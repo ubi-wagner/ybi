@@ -7,13 +7,17 @@ printed in its own report reconcile against what we parsed.
 from __future__ import annotations
 
 import hashlib
+from decimal import Decimal
 from pathlib import Path
+
+import psycopg
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.db import execute, one, query
 from app.domain.qbo import (QBO_GENERAL_LEDGER, QBO_TIME_ACTIVITY,
-                            parse_general_ledger, parse_time_activity)
+                            parse_general_ledger, parse_profit_loss,
+                            parse_time_activity)
 from app.settings import settings
 
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -51,6 +55,28 @@ def parse(batch_id: str) -> dict:
     if not b:
         raise HTTPException(404, "batch not found")
     path = Path(b["storage_uri"])
+
+    if b["report"] == "PROFIT_LOSS":
+        pl = parse_profit_loss(path, sha256=b["sha256"])
+        variance = pl.check_net_income()
+        if abs(variance) > Decimal("0.01"):
+            raise HTTPException(409, {
+                "error": "PL_DOES_NOT_FOOT",
+                "message": f"Sections do not foot to net income; off by {variance}.",
+            })
+        execute("DELETE FROM pl_account WHERE period=%s", (b["period"],))
+        for account, (section, amount) in pl.accounts.items():
+            execute("""INSERT INTO pl_account (period, account, leaf, section, amount)
+                       VALUES (%s,%s,%s,%s,%s)
+                       ON CONFLICT (period, account) DO UPDATE
+                         SET section = EXCLUDED.section, amount = EXCLUDED.amount""",
+                    (b["period"], account, account.split(":")[-1], section, amount))
+        execute("UPDATE staging_batch SET status='ACCEPTED', parsed_at=now(), "
+                "accepted_at=now(), accepted_by='parser' WHERE batch_id=%s", (batch_id,))
+        return {"batch_id": batch_id, "kind": "PROFIT_LOSS",
+                "accounts": len(pl.accounts),
+                "sections": {k: str(v) for k, v in pl.section_totals.items()},
+                "net_income": str(pl.net_income), "variance": str(variance)}
 
     if b["report"] == "TIME_ACTIVITY":
         rows = parse_time_activity(path, QBO_TIME_ACTIVITY)
@@ -106,22 +132,64 @@ def preview(batch_id: str) -> dict:
 def accept(batch_id: str, accepted_by: str) -> dict:
     """A trigger refuses this while any subtotal is off by more than half a
     cent, so the guarantee holds even if this handler is wrong."""
-    execute("""UPDATE staging_batch
-                  SET status='ACCEPTED', accepted_at=now(), accepted_by=%s
-                WHERE batch_id=%s""", (accepted_by, batch_id))
+    try:
+        execute("""UPDATE staging_batch
+                      SET status='ACCEPTED', accepted_at=now(), accepted_by=%s
+                    WHERE batch_id=%s""", (accepted_by, batch_id))
+    except psycopg.errors.RaiseException as exc:
+        # The accept gate declining an import is an expected outcome, not a
+        # server fault. Surface what failed to tie so the controller can act
+        # on it instead of reading "Internal Server Error".
+        mismatches = query(
+            """SELECT account, printed_total, parsed_total,
+                      (parsed_total - printed_total) AS variance
+                 FROM staging_subtotal
+                WHERE batch_id=%s AND abs(parsed_total - printed_total) > 0.005
+                ORDER BY abs(parsed_total - printed_total) DESC LIMIT 25""",
+            (batch_id,))
+        raise HTTPException(status_code=409, detail={
+            "error": "ACCEPT_GATE",
+            "message": str(exc).split("\n")[0].strip(),
+            "mismatches": mismatches,
+        }) from exc
+    # A staging batch becomes a ledger_import on acceptance. ledger_line
+    # references that, not the batch: staging is scratch space, the import is
+    # the permanent provenance record every ledger line points back to.
+    # UNIQUE (period, sha256) makes re-accepting the same file a no-op.
+    imp = one("""
+        INSERT INTO ledger_import (period, source_name, sha256, row_count, imported_by)
+        SELECT b.period, b.original_name, b.sha256,
+               (SELECT count(*) FROM staging_line WHERE batch_id = b.batch_id),
+               %s
+          FROM staging_batch b
+         WHERE b.batch_id = %s
+        ON CONFLICT (period, sha256)
+          DO UPDATE SET source_name = EXCLUDED.source_name
+        RETURNING import_id""", (accepted_by, batch_id))
+    if not imp:
+        raise HTTPException(404, "batch not found")
+
     n = one("""
         WITH ins AS (
           INSERT INTO ledger_line (line_id, import_id, period, txn_date, account,
                                    payee, description, amount, statement, section,
                                    source_key, customer_job_hint)
-          SELECT s.natural_key, b.batch_id, b.period, s.txn_date, s.account,
-                 s.name, s.memo, s.amount, 'P&L', '', s.natural_key, s.objective_hint
-            FROM staging_line s JOIN staging_batch b USING (batch_id)
+          SELECT s.natural_key, %s, b.period, s.txn_date, s.account,
+                 s.name, s.memo, s.amount,
+                 CASE WHEN p.section IS NULL THEN 'BALANCE_SHEET' ELSE 'P&L' END,
+                 coalesce(p.section, ''), s.natural_key, s.objective_hint
+            FROM staging_line s
+            JOIN staging_batch b USING (batch_id)
+            LEFT JOIN pl_account p
+                   ON p.period = b.period
+                  AND p.leaf = split_part(s.account, ':',
+                        array_length(string_to_array(s.account, ':'), 1))
            WHERE s.batch_id=%s
           ON CONFLICT (line_id) DO NOTHING
           RETURNING 1)
-        SELECT count(*) AS n FROM ins""", (batch_id,))
-    return {"batch_id": batch_id, "lines_promoted": n["n"] if n else 0}
+        SELECT count(*) AS n FROM ins""", (imp["import_id"], batch_id))
+    return {"batch_id": batch_id, "import_id": str(imp["import_id"]),
+            "lines_promoted": n["n"] if n else 0}
 
 
 @router.get("")

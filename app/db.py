@@ -77,3 +77,22 @@ def run_migrations() -> list[str]:
             cur.execute("INSERT INTO schema_migration (filename) VALUES (%s)", (path.name,))
             applied.append(path.name)
     return applied
+
+
+@contextmanager
+def transaction():
+    """One connection, one transaction, for a multi-statement write.
+
+    ``execute`` and ``query`` each take their own pooled connection and commit
+    on exit, which is right for single statements and wrong for anything whose
+    invariants are checked at COMMIT. A DEFERRABLE INITIALLY DEFERRED trigger
+    fires at the end of the transaction, so a decision and the evidence it
+    cites have to be written inside one — otherwise the gate sees an
+    unevidenced decision and refuses a judgment that was in fact supported.
+
+        with transaction() as cur:
+            cur.execute(...)
+            cur.execute(...)
+    """
+    with conn() as c, c.transaction(), c.cursor() as cur:
+        yield cur

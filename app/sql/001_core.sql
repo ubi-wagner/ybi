@@ -73,9 +73,23 @@ CREATE TABLE ledger_line (
 CREATE INDEX ON ledger_line (period, account, payee);
 CREATE INDEX ON ledger_line (period, statement, section);
 
+-- Append-only tables refuse mutation loudly. A rule doing INSTEAD NOTHING
+-- would swallow the write silently, leaving a caller that believes it edited
+-- evidence and a reviewer with no trace of the attempt. Rules also make the
+-- table ineligible for ON CONFLICT, which the import path needs for its
+-- idempotent re-accept.
+CREATE FUNCTION refuse_mutation() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION
+    '% is append-only; % refused. Correct by superseding, never by editing.',
+    TG_TABLE_NAME, TG_OP
+    USING ERRCODE = 'restrict_violation';
+END $$ LANGUAGE plpgsql;
+
 -- Source is evidence. Nothing may alter or remove it.
-CREATE RULE ledger_line_no_update AS ON UPDATE TO ledger_line DO INSTEAD NOTHING;
-CREATE RULE ledger_line_no_delete AS ON DELETE TO ledger_line DO INSTEAD NOTHING;
+CREATE TRIGGER ledger_line_immutable
+  BEFORE UPDATE OR DELETE ON ledger_line
+  FOR EACH ROW EXECUTE FUNCTION refuse_mutation();
 
 CREATE TABLE control_total (
   control_id      text PRIMARY KEY,
@@ -189,6 +203,12 @@ CREATE TABLE decision (
 CREATE TABLE decision_line (
   decision_id     uuid NOT NULL REFERENCES decision ON DELETE CASCADE,
   line_id         text NOT NULL REFERENCES ledger_line,
+  -- Mirrors decision.reversed_at IS NULL. Denormalised because Postgres will
+  -- not accept a subquery in an index predicate, and the one-live-decision
+  -- rule has to live in the schema rather than in a handler. Maintained by
+  -- decision_line_live_default and decision_line_live_sync below; never set
+  -- by application code.
+  live            boolean NOT NULL DEFAULT true,
   PRIMARY KEY (decision_id, line_id)
 );
 
@@ -201,10 +221,41 @@ CREATE TABLE decision_evidence (
 -- A ledger line may carry at most one live decision at a time.
 CREATE UNIQUE INDEX one_live_decision_per_line
   ON decision_line (line_id)
-  WHERE decision_id IN (SELECT decision_id FROM decision WHERE reversed_at IS NULL);
+  WHERE live;
+
+-- Keep decision_line.live in step with decision.reversed_at. A line attaching
+-- to an already-reversed decision is born dead, and reversing a decision frees
+-- its lines for a superseding one.
+CREATE FUNCTION decision_line_live_default() RETURNS trigger AS $$
+BEGIN
+  NEW.live := (SELECT reversed_at IS NULL FROM decision
+                WHERE decision_id = NEW.decision_id);
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER decision_line_live_default
+  BEFORE INSERT OR UPDATE OF decision_id ON decision_line
+  FOR EACH ROW EXECUTE FUNCTION decision_line_live_default();
+
+CREATE FUNCTION decision_line_live_sync() RETURNS trigger AS $$
+BEGIN
+  IF NEW.reversed_at IS DISTINCT FROM OLD.reversed_at THEN
+    UPDATE decision_line
+       SET live = (NEW.reversed_at IS NULL)
+     WHERE decision_id = NEW.decision_id;
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER decision_line_live_sync
+  AFTER UPDATE OF reversed_at ON decision
+  FOR EACH ROW EXECUTE FUNCTION decision_line_live_sync();
 
 -- Decisions are the audit trail. Amend by superseding, never by editing.
-CREATE RULE decision_no_delete AS ON DELETE TO decision DO INSTEAD NOTHING;
+-- Decisions may be reversed (an UPDATE of reversed_at) but never removed.
+CREATE TRIGGER decision_immutable
+  BEFORE DELETE ON decision
+  FOR EACH ROW EXECUTE FUNCTION refuse_mutation();
 
 
 -- ---------------------------------------------------------------------
@@ -349,8 +400,9 @@ CREATE TABLE audit_log (
   reason          text NOT NULL DEFAULT ''
 );
 CREATE INDEX ON audit_log (entity, entity_id, occurred_at DESC);
-CREATE RULE audit_log_no_update AS ON UPDATE TO audit_log DO INSTEAD NOTHING;
-CREATE RULE audit_log_no_delete AS ON DELETE TO audit_log DO INSTEAD NOTHING;
+CREATE TRIGGER audit_log_immutable
+  BEFORE UPDATE OR DELETE ON audit_log
+  FOR EACH ROW EXECUTE FUNCTION refuse_mutation();
 
 
 -- ---------------------------------------------------------------------

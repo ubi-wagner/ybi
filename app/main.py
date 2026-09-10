@@ -14,6 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import psycopg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -65,6 +66,23 @@ for r in (health, imports, chart, classify, lanes, rates, evidence, awards):
 async def value_error_handler(_, exc: ValueError):
     # Domain validation failures are user-facing, not server faults.
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(psycopg.errors.RaiseException)
+async def gate_handler(_, exc: psycopg.errors.RaiseException):
+    """A schema gate declining a write is an expected outcome.
+
+    The invariants in app/sql live in triggers that RAISE, which reaches the
+    handler as a database error and would otherwise render as a bare 500. The
+    controller needs to read "a VERIFIED classification requires at least one
+    attached document", not "Internal Server Error" — the message is the whole
+    point of putting the rule in the schema.
+    """
+    message = str(exc).split("\n")[0].strip()
+    log.info("gate refused a write: %s", message)
+    return JSONResponse(status_code=409,
+                        content={"detail": {"error": "SCHEMA_GATE",
+                                            "message": message}})
 
 
 if WEB_DIST.exists():

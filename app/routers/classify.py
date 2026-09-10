@@ -24,7 +24,7 @@ from decimal import Decimal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.db import execute, one, query
+from app.db import execute, one, query, transaction
 
 router = APIRouter(prefix="/classify", tags=["classify"])
 
@@ -92,6 +92,9 @@ def coverage(period: str = "2025") -> CoverageOut:
             LEFT JOIN decision dd ON dd.decision_id = dl.decision_id
                                  AND dd.reversed_at IS NULL
            WHERE l.period = %s
+             -- Balance sheet accounts are not cost. Including them makes
+             -- dollar coverage, the measure that gates sealing, meaningless.
+             AND l.statement = 'P&L'
         )
         SELECT count(*)                                               AS total_lines,
                count(*) FILTER (WHERE decided)                        AS decided_lines,
@@ -146,6 +149,7 @@ def queue(period: str = "2025",
                                   AND att.detached_at IS NULL
           LEFT JOIN note n ON n.target_type = 'LEDGER_LINE' AND n.target_id = l.line_id
          WHERE l.period = %(period)s
+           AND l.statement = 'P&L'
            AND (%(search)s = '' OR l.account ILIKE %(like)s OR l.payee ILIKE %(like)s)
          GROUP BY l.account, l.payee
         HAVING CASE %(status)s
@@ -275,22 +279,27 @@ def decide(body: DecideIn, period: str = "2025") -> dict:
                            (period, account, payee))
         if not with_lines:
             continue
-        row = one("""
-            INSERT INTO decision (set_id, scope, pool, function_990, federal,
-                                  objective_id, grade, rationale, citation,
-                                  decided_by, supersedes)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING decision_id
-        """, (set_id, f"account={account}|payee={payee}", body.pool, body.function_990,
-              body.federal, body.objective_id, body.grade, body.rationale,
-              body.citation, body.decided_by, body.supersedes))
-        did = row["decision_id"]
-        for l in with_lines:
-            execute("""INSERT INTO decision_line (decision_id, line_id)
-                       VALUES (%s,%s) ON CONFLICT DO NOTHING""", (did, l["line_id"]))
-        for ev in body.evidence_ids:
-            execute("""INSERT INTO decision_evidence (decision_id, evidence_id)
-                       VALUES (%s,%s) ON CONFLICT DO NOTHING""", (did, ev))
+        # One transaction: the VERIFIED gate is a deferred constraint trigger
+        # that fires at COMMIT, so the decision and the evidence it cites must
+        # land together or an evidenced judgment is refused as unevidenced.
+        with transaction() as cur:
+            cur.execute("""
+                INSERT INTO decision (set_id, scope, pool, function_990, federal,
+                                      objective_id, grade, rationale, citation,
+                                      decided_by, supersedes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING decision_id
+            """, (set_id, f"account={account}|payee={payee}", body.pool,
+                  body.function_990, body.federal, body.objective_id, body.grade,
+                  body.rationale, body.citation, body.decided_by, body.supersedes))
+            did = cur.fetchone()["decision_id"]
+            for l in with_lines:
+                cur.execute("""INSERT INTO decision_line (decision_id, line_id)
+                               VALUES (%s,%s) ON CONFLICT DO NOTHING""",
+                            (did, l["line_id"]))
+            for ev in body.evidence_ids:
+                cur.execute("""INSERT INTO decision_evidence (decision_id, evidence_id)
+                               VALUES (%s,%s) ON CONFLICT DO NOTHING""", (did, ev))
         execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
                                           after_state, reason)
                    VALUES (%s,'CLASSIFY','decision',%s,%s,%s)""",

@@ -51,13 +51,34 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                 (eid, period, kind, str(dest), sha, uploaded_by,
                  len(raw), file.content_type or "application/octet-stream"))
 
+    attached = 0
     if target_type and target_id:
-        execute("""INSERT INTO attachment (evidence_id,target_type,target_id,
-                                           relevance,attached_by)
-                   VALUES (%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
-                (eid, target_type, target_id, relevance, uploaded_by))
+        if target_type == "LEDGER_GROUP":
+            # The controller works in account/payee groups, but attachment is
+            # per line: that is what the evidence-grade gate reads, and it is
+            # what keeps a document tied to the specific dollars it supports
+            # when a group is later split. One document, many attachments.
+            account, _, payee = target_id.partition("\x1f")
+            lines = query("""SELECT line_id FROM ledger_line
+                              WHERE period=%s AND account=%s
+                                AND coalesce(payee,'')=%s""",
+                          (period, account, payee))
+            for line in lines:
+                execute("""INSERT INTO attachment (evidence_id,target_type,target_id,
+                                                   relevance,attached_by)
+                           VALUES (%s,'LEDGER_LINE',%s,%s,%s)
+                           ON CONFLICT DO NOTHING""",
+                        (eid, line["line_id"], relevance, uploaded_by))
+            attached = len(lines)
+        else:
+            execute("""INSERT INTO attachment (evidence_id,target_type,target_id,
+                                               relevance,attached_by)
+                       VALUES (%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+                    (eid, target_type, target_id, relevance, uploaded_by))
+            attached = 1
 
-    return {"evidence_id": eid, "sha256": sha, "deduplicated": bool(existing)}
+    return {"evidence_id": eid, "sha256": sha, "deduplicated": bool(existing),
+            "attached_to": attached}
 
 
 @router.get("/for/{target_type}/{target_id}")

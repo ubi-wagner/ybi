@@ -33,6 +33,12 @@ _PARENS = re.compile(r"^\((.*)\)$")
 _TOTAL_ROW = re.compile(r"^\s*total\s+(for\s+)?", re.I)
 _BEGIN_BAL = re.compile(r"beginning\s+balance", re.I)
 
+# QuickBooks closes a parent account with "Total for <parent> with sub-accounts".
+# That row is a subtree rollup, not a leaf total, and reconciling it against
+# lines coded directly to the parent will always fail — most parents carry no
+# direct lines at all.
+_ROLLUP_SUFFIX = re.compile(r"\s+with\s+sub-?accounts\s*$", re.I)
+
 
 def qbo_amount(raw) -> Decimal:
     """QBO emits 1,234.56 / (1,234.56) / -1,234.56 / $1,234.56 / blank."""
@@ -156,7 +162,11 @@ class StagedImport:
     source_name: str
     sha256: str
     lines: list[StagedLine] = field(default_factory=list)
+    #: "Total for <account>" — leaf totals, keyed by qualified account path.
     subtotals: dict[str, Decimal] = field(default_factory=dict)
+    #: "Total for <account> with sub-accounts" — subtree rollups, which
+    #: reconcile against the account and everything beneath it.
+    rollups: dict[str, Decimal] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     skipped: int = 0
 
@@ -179,6 +189,25 @@ class StagedImport:
         out = []
         for account, printed in self.subtotals.items():
             got = parsed.get(account, Decimal(0))
+            out.append((account, printed, got, money(got - printed)))
+        return sorted(out, key=lambda r: abs(r[3]), reverse=True)
+
+    def subtree_total(self, account: str) -> Decimal:
+        """Sum of an account and every sub-account beneath it."""
+        prefix = account + ":"
+        return money(sum(
+            (l.amount for l in self.lines
+             if l.account == account or l.account.startswith(prefix)),
+            Decimal(0)))
+
+    def rollup_check(self) -> list[tuple[str, Decimal, Decimal, Decimal]]:
+        """Reconcile the "with sub-accounts" rollups against their subtrees.
+
+        This is the control that proves the account hierarchy was reconstructed
+        correctly, not merely that individual leaves add up."""
+        out = []
+        for account, printed in self.rollups.items():
+            got = self.subtree_total(account)
             out.append((account, printed, got, money(got - printed)))
         return sorted(out, key=lambda r: abs(r[3]), reverse=True)
 
@@ -221,7 +250,29 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
         i = cols.get(key)
         return (row[i].strip() if i is not None and i < len(row) and row[i] else "")
 
-    current_account = ""
+    # QuickBooks prints the account tree as header / total pairs in column 0
+    # rather than by indentation, so the qualified path has to be tracked as a
+    # stack. Without it, sub-accounts sharing a leaf name under different
+    # parents collide — YBI's 2025 chart has "Drive AM" under both
+    # "3900 Grant Income" and "Grant Expenses", and merging them silently
+    # overstates the account by the whole of the other one.
+    #
+    # One further wrinkle: QuickBooks prints a parent's own direct lines and
+    # its "Total for <parent>" *before* the sub-account sections, then closes
+    # with "Total for <parent> with sub-accounts". So a header following a
+    # leaf total may be either that account's child or its sibling, and column
+    # 0 does not say which. The rollup rows do: an account is a parent exactly
+    # when it has a "with sub-accounts" total. Collect those first, then use
+    # them to decide whether a leaf total closes its frame.
+    parents = {
+        _ROLLUP_SUFFIX.sub("", _TOTAL_ROW.sub("", (r[0] or "").strip())).strip()
+        for r in rows[hdr_idx + 1:]
+        if r and (r[0] or "").strip()
+        and _TOTAL_ROW.match((r[0] or "").strip())
+        and _ROLLUP_SUFFIX.search((r[0] or "").strip())
+    }
+
+    stack: list[str] = []
     for n, row in enumerate(rows[hdr_idx + 1:], start=hdr_idx + 2):
         if not any((c or "").strip() for c in row):
             continue
@@ -230,7 +281,9 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
 
         # "Total for 5010 Depreciation Expense" — capture as a control, skip row
         if first and _TOTAL_ROW.match(first):
-            account = _TOTAL_ROW.sub("", first).strip()
+            label = _TOTAL_ROW.sub("", first).strip()
+            is_rollup = bool(_ROLLUP_SUFFIX.search(label))
+            account = _ROLLUP_SUFFIX.sub("", label).strip()
             amt = qbo_amount(cell(row, "amount"))
             if not amt:
                 for c in reversed(row):
@@ -239,12 +292,25 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
                         if amt:
                             break
             if account:
-                staged.subtotals[account] = amt
+                if account in stack:
+                    depth = len(stack) - 1 - stack[::-1].index(account)
+                    path = ":".join(stack[:depth + 1])
+                    # A leaf total closes the frame only when the account has
+                    # no sub-accounts; otherwise its children are still to
+                    # come and the frame stays open until the rollup.
+                    if is_rollup or account not in parents:
+                        del stack[depth:]
+                else:
+                    path = ":".join(stack + [account])
+                if is_rollup:
+                    staged.rollups[path] = amt
+                else:
+                    staged.subtotals[path] = amt
             continue
 
         # Section header: something in column 0 and no date on the row
         if profile.account_in_section_header and first and not cell(row, "date"):
-            current_account = first
+            stack.append(first)
             continue
 
         date = cell(row, "date")
@@ -259,7 +325,7 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
         else:
             amount = qbo_amount(cell(row, "amount"))
 
-        account = current_account or cell(row, "split")
+        account = ":".join(stack) if stack else cell(row, "split")
         if not account:
             staged.warnings.append(f"row {n}: no account context, line held for review")
 
@@ -331,3 +397,153 @@ def objective_hints(staged: StagedImport) -> dict[str, Decimal]:
         if l.objective_hint:
             out[l.objective_hint] = money(out.get(l.objective_hint, Decimal(0)) + l.amount)
     return dict(sorted(out.items(), key=lambda kv: abs(kv[1]), reverse=True))
+
+
+# ---------------------------------------------------------------------
+# Profit and loss
+# ---------------------------------------------------------------------
+
+#: The four sections a QBO P&L prints, in the order it prints them. The
+#: section is what decides whether an account is a cost, a revenue or neither
+#: — never the account number. YBI's 2025 chart has revenue sitting in the
+#: 5xxx expense range (5107 Interest Income, 5108 Other Income) and income in
+#: the net-assets range (3991 MBAC), so number-based inference is wrong here.
+PL_SECTIONS = ("Income", "COGS", "Expense", "Other Income")
+
+_PL_SECTION_HEADERS = {
+    "income": "Income",
+    "cost of goods sold": "COGS",
+    "expenses": "Expense",
+    "other income": "Other Income",
+}
+
+
+@dataclass
+class ProfitLoss:
+    """A parsed QuickBooks Profit and Loss.
+
+    ``accounts`` maps the qualified account path to its section and amount.
+    ``leaf_section`` maps the bare leaf name to its section, which is what the
+    general ledger needs in order to tell a cost account from a balance sheet
+    account.
+    """
+
+    source_name: str
+    sha256: str = ""
+    accounts: dict[str, tuple[str, Decimal]] = field(default_factory=dict)
+    rollups: dict[str, tuple[str, Decimal]] = field(default_factory=dict)
+    section_totals: dict[str, Decimal] = field(default_factory=dict)
+    net_income: Decimal = Decimal(0)
+    warnings: list[str] = field(default_factory=list)
+
+    @property
+    def income_total(self) -> Decimal:
+        return self.section_totals.get("Income", Decimal(0))
+
+    @property
+    def cogs_total(self) -> Decimal:
+        return self.section_totals.get("COGS", Decimal(0))
+
+    @property
+    def expense_total(self) -> Decimal:
+        return self.section_totals.get("Expense", Decimal(0))
+
+    @property
+    def other_income_total(self) -> Decimal:
+        return self.section_totals.get("Other Income", Decimal(0))
+
+    @property
+    def leaf_section(self) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for path, (section, _) in self.accounts.items():
+            out[path.split(":")[-1]] = section
+        for path, (section, _) in self.rollups.items():
+            out.setdefault(path.split(":")[-1], section)
+        return out
+
+    def check_net_income(self) -> Decimal:
+        """Variance between the printed net income and the sections."""
+        derived = (self.income_total - self.cogs_total - self.expense_total
+                   + self.other_income_total)
+        return money(derived - self.net_income)
+
+
+def parse_profit_loss(path: Path, sha256: str = "") -> ProfitLoss:
+    """Parse a QBO Profit and Loss export.
+
+    Same header/total hierarchy as the general ledger, but with section
+    headers (Income, Cost of Goods Sold, Expenses, Other Income) framing the
+    account tree and a single amount column.
+    """
+    rows = _read_rows(path)
+    pl = ProfitLoss(source_name=path.name, sha256=sha256)
+
+    parents = {
+        _ROLLUP_SUFFIX.sub("", _TOTAL_ROW.sub("", (r[0] or "").strip())).strip()
+        for r in rows
+        if r and (r[0] or "").strip()
+        and _TOTAL_ROW.match((r[0] or "").strip())
+        and _ROLLUP_SUFFIX.search((r[0] or "").strip())
+    }
+
+    def amount_of(row: list[str]) -> Decimal:
+        for c in reversed(row[1:]):
+            if (c or "").strip():
+                return qbo_amount(c)
+        return Decimal(0)
+
+    section = ""
+    stack: list[str] = []
+    for row in rows:
+        if not row or not any((c or "").strip() for c in row):
+            continue
+        label = (row[0] or "").strip()
+        if not label:
+            continue
+
+        low = label.lower()
+        if low in _PL_SECTION_HEADERS:
+            section = _PL_SECTION_HEADERS[low]
+            stack = []
+            continue
+
+        if _TOTAL_ROW.match(label):
+            name = _TOTAL_ROW.sub("", label).strip()
+            is_rollup = bool(_ROLLUP_SUFFIX.search(name))
+            name = _ROLLUP_SUFFIX.sub("", name).strip()
+            amt = amount_of(row)
+
+            low_name = name.lower()
+            if low_name in _PL_SECTION_HEADERS:
+                pl.section_totals[_PL_SECTION_HEADERS[low_name]] = amt
+                stack = []
+                continue
+
+            if name in stack:
+                depth = len(stack) - 1 - stack[::-1].index(name)
+                qualified = ":".join(stack[:depth + 1])
+                if is_rollup or name not in parents:
+                    del stack[depth:]
+            else:
+                qualified = ":".join(stack + [name])
+            if is_rollup:
+                pl.rollups[qualified] = (section, amt)
+            else:
+                pl.accounts[qualified] = (section, amt)
+            continue
+
+        if low.startswith("net income") or low.startswith("net operating income"):
+            if low.startswith("net income"):
+                pl.net_income = amount_of(row)
+            continue
+
+        # An account line: a label plus an amount is a leaf with activity; a
+        # label alone opens a parent whose children follow.
+        amt = amount_of(row)
+        has_amount = any((c or "").strip() for c in row[1:])
+        if has_amount and section:
+            pl.accounts[":".join(stack + [label])] = (section, amt)
+        elif section:
+            stack.append(label)
+
+    return pl
