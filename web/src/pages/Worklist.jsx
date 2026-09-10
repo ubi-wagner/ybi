@@ -110,17 +110,21 @@ export default function Worklist() {
           <Empty mark="✓" title="Nothing open in this class" />
         )}
         {data && data.items.length > 0 && (
-          <Table columns={["", "Item", "Detail", "Amount"]}>
+          <Table columns={[
+            { label: "", width: 34, align: "left" },
+            { label: "Item", align: "left" }, { label: "Detail", align: "left" },
+            { label: "Amount" },
+          ]}>
             {data.items.map((r, i) => (
               <tr key={i}>
-                <td>
+                <td className="l">
                   <Tick state={r.severity === "BLOCKING" ? "failed" : "flagged"} />
                 </td>
-                <td>
+                <td className="l">
                   <div className="strong ellipsis">{r.label}</div>
                   <div className="quiet small">{r.entity}</div>
                 </td>
-                <td className="quiet small">{r.detail}</td>
+                <td className="l quiet small">{r.detail}</td>
                 <td className="num">{money(r.amount)}</td>
               </tr>
             ))}

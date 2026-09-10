@@ -10,7 +10,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from fastapi import Depends, APIRouter, File, Form, UploadFile
+from fastapi import Depends, APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.auth import require_controller, require_reader
@@ -92,6 +93,91 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
            reason=relevance)
     return {"evidence_id": eid, "sha256": sha, "deduplicated": bool(existing),
             "attached_to": attached}
+
+
+@router.get("")
+def register(period: str = "2025") -> list[dict]:
+    """The document register.
+
+    Everything received for the period, what it supports and how many places
+    it supports. Available to any reader: an auditor who has to ask the
+    controller for a copy of a document is an auditor being managed.
+    """
+    return query("""
+        SELECT e.evidence_id, e.kind, e.uri, e.sha256, e.byte_size, e.mime_type,
+               e.received_from, e.received_at, e.ingest_channel,
+               (SELECT count(*) FROM attachment a
+                 WHERE a.evidence_id = e.evidence_id
+                   AND a.detached_at IS NULL)                  AS attachments,
+               (SELECT max(a.relevance) FROM attachment a
+                 WHERE a.evidence_id = e.evidence_id
+                   AND a.detached_at IS NULL)                  AS relevance,
+               (SELECT count(DISTINCT l.account) FROM attachment a
+                  JOIN ledger_line l ON l.line_id::text = a.target_id
+                 WHERE a.evidence_id = e.evidence_id
+                   AND a.target_type = 'LEDGER_LINE'
+                   AND a.detached_at IS NULL)                  AS accounts,
+               (SELECT COALESCE(sum(abs(l.amount)), 0) FROM attachment a
+                  JOIN ledger_line l ON l.line_id::text = a.target_id
+                 WHERE a.evidence_id = e.evidence_id
+                   AND a.target_type = 'LEDGER_LINE'
+                   AND a.detached_at IS NULL)                  AS supported_amount
+          FROM evidence e WHERE e.period = %s
+         ORDER BY e.received_at DESC""", (period,))
+
+
+@router.get("/{evidence_id}/file")
+def download(evidence_id: str, actor: Actor = Depends(require_reader)):
+    """Hand back the document itself.
+
+    A register that lists a lease but cannot produce it is a claim, not
+    evidence. Reading is logged like everything else — the record shows who
+    looked at what, which is the auditor's side of the same guarantee.
+    """
+    row = one("""SELECT uri, mime_type, kind, sha256 FROM evidence
+                  WHERE evidence_id = %s""", (evidence_id,))
+    if not row:
+        raise HTTPException(404, "no such document")
+    path = Path(row["uri"])
+    if not path.exists():
+        raise HTTPException(410, "the file behind this record is missing")
+
+    record(actor, "EVIDENCE_DOWNLOAD", "evidence", evidence_id,
+           after={"sha256": row["sha256"]},
+           reason=f"{row['kind']} retrieved")
+    return FileResponse(path, filename=path.name.split("_", 1)[-1],
+                        media_type=row["mime_type"] or "application/octet-stream")
+
+
+@router.get("/group")
+def for_group(group_key: str, period: str = "2025") -> dict:
+    """Everything hanging off one account/payee group.
+
+    Documents attach per line — that is what the evidence gate reads — but
+    the controller works in groups, so the lookup has to fan back in. Notes
+    are recorded against the group itself, because a note is about the
+    judgment, not about one of the eighty-five rows underneath it.
+    """
+    account, _, payee = group_key.partition("\x1f")
+    return {
+        "documents": query("""
+            SELECT DISTINCT e.evidence_id, e.kind, e.byte_size, e.mime_type,
+                   e.uri, a.relevance, a.attached_by, max(a.attached_at) AS attached_at,
+                   count(*) AS lines
+              FROM attachment a
+              JOIN evidence e USING (evidence_id)
+              JOIN ledger_line l ON l.line_id::text = a.target_id
+             WHERE a.target_type = 'LEDGER_LINE' AND a.detached_at IS NULL
+               AND l.period = %s AND l.account = %s
+               AND coalesce(l.payee, '') = %s
+             GROUP BY e.evidence_id, e.kind, e.byte_size, e.mime_type, e.uri,
+                      a.relevance, a.attached_by
+             ORDER BY max(a.attached_at) DESC""", (period, account, payee)),
+        "notes": query("""SELECT note_id, body, author, created_at, is_workpaper
+                            FROM note
+                           WHERE target_type = 'LEDGER_GROUP' AND target_id = %s
+                           ORDER BY created_at""", (group_key,)),
+    }
 
 
 @router.get("/for/{target_type}/{target_id}")

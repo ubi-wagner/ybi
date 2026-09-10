@@ -168,6 +168,49 @@ def main() -> int:
             ok("refused the actor roster with 403")
         else:
             finding(f"auditor read the actor roster ({a.status_code}), not 403")
+
+        # Taking the record away is the reviewer's side of the guarantee: a
+        # reviewer who has to ask the controller for a copy has the person
+        # being reviewed standing between them and the evidence.
+        pkg = auditor.get("/api/export/audit-package", params={"period": "2025"})
+        if pkg.status_code == 200 and len(pkg.content) > 10_000:
+            ok(f"downloaded the audit package — {len(pkg.content):,} bytes")
+        else:
+            finding(f"auditor could not download the audit package "
+                    f"({pkg.status_code}, {len(pkg.content)} bytes)")
+
+        reg = auditor.get("/api/evidence", params={"period": "2025"})
+        if reg.status_code == 200 and reg.json():
+            first = reg.json()[0]["evidence_id"]
+            doc = auditor.get(f"/api/evidence/{first}/file")
+            if doc.status_code == 200 and doc.content:
+                ok(f"retrieved a document itself — {first}, {len(doc.content):,} bytes")
+            else:
+                finding(f"auditor could not retrieve {first} ({doc.status_code}); "
+                        f"a register that cannot produce the document is a claim, "
+                        f"not evidence")
+        else:
+            finding(f"auditor could not read the document register "
+                    f"({reg.status_code})")
+
+        up = auditor.post("/api/evidence/note",
+                          json={"target_type": "LEDGER_GROUP", "target_id": "probe",
+                                "body": "drive probe", "author": "auditor-probe"})
+        if up.status_code == 403:
+            ok("refused to write a note with 403")
+        else:
+            finding(f"auditor note answered {up.status_code}, not 403")
+
+        seg = auditor.post("/api/classify/segment",
+                           json={"group_key": "probe\x1f", "created_by": "auditor-probe",
+                                 "parts": [{"label": "a", "share": "0.5",
+                                            "rationale": "probe"},
+                                           {"label": "b", "share": "0.5",
+                                            "rationale": "probe"}]})
+        if seg.status_code == 403:
+            ok("refused to split a group with 403")
+        else:
+            finding(f"auditor segmentation answered {seg.status_code}, not 403")
     finally:
         auditor.close()
 
@@ -187,6 +230,31 @@ def main() -> int:
             ok(f"carries an employee key — {me['employee_key']}")
         else:
             finding("employee actor has no employee_key; it cannot certify anything")
+
+        mine = employee.get("/api/certify/mine")
+        if mine.status_code == 200 and mine.json().get("distribution"):
+            n = len(mine.json()["distribution"])
+            ok(f"sees their own distribution — {n} activities")
+        else:
+            finding(f"employee cannot see their own effort ({mine.status_code}); "
+                    f"nobody can certify what they cannot read")
+
+        # Certification is personal. Signing for someone else is the one thing
+        # 200.430(i) exists to prevent.
+        other = employee.post("/api/certify/sign",
+                              json={"employee_key": "GAFFNEY", "period": "2025",
+                                    "acknowledged": True})
+        if other.status_code in (403, 404):
+            ok(f"refused to sign for another employee with {other.status_code}")
+        else:
+            finding(f"employee signed for GAFFNEY ({other.status_code}); a "
+                    f"certification that is not the person's own supports nothing")
+
+        pkg = employee.get("/api/export/audit-package")
+        if pkg.status_code == 403:
+            ok("refused the audit package with 403")
+        else:
+            finding(f"employee downloaded the audit package ({pkg.status_code})")
     finally:
         employee.close()
 

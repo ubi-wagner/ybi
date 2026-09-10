@@ -46,7 +46,11 @@ const FUNCTION_FOR = {
 const POOL_KEYS = ["DIRECT", "FRINGE", "OVERHEAD", "G&A", "RENTAL_DIRECT",
                    "FUNDRAISING", "UNALLOWABLE", "EXCLUDED"];
 
-export default function ClassifyQueue({ actor = "tom" }) {
+export default function ClassifyQueue({ actor }) {
+  /* A reader who is offered a button that will 403 has been told the wrong
+     thing about their own access. The auditor sees the queue and everything
+     behind each decision; the affordances that write are simply not there. */
+  const canWrite = actor?.role === "CONTROLLER";
   const toast = useToast();
   const [mode, setMode] = useState("sweep");
   const [cov, setCov] = useState(null);
@@ -92,7 +96,7 @@ export default function ClassifyQueue({ actor = "tom" }) {
         group_keys: groups.map((g) => g.group_key),
         ...decision,
         objective_id: decision.pool === "DIRECT" ? decision.objective_id || null : null,
-        decided_by: actor,
+        decided_by: actor?.display_name || "",
       });
       const label = groups.length === 1
         ? `${groups[0].account} → ${decision.pool}`
@@ -154,6 +158,10 @@ export default function ClassifyQueue({ actor = "tom" }) {
         e.preventDefault(); setCursor((i) => Math.min(i + 1, rows.length - 1));
       } else if (e.key === "k" || e.key === "ArrowUp") {
         e.preventDefault(); setCursor((i) => Math.max(i - 1, 0));
+      } else if (e.key === "f") {
+        e.preventDefault(); setMode((m) => (m === "focus" ? "sweep" : "focus"));
+      } else if (!canWrite) {
+        return;
       } else if (e.key === "Enter" && current) {
         e.preventDefault();
         current.proposal ? acceptProposal(current) : openEditor([current]);
@@ -166,8 +174,6 @@ export default function ClassifyQueue({ actor = "tom" }) {
           n.has(current.group_key) ? n.delete(current.group_key) : n.add(current.group_key);
           return n;
         });
-      } else if (e.key === "f") {
-        e.preventDefault(); setMode((m) => (m === "focus" ? "sweep" : "focus"));
       } else if (/^[1-8]$/.test(e.key) && current) {
         e.preventDefault();
         const pool = POOL_KEYS[Number(e.key) - 1];
@@ -180,18 +186,18 @@ export default function ClassifyQueue({ actor = "tom" }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rows, current, editing, acceptProposal, openEditor]);
+  }, [rows, current, editing, canWrite, acceptProposal, openEditor]);
 
   const pct = Number(cov?.pct_dollars || 0);
 
   return (
     <div className="page">
       <div className="page-head">
-        <h2>Classification</h2>
+        <h2>Classification{!canWrite && <> <Pill>read only</Pill></>}</h2>
         <p className="lede">
-          Largest groups first. Accept a proposal with one key, or open a group when it needs
-          real thought. Progress is measured in dollars — the rate is computed only once this
-          set is sealed.
+          {canWrite
+            ? "Largest groups first. Accept a proposal with one key, or open a group when it needs real thought. Progress is measured in dollars — the rate is computed only once this set is sealed."
+            : "Every group, every decision and the reasoning behind it. Nothing on this screen can be changed from your account — classification is the controller's, and the record shows whose it was."}
         </p>
       </div>
 
@@ -222,7 +228,9 @@ export default function ClassifyQueue({ actor = "tom" }) {
           <Search value={search} onChange={setSearch} placeholder="Account or vendor   /" />
         </div>
         <div style={{ flex: 1 }} />
-        <Keys hints={mode === "focus"
+        <Keys hints={!canWrite
+          ? [["j/k", "move"], ["f", mode === "focus" ? "sweep" : "focus"], ["/", "search"]]
+          : mode === "focus"
           ? [["Enter", "accept"], ["e", "edit"], ["j/k", "move"], ["f", "sweep"]]
           : [["j/k", "move"], ["Enter", "accept"], ["x", "select"], ["1-8", "pool"], ["f", "focus"]]} />
       </div>
@@ -241,6 +249,7 @@ export default function ClassifyQueue({ actor = "tom" }) {
 
       {!loading && rows.length > 0 && mode === "focus" && current && (
         <FocusCard row={current} index={cursor} total={rows.length} busy={busy}
+                   canWrite={canWrite} onSplit={load}
                    onAccept={() => acceptProposal(current)}
                    onEdit={() => openEditor([current])}
                    onPrev={() => setCursor((i) => Math.max(0, i - 1))}
@@ -249,35 +258,37 @@ export default function ClassifyQueue({ actor = "tom" }) {
 
       {!loading && rows.length > 0 && mode === "sweep" && (
         <Table columns={[
-          { label: "", width: 40, align: "left" },
+          ...(canWrite ? [{ label: "", width: 40, align: "left" }] : []),
           { label: "", width: 34, align: "left" },
           { label: "Account", align: "left" },
           { label: "Vendor", align: "left" },
           { label: "Lines" },
           { label: "Amount" },
           { label: "Proposal", align: "left" },
-          { label: "", width: 170, align: "left" },
+          ...(canWrite ? [{ label: "", width: 170, align: "left" }] : []),
         ]}>
           {rows.map((r, i) => (
             <tr key={r.group_key}
                 className={`hoverable ${picked.has(r.group_key) ? "picked" : ""} ${i === cursor ? "cursor" : ""}`}
                 onClick={() => setCursor(i)}>
-              <td className="l">
-                <input type="checkbox" checked={picked.has(r.group_key)}
-                       onChange={() => setPicked((p) => {
-                         const n = new Set(p);
-                         n.has(r.group_key) ? n.delete(r.group_key) : n.add(r.group_key);
-                         return n;
-                       })}
-                       onClick={(e) => e.stopPropagation()}
-                       aria-label={`Select ${r.account}`} />
-              </td>
+              {canWrite && (
+                <td className="l">
+                  <input type="checkbox" checked={picked.has(r.group_key)}
+                         onChange={() => setPicked((p) => {
+                           const n = new Set(p);
+                           n.has(r.group_key) ? n.delete(r.group_key) : n.add(r.group_key);
+                           return n;
+                         })}
+                         onClick={(e) => e.stopPropagation()}
+                         aria-label={`Select ${r.account}`} />
+                </td>
+              )}
               <td className="l">
                 <Tick state={r.stale ? "flagged" : r.decided ? "done" : "open"}
                       title={r.stale ? "Amended in QuickBooks since it was classified" : undefined} />
               </td>
-              <td className="l">{r.account}</td>
-              <td className="l" style={{ color: "var(--graphite)" }}>{r.payee || "—"}</td>
+              <td className="l trunc">{r.account}</td>
+              <td className="l trunc" style={{ color: "var(--graphite)" }}>{r.payee || "—"}</td>
               <td>{r.line_count}</td>
               <td className={`amt strong ${Number(r.amount) < 0 ? "neg" : ""}`}>{money(r.amount)}</td>
               <td className="l wrap">
@@ -292,15 +303,17 @@ export default function ClassifyQueue({ actor = "tom" }) {
                   <span className="rowsub">No signal — needs a judgment</span>
                 )}
               </td>
-              <td className="l">
-                {r.proposal && !r.decided && (
-                  <button className="sm primary" disabled={busy}
-                          onClick={(e) => { e.stopPropagation(); acceptProposal(r); }}>Accept</button>
-                )}{" "}
-                <button className="sm" onClick={(e) => { e.stopPropagation(); openEditor([r]); }}>
-                  {r.decided ? "Revise" : "Classify"}
-                </button>
-              </td>
+              {canWrite && (
+                <td className="l">
+                  {r.proposal && !r.decided && (
+                    <button className="sm primary" disabled={busy}
+                            onClick={(e) => { e.stopPropagation(); acceptProposal(r); }}>Accept</button>
+                  )}{" "}
+                  <button className="sm" onClick={(e) => { e.stopPropagation(); openEditor([r]); }}>
+                    {r.decided ? "Revise" : "Classify"}
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </Table>
@@ -324,8 +337,11 @@ export default function ClassifyQueue({ actor = "tom" }) {
 
 /* ------------------------------------------------------------------ focus */
 
-function FocusCard({ row, index, total, busy, onAccept, onEdit, onPrev, onNext }) {
+function FocusCard({ row, index, total, busy, canWrite, onAccept, onEdit, onPrev, onNext,
+                    onSplit }) {
   const p = row.proposal;
+  const [splitting, setSplitting] = useState(false);
+  useEffect(() => { setSplitting(false); }, [row.group_key]);
   return (
     <div className="focus">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, flexWrap: "wrap" }}>
@@ -372,11 +388,248 @@ function FocusCard({ row, index, total, busy, onAccept, onEdit, onPrev, onNext }
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 18, alignItems: "center", flexWrap: "wrap" }}>
-        {p && <button className="primary" onClick={onAccept} disabled={busy}>Accept proposal</button>}
-        <button onClick={onEdit} disabled={busy}>Classify differently</button>
+        {canWrite && p && (
+          <button className="primary" onClick={onAccept} disabled={busy}>Accept proposal</button>
+        )}
+        {canWrite && <button onClick={onEdit} disabled={busy}>Classify differently</button>}
+        {canWrite && (
+          <button onClick={() => setSplitting(!splitting)} disabled={busy}>
+            {splitting ? "Cancel split" : "Split this group"}
+          </button>
+        )}
         <div style={{ flex: 1 }} />
         <span className="rowsub">Every decision records who, when and why.</span>
       </div>
+
+      {splitting && (
+        <Splitter row={row}
+                  onDone={() => { setSplitting(false); onSplit?.(); }} />
+      )}
+
+      <GroupRecord row={row} canWrite={canWrite} />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ split */
+
+/* A booked entry is often not one thing. Splitting it records the parts and
+   the reasoning for each; the ledger underneath is never touched, and every
+   line reconciles to the cent or the whole split is refused. */
+function Splitter({ row, onDone }) {
+  const toast = useToast();
+  const [parts, setParts] = useState([
+    { label: "", share: "", rationale: "", citation: "" },
+    { label: "", share: "", rationale: "", citation: "" },
+  ]);
+  const [busy, setBusy] = useState(false);
+
+  const set = (i, k, v) =>
+    setParts((ps) => ps.map((p, j) => (j === i ? { ...p, [k]: v } : p)));
+
+  const total = parts.reduce((a, p) => a + (Number(p.share) || 0), 0);
+  const ready = parts.length >= 2 &&
+    parts.every((p) => p.label.trim() && p.rationale.trim() && Number(p.share) > 0) &&
+    Math.abs(total - 100) < 0.005;
+
+  async function apply() {
+    setBusy(true);
+    try {
+      const r = await api.segment({
+        group_key: row.group_key,
+        created_by: "",
+        parts: parts.map((p) => ({
+          label: p.label.trim(),
+          share: String(Number(p.share) / 100),
+          rationale: p.rationale.trim(),
+          citation: p.citation.trim() || null,
+        })),
+      });
+      toast(`Split into ${r.by_part.length} parts across ` +
+            `${r.lines_segmented} lines · ${r.segments_created} segments`);
+      onDone?.();
+    } catch (e) {
+      toast(String(e.message || e), { tone: "bad", sticky: true });
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="splitter">
+      <div className="splitter-head">
+        <span className="strong">Split into parts</span>
+        <span className="rowsub">
+          Each part carries its own share and its own reasoning. Every line
+          reconciles to the cent, or the whole split is refused.
+        </span>
+      </div>
+
+      {parts.map((p, i) => (
+        <div className="split-part" key={i}>
+          <input placeholder="What this part is" value={p.label}
+                 onChange={(e) => set(i, "label", e.target.value)} />
+          <input className="split-share num" placeholder="%" value={p.share}
+                 inputMode="decimal"
+                 onChange={(e) => set(i, "share", e.target.value)} />
+          <input placeholder="Why this share, and on what driver" value={p.rationale}
+                 onChange={(e) => set(i, "rationale", e.target.value)} />
+          <input className="split-cite" placeholder="Citation" value={p.citation}
+                 onChange={(e) => set(i, "citation", e.target.value)} />
+          {parts.length > 2 && (
+            <button className="sm" aria-label="Remove part"
+                    onClick={() => setParts((ps) => ps.filter((_, j) => j !== i))}>−</button>
+          )}
+        </div>
+      ))}
+
+      <div className="splitter-foot">
+        <button className="sm"
+                onClick={() => setParts((ps) => [...ps,
+                  { label: "", share: "", rationale: "", citation: "" }])}>
+          Add a part
+        </button>
+        <span className={`rowsub ${Math.abs(total - 100) < 0.005 ? "" : "amt neg"}`}>
+          {total.toFixed(2)}% of {money(row.amount)}
+        </span>
+        <div style={{ flex: 1 }} />
+        <button className="primary sm" disabled={!ready || busy} onClick={apply}>
+          {busy ? "Splitting…" : "Record the split"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------- notes and papers */
+
+/* The reasoning that does not fit in a rationale field, and the document it
+   rests on, recorded where the judgment is actually made. Attaching from here
+   fans the document out to every line in the group, so it supports the
+   dollars rather than the screen. */
+function GroupRecord({ row, canWrite }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState(null);
+  const [body, setBody] = useState("");
+  const [workpaper, setWorkpaper] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const file = useRef(null);
+
+  const load = useCallback(() => {
+    if (!row?.group_key) return;
+    api.evidenceForGroup(row.group_key).then(setData).catch(() => setData(null));
+  }, [row?.group_key]);
+
+  useEffect(() => { setOpen(false); setData(null); setBody(""); }, [row?.group_key]);
+  useEffect(() => { if (open) load(); }, [open, load]);
+
+  async function addNote() {
+    if (!body.trim()) return;
+    setBusy(true);
+    try {
+      await api.addNote({ target_type: "LEDGER_GROUP", target_id: row.group_key,
+                          body: body.trim(), author: "", is_workpaper: workpaper });
+      setBody("");
+      toast("Note recorded");
+      load();
+    } catch (e) {
+      toast(String(e.message || e), { tone: "bad" });
+    }
+    setBusy(false);
+  }
+
+  async function attach(files) {
+    if (!files?.length) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", files[0]);
+      form.append("kind", "document");
+      form.append("period", "2025");
+      form.append("target_type", "LEDGER_GROUP");
+      form.append("target_id", row.group_key);
+      form.append("relevance", `supports ${row.account}`);
+      const r = await api.uploadEvidence(form);
+      toast(`Attached to ${r.attached_to} line${r.attached_to === 1 ? "" : "s"}`);
+      load();
+    } catch (e) {
+      toast(String(e.message || e), { tone: "bad" });
+    }
+    setBusy(false);
+  }
+
+  const notes = data?.notes || [];
+  const docs = data?.documents || [];
+
+  return (
+    <div className="group-record">
+      <button className="linkish" onClick={() => setOpen(!open)}>
+        {open ? "−" : "+"} Notes and documents
+        {(row.note_count > 0 || row.evidence_count > 0) && !open &&
+          ` · ${row.note_count || 0} note${row.note_count === 1 ? "" : "s"}, ` +
+          `${row.evidence_count || 0} document${row.evidence_count === 1 ? "" : "s"}`}
+      </button>
+
+      {open && (
+        <div className="group-record-body">
+          {notes.length > 0 && (
+            <ul className="note-list">
+              {notes.map((n) => (
+                <li key={n.note_id}>
+                  <div>{n.body}</div>
+                  <div className="quiet small">
+                    {n.author} · {new Date(n.created_at).toLocaleString()}
+                    {n.is_workpaper && " · workpaper"}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {docs.length > 0 && (
+            <ul className="doc-list">
+              {docs.map((d) => (
+                <li key={d.evidence_id}>
+                  <a href={api.evidenceFileUrl(d.evidence_id)} download>
+                    {(d.uri || "").split("/").pop().replace(/^[0-9a-f]{16}_/, "")}
+                  </a>
+                  <span className="quiet small">
+                    {" "}· {d.kind} · {d.lines} line{d.lines === 1 ? "" : "s"}
+                    {d.relevance ? ` · ${d.relevance}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {canWrite && (
+            <>
+          <textarea className="note-input" rows={2} value={body}
+                    placeholder="Why this cost is what you say it is — the part that does not fit in the rationale."
+                    onChange={(e) => setBody(e.target.value)} />
+          <div className="group-record-actions">
+            <button className="sm" disabled={busy || !body.trim()} onClick={addNote}>
+              Add note
+            </button>
+            <label className="note-flag">
+              <input type="checkbox" checked={workpaper}
+                     onChange={(e) => setWorkpaper(e.target.checked)} />
+              prints in the audit package
+            </label>
+            <div style={{ flex: 1 }} />
+            <input ref={file} type="file" hidden
+                   onChange={(e) => attach(e.target.files)} />
+            <button className="sm" disabled={busy} onClick={() => file.current?.click()}>
+              Attach a document
+            </button>
+          </div>
+            </>
+          )}
+          {!canWrite && notes.length === 0 && docs.length === 0 && (
+            <div className="rowsub">Nothing recorded against this group yet.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

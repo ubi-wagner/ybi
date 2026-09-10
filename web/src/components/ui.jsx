@@ -96,12 +96,18 @@ export function Search({ value, onChange, placeholder = "Search" }) {
 }
 
 export function Table({ columns, children, footer }) {
+  /* A column is {label, align, width}. A bare string is accepted too, and
+     read as a left-aligned label: passing one used to render an empty header
+     cell, which is a silent failure — the table looked deliberate and told
+     the reader nothing. */
+  const cols = columns.map((c) =>
+    typeof c === "string" ? { label: c, align: "left" } : c);
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
-            {columns.map((c, i) => (
+            {cols.map((c, i) => (
               <th key={i} className={c.align === "left" ? "l" : ""} style={c.width ? { width: c.width } : undefined}>
                 {c.label}
               </th>

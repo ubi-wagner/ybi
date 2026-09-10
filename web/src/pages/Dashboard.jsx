@@ -67,6 +67,12 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="dash-seal">
+          {/* The reviewer's copy. A plain link rather than a fetch: the browser
+              streams it and names it, and the download is recorded server-side
+              against whoever asked for it. */}
+          <a className="btn" href={api.auditPackageUrl(data.period)} download>
+            Download audit package
+          </a>
           {rollup.sealed_at ? (
             <Pill tone="good">Sealed {when(rollup.sealed_at)}</Pill>
           ) : (
@@ -116,11 +122,15 @@ export default function Dashboard() {
 
       {/* ── Controls ─────────────────────────────────────────────── */}
       <Card title="Controls" aside="Every derived figure ties, or it does not ship">
-        <Table columns={["", "Control", "Variance"]}>
+        <Table columns={[
+          { label: "", width: 34, align: "left" },
+          { label: "Control", align: "left" },
+          { label: "Variance" },
+        ]}>
           {controls.map((c, i) => (
             <tr key={i}>
-              <td><Tick state={c.ties ? "done" : "failed"} /></td>
-              <td>{c.control}</td>
+              <td className="l"><Tick state={c.ties ? "done" : "failed"} /></td>
+              <td className="l">{c.control}</td>
               <td className="num">{Number(c.variance ?? 0).toFixed(2)}</td>
             </tr>
           ))}
@@ -137,7 +147,12 @@ export default function Dashboard() {
             No unclassified cost, no missing evidence, no blocking items.
           </Empty>
         ) : (
-          <Table columns={["", "Class", "Items", "Amount", ""]}>
+          <Table columns={[
+              { label: "", width: 34, align: "left" },
+              { label: "Class", align: "left" },
+              { label: "Items" }, { label: "Amount" },
+              { label: "", align: "left" },
+            ]}>
             {worklist.map((w) => {
               const [title, sub] = KIND[w.kind] || [w.kind, ""];
               return (
@@ -146,14 +161,14 @@ export default function Dashboard() {
                   className="row-clickable"
                   onClick={() => nav(`/worklist/${w.kind}`)}
                 >
-                  <td><Tick state={w.severity === "BLOCKING" ? "failed" : "flagged"} /></td>
-                  <td>
+                  <td className="l"><Tick state={w.severity === "BLOCKING" ? "failed" : "flagged"} /></td>
+                  <td className="l">
                     <div className="strong">{title}</div>
                     <div className="quiet small">{sub}</div>
                   </td>
                   <td className="num">{w.items}</td>
                   <td className="num">{money(w.amount)}</td>
-                  <td><Pill tone={SEV[w.severity]}>{w.severity}</Pill></td>
+                  <td className="l"><Pill tone={SEV[w.severity]}>{w.severity}</Pill></td>
                 </tr>
               );
             })}
@@ -166,13 +181,17 @@ export default function Dashboard() {
         {activity.length === 0 ? (
           <Empty mark="—" title="Nothing recorded yet" />
         ) : (
-          <Table columns={["When", "What", "Who", "Item", "Amount"]}>
+          <Table columns={[
+            { label: "When", align: "left" }, { label: "What", align: "left" },
+            { label: "Who", align: "left" }, { label: "Item", align: "left" },
+            { label: "Amount" },
+          ]}>
             {activity.map((a, i) => (
               <tr key={i}>
-                <td className="quiet small">{when(a.occurred_at)}</td>
-                <td><Pill>{a.kind}</Pill></td>
-                <td>{a.actor}</td>
-                <td>
+                <td className="l quiet small">{when(a.occurred_at)}</td>
+                <td className="l"><Pill>{a.kind}</Pill></td>
+                <td className="l">{a.actor}</td>
+                <td className="l">
                   <div className="strong ellipsis">{a.label || a.entity_id}</div>
                   {a.detail && <div className="quiet small ellipsis">{a.detail}</div>}
                 </td>

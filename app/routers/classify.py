@@ -388,6 +388,10 @@ def segment(body: SegmentIn, period: str = "2025",
             409, "This group is already segmented. Reverse the existing "
                  "segmentation before splitting it differently.")
 
+    # Identity comes from the session, exactly as it does for a decision.
+    # body.created_by is a label the client may send; it is not a claim about
+    # who did this.
+    created_by = actor.display_name or body.created_by
     parts = [Part(label=p.label, share=p.share, rationale=p.rationale,
                   citation=p.citation or "") for p in body.parts]
     plan = plan_segments({r["line_id"]: r["amount"] for r in rows}, parts)
@@ -404,7 +408,7 @@ def segment(body: SegmentIn, period: str = "2025",
                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (f"{batch_key}-{line_id[:12]}-{index}", line_id, period,
                      amount, part.label, part.rationale, part.citation or None,
-                     body.created_by, batch_key))
+                     created_by, batch_key))
         cur.execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
                                               after_state, reason)
                        VALUES (%s,'SEGMENT','ledger_group',%s,%s,%s)""",

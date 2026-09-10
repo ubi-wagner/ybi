@@ -396,3 +396,123 @@ tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
 .small { font-size: 12px; }
 .ellipsis { max-width: 46ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; }
+
+/* ── Certification ────────────────────────────────────────────────── */
+.cert-statement { background: var(--wash, #f4f6f5); border-left: 3px solid var(--accent, #0f6b64);
+  padding: 12px 14px; margin: 0 0 14px; font-size: 13.5px; line-height: 1.65;
+  border-radius: 0 7px 7px 0; }
+.cert-ack { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px;
+  line-height: 1.5; margin-bottom: 12px; cursor: pointer; }
+.cert-ack input { margin-top: 2px; }
+
+/* ── Help ─────────────────────────────────────────────────────────── */
+/* Two columns: contents that stays put, prose that does not run wide. A
+   manual read at 100 characters a line is a manual nobody finishes. */
+.help { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 40px;
+  align-items: start; padding-bottom: 64px; }
+.help-nav { position: sticky; top: 16px; display: grid; gap: 1px;
+  border-left: 1px solid var(--line, #e4e4e0); padding-left: 14px; }
+.help-nav-title { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted, #6b6b66); margin-bottom: 6px; }
+.help-nav a { font-size: 12.5px; color: var(--ink, #23231f); text-decoration: none;
+  padding: 3px 0; }
+.help-nav a:hover { color: var(--accent, #0f6b64); }
+
+.help-body { max-width: 68ch; }
+.help-body h1 { margin: 2px 0 6px; font-size: 25px; }
+.help-body h2 { margin: 38px 0 10px; font-size: 17px; padding-top: 14px;
+  border-top: 1px solid var(--line, #eee); scroll-margin-top: 16px; }
+.help-body h3 { margin: 22px 0 6px; font-size: 14px; }
+.help-body p, .help-body li { font-size: 14px; line-height: 1.68; }
+.help-body ol, .help-body ul { padding-left: 20px; }
+.help-body li { margin: 5px 0; }
+.help-body .lede { font-size: 15.5px; line-height: 1.62; color: var(--muted, #55554f); }
+.help-body code { font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12.5px; background: var(--wash, #f2f4f3); padding: 1px 5px;
+  border-radius: 4px; }
+
+.help-shot { margin: 16px 0 22px; }
+.help-shot img { width: 100%; display: block; border: 1px solid var(--line, #e0e0dc);
+  border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); background: #fff; }
+.help-shot figcaption { font-size: 12px; color: var(--muted, #6b6b66);
+  margin-top: 7px; }
+
+.help-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px;
+  font-size: 13px; }
+.help-table th { text-align: left; font-size: 11px; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--muted, #6b6b66);
+  border-bottom: 1px solid var(--line, #ddd); padding: 6px 10px 5px; }
+.help-table td { padding: 7px 10px; border-bottom: 1px solid var(--line, #f0f0ec);
+  vertical-align: top; line-height: 1.55; }
+
+.callout { background: var(--wash, #f4f6f5); border: 1px solid var(--line, #e4e4e0);
+  border-left: 3px solid var(--accent, #0f6b64); border-radius: 0 8px 8px 0;
+  padding: 12px 14px; margin: 16px 0; }
+.callout p { margin: 0; font-size: 13.5px; }
+.callout p + p { margin-top: 8px; }
+
+.faq { border-bottom: 1px solid var(--line, #eee); }
+.faq-q { display: flex; align-items: baseline; gap: 9px; width: 100%;
+  background: none; border: 0; padding: 11px 0; font: inherit; font-size: 14px;
+  text-align: left; cursor: pointer; color: var(--ink, #23231f); }
+.faq-q:hover { color: var(--accent, #0f6b64); }
+.faq-mark { color: var(--accent, #0f6b64); font-weight: 700; width: 10px; }
+.faq-a { padding: 0 0 14px 19px; }
+.faq-a p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.65; }
+.faq-a p:last-child { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .help { grid-template-columns: 1fr; gap: 20px; }
+  .help-nav { position: static; }
+}
+
+/* ── Evidence ─────────────────────────────────────────────────────── */
+.dropzone { border: 1.5px dashed var(--line, #d5d5cf); border-radius: 10px;
+  padding: 26px 20px; text-align: center; cursor: pointer;
+  background: var(--wash, #fafaf8); transition: border-color .12s, background .12s; }
+.dropzone:hover, .dropzone.on { border-color: var(--accent, #0f6b64);
+  background: #f1f6f5; }
+.upload-form { display: grid; gap: 12px; margin-top: 16px;
+  grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+.upload-form select, .upload-form input { width: 100%; padding: 8px 10px;
+  border: 1px solid var(--line, #ddd); border-radius: 7px; font: inherit;
+  background: #fff; }
+.upload-actions { grid-column: 1 / -1; display: flex; gap: 10px; }
+.dash-seal { display: flex; align-items: center; gap: 10px; }
+
+/* ── Notes and documents on a group ───────────────────────────────── */
+.group-record { margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--line, #eee); }
+.linkish { background: none; border: 0; padding: 0; font: inherit; font-size: 12.5px;
+  color: var(--muted, #6b6b66); cursor: pointer; }
+.linkish:hover { color: var(--accent, #0f6b64); }
+.group-record-body { margin-top: 12px; display: grid; gap: 10px; }
+.note-list, .doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.note-list li { background: var(--wash, #faf8f3); border-left: 2px solid #c9a227;
+  padding: 8px 11px; border-radius: 0 6px 6px 0; font-size: 13px; line-height: 1.55; }
+.doc-list li { font-size: 12.5px; }
+.note-input { width: 100%; padding: 9px 11px; border: 1px solid var(--line, #ddd);
+  border-radius: 7px; font: inherit; font-size: 13px; resize: vertical; }
+.group-record-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.note-flag { display: flex; align-items: center; gap: 6px; font-size: 12px;
+  color: var(--muted, #6b6b66); }
+
+/* A long qualified account name should not push the money off the screen.
+   The wrap scrolls, but a figure you have to scroll to is a figure nobody
+   reads. */
+tbody td.trunc { max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Splitting a group ────────────────────────────────────────────── */
+.splitter { margin-top: 16px; padding: 14px; border: 1px solid var(--rule, #e4e4e0);
+  border-radius: 9px; background: var(--surface-sunk, #fafaf8); display: grid; gap: 9px; }
+.splitter-head { display: grid; gap: 3px; }
+.split-part { display: grid; gap: 8px; align-items: center;
+  grid-template-columns: 1.1fr 72px 2fr 1fr auto; }
+.split-part input { padding: 7px 9px; border: 1px solid var(--rule, #ddd);
+  border-radius: 6px; font: inherit; font-size: 12.5px; background: #fff; min-width: 0; }
+.split-share { text-align: right; font-variant-numeric: tabular-nums; }
+.splitter-foot { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+@media (max-width: 1100px) {
+  .split-part { grid-template-columns: 1fr 72px; }
+  .split-part input:nth-child(3), .split-part input:nth-child(4) { grid-column: 1 / -1; }
+}

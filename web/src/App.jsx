@@ -5,8 +5,11 @@ import { api, Unauthorized } from "./api.js";
 import SignIn from "./pages/SignIn.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
+import Certify from "./pages/Certify.jsx";
+import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
 import Imports from "./pages/Imports.jsx";
+import Evidence from "./pages/Evidence.jsx";
 import Chart from "./pages/Chart.jsx";
 import Lanes from "./pages/Lanes.jsx";
 import Rates from "./pages/Rates.jsx";
@@ -16,14 +19,21 @@ import Awards from "./pages/Awards.jsx";
    package. Someone who has seen the workpapers already knows where they are.
    The dashboard has no schedule letter because it prints as nothing — it is
    where the work is picked up, not part of the package. */
+const EMPLOYEE_TABS = [
+  ["/certify",   "My effort",  "·"],
+  ["/help",      "Help",       "?"],
+];
+
 const TABS = [
   ["/",          "Dashboard",  "·"],
   ["/imports",   "Import",     "A"],
   ["/chart",     "Chart",      "H"],
   ["/classify",  "Classify",   "B"],
+  ["/evidence",  "Evidence",   "E"],
   ["/lanes",     "Lanes",      "C"],
   ["/rates",     "Rates",      "D"],
   ["/awards",    "Awards",     "F"],
+  ["/help",      "Help",       "?"],
 ];
 
 export default function App() {
@@ -58,6 +68,11 @@ export default function App() {
   if (actor === undefined) return null;
   if (actor === null) return <SignIn onSignedIn={setActor} />;
 
+  /* An employee account exists to certify one person's effort and sees
+     nothing else. Giving it the controller's tabs would show a wall of 403s
+     and imply the ledger was theirs to look at. */
+  const isEmployee = actor.role === "EMPLOYEE";
+
   async function signOut() {
     try { await api.logout(); } catch { /* the cookie is going either way */ }
     setActor(null);
@@ -77,7 +92,7 @@ export default function App() {
         </header>
 
         <nav className="tabs">
-          {TABS.map(([to, label, sched]) => (
+          {(isEmployee ? EMPLOYEE_TABS : TABS).map(([to, label, sched]) => (
             <NavLink
               key={to}
               to={to}
@@ -91,11 +106,14 @@ export default function App() {
         </nav>
 
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={isEmployee ? <Certify /> : <Dashboard />} />
+          <Route path="/certify" element={<Certify />} />
+          <Route path="/help" element={<Help />} />
           <Route path="/worklist/:kind" element={<Worklist />} />
           <Route path="/imports" element={<Imports />} />
           <Route path="/chart" element={<Chart />} />
-          <Route path="/classify" element={<ClassifyQueue />} />
+          <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
+          <Route path="/evidence" element={<Evidence actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />
           <Route path="/awards" element={<Awards />} />
