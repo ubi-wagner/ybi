@@ -29,6 +29,8 @@ from pydantic import BaseModel, Field
 
 from app.auth import require_controller, require_reader
 from app.audit import record
+from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
+                       Pool)
 from app.auth import Actor
 from app.db import execute, one, query, transaction
 from app.domain.segment import Part, SegmentError, plan_segments
@@ -36,12 +38,13 @@ from app.domain.segment import Part, SegmentError, plan_segments
 router = APIRouter(prefix="/classify", tags=["classify"],
                    dependencies=[Depends(require_reader)])
 
-POOLS = ["DIRECT", "FRINGE", "OVERHEAD", "G&A", "RENTAL_DIRECT",
-         "FUNDRAISING", "UNALLOWABLE", "EXCLUDED"]
-FUNCTIONS = ["PROGRAM", "MANAGEMENT_AND_GENERAL", "FUNDRAISING", "NOT_APPLICABLE"]
-FEDERAL = ["ALLOWABLE", "UNALLOWABLE", "NOT_APPLICABLE", "PENDING"]
-GRADES = ["UNSUPPORTED", "TEST_ASSUMPTION", "MANAGEMENT_RECONSTRUCTION",
-          "CORROBORATED", "VERIFIED"]
+# The vocabulary endpoint serves these to the UI. Derived from the same enums
+# the request models validate against, so the list a person is offered and the
+# list the server accepts cannot drift apart.
+POOLS = [p.value for p in Pool]
+FUNCTIONS = [f.value for f in Function990]
+FEDERAL = [f.value for f in FederalTreatment]
+GRADES = [g.value for g in EvidenceGrade]
 
 
 class GroupOut(BaseModel):
@@ -62,11 +65,13 @@ class GroupOut(BaseModel):
 
 class DecideIn(BaseModel):
     group_keys: list[str] = Field(..., min_length=1)
-    pool: str
-    function_990: str
-    federal: str
+    # Typed against the database's own enums, so a wrong value is a 422 that
+    # names what is allowed rather than a 500 from the driver.
+    pool: Pool
+    function_990: Function990
+    federal: FederalTreatment
     objective_id: str | None = None
-    grade: str = "CORROBORATED"
+    grade: EvidenceGrade = EvidenceGrade.CORROBORATED
     rationale: str = ""
     citation: str | None = None
     evidence_ids: list[str] = []
@@ -409,13 +414,12 @@ def segment(body: SegmentIn, period: str = "2025",
                     (f"{batch_key}-{line_id[:12]}-{index}", line_id, period,
                      amount, part.label, part.rationale, part.citation or None,
                      created_by, batch_key))
-        cur.execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
-                                              after_state, reason)
-                       VALUES (%s,'SEGMENT','ledger_group',%s,%s,%s)""",
-                    (actor.display_name, body.group_key, body.model_dump_json(),
-                     "; ".join(p.rationale for p in parts)))
+        # One entry, through record(), which carries the role and the session
+        # as well as the name. There was a hand-written INSERT here as well,
+        # so every split logged twice — once properly and once as a row that
+        # could not be traced to a session.
         record(actor, "SEGMENT", "ledger_group", body.group_key,
-               after={"batch_key": batch_key,
+               after={"batch_key": batch_key, "request": body.model_dump_json(),
                       "parts": [p.label for p in parts]},
                reason="; ".join(p.rationale for p in parts), cursor=cur)
 
@@ -447,11 +451,8 @@ def reverse_segment(batch_key: str, reason: str, reversed_by: str = "",
         reversed_ids = [r["segment_id"] for r in cur.fetchall()]
         if not reversed_ids:
             raise HTTPException(404, "No live segmentation with that key.")
-        cur.execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
-                                              reason)
-                       VALUES (%s,'SEGMENT_REVERSE','ledger_segment',%s,%s)""",
-                    (reversed_by, batch_key, reason))
         record(actor, "SEGMENT_REVERSE", "ledger_segment", batch_key,
+               after={"segments_reversed": len(reversed_ids)},
                reason=reason, cursor=cur)
     return {"batch_key": batch_key, "segments_reversed": len(reversed_ids)}
 

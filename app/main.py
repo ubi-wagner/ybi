@@ -96,6 +96,88 @@ async def segment_error_handler(_, exc: SegmentError):
     return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
+#: Constraint names are precise and unreadable. Where a person can actually
+#: hit one, say what it means; where they cannot, name the constraint so
+#: whoever reads the log has something to search for.
+CONSTRAINT_MESSAGES = {
+    "one_live_entry_per_day_objective":
+        "There is already time recorded against that objective on that day.",
+    "one_live_submission_per_period":
+        "This timesheet is already submitted for the period.",
+    "timesheet_hours_sane":
+        "Hours have to be more than zero and no more than twenty-four.",
+    "as_worked_must_be_prompt":
+        "A record made as the work was done has to be entered within a week "
+        "of it. Say what you are working from instead.",
+    "employment_hours_sane":
+        "Contracted hours have to be between one and eighty a week.",
+    "employment_span_ordered":
+        "The end of an employment span cannot precede its start.",
+    "one_live_decision_per_line":
+        "That line already carries a live decision.",
+    "one_live_decision_per_unit":
+        "That analytical unit already carries a live decision.",
+    "reconstruction_needs_rationale":
+        "A reconstructed figure has to carry its reasoning.",
+    "reconstruction_not_unsupported":
+        "A reconstruction cannot be offered while the evidence behind it is "
+        "graded unsupported.",
+    "certification_statement_present":
+        "A certification has to carry the words that were signed.",
+}
+
+
+def _constraint_message(exc: Exception) -> str:
+    name = getattr(getattr(exc, "diag", None), "constraint_name", None) or ""
+    if name in CONSTRAINT_MESSAGES:
+        return CONSTRAINT_MESSAGES[name]
+    if name:
+        return f"The database refused this write: {name}."
+    return "The database refused this write."
+
+
+@app.exception_handler(psycopg.errors.UniqueViolation)
+async def unique_handler(_, exc: psycopg.errors.UniqueViolation):
+    """A duplicate is a conflict, not a server fault.
+
+    Several of the invariants here are partial unique indexes — one live
+    decision per line, one live timesheet entry per day and objective — so
+    hitting one is a normal outcome of two people working at once, and the
+    screen should say so rather than showing a 500.
+    """
+    log.info("unique violation: %s", _constraint_message(exc))
+    return JSONResponse(status_code=409,
+                        content={"error": "CONFLICT",
+                                 "message": _constraint_message(exc)})
+
+
+@app.exception_handler(psycopg.errors.CheckViolation)
+async def check_handler(_, exc: psycopg.errors.CheckViolation):
+    return JSONResponse(status_code=422,
+                        content={"error": "REFUSED",
+                                 "message": _constraint_message(exc)})
+
+
+@app.exception_handler(psycopg.errors.ForeignKeyViolation)
+async def fk_handler(_, exc: psycopg.errors.ForeignKeyViolation):
+    """Something referred to a row that does not exist — an objective that is
+    not in the chart, a period that was never opened."""
+    return JSONResponse(
+        status_code=422,
+        content={"error": "UNKNOWN_REFERENCE",
+                 "message": "That refers to something the system does not "
+                            "have on file. Check the objective, period or "
+                            "account it names."})
+
+
+@app.exception_handler(psycopg.errors.NotNullViolation)
+async def not_null_handler(_, exc: psycopg.errors.NotNullViolation):
+    column = getattr(getattr(exc, "diag", None), "column_name", "") or "a field"
+    return JSONResponse(status_code=422,
+                        content={"error": "MISSING",
+                                 "message": f"{column} is required."})
+
+
 @app.exception_handler(psycopg.errors.RaiseException)
 async def gate_handler(_, exc: psycopg.errors.RaiseException):
     """A schema gate declining a write is an expected outcome.

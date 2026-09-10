@@ -180,8 +180,19 @@ def main() -> int:
                     f"({pkg.status_code}, {len(pkg.content)} bytes)")
 
         reg = auditor.get("/api/evidence", params={"period": "2025"})
-        if reg.status_code == 200 and reg.json():
+        if reg.status_code != 200:
+            finding(f"auditor could not read the document register "
+                    f"({reg.status_code})")
+        elif not reg.json():
+            # An empty register is not a refusal, and calling it one would be
+            # a finding against a system that did nothing wrong. It does mean
+            # the retrieval check below cannot run, and saying so is the
+            # honest answer rather than passing on an empty set.
+            raise CannotRun("no documents on file, so retrieval cannot be "
+                            "proved. Run scripts/tom_session.py first.")
+        else:
             first = reg.json()[0]["evidence_id"]
+            ok(f"reads the document register — {len(reg.json())} documents")
             doc = auditor.get(f"/api/evidence/{first}/file")
             if doc.status_code == 200 and doc.content:
                 ok(f"retrieved a document itself — {first}, {len(doc.content):,} bytes")
@@ -189,9 +200,6 @@ def main() -> int:
                 finding(f"auditor could not retrieve {first} ({doc.status_code}); "
                         f"a register that cannot produce the document is a claim, "
                         f"not evidence")
-        else:
-            finding(f"auditor could not read the document register "
-                    f"({reg.status_code})")
 
         up = auditor.post("/api/evidence/note",
                           json={"target_type": "LEDGER_GROUP", "target_id": "probe",

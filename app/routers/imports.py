@@ -28,16 +28,22 @@ router = APIRouter(prefix="/imports", tags=["imports"],
 STORAGE = Path(settings.storage_dir)
 
 
-@router.post("/upload",
-              dependencies=[Depends(require_controller)])
+@router.post("/upload")
 async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
-                 period: str = "2025", uploaded_by: str = "unknown") -> dict:
+                 period: str = "2025", uploaded_by: str = "unknown",
+                 actor: Actor = Depends(require_controller)) -> dict:
+    # Identity comes from the session. uploaded_by is a label for a file
+    # received on someone else's behalf, not a claim about who did this.
+    uploaded_by = actor.display_name or uploaded_by
     raw = await file.read()
     sha = hashlib.sha256(raw).hexdigest()
 
     dup = one("""SELECT batch_id, status FROM staging_batch
                   WHERE period=%s AND report=%s AND sha256=%s""", (period, report, sha))
     if dup:
+        record(actor, "IMPORT_UPLOAD", "staging_batch", str(dup["batch_id"]),
+               after={"report": report, "sha256": sha, "deduplicated": True},
+               reason=f"{file.filename} — already on file")
         return {"batch_id": str(dup["batch_id"]), "status": dup["status"],
                 "note": "This exact file has already been uploaded."}
 
@@ -51,15 +57,24 @@ async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
                  VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING batch_id""",
               (period, report, "qbo-gl-v1", file.filename, str(dest),
                sha, len(raw), uploaded_by))
+    record(actor, "IMPORT_UPLOAD", "staging_batch", str(row["batch_id"]),
+           after={"report": report, "sha256": sha, "byte_size": len(raw),
+                  "original_name": file.filename},
+           reason=f"{file.filename} received")
     return {"batch_id": str(row["batch_id"]), "status": "UPLOADED", "sha256": sha}
 
 
-@router.post("/{batch_id}/parse",
-              dependencies=[Depends(require_controller)])
-def parse(batch_id: str) -> dict:
+@router.post("/{batch_id}/parse")
+def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
     b = one("SELECT * FROM staging_batch WHERE batch_id=%s", (batch_id,))
     if not b:
         raise HTTPException(404, "batch not found")
+    # A parse writes: it can replace every pl_account row for the period. That
+    # is a change to the cost scope every classification is then measured in,
+    # so it belongs on the record whatever its outcome.
+    record(actor, "IMPORT_PARSE", "staging_batch", batch_id,
+           after={"report": b["report"], "original_name": b["original_name"]},
+           reason=f"parsing {b['original_name']}")
     path = Path(b["storage_uri"])
 
     if b["report"] == "PROFIT_LOSS":

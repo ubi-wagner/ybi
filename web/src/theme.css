@@ -590,3 +590,27 @@ tbody tr.ts-foot td { border-top: 1px solid var(--ink); border-bottom: none;
 .ts-withdraw input { flex: 1; min-width: 220px; padding: 8px 10px;
   border: 1px solid var(--rule); border-radius: 7px; font: inherit;
   background: var(--surface); }
+
+/* ── Month strip and employment terms ─────────────────────────────── */
+.month-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; }
+.month-cell { display: grid; gap: 3px; padding: 8px 6px; border: 1px solid var(--rule-soft);
+  border-radius: 7px; background: var(--surface); font: inherit; cursor: pointer;
+  text-align: left; }
+.month-cell:hover { border-color: var(--rule); }
+.month-name { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--muted); }
+.month-hours { font-size: 15px; }
+.month-bar-track { height: 3px; background: var(--rule-soft); border-radius: 2px; }
+.month-bar { display: block; height: 3px; background: var(--accent); border-radius: 2px; }
+.month-bar.short { background: var(--warn); }
+.modal.wide { width: min(560px, 100%); }
+.terms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px;
+  margin-top: 14px; }
+.terms-grid > *:last-child { grid-column: 1 / -1; }
+.terms-grid select, .terms-grid input { width: 100%; padding: 8px 10px;
+  border: 1px solid var(--rule); border-radius: 7px; font: inherit;
+  background: var(--surface); color: var(--ink); }
+.span-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.span-list li { font-size: 13px; padding: 8px 11px; background: var(--surface-sunk);
+  border-radius: 6px; }
+@media (max-width: 900px) { .month-strip { grid-template-columns: repeat(4, 1fr); } }

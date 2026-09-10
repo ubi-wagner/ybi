@@ -18,16 +18,21 @@ router = APIRouter(prefix="/rates", tags=["rates"],
 
 
 class SealIn(BaseModel):
-    sealed_by: str
+    sealed_by: str = ""
     note: str = ""
 
 
-@router.post("/seal",
-              dependencies=[Depends(require_controller)])
-def seal(body: SealIn, period: str = "2025") -> dict:
+@router.post("/seal")
+def seal(body: SealIn, period: str = "2025",
+         actor: Actor = Depends(require_controller)) -> dict:
     """Hash every live classification and freeze the set. After this the rate
     phase unlocks and classifications can only change by unsealing, with a
-    reason, which supersedes any rate already computed."""
+    reason, which supersedes any rate already computed.
+
+    The seal is the moment the whole guarantee rests on, so it is recorded as
+    the signed-in controller and body.sealed_by is only a label. An identity
+    the client supplies is not evidence of who did this.
+    """
     st = one("""SELECT set_id FROM decision_set WHERE period=%s AND seal_hash IS NULL
                  ORDER BY set_id LIMIT 1""", (period,))
     if not st:
@@ -41,9 +46,20 @@ def seal(body: SealIn, period: str = "2025") -> dict:
                   FROM decision d
                  WHERE d.set_id=%s AND d.reversed_at IS NULL) x
     """, (st["set_id"],))
+    sealed_by = actor.display_name or body.sealed_by
+    counts = one("""SELECT count(*) AS decisions,
+                           count(*) FILTER (WHERE grade IN ('UNSUPPORTED','TEST_ASSUMPTION'))
+                             AS weak
+                      FROM decision
+                     WHERE set_id = %s AND reversed_at IS NULL""", (st["set_id"],))
     execute("""UPDATE decision_set SET seal_hash=%s, sealed_at=now(), sealed_by=%s
-                WHERE set_id=%s""", (h["seal"], body.sealed_by, st["set_id"]))
-    return {"set_id": str(st["set_id"]), "seal_hash": h["seal"]}
+                WHERE set_id=%s""", (h["seal"], sealed_by, st["set_id"]))
+    record(actor, "SEAL", "decision_set", str(st["set_id"]),
+           after={"seal_hash": h["seal"], "decisions": counts["decisions"],
+                  "weakly_graded": counts["weak"]},
+           reason=body.note.strip() or "decision set sealed")
+    return {"set_id": str(st["set_id"]), "seal_hash": h["seal"],
+            "decisions": counts["decisions"]}
 
 
 @router.post("/unseal")

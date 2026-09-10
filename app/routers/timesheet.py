@@ -23,9 +23,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.audit import record
-from app.auth import Actor, Role, current_actor
+from app.auth import Actor, Role, current_actor, require_controller
 from app.db import one, query, transaction
 from app.settings import settings
+from app.vocab import EmploymentStatus, TimeBasis
 
 router = APIRouter(prefix="/timesheet", tags=["timesheet"])
 
@@ -52,13 +53,23 @@ class EntryIn(BaseModel):
     work_date: date
     objective_id: str
     hours: float = Field(gt=0, le=24)
-    basis: str
+    basis: TimeBasis
     note: str = ""
 
 
 class SubmitIn(BaseModel):
     weekly_hours: float = Field(gt=0, le=80, default=40)
     acknowledged: bool = False
+
+
+class EmploymentIn(BaseModel):
+    employee_key: str
+    status: EmploymentStatus
+    weekly_hours: float = Field(gt=0, le=80)
+    employed_from: date
+    employed_to: date | None = None
+    source_document: str = ""
+    note: str = ""
 
 
 class WithdrawIn(BaseModel):
@@ -177,10 +188,6 @@ def put_entry(body: EntryIn, period: str = None,
         raise HTTPException(
             422, "That day has not happened yet. Time is recorded after it is "
                  "worked, not before.")
-
-    valid = {b for b, _, _ in BASES}
-    if body.basis not in valid:
-        raise HTTPException(422, f"Unknown basis {body.basis!r}.")
 
     lag = (date.today() - body.work_date).days
     if body.basis == "AS_WORKED" and lag > CONTEMPORANEOUS_DAYS:
@@ -320,20 +327,36 @@ def submit(body: SubmitIn, period: str = None,
     if not row or not row["entered_hours"]:
         raise HTTPException(422, "There is no time on this sheet to submit.")
 
-    weeks = float(row["weeks_in_period"])
-    expected = round(weeks * body.weekly_hours, 2)
     entered = float(row["entered_hours"])
+
+    # The denominator is employment terms, not a figure supplied by the person
+    # being measured. A full-time year is 2,080 hours and somebody who started
+    # in July is owed half of it; asking everyone for a full year makes the
+    # part-year employee — whose time is hardest to reconstruct — the one who
+    # cannot record it.
+    if row["terms_known"]:
+        expected = float(row["expected_hours"])
+        weekly = float(row["weekly_hours"])
+        basis = (f"{row['statuses']}, {weekly:g} hours a week, "
+                 f"{row['employed_from']} to {row['employed_to']}")
+    else:
+        raise HTTPException(
+            422,
+            "Nobody has recorded your employment terms for this period, so "
+            "there is nothing to measure a complete year against. Ask the "
+            "controller to record your status, your contracted hours and the "
+            "dates you worked, and then submit.")
+
     cover = round(entered / expected, 4) if expected else 0
 
     if cover < MIN_COVERAGE:
         raise HTTPException(
             422,
-            f"The sheet holds {entered:,.1f} hours, which is "
-            f"{cover:.0%} of the {expected:,.0f} hours a {body.weekly_hours:g}"
-            f"-hour week over this period implies. A part-filled sheet cannot "
-            f"stand for the whole year — it would say the objectives you have "
-            f"reached so far were all of it. Fill in the rest, or record the "
-            f"time you were not working as paid leave.")
+            f"The sheet holds {entered:,.1f} hours against the {expected:,.0f} "
+            f"your terms imply ({basis}), which is {cover:.0%}. A part-filled "
+            f"sheet cannot stand for the period — it would say the objectives "
+            f"you have reached so far were all of it. Fill in the rest, or "
+            f"record the time you were not working as paid leave.")
 
     with transaction() as cur:
         cur.execute("""INSERT INTO timesheet_submission
@@ -342,7 +365,7 @@ def submit(body: SubmitIn, period: str = None,
                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                        ON CONFLICT DO NOTHING
                        RETURNING submission_id""",
-                    (period, key, body.weekly_hours, entered, expected, cover,
+                    (period, key, weekly, entered, expected, cover,
                      actor.actor_id, actor.display_name))
         got = cur.fetchone()
         if not got:
@@ -351,7 +374,7 @@ def submit(body: SubmitIn, period: str = None,
                str(got["submission_id"]),
                after={"period": period, "entered_hours": entered,
                       "expected_hours": expected, "coverage": cover},
-               reason=f"{cover:.0%} of a {body.weekly_hours:g}-hour week",
+               reason=f"{cover:.0%} of {expected:,.0f} hours — {basis}",
                cursor=cur)
     return {"submitted": True, "coverage": cover, "entered_hours": entered,
             "expected_hours": expected}
@@ -386,6 +409,116 @@ def withdraw(body: WithdrawIn, period: str = None,
                str(got[0]["submission_id"]), reason=body.reason.strip()[:400],
                cursor=cur)
     return {"withdrawn": True}
+
+
+@router.get("/employment")
+def employment(period: str = None, employee_key: str = None,
+               actor: Actor = Depends(current_actor)) -> dict:
+    """The terms a timesheet is measured against."""
+    period = period or settings.period
+    key = _employee(actor, employee_key)
+    spans = query("""SELECT employment_id, status::text AS status, weekly_hours,
+                            employed_from, employed_to, source_document, note,
+                            recorded_name, recorded_at
+                       FROM employment
+                      WHERE period = %s AND employee_key = %s
+                        AND superseded_at IS NULL
+                      ORDER BY employed_from""", (period, key))
+    expected = one("""SELECT * FROM v_employment_expected
+                       WHERE period = %s AND employee_key = %s""", (period, key))
+    return {"period": period, "employee_key": key, "spans": spans,
+            "expected": expected}
+
+
+@router.put("/employment")
+def put_employment(body: EmploymentIn, period: str = None,
+                   actor: Actor = Depends(require_controller)) -> dict:
+    """Record what somebody was employed to do, and when.
+
+    Payroll's fact, so the controller records it. Deliberately not the
+    employee's to set: it is the denominator their own timesheet is tested
+    against, and nobody should be able to move the bar they are being measured
+    at.
+
+    Terms that changed mid-year are two spans, not an edit. Overlapping spans
+    are refused at COMMIT, so closing the old one and opening the new one is a
+    single act.
+    """
+    period = period or settings.period
+    p_start, p_end = _period_bounds(period)
+    if body.employed_to and body.employed_to < body.employed_from:
+        raise HTTPException(422, "The end of the span is before its start.")
+    if body.employed_from > p_end or (body.employed_to or p_end) < p_start:
+        raise HTTPException(422, f"That span lies outside {period}.")
+
+    r = one("""INSERT INTO employment
+                 (period, employee_key, status, weekly_hours, employed_from,
+                  employed_to, source_document, note, recorded_by, recorded_name)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               RETURNING employment_id""",
+            (period, body.employee_key.upper(), body.status, body.weekly_hours,
+             body.employed_from, body.employed_to, body.source_document.strip(),
+             body.note.strip(), actor.actor_id, actor.display_name))
+    record(actor, "EMPLOYMENT", "employee", body.employee_key.upper(),
+           after={"status": body.status, "weekly_hours": body.weekly_hours,
+                  "from": str(body.employed_from),
+                  "to": str(body.employed_to) if body.employed_to else None},
+           reason=body.source_document.strip()[:400] or "employment terms recorded")
+    expected = one("""SELECT expected_hours FROM v_employment_expected
+                       WHERE period = %s AND employee_key = %s""",
+                   (period, body.employee_key.upper()))
+    return {"employment_id": r["employment_id"],
+            "expected_hours": expected["expected_hours"] if expected else None}
+
+
+@router.get("/roster")
+def roster(period: str = None,
+           actor: Actor = Depends(current_actor)) -> list[dict]:
+    """Everyone's timesheet at a glance. The controller's screen.
+
+    Reading is review, which is the controller's job; writing a timesheet
+    never is.
+    """
+    period = period or settings.period
+    if actor.role not in (Role.CONTROLLER, Role.AUDITOR, Role.ADMIN):
+        raise HTTPException(403, "The roster is for whoever reviews the record.")
+    return query("""
+        SELECT a.employee_key,
+               max(a.employee_name)                       AS employee_name,
+               max(a.payroll_wages)                       AS payroll_wages,
+               x.expected_hours, x.weekly_hours, x.statuses,
+               x.from_date AS employed_from, x.to_date AS employed_to,
+               (x.expected_hours IS NOT NULL)             AS terms_known,
+               c.entered_hours, c.chargeable_hours, c.leave_hours,
+               c.days_with_time, c.coverage, c.submitted_at,
+               s.certified, s.stale, s.signed_at, s.from_timesheet
+          FROM labor_allocation a
+          LEFT JOIN v_employment_expected x
+                 ON x.period = a.period AND x.employee_key = a.employee_key
+          LEFT JOIN v_timesheet_coverage c
+                 ON c.period = a.period AND c.employee_key = a.employee_key
+          LEFT JOIN v_certification_status s
+                 ON s.period = a.period AND s.employee_key = a.employee_key
+         WHERE a.period = %s
+         GROUP BY a.employee_key, x.expected_hours, x.weekly_hours, x.statuses,
+                  x.from_date, x.to_date, c.entered_hours, c.chargeable_hours,
+                  c.leave_hours, c.days_with_time, c.coverage, c.submitted_at,
+                  s.certified, s.stale, s.signed_at, s.from_timesheet
+         ORDER BY max(a.payroll_wages) DESC""", (period,))
+
+
+@router.get("/months")
+def months(period: str = None, employee_key: str = None,
+           actor: Actor = Depends(current_actor)) -> list[dict]:
+    """Entered against expected, month by month — where the gap actually is."""
+    period = period or settings.period
+    key = _employee(actor, employee_key)
+    return query("""SELECT month_start, month_label, entered_hours,
+                           chargeable_hours, leave_hours, days_with_time,
+                           expected_hours, coverage
+                      FROM v_timesheet_month
+                     WHERE period = %s AND employee_key = %s
+                     ORDER BY month_start""", (period, key))
 
 
 @router.get("/summary")
@@ -434,6 +567,11 @@ def summary(period: str = None, employee_key: str = None,
 
     cover = one("""SELECT * FROM v_timesheet_coverage
                     WHERE period = %s AND employee_key = %s""", (period, key))
+    by_month = query("""SELECT month_label, entered_hours, expected_hours,
+                               coverage, days_with_time
+                          FROM v_timesheet_month
+                         WHERE period = %s AND employee_key = %s
+                         ORDER BY month_start""", (period, key))
 
     total = sum(float(r["hours"]) for r in dist)
     return {"period": period, "employee_key": key,
@@ -442,4 +580,5 @@ def summary(period: str = None, employee_key: str = None,
             "distribution": dist, "variance": variance,
             "effective": effective, "status": status,
             "coverage": cover, "min_coverage": MIN_COVERAGE,
+            "months": by_month,
             "submitted": bool(cover and cover["submitted_at"])}

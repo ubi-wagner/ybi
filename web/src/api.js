@@ -43,6 +43,11 @@ export const api = {
   putTime: (body) => req("/timesheet/entry", { method: "POST", body: JSON.stringify(body) }),
   removeTime: (body) =>
     req("/timesheet/entry/remove", { method: "POST", body: JSON.stringify(body) }),
+  timesheetRoster: (period = "2025") => req(`/timesheet/roster?period=${period}`),
+  timesheetMonths: (params) => req("/timesheet/months?" + new URLSearchParams(params || {})),
+  employment: (params) => req("/timesheet/employment?" + new URLSearchParams(params || {})),
+  putEmployment: (body) =>
+    req("/timesheet/employment", { method: "PUT", body: JSON.stringify(body) }),
   timesheetCoverage: (params) =>
     req("/timesheet/coverage?" + new URLSearchParams(params || {})),
   submitTimesheet: (body) =>

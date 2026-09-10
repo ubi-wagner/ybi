@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import { Card, Empty, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
+import TimeRoster from "./TimeRoster.jsx";
 
 /*
   The employee's own record of their own time.
@@ -63,6 +64,18 @@ function monthGrid(year, month) {
 }
 
 export default function Timesheet({ actor }) {
+  /* An account with no employee behind it — the controller, the auditor — has
+     no timesheet of its own. It gets the roster instead, and can open anyone's
+     sheet from there to read. */
+  const [viewing, setViewing] = useState(null);
+  if (!actor?.employee_key && !viewing) {
+    return <TimeRoster onOpen={setViewing} />;
+  }
+  return <Sheet actor={actor} viewing={viewing}
+                onBack={() => setViewing(null)} />;
+}
+
+function Sheet({ actor, viewing, onBack }) {
   const toast = useToast();
   const [mode, setMode] = useState("week");
   const [vocab, setVocab] = useState(null);
@@ -81,17 +94,19 @@ export default function Timesheet({ actor }) {
     ? { start: iso(wkStart), end: iso(addDays(wkStart, 6)) }
     : { start: iso(new Date(year, month, 1)), end: iso(new Date(year, month + 1, 0)) };
 
+  const who = viewing ? { employee_key: viewing } : {};
+
   const load = useCallback(async () => {
     try {
       const [d, s] = await Promise.all([
-        api.timesheetEntries(range),
-        api.timesheetSummary(),
+        api.timesheetEntries({ ...range, ...who }),
+        api.timesheetSummary(who),
       ]);
       setData(d); setSummary(s); setError("");
     } catch (e) {
       setError(String(e.message || e));
     }
-  }, [range.start, range.end]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [range.start, range.end, viewing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { api.timesheetObjectives().then(setVocab).catch(() => {}); }, []);
   useEffect(() => { load(); }, [load]);
@@ -153,12 +168,15 @@ export default function Timesheet({ actor }) {
     <div className="dash">
       <div className="dash-head">
         <div>
-          <h1>Timesheet</h1>
+          <h1>{viewing ? `${viewing}'s timesheet` : "Timesheet"}</h1>
           <p className="quiet">
             {data.employee_key} · {data.period} ·{" "}
             {editable
               ? "your own record of your own time"
-              : "read only — this is somebody else's record"}
+              : "read only — a timesheet is only ever kept by the person whose time it is"}
+            {viewing && (
+              <>{" · "}<button className="linkish" onClick={onBack}>back to the roster</button></>
+            )}
           </p>
         </div>
         <div className="dash-seal">
@@ -179,6 +197,32 @@ export default function Timesheet({ actor }) {
                 note={`${range.start} to ${range.end}`} />
         </div>
       </Card>
+
+      {(summary?.months || []).some((m) => Number(m.expected_hours) > 0) && (
+        <Card title="Month by month"
+              aside="Where the gap is, rather than one number at the bottom">
+          <div className="month-strip">
+            {summary.months.map((m) => {
+              const cov = m.coverage === null ? null : Number(m.coverage);
+              return (
+                <button key={m.month_label} className="month-cell"
+                        onClick={() => { setMode("month");
+                                         setCursor(new Date(m.month_label.replace(" ", " 1, "))); }}>
+                  <span className="month-name">{m.month_label.slice(0, 3)}</span>
+                  <span className="month-hours num">{hours(m.entered_hours)}</span>
+                  <span className="month-bar-track">
+                    <span className={`month-bar ${cov !== null && cov < 0.9 ? "short" : ""}`}
+                          style={{ width: `${Math.min(100, (cov || 0) * 100)}%` }} />
+                  </span>
+                  <span className="quiet small">
+                    {cov === null ? "—" : `${(cov * 100).toFixed(0)}%`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       <div className="ts-bar">
         <Segmented value={mode} onChange={setMode}
@@ -400,7 +444,6 @@ export default function Timesheet({ actor }) {
    controller's reconstruction. So it says what it is claiming, in hours. */
 function SubmitCard({ summary, onDone }) {
   const toast = useToast();
-  const [weekly, setWeekly] = useState(40);
   const [ack, setAck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
@@ -409,16 +452,18 @@ function SubmitCard({ summary, onDone }) {
   const cov = summary?.coverage;
   const submitted = summary?.submitted;
   const entered = Number(cov?.entered_hours || 0);
-  const weeks = Number(cov?.weeks_in_period || 0);
-  const expected = weeks * weekly;
+  /* The denominator comes from employment terms, which are payroll's fact and
+     not the employee's to set. Without them there is nothing to measure a
+     complete period against, and the sheet cannot be submitted. */
+  const termsKnown = Boolean(cov?.terms_known);
+  const expected = Number(cov?.expected_hours || 0);
   const share = expected ? entered / expected : 0;
   const min = summary?.min_coverage ?? 0.9;
 
   async function submit() {
     setBusy(true);
     try {
-      const r = await api.submitTimesheet({ weekly_hours: Number(weekly),
-                                            acknowledged: true });
+      const r = await api.submitTimesheet({ acknowledged: true });
       toast(`Submitted — ${(r.coverage * 100).toFixed(0)}% of the period`);
       await onDone();
     } catch (e) {
@@ -480,18 +525,24 @@ function SubmitCard({ summary, onDone }) {
         allowed to speak for the whole period — it would say the objectives you
         have reached so far were all of it.
       </p>
-      <div className="stat-row">
-        <Stat label="On the sheet" size="lg" value={hours(entered)} note="hours" />
-        <Stat label="A year at" value={
-          <input className="ts-weekly num" value={weekly} inputMode="decimal"
-                 aria-label="Hours a week"
-                 onChange={(e) => setWeekly(e.target.value.replace(/[^0-9.]/g, ""))} />
-        } note="hours a week" />
-        <Stat label="Would be" value={hours(Math.round(expected))} note="hours" />
-        <Stat label="You have" value={`${(share * 100).toFixed(0)}%`}
-              tone={share < min ? "fail" : undefined}
-              note={share < min ? `${(min * 100).toFixed(0)}% needed` : "enough to submit"} />
-      </div>
+      {!termsKnown ? (
+        <p className="amt neg">
+          Nobody has recorded your employment terms for 2025, so there is
+          nothing to measure a complete period against. Ask the controller to
+          record your status, your contracted hours and the dates you worked.
+        </p>
+      ) : (
+        <div className="stat-row">
+          <Stat label="On the sheet" size="lg" value={hours(entered)} note="hours" />
+          <Stat label="Your terms"
+                value={`${Number(cov.weekly_hours)}h`}
+                note={`${String(cov.statuses).toLowerCase().replace(/_/g, " ")}, ${cov.employed_from} → ${cov.employed_to}`} />
+          <Stat label="Expected" value={hours(expected)} note="hours" />
+          <Stat label="You have" value={`${(share * 100).toFixed(0)}%`}
+                tone={share < min ? "fail" : undefined}
+                note={share < min ? `${(min * 100).toFixed(0)}% needed` : "enough to submit"} />
+        </div>
+      )}
       <label className="cert-ack">
         <input type="checkbox" checked={ack}
                onChange={(e) => setAck(e.target.checked)} />
@@ -500,7 +551,8 @@ function SubmitCard({ summary, onDone }) {
           including the time I was not working on any project.
         </span>
       </label>
-      <button className="btn primary" disabled={!ack || busy || share < min}
+      <button className="btn primary"
+              disabled={!ack || busy || !termsKnown || share < min}
               onClick={submit}>
         {busy ? "Submitting…" : "Submit the sheet"}
       </button>
