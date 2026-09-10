@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.db import close_pool, open_pool, run_migrations
+from app.domain.segment import SegmentError
 from app.routers import (auth, awards, chart, classify, evidence, health,
                          imports, lanes, rates)
 from app.settings import settings
@@ -66,6 +67,11 @@ for r in (health, auth, imports, chart, classify, lanes, rates, evidence, awards
 @app.exception_handler(ValueError)
 async def value_error_handler(_, exc: ValueError):
     # Domain validation failures are user-facing, not server faults.
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(SegmentError)
+async def segment_error_handler(_, exc: SegmentError):
     return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 

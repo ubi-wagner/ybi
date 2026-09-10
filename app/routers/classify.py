@@ -20,12 +20,16 @@ is reporting. Three rules shape the API:
 from __future__ import annotations
 
 from decimal import Decimal
+from uuid import uuid4
+
+from decimal import Decimal
 
 from fastapi import Depends, APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.auth import require_controller, require_reader
 from app.db import execute, one, query, transaction
+from app.domain.segment import Part, SegmentError, plan_segments
 
 router = APIRouter(prefix="/classify", tags=["classify"],
                    dependencies=[Depends(require_reader)])
@@ -334,3 +338,109 @@ def vocabulary() -> dict:
             "objectives": query("""SELECT objective_id, label, is_federal
                                      FROM cost_objective WHERE active
                                     ORDER BY objective_id""")}
+
+
+class PartIn(BaseModel):
+    label: str
+    share: Decimal
+    rationale: str
+    citation: str | None = None
+
+
+class SegmentIn(BaseModel):
+    group_key: str
+    parts: list[PartIn]
+    created_by: str
+
+
+@router.post("/segment",
+              dependencies=[Depends(require_controller)])
+def segment(body: SegmentIn, period: str = "2025") -> dict:
+    """Split a group's lines into analytically distinct parts.
+
+    The source ledger is untouched. Every line reconciles to the cent, or the
+    whole segmentation is refused at COMMIT — which is why this runs in one
+    transaction rather than line by line.
+    """
+    account, _, payee = body.group_key.partition("\x1f")
+    rows = query("""SELECT line_id, amount FROM ledger_line
+                     WHERE period=%s AND account=%s AND coalesce(payee,'')=%s""",
+                 (period, account, payee))
+    if not rows:
+        raise HTTPException(404, "No lines in that group.")
+
+    live = one("""SELECT count(*) AS n FROM ledger_segment s
+                   JOIN ledger_line l USING (line_id)
+                  WHERE l.period=%s AND l.account=%s AND coalesce(l.payee,'')=%s
+                    AND s.reversed_at IS NULL""", (period, account, payee))
+    if live and live["n"]:
+        raise HTTPException(
+            409, "This group is already segmented. Reverse the existing "
+                 "segmentation before splitting it differently.")
+
+    parts = [Part(label=p.label, share=p.share, rationale=p.rationale,
+                  citation=p.citation or "") for p in body.parts]
+    plan = plan_segments({r["line_id"]: r["amount"] for r in rows}, parts)
+
+    batch_key = f"SEG-{uuid4().hex[:12]}"
+    with transaction() as cur:
+        for line_id, entries in plan.by_line.items():
+            for index, amount in entries:
+                part = parts[index]
+                cur.execute(
+                    """INSERT INTO ledger_segment
+                         (segment_id, line_id, period, amount, label, rationale,
+                          citation, created_by, batch_key)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (f"{batch_key}-{line_id[:12]}-{index}", line_id, period,
+                     amount, part.label, part.rationale, part.citation or None,
+                     body.created_by, batch_key))
+        cur.execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
+                                              after_state, reason)
+                       VALUES (%s,'SEGMENT','ledger_group',%s,%s,%s)""",
+                    (body.created_by, body.group_key, body.model_dump_json(),
+                     "; ".join(p.rationale for p in parts)))
+
+    return {
+        "batch_key": batch_key,
+        "lines_segmented": len(plan.by_line),
+        "segments_created": plan.segment_count,
+        "group_total": str(plan.total()),
+        "by_part": [{"label": p.label, "share": str(p.share),
+                     "amount": str(plan.part_total(i))}
+                    for i, p in enumerate(parts)],
+    }
+
+
+@router.post("/segment/{batch_key}/reverse",
+              dependencies=[Depends(require_controller)])
+def reverse_segment(batch_key: str, reversed_by: str, reason: str) -> dict:
+    """Reverse a segmentation. The parent lines become the analytical unit again."""
+    if not reason.strip():
+        raise HTTPException(422, "A reversal needs a reason.")
+    with transaction() as cur:
+        cur.execute("""UPDATE ledger_segment
+                          SET reversed_at = now(), reversed_by = %s,
+                              reversal_reason = %s
+                        WHERE batch_key = %s AND reversed_at IS NULL
+                        RETURNING segment_id""",
+                    (reversed_by, reason, batch_key))
+        reversed_ids = [r["segment_id"] for r in cur.fetchall()]
+        if not reversed_ids:
+            raise HTTPException(404, "No live segmentation with that key.")
+        cur.execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
+                                              reason)
+                       VALUES (%s,'SEGMENT_REVERSE','ledger_segment',%s,%s)""",
+                    (reversed_by, batch_key, reason))
+    return {"batch_key": batch_key, "segments_reversed": len(reversed_ids)}
+
+
+@router.get("/segments")
+def list_segments(period: str = "2025") -> list[dict]:
+    return query("""SELECT s.batch_key, s.label, count(*) AS segments,
+                           sum(s.amount) AS amount, min(s.created_at) AS created_at,
+                           s.created_by, bool_or(s.reversed_at IS NOT NULL) AS reversed
+                      FROM ledger_segment s
+                     WHERE s.period = %s
+                     GROUP BY s.batch_key, s.label, s.created_by
+                     ORDER BY min(s.created_at) DESC, s.label""", (period,))
