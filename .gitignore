@@ -1,16 +1,18 @@
-# Environments
-.venv/
 __pycache__/
-*.py[cod]
+*.pyc
+.env
+.venv/
+venv/
+storage/
+node_modules/
+web/dist/
+.pytest_cache/
+.DS_Store
 
-# Local database and media
-db.sqlite3
-media/
-staticfiles/
-
-# Source intake -- payroll, certifications and contracts never get committed
+# Raw client uploads — never commit. Route PII to the bucket.
 /intake/
 
-# Tooling
-.pytest_cache/
+# Local tooling
+.venv/
 .hypothesis/
+.pytest_cache/

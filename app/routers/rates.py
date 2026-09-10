@@ -1,0 +1,73 @@
+"""Rates and allocation.
+
+Sealing is the gate. A rate cannot be computed from an unsealed decision set,
+in this handler or anywhere else — a database trigger enforces it too, so the
+guarantee survives a bug here.
+"""
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from app.db import execute, one, query
+
+router = APIRouter(prefix="/rates", tags=["rates"])
+
+
+class SealIn(BaseModel):
+    sealed_by: str
+    note: str = ""
+
+
+@router.post("/seal")
+def seal(body: SealIn, period: str = "2025") -> dict:
+    """Hash every live classification and freeze the set. After this the rate
+    phase unlocks and classifications can only change by unsealing, with a
+    reason, which supersedes any rate already computed."""
+    st = one("""SELECT set_id FROM decision_set WHERE period=%s AND seal_hash IS NULL
+                 ORDER BY set_id LIMIT 1""", (period,))
+    if not st:
+        raise HTTPException(409, "No open decision set — this period is already sealed.")
+    h = one("""
+        SELECT encode(digest(string_agg(fp,'' ORDER BY fp),'sha256'),'hex') AS seal
+          FROM (SELECT encode(digest(
+                   d.decision_id::text || d.pool::text || d.function_990::text ||
+                   d.federal::text || coalesce(d.objective_id,'') || d.grade::text,
+                   'sha256'),'hex') AS fp
+                  FROM decision d
+                 WHERE d.set_id=%s AND d.reversed_at IS NULL) x
+    """, (st["set_id"],))
+    execute("""UPDATE decision_set SET seal_hash=%s, sealed_at=now(), sealed_by=%s
+                WHERE set_id=%s""", (h["seal"], body.sealed_by, st["set_id"]))
+    return {"set_id": str(st["set_id"]), "seal_hash": h["seal"]}
+
+
+@router.post("/unseal")
+def unseal(reason: str, actor: str, period: str = "2025") -> dict:
+    if not reason.strip():
+        raise HTTPException(422, "Unsealing requires a reason for the audit trail.")
+    st = one("""SELECT set_id FROM decision_set WHERE period=%s AND seal_hash IS NOT NULL
+                 ORDER BY sealed_at DESC LIMIT 1""", (period,))
+    execute("""UPDATE decision_set SET seal_hash=NULL, sealed_at=NULL,
+                      unsealed_reason=%s WHERE set_id=%s""", (reason, st["set_id"]))
+    execute("""UPDATE rate SET status='SUPERSEDED' WHERE set_id=%s AND status<>'ACCEPTED'""",
+            (st["set_id"],))
+    execute("""INSERT INTO audit_log (actor,action,entity,entity_id,reason)
+               VALUES (%s,'UNSEAL','decision_set',%s,%s)""", (actor, str(st["set_id"]), reason))
+    return {"set_id": str(st["set_id"]), "status": "unsealed"}
+
+
+@router.get("/current")
+def current(period: str = "2025") -> dict:
+    rates = query("""SELECT kind, pool_amount, base_type, base_amount, rate, status,
+                            seal_hash, computed_at
+                       FROM rate WHERE period=%s AND status<>'SUPERSEDED'
+                      ORDER BY computed_at DESC""", (period,))
+    return {"period": period, "rates": rates}
+
+
+@router.get("/allocation")
+def allocation(rate_id: str) -> list[dict]:
+    return query("""SELECT a.objective_id, o.label, o.is_federal,
+                           a.base_amount, a.allocated, a.rounding_adj
+                      FROM allocation a JOIN cost_objective o USING (objective_id)
+                     WHERE a.rate_id=%s ORDER BY a.allocated DESC""", (rate_id,))

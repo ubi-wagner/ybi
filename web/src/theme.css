@@ -1,0 +1,358 @@
+/* ==========================================================================
+   YBI Cost Allocation — design system
+
+   The subject is audit workpapers, and the craft has its own vernacular:
+   tick marks, footing and cross-footing, schedule references, red pencil in
+   the margin. Those are the structural devices here rather than generic
+   dashboard furniture — status is a tick, navigation echoes the schedules
+   the audit package prints, and exceptions are annotated the way a reviewer
+   would annotate them.
+
+   Density is the point. Tom is making roughly 200 judgments against a
+   deadline. Every element either helps him decide or gets out of the way.
+   ========================================================================== */
+
+:root {
+  /* Paper and ink. Cool rather than cream — a working document, not a keepsake. */
+  --paper:        #f4f6f5;
+  --surface:      #ffffff;
+  --surface-sunk: #eef1ef;
+  --ink:          #16211f;
+  --graphite:     #4a5754;
+  --muted:        #74827e;
+  --rule:         #d6ddda;
+  --rule-soft:    #e7ecea;
+
+  /* One accent, carried through from the rate model so the engagement
+     reads as a single piece of work. */
+  --accent:       #0e6e66;
+  --accent-deep:  #0a534d;
+  --accent-wash:  #e4efed;
+
+  /* Annotation colours, warm like pencil rather than like a traffic light. */
+  --pass:         #2f6b4e;
+  --pass-wash:    #e6efe9;
+  --warn:         #a9700c;
+  --warn-wash:    #f8f0dd;
+  --fail:         #a32e22;
+  --fail-wash:    #f8e7e4;
+
+  --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --sans:  ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+           Roboto, Helvetica, Arial, sans-serif;
+
+  /* Pool colours. Muted enough for a dense workpaper, separated enough to scan
+     a thousand-row ledger by hue. Always paired with the pool abbreviation —
+     colour never carries meaning alone. */
+  --pool-direct:      #0e6e66;   --pool-direct-wash:      #e4efed;
+  --pool-fringe:      #2a5b8c;   --pool-fringe-wash:      #e6edf4;
+  --pool-overhead:    #5b6470;   --pool-overhead-wash:    #ecedef;
+  --pool-ga:          #6b4a86;   --pool-ga-wash:          #efe9f4;
+  --pool-rental:      #8a6a1f;   --pool-rental-wash:      #f5efdf;
+  --pool-fundraising: #a9700c;   --pool-fundraising-wash: #f8f0dd;
+  --pool-unallowable: #a32e22;   --pool-unallowable-wash: #f8e7e4;
+  --pool-excluded:    #74827e;   --pool-excluded-wash:    #eef1ef;
+  --pool-none:        #b3bdb9;   --pool-none-wash:        transparent;
+
+  --r:    6px;
+  --r-lg: 10px;
+  --shadow-raise: 0 1px 2px rgba(22,33,31,.06), 0 4px 14px rgba(22,33,31,.06);
+  --shadow-float: 0 6px 28px rgba(22,33,31,.16);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012em; margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* --------------------------------------------------------------- shell -- */
+
+.shell { max-width: 1240px; margin: 0 auto; padding: 0 24px 96px; }
+
+.topbar { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; padding: 24px 0 0; }
+.wordmark { font-family: var(--serif); font-size: 20px; letter-spacing: -0.015em; }
+.period-chip { font-size: 12px; color: var(--muted); border: 1px solid var(--rule);
+               border-radius: 999px; padding: 1px 9px; background: var(--surface); }
+
+/* Navigation echoes the audit package: each tab carries the schedule it
+   eventually prints as. The reference is information, not decoration. */
+.tabs { display: flex; gap: 2px; margin-top: 18px; border-bottom: 1px solid var(--rule); }
+.tab { display: flex; align-items: baseline; gap: 7px; padding: 9px 14px;
+       text-decoration: none; color: var(--graphite);
+       border: 1px solid transparent; border-bottom: none;
+       border-radius: var(--r) var(--r) 0 0; font-size: 13.5px;
+       position: relative; top: 1px; white-space: nowrap; }
+.tab:hover { background: var(--surface-sunk); color: var(--ink); }
+.tab.on { background: var(--surface); color: var(--ink); font-weight: 600;
+          border-color: var(--rule); border-bottom: 1px solid var(--surface); }
+.tab .sched { font-family: var(--serif); font-size: 11px; color: var(--muted);
+              border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; line-height: 1.5; }
+.tab.on .sched { color: var(--accent); border-color: var(--accent); }
+
+.page { padding-top: 26px; }
+.page-head { margin-bottom: 20px; }
+.page-head h2 { font-size: 21px; }
+.lede { color: var(--graphite); max-width: 74ch; margin: 6px 0 0; font-size: 13.5px; }
+
+/* ---------------------------------------------------------------- card -- */
+/* Three weights. Radius and shadow carry hierarchy rather than being applied
+   uniformly to everything. */
+
+.card { background: var(--surface); border: 1px solid var(--rule);
+        border-radius: var(--r); padding: 16px 18px; }
+.card.raised { box-shadow: var(--shadow-raise); border-radius: var(--r-lg); }
+.card.quiet { background: var(--surface-sunk); border-color: var(--rule-soft); }
+.card + .card { margin-top: 14px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline;
+             gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.card-title { font-weight: 600; font-size: 14px; }
+
+.grid { display: grid; gap: 14px; }
+.grid.two   { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.grid.form  { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+/* ---------------------------------------------------------------- stat -- */
+
+.stat-row { display: flex; gap: 34px; flex-wrap: wrap; align-items: flex-end; }
+.stat-label { font-size: 12px; color: var(--muted); }
+.stat-value { font-family: var(--serif); line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat-value.xl { font-size: 40px; color: var(--accent); }
+.stat-value.lg { font-size: 26px; }
+.stat-value.md { font-size: 19px; }
+.stat-note { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+/* ------------------------------------------------------------ progress -- */
+
+.meter { height: 9px; background: var(--surface-sunk); border-radius: 999px;
+         overflow: hidden; border: 1px solid var(--rule-soft); }
+.meter > i { display: block; height: 100%; background: var(--accent);
+             transition: width .35s cubic-bezier(.2,.7,.3,1); }
+.meter.good > i { background: var(--pass); }
+.meter-marks { position: relative; height: 15px; margin-top: 3px;
+               font-size: 10.5px; color: var(--muted); }
+.meter-marks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+
+/* --------------------------------------------------------------- table -- */
+
+.table-wrap { background: var(--surface); border: 1px solid var(--rule);
+              border-radius: var(--r); overflow: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+thead th { position: sticky; top: 0; z-index: 2; background: var(--surface);
+           text-align: right; white-space: nowrap; font-size: 11px; font-weight: 600;
+           color: var(--muted); padding: 10px 14px 8px; border-bottom: 1px solid var(--ink); }
+thead th.l, tbody td.l { text-align: left; }
+tbody td { text-align: right; padding: 9px 14px; white-space: nowrap;
+           border-bottom: 1px solid var(--rule-soft); font-variant-numeric: tabular-nums; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr.hoverable:hover { background: var(--surface-sunk); }
+tbody tr.picked { background: var(--accent-wash); }
+tbody tr.cursor td { box-shadow: inset 3px 0 0 var(--accent); }
+tbody td.wrap { white-space: normal; max-width: 460px; }
+tfoot td { padding: 10px 14px; font-weight: 700; border-top: 1px solid var(--ink);
+           text-align: right; font-variant-numeric: tabular-nums; }
+tfoot td.l { text-align: left; }
+
+.amt.neg { color: var(--fail); }
+.amt.strong { font-weight: 600; }
+
+/* ----------------------------------------------------------- tick mark -- */
+/* Auditors tick reconciled items. Status is a tick, not a coloured dot. */
+
+.tick { display: inline-flex; align-items: center; justify-content: center;
+        width: 18px; height: 18px; font-size: 12px; line-height: 1;
+        font-family: var(--serif); border-radius: 3px; }
+.tick.done    { color: var(--pass); background: var(--pass-wash); }
+.tick.open    { color: var(--muted); border: 1px dashed var(--rule); }
+.tick.flagged { color: var(--warn); background: var(--warn-wash); }
+.tick.failed  { color: var(--fail); background: var(--fail-wash); }
+
+/* ---------------------------------------------------------------- pill -- */
+
+.pill { display: inline-block; font-size: 11px; line-height: 1.7;
+        border: 1px solid var(--rule); border-radius: 999px; padding: 0 9px;
+        color: var(--graphite); background: var(--surface); white-space: nowrap; }
+.pill.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+.pill.pass   { border-color: var(--pass);   color: var(--pass);   background: var(--pass-wash); }
+.pill.warn   { border-color: var(--warn);   color: var(--warn);   background: var(--warn-wash); }
+.pill.fail   { border-color: var(--fail);   color: var(--fail);   background: var(--fail-wash); }
+.pill.solid  { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* ------------------------------------------------------------- control -- */
+
+button, .btn { font: inherit; font-size: 13px; line-height: 1.4;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+  padding: 7px 13px; border-radius: var(--r); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+  transition: background .12s ease, border-color .12s ease; }
+button:hover:not(:disabled) { background: var(--surface-sunk); border-color: var(--graphite); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: var(--accent-deep); border-color: var(--accent-deep); }
+button.ghost { border-color: transparent; background: transparent; color: var(--graphite); }
+button.ghost:hover:not(:disabled) { background: var(--surface-sunk); }
+button.sm { padding: 4px 9px; font-size: 12px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: var(--r);
+       overflow: hidden; background: var(--surface); }
+.seg button { border: none; border-radius: 0; background: transparent; padding: 6px 12px; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button.on { background: var(--ink); color: #fff; font-weight: 600; }
+
+input, select, textarea { font: inherit; font-size: 13px; width: 100%;
+  padding: 7px 9px; border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--surface); color: var(--ink); }
+input:hover, select:hover, textarea:hover { border-color: var(--graphite); }
+textarea { resize: vertical; min-height: 56px; line-height: 1.5; }
+input[type="checkbox"] { width: auto; accent-color: var(--accent); }
+
+.field > .field-label { font-size: 11.5px; color: var(--muted); margin-bottom: 4px;
+                        display: flex; justify-content: space-between; gap: 8px; }
+.field .req { color: var(--warn); }
+
+.search { position: relative; min-width: 230px; }
+.search input { padding-left: 30px; }
+.search .glyph { position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+                 color: var(--muted); font-size: 13px; pointer-events: none; }
+
+/* ------------------------------------------------------------- keyhint -- */
+
+kbd { font-family: var(--sans); font-size: 10.5px; font-weight: 600;
+      border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px;
+      padding: 1px 5px; background: var(--surface); color: var(--graphite);
+      min-width: 18px; display: inline-block; text-align: center; }
+.keyhints { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11.5px;
+            color: var(--muted); align-items: center; }
+.keyhints span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ---------------------------------------------------------- focus card -- */
+/* Where the boldness is spent: one decision, large, with everything needed
+   to make it and nothing else. */
+
+.focus { background: var(--surface); border: 1px solid var(--rule);
+         border-radius: var(--r-lg); box-shadow: var(--shadow-raise);
+         padding: 26px 28px; position: relative; overflow: hidden; }
+.focus::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+                 width: 4px; background: var(--accent); }
+.focus-amount { font-family: var(--serif); font-size: 46px; line-height: 1;
+                font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.focus-account { font-size: 17px; font-weight: 600; margin-top: 2px; }
+.focus-meta { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+.memo-list { margin: 14px 0 0; padding: 0; list-style: none;
+             border-left: 2px solid var(--rule-soft); }
+.memo-list li { padding: 3px 0 3px 12px; color: var(--graphite); font-size: 12.5px; }
+
+.proposal { margin-top: 18px; padding: 14px 16px; border-radius: var(--r);
+            background: var(--accent-wash); border: 1px solid var(--accent); }
+.proposal.none { background: var(--surface-sunk); border-color: var(--rule); border-style: dashed; }
+.proposal-why { color: var(--graphite); font-size: 12.5px; margin-top: 4px; }
+
+/* --------------------------------------------------------------- toast -- */
+
+.toasts { position: fixed; right: 22px; bottom: 22px; z-index: 60;
+          display: flex; flex-direction: column; gap: 9px; max-width: 400px; }
+.toast { background: var(--ink); color: #fff; border-radius: var(--r);
+         padding: 11px 14px; box-shadow: var(--shadow-float); font-size: 13px;
+         display: flex; align-items: center; gap: 14px;
+         animation: rise .18s cubic-bezier(.2,.7,.3,1); }
+.toast.bad { background: var(--fail); }
+.toast button { background: transparent; border-color: rgba(255,255,255,.4); color: #fff; }
+.toast button:hover { background: rgba(255,255,255,.14); border-color: #fff; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+/* ----------------------------------------------------------- bulk bar -- */
+
+.bulkbar { position: sticky; bottom: 0; z-index: 20; margin-top: 14px;
+           background: var(--ink); color: #fff; border-radius: var(--r);
+           padding: 11px 16px; display: flex; align-items: center; gap: 14px;
+           flex-wrap: wrap; box-shadow: var(--shadow-float); }
+.bulkbar .count { font-family: var(--serif); font-size: 18px; }
+.bulkbar button { background: transparent; border-color: rgba(255,255,255,.4); color: #fff; }
+.bulkbar button:hover:not(:disabled) { background: rgba(255,255,255,.14); border-color: #fff; }
+.bulkbar button.primary { background: #fff; color: var(--ink); border-color: #fff; }
+
+/* --------------------------------------------------------------- empty -- */
+
+.empty { text-align: center; padding: 52px 24px; color: var(--muted); }
+.empty .mark { font-family: var(--serif); font-size: 30px; color: var(--rule); }
+.empty h3 { font-size: 16px; color: var(--ink); margin: 10px 0 4px; }
+.empty p { margin: 0 auto; max-width: 46ch; font-size: 13px; }
+
+/* -------------------------------------------------------------- drawer -- */
+
+.scrim { position: fixed; inset: 0; background: rgba(22,33,31,.34); z-index: 40; }
+.drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(560px, 100%);
+          background: var(--surface); z-index: 50; box-shadow: var(--shadow-float);
+          display: flex; flex-direction: column;
+          animation: slide .2s cubic-bezier(.2,.7,.3,1); }
+@keyframes slide { from { transform: translateX(22px); opacity: .6; } }
+.drawer header { padding: 18px 22px; border-bottom: 1px solid var(--rule);
+                 display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.drawer .body { padding: 20px 22px; overflow: auto; flex: 1; }
+.drawer footer { padding: 14px 22px; border-top: 1px solid var(--rule);
+                 display: flex; gap: 10px; align-items: center; background: var(--surface-sunk); }
+
+/* ------------------------------------------------------------ dropzone -- */
+
+.dropzone { border: 1.5px dashed var(--rule); border-radius: var(--r-lg);
+            padding: 24px; text-align: center; color: var(--muted);
+            background: var(--surface); transition: border-color .12s, background .12s; }
+.dropzone.hot { border-color: var(--accent); background: var(--accent-wash); color: var(--accent); }
+
+.rowsub { color: var(--muted); font-size: 11.5px; }
+.mono-ref { font-family: var(--serif); font-size: 11.5px; color: var(--muted); }
+.hr { height: 1px; background: var(--rule-soft); margin: 18px 0; border: none; }
+
+@media (max-width: 720px) {
+  .shell { padding: 0 14px 80px; }
+  .focus { padding: 20px 18px; }
+  .focus-amount { font-size: 34px; }
+  .stat-row { gap: 22px; }
+}
+
+
+/* ------------------------------------------------------------ pool code -- */
+/* One visual language for cost pools, used identically in the GL explorer,
+   the classification queue, the allocation schedule and the crosswalk. A row
+   gets a left stripe; a value gets a chip. Never a full-row fill — it drowns
+   a dense table. */
+
+.pool-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; line-height: 1.7; padding: 0 8px;
+  border-radius: 3px; border: 1px solid currentColor; white-space: nowrap;
+}
+.pool-chip .abbr { font-weight: 700; letter-spacing: .02em; }
+
+tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
+
+.p-DIRECT      { color: var(--pool-direct);      background: var(--pool-direct-wash); }
+.p-FRINGE      { color: var(--pool-fringe);      background: var(--pool-fringe-wash); }
+.p-OVERHEAD    { color: var(--pool-overhead);    background: var(--pool-overhead-wash); }
+.p-GA          { color: var(--pool-ga);          background: var(--pool-ga-wash); }
+.p-RENTAL      { color: var(--pool-rental);      background: var(--pool-rental-wash); }
+.p-FUNDRAISING { color: var(--pool-fundraising); background: var(--pool-fundraising-wash); }
+.p-UNALLOWABLE { color: var(--pool-unallowable); background: var(--pool-unallowable-wash); }
+.p-EXCLUDED    { color: var(--pool-excluded);    background: var(--pool-excluded-wash); }
+.p-NONE        { color: var(--pool-none); background: transparent; border-style: dashed; }
+
+/* Density switch for the GL explorer — 15,500 rows wants a tighter row. */
+.dense tbody td { padding: 5px 12px; font-size: 12.5px; }
+.dense thead th { padding: 7px 12px 6px; }

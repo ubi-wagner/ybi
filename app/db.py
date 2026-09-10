@@ -1,0 +1,79 @@
+"""Connection pool and a very small migration runner.
+
+Deliberately no ORM. The schema is the design document, the invariants live
+in constraints and triggers, and hand-written SQL keeps both visible.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import contextmanager
+from pathlib import Path
+
+from psycopg_pool import ConnectionPool
+from psycopg.rows import dict_row
+
+from app.settings import settings
+
+log = logging.getLogger("ybi.db")
+SQL_DIR = Path(__file__).resolve().parent / "sql"
+_pool: ConnectionPool | None = None
+
+
+def open_pool() -> None:
+    global _pool
+    if _pool is None:
+        _pool = ConnectionPool(settings.database_url, min_size=1, max_size=10,
+                               kwargs={"row_factory": dict_row}, open=True)
+
+
+def close_pool() -> None:
+    global _pool
+    if _pool is not None:
+        _pool.close()
+        _pool = None
+
+
+@contextmanager
+def conn():
+    if _pool is None:
+        open_pool()
+    with _pool.connection() as c:  # type: ignore[union-attr]
+        yield c
+
+
+def query(sql: str, params: tuple | dict | None = None) -> list[dict]:
+    with conn() as c, c.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchall() if cur.description else []
+
+
+def one(sql: str, params: tuple | dict | None = None) -> dict | None:
+    rows = query(sql, params)
+    return rows[0] if rows else None
+
+
+def execute(sql: str, params: tuple | dict | None = None) -> None:
+    with conn() as c, c.cursor() as cur:
+        cur.execute(sql, params)
+
+
+def run_migrations() -> list[str]:
+    """Apply app/sql/*.sql in filename order, once each."""
+    applied: list[str] = []
+    with conn() as c, c.cursor() as cur:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migration (
+              filename    text PRIMARY KEY,
+              applied_at  timestamptz NOT NULL DEFAULT now())
+        """)
+        cur.execute("SELECT filename FROM schema_migration")
+        done = {r["filename"] for r in cur.fetchall()}
+        for path in sorted(SQL_DIR.glob("*.sql")):
+            if path.name in done:
+                continue
+            log.info("migrating %s", path.name)
+            cur.execute(path.read_text())
+            cur.execute("INSERT INTO schema_migration (filename) VALUES (%s)", (path.name,))
+            applied.append(path.name)
+    return applied
