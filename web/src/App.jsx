@@ -4,6 +4,7 @@ import { ToastHost } from "./components/ui.jsx";
 import { api, Unauthorized } from "./api.js";
 import SignIn from "./pages/SignIn.jsx";
 import PasswordDialog from "./components/PasswordDialog.jsx";
+import UndoTrail from "./components/UndoTrail.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
 import Certify from "./pages/Certify.jsx";
@@ -47,6 +48,7 @@ export default function App() {
      they were logged out. */
   const [actor, setActor] = useState(undefined);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showTrail, setShowTrail] = useState(false);
 
   const check = useCallback(() => {
     api.me().then(setActor).catch((e) => {
@@ -92,6 +94,9 @@ export default function App() {
           <span className="topbar-actor">
             {actor.display_name}
             <span className="role-chip">{actor.role}</span>
+            <button className="btn quiet" onClick={() => setShowTrail(true)}>
+              Undo
+            </button>
             <button className="btn quiet" onClick={() => setChangingPassword(true)}>
               Password
             </button>
@@ -101,6 +106,10 @@ export default function App() {
 
         {changingPassword && (
           <PasswordDialog onClose={() => setChangingPassword(false)} />
+        )}
+        {showTrail && (
+          <UndoTrail onClose={() => setShowTrail(false)}
+                     onChanged={() => window.dispatchEvent(new Event("ybi:changed"))} />
         )}
 
         <nav className="tabs">

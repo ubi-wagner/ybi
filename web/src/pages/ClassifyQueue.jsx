@@ -101,8 +101,30 @@ export default function ClassifyQueue({ actor }) {
       const label = groups.length === 1
         ? `${groups[0].account} → ${decision.pool}`
         : `${groups.length} groups → ${decision.pool}`;
+      /* The undo here reverses the decision that was just recorded. It used
+         to show a message saying a reversal had been recorded while recording
+         nothing at all, which is worse than having no undo: it told somebody
+         their mistake was fixed. */
       toast(`Recorded ${label}`, {
-        onUndo: () => toast("Reversal recorded. Decisions are superseded, never deleted."),
+        onUndo: async () => {
+          try {
+            const trail = await api.undoable({ limit: 5 });
+            const mine = trail.find((t) => t.action === "CLASSIFY" && t.can_undo);
+            if (!mine) {
+              toast("That decision has already been superseded.", { tone: "bad" });
+              return;
+            }
+            const r = await api.undo({
+              entry_ids: [mine.entry_id],
+              reason: "Walked back immediately after recording it.",
+            });
+            toast(r.undone.length ? r.undone[0].result
+                                  : "Nothing was walked back", { tone: r.undone.length ? undefined : "bad" });
+            await load();
+          } catch (e) {
+            toast(String(e.message || e), { tone: "bad", sticky: true });
+          }
+        },
       });
       setPicked(new Set());
       setEditing(null);
@@ -406,7 +428,41 @@ function FocusCard({ row, index, total, busy, canWrite, onAccept, onEdit, onPrev
                   onDone={() => { setSplitting(false); onSplit?.(); }} />
       )}
 
+      <Advice groupKey={row.group_key} />
+
       <GroupRecord row={row} canWrite={canWrite} />
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------- advice */
+
+/* What is worth thinking about before deciding — the thing that is obvious at
+   nine in the morning and gone by the six hundredth group. Advice, never a
+   decision, and every item carries the rule it rests on. */
+function Advice({ groupKey }) {
+  const [items, setItems] = useState(null);
+  useEffect(() => {
+    let live = true;
+    api.advice(groupKey)
+      .then((d) => live && setItems(d.advice))
+      .catch(() => live && setItems([]));
+    return () => { live = false; };
+  }, [groupKey]);
+
+  if (!items?.length) return null;
+  return (
+    <div className="advice">
+      {items.map((a, i) => (
+        <div key={i} className={`advice-item k-${a.kind.toLowerCase()}`}>
+          <span className="advice-kind">{a.kind}</span>
+          <div>
+            <div className="strong">{a.headline}</div>
+            <div className="quiet small">{a.detail}</div>
+            {a.citation && <span className="mono-ref">{a.citation}</span>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

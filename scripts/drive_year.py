@@ -314,6 +314,16 @@ def main() -> int:
                     r = barb.post("/api/timesheet/entry", json={
                         "work_date": d.isoformat(), "objective_id": objective,
                         "hours": h, "basis": "CALENDAR"})
+                    if r.status_code == 409 and "OVER_SOFT_LIMIT" in r.text:
+                        # A normal eight-hour day never trips this; when the
+                        # shape of the week does, the answer is to say why —
+                        # which is the whole point of a soft limit.
+                        r = barb.post("/api/timesheet/entry", json={
+                            "work_date": d.isoformat(),
+                            "objective_id": objective, "hours": h,
+                            "basis": "CALENDAR",
+                            "override_reason": "Drive: long week, entered "
+                                               "from the diary."})
                     written += r.status_code == 200
                     refused += r.status_code != 200
             d += dt.timedelta(days=1)
@@ -354,7 +364,8 @@ def main() -> int:
         with mutating("an entry after signing", "Barb Ewing", "TIME_ENTRY"):
             call(barb, "POST", "/api/timesheet/entry", 200, "late change", json={
                 "work_date": "2025-02-03", "objective_id": "MBAC", "hours": 2,
-                "basis": "CALENDAR", "note": "Drive: found a missed afternoon."})
+                "basis": "CALENDAR", "note": "Drive: found a missed afternoon.",
+                "override_reason": "Drive: the day really was ten hours."})
         st = one("""SELECT stale FROM v_certification_status
                      WHERE period='2025' AND employee_key='EWING'""")
         if st and st["stale"]:
@@ -362,6 +373,134 @@ def main() -> int:
         else:
             finding("the sheet changed under a signature and it was not "
                     "marked stale")
+    finally:
+        barb.close()
+
+    # ── Walking things back ──────────────────────────────────────────
+    print("\nUndo — a fat finger, and a mass reclassification")
+    tom = sign_in(args.base, "tom@ybi.org", password)
+    try:
+        # A bulk mistake: five groups into the wrong pool in one go.
+        groups = query("""SELECT account, COALESCE(payee,'') AS payee
+                            FROM ledger_line l
+                           WHERE period='2025' AND statement='P&L'
+                             AND NOT EXISTS (SELECT 1 FROM decision_line dl
+                                              WHERE dl.line_id = l.line_id AND dl.live)
+                           GROUP BY account, payee
+                           ORDER BY sum(abs(amount)) DESC LIMIT 5""")
+        keys = [f"{g['account']}\x1f{g['payee']}" for g in groups]
+        call(tom, "POST", "/api/classify/decide", 200,
+             "five groups classified in one go", json={
+                 "group_keys": keys, "pool": "FUNDRAISING",
+                 "function_990": "FUNDRAISING", "federal": "UNALLOWABLE",
+                 "grade": "TEST_ASSUMPTION",
+                 "rationale": "Drive: the wrong pool, applied in bulk.",
+                 "evidence_ids": [], "decided_by": "drive"})
+        live = one("""SELECT count(*) AS n FROM decision
+                       WHERE pool = 'FUNDRAISING' AND reversed_at IS NULL""")["n"]
+
+        trail = call(tom, "GET", "/api/undo?limit=5", 200, "reads the trail")
+        undoable = [t for t in trail.json() if t["can_undo"]]
+        if undoable:
+            ok(f"{len(undoable)} of the last 5 actions can be walked back")
+        else:
+            finding("nothing in the trail can be walked back")
+
+        call(tom, "POST", "/api/undo", 422, "an undo without a reason is refused",
+             json={"count": 1, "reason": "   "})
+
+        with mutating("walk the bulk mistake back", "Tom Metzinger", "UNDO"):
+            r = call(tom, "POST", "/api/undo", 200, "undo", json={
+                "count": 1, "reason": "Drive: wrong pool applied in bulk."})
+        after = one("""SELECT count(*) AS n FROM decision
+                        WHERE pool = 'FUNDRAISING' AND reversed_at IS NULL""")["n"]
+        if after < live:
+            ok(f"the classification is reversed — {live} live before, {after} after")
+        else:
+            finding("the undo reported success and nothing was reversed")
+
+        kept = one("""SELECT count(*) AS n FROM decision
+                       WHERE pool = 'FUNDRAISING' AND reversed_at IS NOT NULL""")["n"]
+        if kept:
+            ok(f"the reversed decision is still on the record ({kept} of them)")
+        else:
+            finding("the undo deleted the decision instead of reversing it")
+
+        linked = one("""SELECT count(*) AS n FROM audit_log
+                         WHERE action = 'UNDO' AND undoes_entry_id IS NOT NULL""")["n"]
+        if linked:
+            ok("the undo entry names the entry it walked back")
+        else:
+            finding("an undo was recorded that names nothing")
+
+        again = tom.post("/api/undo", json={
+            "entry_ids": [undoable[0]["entry_id"]] if undoable else [],
+            "reason": "Drive: trying the same one twice."})
+        if again.status_code in (200, 404) and (
+                again.status_code == 404
+                or not again.json().get("undone")
+                or again.json().get("refused")):
+            ok("the same action cannot be walked back twice")
+        else:
+            finding("an already-reversed action was reversed again")
+    finally:
+        tom.close()
+
+    # ── Guardrails and donated time ──────────────────────────────────
+    print("\nGuardrails, and hours nobody was paid for")
+    barb = sign_in(args.base, "bewing@ybi.org", password)
+    try:
+        over = barb.post("/api/timesheet/entry", json={
+            "work_date": "2025-04-15", "objective_id": "HUB", "hours": 11,
+            "basis": "CALENDAR"})
+        if over.status_code == 409 and "breaches" in over.text:
+            ok("an eleven-hour day is questioned, not refused — "
+               + over.json()["detail"]["breaches"][0]["limit"])
+        else:
+            finding(f"an eleven-hour day answered {over.status_code}")
+
+        with mutating("the same day, with a reason", "Barb Ewing", "TIME_ENTRY"):
+            call(barb, "POST", "/api/timesheet/entry", 200, "override", json={
+                "work_date": "2025-04-15", "objective_id": "HUB", "hours": 11,
+                "basis": "CALENDAR",
+                "override_reason": "Drive: site visit and the drive back."})
+        kept = one("""SELECT overrode, override_reason FROM timesheet_entry
+                       WHERE employee_key='EWING' AND work_date='2025-04-15'
+                         AND objective_id='HUB' AND superseded_at IS NULL""")
+        if kept and kept["overrode"] and kept["override_reason"]:
+            ok(f"the override is on the entry — {kept['overrode']}")
+        else:
+            finding("an override was allowed and not recorded")
+
+        before = one("""SELECT COALESCE(sum(hours),0) AS h
+                          FROM v_timesheet_distribution
+                         WHERE employee_key='EWING' AND objective_id='YOUTH'""")
+        with mutating("donated hours", "Barb Ewing", "TIME_ENTRY"):
+            call(barb, "POST", "/api/timesheet/entry", 200, "donated", json={
+                "work_date": "2025-05-17", "objective_id": "YOUTH", "hours": 6,
+                "basis": "CALENDAR", "donated": True,
+                "note": "Drive: Saturday mentoring, unpaid."})
+        after_paid = one("""SELECT COALESCE(sum(hours),0) AS h
+                              FROM v_timesheet_distribution
+                             WHERE employee_key='EWING' AND objective_id='YOUTH'""")
+        donated = one("""SELECT hours FROM v_donated_time
+                          WHERE employee_key='EWING' AND objective_id='YOUTH'""")
+        if donated and float(donated["hours"]) == 6:
+            ok("donated hours are recorded as donated")
+        else:
+            finding("donated hours did not reach the donated view")
+        # The test is that they move nothing, not that the objective is empty:
+        # Barb has paid Youth time too, and it must be untouched.
+        if float(after_paid["h"]) == float(before["h"]):
+            ok(f"the paid distribution is unchanged at {float(before['h']):g} "
+               f"hours — donated time moves no paid share")
+        else:
+            finding(f"donated hours moved the paid distribution from "
+                    f"{before['h']} to {after_paid['h']}")
+        rate = one("""SELECT rate_missing FROM v_donated_time
+                       WHERE employee_key='EWING' AND objective_id='YOUTH'""")
+        if rate and rate["rate_missing"]:
+            ok("and they are listed as unvalued rather than valued at a guess")
     finally:
         barb.close()
 

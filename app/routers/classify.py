@@ -33,6 +33,7 @@ from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
                        Pool)
 from app.auth import Actor
 from app.db import execute, one, query, transaction
+from app.domain.advice import GroupFacts, advise
 from app.domain.segment import Part, SegmentError, plan_segments
 
 router = APIRouter(prefix="/classify", tags=["classify"],
@@ -256,6 +257,66 @@ def propose(g: GroupOut) -> dict | None:
                 "source": "prior_year", "confidence": "medium"}
 
     return None
+
+
+@router.get("/advice")
+def advice(group_key: str, period: str = "2025") -> dict:
+    """What is worth thinking about before this group is classified.
+
+    Advice, never a decision — the same rule that governs proposals. It reads
+    the shape of the group and the treatment of the same account elsewhere,
+    and every item carries the rule it rests on, because "split this" without
+    the citation is an opinion.
+    """
+    account, _, payee = group_key.partition("\x1f")
+    facts = one("""
+        SELECT %s::text AS account, %s::text AS payee,
+               COALESCE(sum(l.amount), 0)                   AS amount,
+               count(*)                                     AS line_count,
+               COALESCE(array_agg(DISTINCT l.customer_job_hint)
+                        FILTER (WHERE COALESCE(l.customer_job_hint,'') <> ''), '{}')
+                                                            AS objective_hints,
+               COALESCE(array_agg(DISTINCT left(l.description, 120))
+                        FILTER (WHERE COALESCE(l.description,'') <> ''), '{}')
+                                                            AS memos
+          FROM ledger_line l
+         WHERE l.period = %s AND l.account = %s
+           AND coalesce(l.payee,'') = %s""",
+        (account, payee, period, account, payee))
+    if not facts or not facts["line_count"]:
+        raise HTTPException(404, "No lines in that group.")
+
+    # How the same account is treated elsewhere in the period, and last year.
+    prior = query("""SELECT DISTINCT d.pool::text AS pool
+                       FROM decision d
+                       JOIN decision_line dl ON dl.decision_id = d.decision_id
+                                            AND dl.live
+                       JOIN ledger_line l ON l.line_id = dl.line_id
+                      WHERE d.reversed_at IS NULL AND l.period = %s
+                        AND l.account = %s
+                        AND coalesce(l.payee,'') <> %s""",
+                  (period, account, payee))
+
+    evidence = one("""SELECT count(DISTINCT a.evidence_id) AS n
+                        FROM attachment a
+                        JOIN ledger_line l ON l.line_id::text = a.target_id
+                       WHERE a.target_type = 'LEDGER_LINE'
+                         AND a.detached_at IS NULL AND l.period = %s
+                         AND l.account = %s AND coalesce(l.payee,'') = %s""",
+                   (period, account, payee))
+
+    g = GroupFacts(
+        account=facts["account"], payee=facts["payee"] or "",
+        amount=facts["amount"], line_count=facts["line_count"],
+        objective_hints=list(facts["objective_hints"] or []),
+        memos=list(facts["memos"] or []),
+        evidence_count=(evidence or {}).get("n", 0),
+        prior_pools=[r["pool"] for r in prior])
+
+    return {"group_key": group_key,
+            "advice": [{"kind": a.kind, "headline": a.headline,
+                        "detail": a.detail, "citation": a.citation,
+                        "weight": a.weight} for a in advise(g)]}
 
 
 @router.post("/decide")

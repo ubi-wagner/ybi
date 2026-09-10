@@ -55,6 +55,11 @@ class EntryIn(BaseModel):
     hours: float = Field(gt=0, le=24)
     basis: TimeBasis
     note: str = ""
+    donated: bool = False
+    #: Supplied on a second attempt, after the first came back with the soft
+    #: limits it would breach. Nobody is stopped from working a long day; they
+    #: are asked to say why, once.
+    override_reason: str = ""
 
 
 class SubmitIn(BaseModel):
@@ -201,6 +206,53 @@ def put_entry(body: EntryIn, period: str = None,
                (body.objective_id,)):
         raise HTTPException(422, f"No active objective {body.objective_id!r}.")
 
+    # ── the soft limits ─────────────────────────────────────────────
+    #
+    # Paid hours only, and not applied to donated ones at all. The guardrail
+    # exists to catch a mistyped paid day; a volunteer Saturday on top of a
+    # full week is not a mistake, and asking somebody to justify every hour
+    # they gave away is how a guardrail becomes noise that gets clicked past.
+    day_total = one("""SELECT COALESCE(sum(hours), 0) AS h FROM timesheet_entry
+                        WHERE employee_key=%s AND work_date=%s
+                          AND superseded_at IS NULL AND NOT donated
+                          AND objective_id <> %s""",
+                    (key, body.work_date, body.objective_id))["h"]
+    week_start = body.work_date - timedelta(days=body.work_date.weekday())
+    week_total = one("""SELECT COALESCE(sum(hours), 0) AS h FROM timesheet_entry
+                         WHERE employee_key=%s AND superseded_at IS NULL
+                           AND NOT donated
+                           AND work_date BETWEEN %s AND %s
+                           AND NOT (work_date = %s AND objective_id = %s)""",
+                     (key, week_start, week_start + timedelta(days=6),
+                      body.work_date, body.objective_id))["h"]
+
+    breaches = []
+    new_day = float(day_total) + body.hours
+    new_week = float(week_total) + body.hours
+    if body.donated:
+        breaches = []          # see the note above
+    elif new_day > DAY_SOFT_LIMIT:
+        breaches.append({
+            "limit": "DAY_OVER_8", "would_be": round(new_day, 2),
+            "message": f"That makes {new_day:g} hours on "
+                       f"{body.work_date:%A %-d %B} — more than a normal "
+                       f"{DAY_SOFT_LIMIT}-hour day."})
+    if not body.donated and new_week > WEEK_SOFT_LIMIT:
+        breaches.append({
+            "limit": "WEEK_OVER_40", "would_be": round(new_week, 2),
+            "message": f"That makes {new_week:g} hours in the week of "
+                       f"{week_start:%-d %B} — more than a normal "
+                       f"{WEEK_SOFT_LIMIT}-hour week."})
+
+    if breaches and not body.override_reason.strip():
+        raise HTTPException(409, {
+            "error": "OVER_SOFT_LIMIT",
+            "message": "This is allowed, but say why so it does not look "
+                       "like a slip later.",
+            "breaches": breaches})
+
+    overrode = [b["limit"] for b in breaches]
+
     with transaction() as cur:
         # Stand the old entry down first. The partial unique index is
         # immediate, so two live entries for one day and objective cannot
@@ -217,12 +269,14 @@ def put_entry(body: EntryIn, period: str = None,
 
         cur.execute("""INSERT INTO timesheet_entry
                          (period, employee_key, work_date, objective_id, hours,
-                          basis, note, entered_by, entered_by_name)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                          basis, note, entered_by, entered_by_name,
+                          donated, overrode, override_reason)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                        RETURNING entry_id""",
                     (period, key, body.work_date, body.objective_id,
                      body.hours, body.basis, body.note.strip(),
-                     actor.actor_id, actor.display_name))
+                     actor.actor_id, actor.display_name, body.donated,
+                     overrode, body.override_reason.strip() or None))
         entry_id = cur.fetchone()["entry_id"]
 
         # Now the superseded rows can name what replaced them.
@@ -234,7 +288,8 @@ def put_entry(body: EntryIn, period: str = None,
                before={"hours": str(replaced[0]["hours"])} if replaced else None,
                after={"work_date": str(body.work_date),
                       "objective_id": body.objective_id,
-                      "hours": body.hours, "basis": body.basis},
+                      "hours": body.hours, "basis": str(body.basis),
+                      "donated": body.donated, "overrode": overrode},
                reason=body.note.strip()[:400], cursor=cur)
 
     day = one("""SELECT hours FROM v_timesheet_day
@@ -277,6 +332,14 @@ def remove_entry(body: RemoveIn, period: str = None,
                reason=body.reason.strip()[:400] or "removed by the employee",
                cursor=cur)
     return {"removed": len(removed)}
+
+
+#: Soft limits. A day over eight hours or a week over forty is usually a slip
+#: and occasionally a real week, so it is a question rather than a refusal —
+#: and the answer stays on the record, because "why is there a fourteen-hour
+#: day in March" is exactly what a reviewer asks two years later.
+DAY_SOFT_LIMIT = 8
+WEEK_SOFT_LIMIT = 40
 
 
 #: How much of a period a timesheet must cover before its owner can call it

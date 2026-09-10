@@ -62,6 +62,10 @@ export const api = {
   coverage: (period = "2025") => req(`/classify/coverage?period=${period}`),
   queue: (params) => req("/classify/queue?" + new URLSearchParams(params)),
   vocabulary: () => req("/classify/vocabulary"),
+  undoable: (params) => req("/undo?" + new URLSearchParams(params || {})),
+  undo: (body) => req("/undo", { method: "POST", body: JSON.stringify(body) }),
+  advice: (groupKey, period = "2025") =>
+    req(`/classify/advice?period=${period}&group_key=${encodeURIComponent(groupKey)}`),
   segment: (body) => req("/classify/segment", { method: "POST", body: JSON.stringify(body) }),
   segments: (period = "2025") => req(`/classify/segments?period=${period}`),
   decide: (body) => req("/classify/decide", { method: "POST", body: JSON.stringify(body) }),
