@@ -16,6 +16,7 @@ from pydantic import BaseModel, EmailStr
 from app.auth import (SESSION_COOKIE, SESSION_MAX_AGE, Actor, Role,
                       current_actor, hash_password, issue_token, require_admin,
                       session_expiry, verify_password)
+from app.audit import record
 from app.db import execute, one, transaction
 from app.settings import settings
 
@@ -59,6 +60,13 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
         cur.execute("UPDATE actor SET last_login_at = now() WHERE actor_id = %s",
                     (row["actor_id"],))
 
+    signed_in = Actor(actor_id=str(row["actor_id"]), email=row["email"],
+                      display_name=row["display_name"], role=Role(row["role"]),
+                      session_id=str(session_id),
+                      employee_key=row["employee_key"])
+    record(signed_in, "SIGN_IN", "actor_session", str(session_id),
+           reason=request.headers.get("user-agent", "")[:200])
+
     token = issue_token(actor_id=row["actor_id"], session_id=session_id,
                         email=row["email"], role=row["role"],
                         name=row["display_name"],
@@ -80,6 +88,7 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
 def logout(response: Response, actor: Actor = Depends(current_actor)) -> dict:
     execute("UPDATE actor_session SET revoked_at = now() WHERE session_id = %s",
             (actor.session_id,))
+    record(actor, "SIGN_OUT", "actor_session", actor.session_id)
     response.delete_cookie(SESSION_COOKIE, path="/")
     return {"signed_out": True}
 
@@ -108,6 +117,10 @@ def create_actor(body: ActorIn, admin: Actor = Depends(require_admin)) -> dict:
                  VALUES (%s,%s,%s,%s,%s) RETURNING actor_id""",
               (body.email.strip().lower(), body.display_name, body.role.value,
                hash_password(body.password), body.employee_key))
+    record(admin, "ACTOR_CREATE", "actor", str(row["actor_id"]),
+           after={"email": body.email, "role": body.role.value,
+                  "employee_key": body.employee_key},
+           reason="provisioned")
     log.info("%s provisioned %s as %s", admin.email, body.email, body.role.value)
     return {"actor_id": str(row["actor_id"]), "email": body.email,
             "role": body.role.value}

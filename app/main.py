@@ -22,8 +22,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
-from app.routers import (auth, awards, chart, classify, evidence, health,
-                         imports, lanes, rates)
+from app.routers import (auth, awards, chart, classify, dashboard,
+                         evidence, health, imports, lanes, rates)
 from app.settings import settings
 
 log = logging.getLogger("ybi")
@@ -60,7 +60,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for r in (health, auth, imports, chart, classify, lanes, rates, evidence, awards):
+for r in (health, auth, dashboard, imports, chart, classify, lanes,
+          rates, evidence, awards):
     app.include_router(r.router, prefix="/api")
 
 

@@ -175,3 +175,66 @@ def test_real_2025_ledger_reconciles_completely():
     assert st.rollups["3900 Grant Income"] == Decimal("3183899.26")
     assert st.rollups["5129 Payroll Expenses:5139 Wages"] == Decimal("1789993.94")
     assert st.rollups["5129 Payroll Expenses"] == Decimal("2197014.24")
+
+
+# ------------------------------------------- the profit and loss
+
+REAL_PL = Path("docs/source-documents/accounting-records/"
+               "2025_Profit-and-Loss_QuickBooks.xlsx")
+
+
+def test_pl_leaf_accounts_foot_to_their_section_totals():
+    """The control that caught two real defects.
+
+    Section totals came from the printed "Total for Income" rows and tied all
+    along, so they proved nothing about the accounts underneath. Summing the
+    leaves is what exposed that every "Total for X" was also being stored as
+    an account, and that accounts sharing a leaf name across sections were
+    overwriting each other: Drive AM, Digital Engineering, DLA Grant and Youth
+    Entrepreneurship each exist in both Income and Expenses, and losing the
+    income side understated Income by exactly 1,170,667.20.
+    """
+    if not REAL_PL.exists():          # pragma: no cover - source not vendored
+        import pytest
+        pytest.skip("2025 profit and loss not present")
+
+    from app.domain.qbo import parse_profit_loss
+    pl = parse_profit_loss(REAL_PL)
+
+    for section in ("Income", "COGS", "Expense", "Other Income"):
+        leaves = sum((a for (s, a) in pl.accounts.values() if s == section),
+                     Decimal(0))
+        assert leaves == pl.section_totals[section], section
+
+    assert pl.section_totals["Income"] == Decimal("6662593.00")
+    assert pl.section_totals["Expense"] == Decimal("6737951.18")
+    assert pl.net_income == Decimal("4329.28")
+    assert pl.check_net_income() == Decimal("0.00")
+
+
+def test_pl_accounts_sharing_a_leaf_name_are_qualified():
+    if not REAL_PL.exists():          # pragma: no cover
+        import pytest
+        pytest.skip("2025 profit and loss not present")
+
+    from app.domain.qbo import parse_profit_loss
+    pl = parse_profit_loss(REAL_PL)
+
+    assert pl.accounts["3900 Grant Income:Drive AM"][1] == Decimal("579240.87")
+    assert pl.accounts["Grant Expenses:Drive AM"][1] == Decimal("181880.88")
+    assert pl.accounts["3900 Grant Income:Drive AM"][0] == "Income"
+    assert pl.accounts["Grant Expenses:Drive AM"][0] == "Expense"
+
+
+def test_pl_total_rows_are_never_accounts():
+    """4029 Sponsorships totals 270,209 and its three children total the same
+    270,209. Storing the total as an account doubles it."""
+    if not REAL_PL.exists():          # pragma: no cover
+        import pytest
+        pytest.skip("2025 profit and loss not present")
+
+    from app.domain.qbo import parse_profit_loss
+    pl = parse_profit_loss(REAL_PL)
+    assert "4000 Contributions Income:4029 Sponsorships" in pl.rollups
+    assert pl.rollups["4000 Contributions Income:4029 Sponsorships"][1] == \
+        Decimal("270209.00")

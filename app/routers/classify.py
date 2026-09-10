@@ -28,6 +28,8 @@ from fastapi import Depends, APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.auth import require_controller, require_reader
+from app.audit import record
+from app.auth import Actor
 from app.db import execute, one, query, transaction
 from app.domain.segment import Part, SegmentError, plan_segments
 
@@ -251,12 +253,16 @@ def propose(g: GroupOut) -> dict | None:
     return None
 
 
-@router.post("/decide",
-              dependencies=[Depends(require_controller)])
-def decide(body: DecideIn, period: str = "2025") -> dict:
+@router.post("/decide")
+def decide(body: DecideIn, period: str = "2025",
+           actor: Actor = Depends(require_controller)) -> dict:
     """Record decisions for one or more groups. Fans out to every line in the
     group; the audit trail is at line grain even though the work is at group
-    grain."""
+    grain.
+
+    The decision is recorded as the signed-in actor. body.decided_by is
+    ignored: a cost judgment cannot be recorded in someone else's name."""
+    decided_by = actor.display_name
     if body.pool not in POOLS:
         raise ValueError(f"Unknown pool {body.pool}")
     if body.function_990 not in FUNCTIONS:
@@ -298,7 +304,7 @@ def decide(body: DecideIn, period: str = "2025") -> dict:
                 RETURNING decision_id
             """, (set_id, f"account={account}|payee={payee}", body.pool,
                   body.function_990, body.federal, body.objective_id, body.grade,
-                  body.rationale, body.citation, body.decided_by, body.supersedes))
+                  body.rationale, body.citation, decided_by, body.supersedes))
             did = cur.fetchone()["decision_id"]
             for l in with_lines:
                 cur.execute("""INSERT INTO decision_line (decision_id, line_id)
@@ -307,24 +313,28 @@ def decide(body: DecideIn, period: str = "2025") -> dict:
             for ev in body.evidence_ids:
                 cur.execute("""INSERT INTO decision_evidence (decision_id, evidence_id)
                                VALUES (%s,%s) ON CONFLICT DO NOTHING""", (did, ev))
-        execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
-                                          after_state, reason)
-                   VALUES (%s,'CLASSIFY','decision',%s,%s,%s)""",
-                (body.decided_by, str(did), body.model_dump_json(), body.rationale))
+            # Inside the transaction: an audit row that survived a rolled
+            # back decision would describe something that never happened.
+            record(actor, "CLASSIFY", "decision", str(did),
+                   after=body.model_dump(mode="json"), reason=body.rationale,
+                   cursor=cur)
         created += 1
 
     return {"decisions_created": created, "set_id": str(set_id)}
 
 
-@router.post("/defer",
-              dependencies=[Depends(require_controller)])
-def defer(group_key: str, reason: str, actor: str, period: str = "2025") -> dict:
+@router.post("/defer")
+def defer(group_key: str, reason: str, period: str = "2025",
+          actor: Actor = Depends(require_controller)) -> dict:
     """Explicitly park a group. Deferred is a state, not an absence of one —
     it keeps the item visible instead of letting it drift out of view."""
+    if not reason.strip():
+        raise HTTPException(422, "Deferring needs a reason; that is the point of it.")
     account, _, payee = group_key.partition("\x1f")
     execute("""INSERT INTO note (target_type, target_id, body, author, is_workpaper)
-               VALUES ('LEDGER_LINE', %s, %s, %s, true)""",
-            (f"{account}|{payee}", f"Deferred: {reason}", actor))
+               VALUES ('LEDGER_GROUP', %s, %s, %s, true)""",
+            (group_key, f"Deferred: {reason}", actor.display_name))
+    record(actor, "DEFER", "ledger_group", group_key, reason=reason)
     return {"deferred": group_key}
 
 
@@ -353,9 +363,9 @@ class SegmentIn(BaseModel):
     created_by: str
 
 
-@router.post("/segment",
-              dependencies=[Depends(require_controller)])
-def segment(body: SegmentIn, period: str = "2025") -> dict:
+@router.post("/segment")
+def segment(body: SegmentIn, period: str = "2025",
+            actor: Actor = Depends(require_controller)) -> dict:
     """Split a group's lines into analytically distinct parts.
 
     The source ledger is untouched. Every line reconciles to the cent, or the
@@ -398,8 +408,12 @@ def segment(body: SegmentIn, period: str = "2025") -> dict:
         cur.execute("""INSERT INTO audit_log (actor, action, entity, entity_id,
                                               after_state, reason)
                        VALUES (%s,'SEGMENT','ledger_group',%s,%s,%s)""",
-                    (body.created_by, body.group_key, body.model_dump_json(),
+                    (actor.display_name, body.group_key, body.model_dump_json(),
                      "; ".join(p.rationale for p in parts)))
+        record(actor, "SEGMENT", "ledger_group", body.group_key,
+               after={"batch_key": batch_key,
+                      "parts": [p.label for p in parts]},
+               reason="; ".join(p.rationale for p in parts), cursor=cur)
 
     return {
         "batch_key": batch_key,
@@ -412,9 +426,10 @@ def segment(body: SegmentIn, period: str = "2025") -> dict:
     }
 
 
-@router.post("/segment/{batch_key}/reverse",
-              dependencies=[Depends(require_controller)])
-def reverse_segment(batch_key: str, reversed_by: str, reason: str) -> dict:
+@router.post("/segment/{batch_key}/reverse")
+def reverse_segment(batch_key: str, reason: str, reversed_by: str = "",
+                    actor: Actor = Depends(require_controller)) -> dict:
+    reversed_by = actor.display_name or reversed_by
     """Reverse a segmentation. The parent lines become the analytical unit again."""
     if not reason.strip():
         raise HTTPException(422, "A reversal needs a reason.")
@@ -432,6 +447,8 @@ def reverse_segment(batch_key: str, reversed_by: str, reason: str) -> dict:
                                               reason)
                        VALUES (%s,'SEGMENT_REVERSE','ledger_segment',%s,%s)""",
                     (reversed_by, batch_key, reason))
+        record(actor, "SEGMENT_REVERSE", "ledger_segment", batch_key,
+               reason=reason, cursor=cur)
     return {"batch_key": batch_key, "segments_reversed": len(reversed_ids)}
 
 

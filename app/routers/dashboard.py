@@ -1,0 +1,123 @@
+"""The landing page: where the engagement stands, and what is left to do.
+
+Three questions, answered in one call because they are one question:
+
+  * where do the finances stand, and do the controls tie;
+  * what has happened, and who did it;
+  * what is still open, in the order it is worth doing.
+
+The work list is ordered by money rather than by age. A hundred small groups
+and one large one are not the same afternoon's work.
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Query
+
+from app.auth import Actor, require_reader
+from app.db import one, query
+from app.settings import settings
+
+router = APIRouter(prefix="/dashboard", tags=["dashboard"],
+                   dependencies=[Depends(require_reader)])
+
+
+@router.get("")
+def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
+              actor: Actor = Depends(require_reader)) -> dict:
+    period = period or settings.period
+
+    rollup = one("SELECT * FROM v_dashboard WHERE period = %s", (period,))
+    coverage = one("""
+        WITH d AS (
+          SELECT l.line_id, l.amount,
+                 (dl.decision_id IS NOT NULL) AS decided
+            FROM ledger_line l
+            LEFT JOIN decision_line dl ON dl.line_id = l.line_id AND dl.live
+           WHERE l.period = %s AND l.statement = 'P&L')
+        SELECT count(*)                                            AS lines,
+               count(*) FILTER (WHERE decided)                     AS decided_lines,
+               COALESCE(sum(abs(amount)), 0)                       AS dollars,
+               COALESCE(sum(abs(amount)) FILTER (WHERE decided), 0) AS decided_dollars
+          FROM d""", (period,))
+
+    pct = 0.0
+    if coverage and coverage["dollars"]:
+        pct = round(float(coverage["decided_dollars"]) /
+                    float(coverage["dollars"]) * 100, 1)
+
+    controls = query("""
+        SELECT 'GL subtotals'      AS control, variance, (variance = 0) AS ties
+          FROM v_staging_reconciliation LIMIT 1""") or []
+    controls += query("""
+        SELECT 'Segmentation' AS control, variance, (variance = 0) AS ties
+          FROM v_segmentation_control WHERE period = %s""", (period,))
+    controls += query("""
+        SELECT 'Asset register' AS control, variance, (variance = 0) AS ties
+          FROM v_asset_control WHERE period = %s""", (period,))
+
+    worklist = query("""
+        SELECT kind, severity, count(*) AS items,
+               COALESCE(sum(amount), 0) AS amount
+          FROM v_worklist WHERE period = %s
+         GROUP BY kind, severity
+         ORDER BY CASE severity WHEN 'BLOCKING' THEN 0 WHEN 'HIGH' THEN 1
+                                ELSE 2 END, sum(amount) DESC NULLS LAST""",
+        (period,))
+
+    activity = query("""
+        SELECT occurred_at, kind, actor, entity, entity_id, label, amount, detail
+          FROM v_activity
+         WHERE occurred_at IS NOT NULL
+         ORDER BY occurred_at DESC LIMIT %s""", (activity_limit,))
+
+    return {
+        "period": period,
+        "actor": {"name": actor.display_name, "role": actor.role.value,
+                  "can_write": actor.can_write},
+        "rollup": rollup,
+        "coverage": {**(coverage or {}), "pct_dollars": pct},
+        "controls": controls,
+        "worklist": worklist,
+        "activity": activity,
+    }
+
+
+@router.get("/worklist")
+def worklist(period: str = None, kind: str = "", limit: int = Query(50, le=500),
+             offset: int = 0) -> dict:
+    """One class of open work, largest first.
+
+    Returns the true total alongside the page. A page length shown as a count
+    tells the controller there are 200 things left when there are 990, which
+    is the difference between an afternoon and a fortnight.
+    """
+    period = period or settings.period
+    total = one("""SELECT count(*) AS n, COALESCE(sum(abs(amount)), 0) AS amount
+                     FROM v_worklist
+                    WHERE period = %s AND (%s = '' OR kind = %s)""",
+                (period, kind, kind))
+    items = query("""
+        SELECT kind, severity, label, entity, entity_id, amount, detail
+          FROM v_worklist
+         WHERE period = %s AND (%s = '' OR kind = %s)
+         ORDER BY COALESCE(abs(amount), 0) DESC
+         LIMIT %s OFFSET %s""", (period, kind, kind, limit, offset))
+    return {"kind": kind, "total": total["n"] if total else 0,
+            "amount": total["amount"] if total else 0,
+            "shown": len(items), "items": items}
+
+
+@router.get("/activity")
+def activity(limit: int = Query(100, le=500), offset: int = 0,
+             entity: str = "", entity_id: str = "") -> list[dict]:
+    """The audit spine. Filterable to one object, which is how a reviewer
+    asks "what happened to this"."""
+    return query("""
+        SELECT occurred_at, kind, actor, entity, entity_id, label, amount, detail
+          FROM v_activity
+         WHERE occurred_at IS NOT NULL
+           AND (%s = '' OR entity = %s)
+           AND (%s = '' OR entity_id = %s)
+         ORDER BY occurred_at DESC LIMIT %s OFFSET %s""",
+        (entity, entity, entity_id, entity_id, limit, offset))

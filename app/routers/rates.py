@@ -9,6 +9,8 @@ from fastapi import Depends, APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.auth import require_controller, require_reader
+from app.audit import record
+from app.auth import Actor
 from app.db import execute, one, query
 
 router = APIRouter(prefix="/rates", tags=["rates"],
@@ -44,19 +46,20 @@ def seal(body: SealIn, period: str = "2025") -> dict:
     return {"set_id": str(st["set_id"]), "seal_hash": h["seal"]}
 
 
-@router.post("/unseal",
-              dependencies=[Depends(require_controller)])
-def unseal(reason: str, actor: str, period: str = "2025") -> dict:
+@router.post("/unseal")
+def unseal(reason: str, period: str = "2025",
+           actor: Actor = Depends(require_controller)) -> dict:
     if not reason.strip():
         raise HTTPException(422, "Unsealing requires a reason for the audit trail.")
     st = one("""SELECT set_id FROM decision_set WHERE period=%s AND seal_hash IS NOT NULL
                  ORDER BY sealed_at DESC LIMIT 1""", (period,))
+    if not st:
+        raise HTTPException(404, "No sealed decision set for this period.")
     execute("""UPDATE decision_set SET seal_hash=NULL, sealed_at=NULL,
                       unsealed_reason=%s WHERE set_id=%s""", (reason, st["set_id"]))
     execute("""UPDATE rate SET status='SUPERSEDED' WHERE set_id=%s AND status<>'ACCEPTED'""",
             (st["set_id"],))
-    execute("""INSERT INTO audit_log (actor,action,entity,entity_id,reason)
-               VALUES (%s,'UNSEAL','decision_set',%s,%s)""", (actor, str(st["set_id"]), reason))
+    record(actor, "UNSEAL", "decision_set", str(st["set_id"]), reason=reason)
     return {"set_id": str(st["set_id"]), "status": "unsealed"}
 
 

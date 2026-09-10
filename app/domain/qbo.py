@@ -478,12 +478,18 @@ def parse_profit_loss(path: Path, sha256: str = "") -> ProfitLoss:
     rows = _read_rows(path)
     pl = ProfitLoss(source_name=path.name, sha256=sha256)
 
+    # On a P&L every "Total for X" is a subtree total, so every one of them
+    # names a parent. Requiring the "with sub-accounts" suffix here — as the
+    # general ledger does — left this set empty, nothing was ever pushed, and
+    # every account landed at the top level. Accounts sharing a leaf name
+    # across sections then collided: Drive AM, Digital Engineering, DLA Grant
+    # and Youth Entrepreneurship each exist in both Income and Expenses, and
+    # the later one silently overwrote the earlier.
     parents = {
         _ROLLUP_SUFFIX.sub("", _TOTAL_ROW.sub("", (r[0] or "").strip())).strip()
         for r in rows
         if r and (r[0] or "").strip()
         and _TOTAL_ROW.match((r[0] or "").strip())
-        and _ROLLUP_SUFFIX.search((r[0] or "").strip())
     }
 
     def amount_of(row: list[str]) -> Decimal:
@@ -508,9 +514,8 @@ def parse_profit_loss(path: Path, sha256: str = "") -> ProfitLoss:
             continue
 
         if _TOTAL_ROW.match(label):
-            name = _TOTAL_ROW.sub("", label).strip()
-            is_rollup = bool(_ROLLUP_SUFFIX.search(name))
-            name = _ROLLUP_SUFFIX.sub("", name).strip()
+            name = _ROLLUP_SUFFIX.sub(
+                "", _TOTAL_ROW.sub("", label).strip()).strip()
             amt = amount_of(row)
 
             low_name = name.lower()
@@ -519,31 +524,40 @@ def parse_profit_loss(path: Path, sha256: str = "") -> ProfitLoss:
                 stack = []
                 continue
 
+            # Every "Total for X" on a P&L is a subtree rollup, whether or not
+            # it carries the "with sub-accounts" suffix. Recording it as an
+            # account would double count: 4029 Sponsorships totals 270,209 and
+            # its three children total the same 270,209.
             if name in stack:
                 depth = len(stack) - 1 - stack[::-1].index(name)
                 qualified = ":".join(stack[:depth + 1])
-                if is_rollup or name not in parents:
-                    del stack[depth:]
+                del stack[depth:]
             else:
                 qualified = ":".join(stack + [name])
-            if is_rollup:
-                pl.rollups[qualified] = (section, amt)
-            else:
-                pl.accounts[qualified] = (section, amt)
+            pl.rollups[qualified] = (section, amt)
             continue
 
-        if low.startswith("net income") or low.startswith("net operating income"):
-            if low.startswith("net income"):
-                pl.net_income = amount_of(row)
+        if low.startswith("net income"):
+            pl.net_income = amount_of(row)
+            continue
+        # Computed lines, not accounts. "Net Other Income" repeats the Other
+        # Income section total and would double it.
+        if low.startswith(("net operating income", "net other income",
+                           "gross profit")):
             continue
 
-        # An account line: a label plus an amount is a leaf with activity; a
-        # label alone opens a parent whose children follow.
+        # An account line. A parent may carry its own amount AND have children
+        # beneath it — 4000 Contributions Income books 85,820.23 directly and
+        # still has sub-accounts — so the parent's own amount is recorded and
+        # the parent is then pushed, rather than one or the other.
+        if not section:
+            continue
         amt = amount_of(row)
         has_amount = any((c or "").strip() for c in row[1:])
-        if has_amount and section:
-            pl.accounts[":".join(stack + [label])] = (section, amt)
-        elif section:
+        qualified = ":".join(stack + [label])
+        if has_amount:
+            pl.accounts[qualified] = (section, amt)
+        if label in parents:
             stack.append(label)
 
     return pl

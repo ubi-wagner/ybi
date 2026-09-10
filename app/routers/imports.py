@@ -15,6 +15,8 @@ import psycopg
 from fastapi import Depends, APIRouter, File, HTTPException, UploadFile
 
 from app.auth import require_controller, require_reader
+from app.audit import record
+from app.auth import Actor
 from app.db import execute, one, query
 from app.domain.qbo import (QBO_GENERAL_LEDGER, QBO_TIME_ACTIVITY,
                             parse_general_ledger, parse_profit_loss,
@@ -132,9 +134,9 @@ def preview(batch_id: str) -> dict:
             "acceptable": bool(recon and recon["mismatches"] == 0)}
 
 
-@router.post("/{batch_id}/accept",
-              dependencies=[Depends(require_controller)])
-def accept(batch_id: str, accepted_by: str) -> dict:
+@router.post("/{batch_id}/accept")
+def accept(batch_id: str, accepted_by: str = "",
+           actor: Actor = Depends(require_controller)) -> dict:
     """A trigger refuses this while any subtotal is off by more than half a
     cent, so the guarantee holds even if this handler is wrong."""
     try:
@@ -193,6 +195,10 @@ def accept(batch_id: str, accepted_by: str) -> dict:
           ON CONFLICT (line_id) DO NOTHING
           RETURNING 1)
         SELECT count(*) AS n FROM ins""", (imp["import_id"], batch_id))
+    record(actor, "IMPORT_ACCEPT", "ledger_import", str(imp["import_id"]),
+           after={"batch_id": batch_id,
+                  "lines_promoted": n["n"] if n else 0},
+           reason="accepted after every printed subtotal tied")
     return {"batch_id": batch_id, "import_id": str(imp["import_id"]),
             "lines_promoted": n["n"] if n else 0}
 

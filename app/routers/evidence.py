@@ -14,6 +14,8 @@ from fastapi import Depends, APIRouter, File, Form, UploadFile
 from pydantic import BaseModel
 
 from app.auth import require_controller, require_reader
+from app.audit import record
+from app.auth import Actor
 from app.db import execute, one, query
 from app.settings import settings
 
@@ -30,13 +32,17 @@ class NoteIn(BaseModel):
     is_workpaper: bool = False
 
 
-@router.post("/upload",
-              dependencies=[Depends(require_controller)])
+@router.post("/upload")
 async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                  period: str = Form("2025"), uploaded_by: str = Form("unknown"),
                  target_type: str | None = Form(None),
                  target_id: str | None = Form(None),
-                 relevance: str = Form("")) -> dict:
+                 relevance: str = Form(""),
+                 actor: Actor = Depends(require_controller)) -> dict:
+    # Identity comes from the session, not the form. uploaded_by is kept for
+    # the case where a document is received on someone else's behalf, but it
+    # is a label, not a claim about who did this.
+    uploaded_by = actor.display_name or uploaded_by
     raw = await file.read()
     sha = hashlib.sha256(raw).hexdigest()
 
@@ -80,6 +86,10 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                     (eid, target_type, target_id, relevance, uploaded_by))
             attached = 1
 
+    record(actor, "EVIDENCE_UPLOAD", "evidence", eid,
+           after={"kind": kind, "sha256": sha, "target_type": target_type,
+                  "target_id": target_id, "attached_to": attached},
+           reason=relevance)
     return {"evidence_id": eid, "sha256": sha, "deduplicated": bool(existing),
             "attached_to": attached}
 
@@ -99,12 +109,15 @@ def for_target(target_type: str, target_id: str) -> dict:
     }
 
 
-@router.post("/note",
-              dependencies=[Depends(require_controller)])
-def add_note(body: NoteIn) -> dict:
+@router.post("/note")
+def add_note(body: NoteIn,
+             actor: Actor = Depends(require_controller)) -> dict:
     r = one("""INSERT INTO note (target_type,target_id,body,author,is_workpaper)
                VALUES (%s,%s,%s,%s,%s) RETURNING note_id""",
-            (body.target_type, body.target_id, body.body, body.author, body.is_workpaper))
+            (body.target_type, body.target_id, body.body,
+             actor.display_name, body.is_workpaper))
+    record(actor, "NOTE", body.target_type, body.target_id,
+           after={"is_workpaper": body.is_workpaper}, reason=body.body[:400])
     return {"note_id": str(r["note_id"])}
 
 

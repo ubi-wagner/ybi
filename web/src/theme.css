@@ -356,3 +356,43 @@ tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
 /* Density switch for the GL explorer — 15,500 rows wants a tighter row. */
 .dense tbody td { padding: 5px 12px; font-size: 12.5px; }
 .dense thead th { padding: 7px 12px 6px; }
+
+/* ── Sign-in ──────────────────────────────────────────────────────── */
+.signin-shell { min-height: 100vh; display: grid; place-items: center;
+  background: var(--bg, #f6f6f4); padding: 24px; }
+.signin { width: min(400px, 100%); padding: 32px; display: grid; gap: 10px; }
+.signin h1 { margin: 0 0 2px; font-size: 22px; }
+.signin-mark { font-size: 12px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted, #6b6b66); }
+.signin label { font-size: 12px; color: var(--muted, #6b6b66); margin-top: 6px; }
+.signin input { padding: 9px 11px; border: 1px solid var(--line, #ddd);
+  border-radius: 7px; font: inherit; background: #fff; }
+.signin input:focus { outline: 2px solid var(--accent, #0f6b64); outline-offset: 1px; }
+.signin .btn { margin-top: 14px; }
+.signin-error { background: #fdf0ee; border: 1px solid #e8c4bd; color: #8a2b1b;
+  padding: 8px 10px; border-radius: 7px; font-size: 13px; }
+
+/* ── Topbar actor ─────────────────────────────────────────────────── */
+.topbar-actor { margin-left: auto; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--muted, #6b6b66); }
+.role-chip { font-size: 10px; letter-spacing: .06em; padding: 2px 6px;
+  border: 1px solid var(--line, #ddd); border-radius: 4px; }
+
+/* ── Dashboard ────────────────────────────────────────────────────── */
+.dash { display: grid; gap: 16px; padding-bottom: 40px; }
+.dash-head { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; }
+.dash-head h1 { margin: 4px 0 2px; font-size: 24px; }
+.dash-head p { margin: 0; font-size: 13px; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 28px; }
+.quiet-row { margin-top: 18px; padding-top: 16px;
+  border-top: 1px solid var(--line, #eee); gap: 22px; }
+.quiet-row .stat-value { font-size: 15px; }
+.dash-coverage { margin-top: 18px; padding-top: 16px;
+  border-top: 1px solid var(--line, #eee); display: grid; gap: 10px; }
+.row-clickable { cursor: pointer; }
+.row-clickable:hover { background: var(--hover, #f2f4f3); }
+.strong { font-weight: 600; }
+.small { font-size: 12px; }
+.ellipsis { max-width: 46ch; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
