@@ -4,12 +4,14 @@ Assumption variants are free. Classification overrides are counted, reasoned
 and disclosed. Both are legitimate; only one needs a paper trail.
 """
 
-from fastapi import APIRouter
+from fastapi import Depends, APIRouter
 from pydantic import BaseModel
 
+from app.auth import require_controller, require_reader
 from app.db import execute, one, query
 
-router = APIRouter(prefix="/lanes", tags=["lanes"])
+router = APIRouter(prefix="/lanes", tags=["lanes"],
+                   dependencies=[Depends(require_reader)])
 
 
 class LaneIn(BaseModel):
@@ -24,7 +26,8 @@ def list_lanes(period: str = "2025") -> list[dict]:
     return query("SELECT * FROM v_lane_disclosure WHERE period=%s ORDER BY created_at", (period,))
 
 
-@router.post("")
+@router.post("",
+              dependencies=[Depends(require_controller)])
 def create_lane(body: LaneIn, period: str = "2025") -> dict:
     st = one("""SELECT set_id FROM decision_set WHERE period=%s ORDER BY set_id LIMIT 1""",
              (period,))
@@ -40,7 +43,8 @@ def buildup(lane_id: str) -> list[dict]:
     return query("SELECT * FROM v_lane_buildup WHERE lane_id=%s ORDER BY pool", (lane_id,))
 
 
-@router.post("/{lane_id}/promote")
+@router.post("/{lane_id}/promote",
+              dependencies=[Depends(require_controller)])
 def promote(lane_id: str, to_kind: str, rationale: str, approved_by: str) -> dict:
     cur = one("SELECT kind FROM lane WHERE lane_id=%s", (lane_id,))
     execute("""INSERT INTO lane_promotion (lane_id,from_kind,to_kind,rationale,approved_by)

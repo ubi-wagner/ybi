@@ -5,12 +5,14 @@ in this handler or anywhere else — a database trigger enforces it too, so the
 guarantee survives a bug here.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.auth import require_controller, require_reader
 from app.db import execute, one, query
 
-router = APIRouter(prefix="/rates", tags=["rates"])
+router = APIRouter(prefix="/rates", tags=["rates"],
+                   dependencies=[Depends(require_reader)])
 
 
 class SealIn(BaseModel):
@@ -18,7 +20,8 @@ class SealIn(BaseModel):
     note: str = ""
 
 
-@router.post("/seal")
+@router.post("/seal",
+              dependencies=[Depends(require_controller)])
 def seal(body: SealIn, period: str = "2025") -> dict:
     """Hash every live classification and freeze the set. After this the rate
     phase unlocks and classifications can only change by unsealing, with a
@@ -41,7 +44,8 @@ def seal(body: SealIn, period: str = "2025") -> dict:
     return {"set_id": str(st["set_id"]), "seal_hash": h["seal"]}
 
 
-@router.post("/unseal")
+@router.post("/unseal",
+              dependencies=[Depends(require_controller)])
 def unseal(reason: str, actor: str, period: str = "2025") -> dict:
     if not reason.strip():
         raise HTTPException(422, "Unsealing requires a reason for the audit trail.")

@@ -59,6 +59,24 @@ def upload(c: httpx.Client, path: Path, report: str, who: str) -> str:
     return r.json()["batch_id"]
 
 
+def sign_in(c: httpx.Client, email_env: str, default_email: str) -> None:
+    """Authenticate the client, or die saying so.
+
+    A script that carries on unauthenticated measures 401s and reports them as
+    product behaviour. Better to stop here with a message naming the fix.
+    """
+    import os
+    password = os.environ.get("YBI_SEED_PASSWORD", "")
+    email = os.environ.get(email_env, default_email)
+    if not password:
+        raise SystemExit(
+            "YBI_SEED_PASSWORD is required. Seed actors first:\n"
+            "  YBI_SEED_PASSWORD=... python3 scripts/seed_actors.py")
+    r = c.post("/api/auth/login", json={"email": email, "password": password})
+    if r.status_code != 200:
+        raise SystemExit(f"could not sign in as {email} ({r.status_code}): "
+                         f"{r.text[:160]}")
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8000")
@@ -67,6 +85,7 @@ def main() -> int:
 
     with httpx.Client(base_url=args.base, timeout=300) as c:
         c.get("/api/health").raise_for_status()
+        sign_in(c, "YBI_CONTROLLER_EMAIL", "tom@ybi.org")
 
         print("\nProfit and loss")
         pl_batch = upload(c, PL_FILE, "PROFIT_LOSS", args.who)

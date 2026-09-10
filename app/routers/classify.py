@@ -21,12 +21,14 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends, APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.auth import require_controller, require_reader
 from app.db import execute, one, query, transaction
 
-router = APIRouter(prefix="/classify", tags=["classify"])
+router = APIRouter(prefix="/classify", tags=["classify"],
+                   dependencies=[Depends(require_reader)])
 
 POOLS = ["DIRECT", "FRINGE", "OVERHEAD", "G&A", "RENTAL_DIRECT",
          "FUNDRAISING", "UNALLOWABLE", "EXCLUDED"]
@@ -245,7 +247,8 @@ def propose(g: GroupOut) -> dict | None:
     return None
 
 
-@router.post("/decide")
+@router.post("/decide",
+              dependencies=[Depends(require_controller)])
 def decide(body: DecideIn, period: str = "2025") -> dict:
     """Record decisions for one or more groups. Fans out to every line in the
     group; the audit trail is at line grain even though the work is at group
@@ -309,7 +312,8 @@ def decide(body: DecideIn, period: str = "2025") -> dict:
     return {"decisions_created": created, "set_id": str(set_id)}
 
 
-@router.post("/defer")
+@router.post("/defer",
+              dependencies=[Depends(require_controller)])
 def defer(group_key: str, reason: str, actor: str, period: str = "2025") -> dict:
     """Explicitly park a group. Deferred is a state, not an absence of one —
     it keeps the item visible instead of letting it drift out of view."""

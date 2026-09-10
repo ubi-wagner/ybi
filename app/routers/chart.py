@@ -3,14 +3,16 @@ carries every 2025 dollar."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import Depends, APIRouter
 from fastapi.responses import Response
 
+from app.auth import require_controller, require_reader
 from app.db import query
 from app.domain import chart as C
 from app.domain.crosswalk import CROSSWALK, build
 
-router = APIRouter(prefix="/chart", tags=["chart"])
+router = APIRouter(prefix="/chart", tags=["chart"],
+                   dependencies=[Depends(require_reader)])
 
 
 @router.get("/summary")

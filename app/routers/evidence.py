@@ -10,13 +10,15 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import Depends, APIRouter, File, Form, UploadFile
 from pydantic import BaseModel
 
+from app.auth import require_controller, require_reader
 from app.db import execute, one, query
 from app.settings import settings
 
-router = APIRouter(prefix="/evidence", tags=["evidence"])
+router = APIRouter(prefix="/evidence", tags=["evidence"],
+                   dependencies=[Depends(require_reader)])
 STORAGE = Path(settings.storage_dir) / "evidence"
 
 
@@ -28,7 +30,8 @@ class NoteIn(BaseModel):
     is_workpaper: bool = False
 
 
-@router.post("/upload")
+@router.post("/upload",
+              dependencies=[Depends(require_controller)])
 async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                  period: str = Form("2025"), uploaded_by: str = Form("unknown"),
                  target_type: str | None = Form(None),
@@ -96,7 +99,8 @@ def for_target(target_type: str, target_id: str) -> dict:
     }
 
 
-@router.post("/note")
+@router.post("/note",
+              dependencies=[Depends(require_controller)])
 def add_note(body: NoteIn) -> dict:
     r = one("""INSERT INTO note (target_type,target_id,body,author,is_workpaper)
                VALUES (%s,%s,%s,%s,%s) RETURNING note_id""",

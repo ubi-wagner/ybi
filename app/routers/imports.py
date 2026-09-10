@@ -12,19 +12,22 @@ from pathlib import Path
 
 import psycopg
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import Depends, APIRouter, File, HTTPException, UploadFile
 
+from app.auth import require_controller, require_reader
 from app.db import execute, one, query
 from app.domain.qbo import (QBO_GENERAL_LEDGER, QBO_TIME_ACTIVITY,
                             parse_general_ledger, parse_profit_loss,
                             parse_time_activity)
 from app.settings import settings
 
-router = APIRouter(prefix="/imports", tags=["imports"])
+router = APIRouter(prefix="/imports", tags=["imports"],
+                   dependencies=[Depends(require_reader)])
 STORAGE = Path(settings.storage_dir)
 
 
-@router.post("/upload")
+@router.post("/upload",
+              dependencies=[Depends(require_controller)])
 async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
                  period: str = "2025", uploaded_by: str = "unknown") -> dict:
     raw = await file.read()
@@ -49,7 +52,8 @@ async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
     return {"batch_id": str(row["batch_id"]), "status": "UPLOADED", "sha256": sha}
 
 
-@router.post("/{batch_id}/parse")
+@router.post("/{batch_id}/parse",
+              dependencies=[Depends(require_controller)])
 def parse(batch_id: str) -> dict:
     b = one("SELECT * FROM staging_batch WHERE batch_id=%s", (batch_id,))
     if not b:
@@ -128,7 +132,8 @@ def preview(batch_id: str) -> dict:
             "acceptable": bool(recon and recon["mismatches"] == 0)}
 
 
-@router.post("/{batch_id}/accept")
+@router.post("/{batch_id}/accept",
+              dependencies=[Depends(require_controller)])
 def accept(batch_id: str, accepted_by: str) -> dict:
     """A trigger refuses this while any subtotal is off by more than half a
     cent, so the guarantee holds even if this handler is wrong."""

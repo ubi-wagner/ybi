@@ -1,10 +1,12 @@
 """Awards, constraint tests and invoice true-up."""
 
-from fastapi import APIRouter
+from fastapi import Depends, APIRouter
 
+from app.auth import require_controller, require_reader
 from app.db import query
 
-router = APIRouter(prefix="/awards", tags=["awards"])
+router = APIRouter(prefix="/awards", tags=["awards"],
+                   dependencies=[Depends(require_reader)])
 
 
 @router.get("")
