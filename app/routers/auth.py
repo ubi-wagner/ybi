@@ -101,6 +101,45 @@ def me(actor: Actor = Depends(current_actor)) -> dict:
             "can_write": actor.can_write, "can_read": actor.can_read}
 
 
+class PasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/password")
+def change_password(body: PasswordIn, request: Request,
+                    actor: Actor = Depends(current_actor)) -> dict:
+    """Change your own password.
+
+    Seeding provisions every account with one bootstrap password, which is
+    what a bootstrap is. Without this the bootstrap password is the permanent
+    password, shared across the controller, the auditor and two employees —
+    and a record whose signatures anyone could have written is not a record.
+
+    The current password is required, so a borrowed session cannot lock the
+    owner out of their own account. Other sessions are left alone: signing
+    someone out of a screen they are working in is not what they asked for.
+    """
+    row = one("SELECT password_hash FROM actor WHERE actor_id = %s",
+              (actor.actor_id,))
+    if not row or not verify_password(body.current_password, row["password_hash"]):
+        log.warning("failed password change for %s from %s", actor.email,
+                    request.client.host if request.client else "?")
+        raise HTTPException(403, "That is not your current password.")
+    if len(body.new_password) < 12:
+        raise HTTPException(422, "A password must be at least 12 characters.")
+    if body.new_password == body.current_password:
+        raise HTTPException(422, "The new password is the same as the old one.")
+
+    execute("UPDATE actor SET password_hash = %s WHERE actor_id = %s",
+            (hash_password(body.new_password), actor.actor_id))
+    # The password itself is never written to the log, only that it changed.
+    record(actor, "PASSWORD_CHANGE", "actor", actor.actor_id,
+           reason="changed their own password")
+    log.info("%s changed their password", actor.email)
+    return {"changed": True}
+
+
 @router.post("/actors")
 def create_actor(body: ActorIn, admin: Actor = Depends(require_admin)) -> dict:
     """Provision an actor. ADMIN only."""

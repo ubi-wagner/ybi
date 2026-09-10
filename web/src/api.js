@@ -31,6 +31,8 @@ export const api = {
   login: (email, password) =>
     req("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   logout: () => req("/auth/logout", { method: "POST" }),
+  changePassword: (body) =>
+    req("/auth/password", { method: "POST", body: JSON.stringify(body) }),
   dashboard: (period) => req("/dashboard" + (period ? `?period=${period}` : "")),
   worklist: (params) => req("/dashboard/worklist?" + new URLSearchParams(params)),
   activity: (params) => req("/dashboard/activity?" + new URLSearchParams(params)),

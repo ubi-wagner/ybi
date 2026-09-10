@@ -71,8 +71,16 @@ export default function Help() {
         </p>
         <Shot src="/help/01-signin.png" caption="Sign in with your own account." />
         <p>
-          If you forget your password, ask Eric to reset it. There is no
-          self-service reset yet.
+          Your account is created with a bootstrap password shared by everyone
+          in the first setup. Change it the first time you sign in:{" "}
+          <strong>Password</strong> in the top bar, beside your name. It asks
+          for your current one, so nobody can change it from a screen you left
+          open. Until you do, every signature the system holds in your name is
+          one four other people could have written.
+        </p>
+        <p>
+          If you forget it, ask Eric to reset it. There is no self-service
+          reset by email yet.
         </p>
 
         {/* ─────────────────────────────────────────────── */}

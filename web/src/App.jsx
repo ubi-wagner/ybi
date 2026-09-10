@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { ToastHost } from "./components/ui.jsx";
 import { api, Unauthorized } from "./api.js";
 import SignIn from "./pages/SignIn.jsx";
+import PasswordDialog from "./components/PasswordDialog.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
 import Certify from "./pages/Certify.jsx";
@@ -42,6 +43,7 @@ export default function App() {
      session check is still in flight makes an already-authenticated user think
      they were logged out. */
   const [actor, setActor] = useState(undefined);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const check = useCallback(() => {
     api.me().then(setActor).catch((e) => {
@@ -87,9 +89,16 @@ export default function App() {
           <span className="topbar-actor">
             {actor.display_name}
             <span className="role-chip">{actor.role}</span>
+            <button className="btn quiet" onClick={() => setChangingPassword(true)}>
+              Password
+            </button>
             <button className="btn quiet" onClick={signOut}>Sign out</button>
           </span>
         </header>
+
+        {changingPassword && (
+          <PasswordDialog onClose={() => setChangingPassword(false)} />
+        )}
 
         <nav className="tabs">
           {(isEmployee ? EMPLOYEE_TABS : TABS).map(([to, label, sched]) => (

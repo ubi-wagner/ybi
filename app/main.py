@@ -11,6 +11,7 @@ idempotent and tracked in schema_migration, so a redeploy is safe.
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -32,8 +33,26 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
 
+def check_deployment() -> None:
+    """Refuse to serve a deployment that is configured as development.
+
+    ``env`` decides two things that are invisible when they are wrong: the
+    session cookie's Secure flag, and whether CORS admits the Vite dev server.
+    A production deployment left at the default would look entirely healthy
+    while handing out cookies that a plain-HTTP hop can read. Railway sets
+    RAILWAY_ENVIRONMENT_NAME on every service, so the mismatch is detectable,
+    and a boot that stops is cheaper than one that does not.
+    """
+    if os.getenv("RAILWAY_ENVIRONMENT_NAME") and settings.env == "dev":
+        raise RuntimeError(
+            "YBI_ENV is 'dev' on a Railway deployment. Session cookies would "
+            "be issued without the Secure flag and CORS would admit "
+            "localhost:5173. Set YBI_ENV=prod on the service and redeploy.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    check_deployment()
     open_pool()
     applied = run_migrations()
     if applied:

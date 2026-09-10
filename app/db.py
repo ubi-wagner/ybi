@@ -58,10 +58,21 @@ def execute(sql: str, params: tuple | dict | None = None) -> None:
         cur.execute(sql, params)
 
 
+MIGRATION_LOCK = 8_142_025          # arbitrary, but stable across deploys
+
+
 def run_migrations() -> list[str]:
-    """Apply app/sql/*.sql in filename order, once each."""
+    """Apply app/sql/*.sql in filename order, once each.
+
+    Held under a session advisory lock for the duration. Railway starts the
+    new container before it stops the old one, so two processes can reach
+    this function against one database within the same second; without the
+    lock they race on the same file. The second waits, sees the file already
+    in schema_migration, and applies nothing.
+    """
     applied: list[str] = []
     with conn() as c, c.cursor() as cur:
+        cur.execute("SELECT pg_advisory_xact_lock(%s)", (MIGRATION_LOCK,))
         cur.execute("""
             CREATE TABLE IF NOT EXISTS schema_migration (
               filename    text PRIMARY KEY,

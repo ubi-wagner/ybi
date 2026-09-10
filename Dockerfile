@@ -15,8 +15,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
+# Bootstrap scripts ship with the image so seeding runs inside the deployment,
+# against the private database URL, rather than requiring someone to open the
+# database to the internet and run them from a laptop.
+COPY scripts/ ./scripts/
 COPY --from=web /web/dist ./web/dist
+# Evidence lands here. On Railway this path must be a mounted volume — a
+# container filesystem is discarded on every deploy, and an audit record whose
+# documents disappear on redeploy is not an audit record.
 RUN mkdir -p storage
 
+ENV PYTHONPATH=/srv
 EXPOSE 8000
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

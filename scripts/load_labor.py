@@ -15,11 +15,21 @@ because that is what it is: prepared in September 2026 for calendar 2025, from
 records that were not contemporaneous. The certification workflow is what turns
 it into support for a charge.
 
-    PYTHONPATH=. python3 scripts/load_labor.py
+    PYTHONPATH=. python3 scripts/load_labor.py                 # repo copy
+    python3 scripts/load_labor.py path/to/workbook.xlsx        # explicit file
+    python3 scripts/load_labor.py --evidence EV-8be4dad4402d   # from the store
+
+The third form is the deployed one. The source workbooks are not baked into
+the image — they are the client's financial records, and an image is copied
+around — so in production the controller uploads the workbook through the
+Evidence screen, where it is hashed and stored, and this loads from that
+stored copy. The document the load used is then the document on file, which
+is the whole point of a content-addressed store.
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 import zipfile
@@ -58,6 +68,10 @@ def cells(path: Path, sheet_name: str):
     target = {r.get("Id"): r.get("Target") for r in rels}
     path_for = {s.get("name"): "xl/" + target[s.get(NSR + "id")].lstrip("/")
                 for s in wb.iter(NS + "sheet")}
+    if sheet_name not in path_for:
+        raise LookupError(
+            f"{path.name} has no {sheet_name!r} sheet. Its sheets are: "
+            + ", ".join(sorted(path_for)))
     root = ET.fromstring(z.read(path_for[sheet_name]))
     for row in root.iter(NS + "row"):
         out: dict[str, str] = {}
@@ -70,12 +84,44 @@ def cells(path: Path, sheet_name: str):
         yield int(row.get("r")), out
 
 
+def resolve_source(args) -> Path | None:
+    """Where the workbook is: named on the command line, on file as evidence,
+    or the repo copy for a development run."""
+    if args.evidence:
+        open_pool()
+        row = one("SELECT uri, sha256 FROM evidence WHERE evidence_id = %s",
+                  (args.evidence,))
+        if not row:
+            print(f"no evidence {args.evidence} on file", file=sys.stderr)
+            return None
+        path = Path(row["uri"])
+        if not path.exists():
+            print(f"{args.evidence} is on file but {path} is missing — the "
+                  f"storage volume may not be mounted", file=sys.stderr)
+            return None
+        print(f"  from evidence {args.evidence} (sha256 {row['sha256'][:12]}…)")
+        return path
+    return Path(args.path) if args.path else SOURCE
+
+
 def main() -> int:
-    if not SOURCE.exists():
-        print(f"{SOURCE} not found", file=sys.stderr)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("path", nargs="?", help="path to the workbook")
+    ap.add_argument("--evidence", help="evidence id of an uploaded workbook")
+    args = ap.parse_args()
+
+    source = resolve_source(args)
+    if source is None:
+        return 2
+    if not source.exists():
+        print(f"{source} not found", file=sys.stderr)
         return 2
 
-    rows = dict(cells(SOURCE, SHEET))
+    try:
+        rows = dict(cells(source, SHEET))
+    except LookupError as e:
+        print(e, file=sys.stderr)
+        return 2
     header = rows.get(HEADER_ROW, {})
     objectives = {col: label[4:].strip()
                   for col, label in header.items()
@@ -114,7 +160,7 @@ def main() -> int:
                   DO UPDATE SET reconstructed_units = EXCLUDED.reconstructed_units,
                                 payroll_wages = EXCLUDED.payroll_wages""",
                 (name.upper(), name, objective, wages, amount,
-                 RATIONALE, SOURCE.name))
+                 RATIONALE, source.name))
             allocations += 1
 
     print(f"  {employees} employees, {allocations} allocations")
