@@ -255,6 +255,16 @@ def main() -> int:
             ok("refused the audit package with 403")
         else:
             finding(f"employee downloaded the audit package ({pkg.status_code})")
+
+        # A timesheet somebody else filled in is the thing a certification
+        # exists to rule out, so it must not be reachable from any account.
+        other = employee.get("/api/timesheet/entries",
+                             params={"employee_key": "GAFFNEY"})
+        if other.status_code == 403:
+            ok("refused another employee's timesheet with 403")
+        else:
+            finding(f"employee read GAFFNEY's timesheet ({other.status_code})")
+
     finally:
         employee.close()
 
@@ -262,6 +272,24 @@ def main() -> int:
     print("\nController")
     controller = sign_in(args.base, actors["CONTROLLER"]["email"], password)
     try:
+        t = controller.post("/api/timesheet/entry",
+                            json={"work_date": "2025-03-04",
+                                  "objective_id": "DRIVE-AM", "hours": 8,
+                                  "basis": "CALENDAR"})
+        if t.status_code == 403:
+            ok("controller refused time entry with 403 — nobody keeps "
+               "somebody else's timesheet")
+        else:
+            finding(f"controller entered time ({t.status_code}); a timesheet "
+                    f"filled in by the controller is what a certification "
+                    f"exists to rule out")
+
+        r = controller.get("/api/timesheet/entries",
+                           params={"employee_key": "EWING"})
+        if r.status_code == 200:
+            ok("controller reads an employee's timesheet — review is their job")
+        else:
+            finding(f"controller cannot review a timesheet ({r.status_code})")
         q = controller.get("/api/classify/queue", params={"limit": 3})
         if q.status_code == 200 and q.json():
             ok(f"reads the queue — {len(q.json())} groups")

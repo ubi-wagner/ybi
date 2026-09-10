@@ -152,15 +152,23 @@ def main() -> int:
             execute("""
                 INSERT INTO labor_allocation
                   (period, employee_key, employee_name, objective_id,
-                   payroll_wages, original_units, reconstructed_units,
-                   evidence_quality, rationale, source_document, loaded_by)
-                VALUES ('2025',%s,%s,%s,%s,0,%s,'MANAGEMENT_RECONSTRUCTION',
+                   source_label, payroll_wages, original_units,
+                   reconstructed_units, evidence_quality, rationale,
+                   source_document, loaded_by)
+                -- The workbook's column headings are its own vocabulary.
+                -- labor_objective_map turns them into the objective ids the
+                -- ledger and the awards use; an unmapped heading is rejected
+                -- by the foreign key rather than quietly stored as a new one.
+                VALUES ('2025',%s,%s,
+                        COALESCE((SELECT objective_id FROM labor_objective_map
+                                   WHERE source_label = %s), %s),
+                        %s,%s,0,%s,'MANAGEMENT_RECONSTRUCTION',
                         %s,%s,'load_labor.py')
                 ON CONFLICT (period, employee_key, objective_id)
                   DO UPDATE SET reconstructed_units = EXCLUDED.reconstructed_units,
                                 payroll_wages = EXCLUDED.payroll_wages""",
-                (name.upper(), name, objective, wages, amount,
-                 RATIONALE, source.name))
+                (name.upper(), name, objective, objective, objective,
+                 wages, amount, RATIONALE, source.name))
             allocations += 1
 
     print(f"  {employees} employees, {allocations} allocations")

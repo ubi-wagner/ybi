@@ -27,4 +27,7 @@ RUN mkdir -p storage
 
 ENV PYTHONPATH=/srv
 EXPOSE 8000
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# --proxy-headers so the address in the record is the client's, not Railway's
+# edge. The only route into the container is that proxy, so trusting the
+# forwarded header from any peer is trusting the one peer there is.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

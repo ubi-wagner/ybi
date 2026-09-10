@@ -36,6 +36,19 @@ export const api = {
   dashboard: (period) => req("/dashboard" + (period ? `?period=${period}` : "")),
   worklist: (params) => req("/dashboard/worklist?" + new URLSearchParams(params)),
   activity: (params) => req("/dashboard/activity?" + new URLSearchParams(params)),
+  timesheetObjectives: (period = "2025") =>
+    req(`/timesheet/objectives?period=${period}`),
+  timesheetEntries: (params) => req("/timesheet/entries?" + new URLSearchParams(params)),
+  timesheetSummary: (params) => req("/timesheet/summary?" + new URLSearchParams(params || {})),
+  putTime: (body) => req("/timesheet/entry", { method: "POST", body: JSON.stringify(body) }),
+  removeTime: (body) =>
+    req("/timesheet/entry/remove", { method: "POST", body: JSON.stringify(body) }),
+  timesheetCoverage: (params) =>
+    req("/timesheet/coverage?" + new URLSearchParams(params || {})),
+  submitTimesheet: (body) =>
+    req("/timesheet/submit", { method: "POST", body: JSON.stringify(body) }),
+  withdrawTimesheet: (body) =>
+    req("/timesheet/withdraw", { method: "POST", body: JSON.stringify(body) }),
   myCertification: () => req("/certify/mine"),
   sign: (body) => req("/certify/sign", { method: "POST", body: JSON.stringify(body) }),
   certificationStatus: () => req("/certify/status"),

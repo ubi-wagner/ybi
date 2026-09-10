@@ -13,6 +13,7 @@ const SECTIONS = [
   { id: "classify", label: "Classifying cost" },
   { id: "segment", label: "Splitting a mixed line" },
   { id: "evidence", label: "Evidence and notes" },
+  { id: "timesheet", label: "Your timesheet" },
   { id: "certify", label: "Certifying effort" },
   { id: "worklist", label: "What is left" },
   { id: "seal", label: "Sealing and rates" },
@@ -264,6 +265,72 @@ export default function Help() {
               caption="Schedule E. Anyone who can read the period can download the document." />
 
         {/* ─────────────────────────────────────────────── */}
+        <h2 id="timesheet">Your timesheet</h2>
+        <p>
+          <strong>My time</strong> is your own record of your own time. Nobody
+          else can enter time on it — not the controller, not an administrator
+          — because a timesheet somebody else filled in is exactly what a
+          certification is supposed to rule out.
+        </p>
+        <p>
+          Two views. <strong>Week</strong> is for entering: objectives down the
+          side, days across the top, type hours into the grid and tab along.
+          <strong> Month</strong> is for finding your way around the year and
+          seeing what is still blank; click any day to see what is on it.
+        </p>
+        <Shot src="/help/22-timesheet-week.png"
+              caption="The week grid. One basis for the week, because that is how a person works back through a calendar." />
+        <p>
+          Before you enter a week, say <strong>what you are working from</strong>
+          — your calendar, project records, a dated deliverable, or memory. It
+          is recorded with the hours, because a reviewer is entitled to know
+          what the number rests on.
+        </p>
+        <p className="callout">
+          <strong>You cannot mark old time as contemporaneous.</strong> The
+          system works out whether a record was made at the time by comparing
+          the day worked with the day you typed it, and nothing else. Time
+          entered within a week counts as contemporaneous. 2025 entered now is
+          a reconstruction, however carefully you rebuild it — and a careful
+          reconstruction is worth a great deal more than a bad one, so it is
+          worth doing properly.
+        </p>
+        <Shot src="/help/23-timesheet-month.png"
+              caption="The month view. Days with time carry the hours and a bar; blank days are the work left." />
+        <h3>Paid leave</h3>
+        <p>
+          Record holidays, PTO and sick days against <strong>LEAVE</strong>.
+          They are compensated time, so leaving them out would overstate every
+          project share. Leave is recorded and then left out of the base, which
+          is a different thing from ignoring it.
+        </p>
+        <h3>Submitting</h3>
+        <p>
+          Filling the sheet in is not the same as finishing it. While it is
+          unsubmitted, the controller's reconstruction still speaks for your
+          year; the moment you submit, your own record replaces it. That is why
+          submission is a separate step, and why a part-filled sheet is refused:
+          two days entered against one award would otherwise claim that award
+          was your whole year.
+        </p>
+        <p>
+          You say how many hours a week you worked, and the sheet has to cover
+          at least ninety per cent of what that implies for the period. You can
+          withdraw a submission with a reason; it stays on the record marked
+          withdrawn.
+        </p>
+        <Shot src="/help/25-timesheet-summary.png"
+              caption="What the sheet adds up to, and where it differs from the reconstruction built for you." />
+        <p>
+          The <strong>difference table</strong> is not a scolding. The 2025
+          distribution was rebuilt from payroll and hours logs before anyone
+          asked you, and where your own record disagrees with it, both stay on
+          the file and the gap is shown in dollars. That difference is for the
+          controller to look at — it is not something either side gets to
+          overwrite.
+        </p>
+
+        {/* ─────────────────────────────────────────────── */}
         <h2 id="certify">Certifying effort</h2>
         <p>
           Employees sign for their own time. Nobody signs for anybody else — not
@@ -357,13 +424,16 @@ export default function Help() {
             <tr>
               <td><strong>Controller</strong></td>
               <td>Import, classify, segment, attach evidence, note, seal,
-                  restate, export</td>
-              <td>Create accounts; certify anyone's effort</td>
+                  restate, export, read anyone's timesheet</td>
+              <td>Create accounts; enter time for anyone; certify anyone's
+                  effort</td>
             </tr>
             <tr>
               <td><strong>Employee</strong></td>
-              <td>See and certify their own effort</td>
-              <td>See the ledger, classify, or certify for anyone else</td>
+              <td>Keep their own timesheet, submit it, and certify their own
+                  effort</td>
+              <td>See the ledger, classify, see or fill in anyone else's
+                  timesheet, or certify for anyone else</td>
             </tr>
             <tr>
               <td><strong>Auditor</strong></td>
@@ -445,6 +515,24 @@ export default function Help() {
           Documents and judgments are not deletable. Detach a document, or
           supersede a judgment, and the record shows that it happened and why.
           A cost system where things can vanish cannot support an audit.
+        </Q>
+
+        <Q q="Do I have to rebuild all of 2025 to certify?">
+          No. If you leave your timesheet unsubmitted, the controller's
+          reconstruction stands and you certify that, which is what everyone
+          did before timesheets existed. Submitting your own record is better
+          evidence, and it is your call whether the year is worth rebuilding.
+          From 2026 the same screen produces contemporaneous records simply by
+          being used in the week the work happens, which is worth more than any
+          reconstruction.
+        </Q>
+
+        <Q q="My hours disagree with the controller's figures. Which wins?">
+          Yours, once you submit — the person who did the work is the
+          firsthand record. Neither is deleted: the difference is shown in
+          percentages and in dollars, and the controller looks at it. If the
+          difference is large it usually means something real, like time spent
+          on an award nobody thought to charge.
         </Q>
 
         <Q q="Who do I ask?">

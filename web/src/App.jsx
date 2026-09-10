@@ -7,6 +7,7 @@ import PasswordDialog from "./components/PasswordDialog.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
 import Certify from "./pages/Certify.jsx";
+import Timesheet from "./pages/Timesheet.jsx";
 import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
 import Imports from "./pages/Imports.jsx";
@@ -21,6 +22,7 @@ import Awards from "./pages/Awards.jsx";
    The dashboard has no schedule letter because it prints as nothing — it is
    where the work is picked up, not part of the package. */
 const EMPLOYEE_TABS = [
+  ["/timesheet", "My time",    "·"],
   ["/certify",   "My effort",  "·"],
   ["/help",      "Help",       "?"],
 ];
@@ -31,6 +33,7 @@ const TABS = [
   ["/chart",     "Chart",      "H"],
   ["/classify",  "Classify",   "B"],
   ["/evidence",  "Evidence",   "E"],
+  ["/timesheet", "Time",       "G"],
   ["/lanes",     "Lanes",      "C"],
   ["/rates",     "Rates",      "D"],
   ["/awards",    "Awards",     "F"],
@@ -115,7 +118,8 @@ export default function App() {
         </nav>
 
         <Routes>
-          <Route path="/" element={isEmployee ? <Certify /> : <Dashboard />} />
+          <Route path="/" element={isEmployee ? <Timesheet actor={actor} /> : <Dashboard />} />
+          <Route path="/timesheet" element={<Timesheet actor={actor} />} />
           <Route path="/certify" element={<Certify />} />
           <Route path="/help" element={<Help />} />
           <Route path="/worklist/:kind" element={<Worklist />} />
