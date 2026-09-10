@@ -109,12 +109,27 @@ class Invoice:
 
     @property
     def carries_no_fringe(self) -> bool:
-        """No fringe line at all.
+        """No separate fringe line.
 
-        Not conclusive on its own: a labour line may be burdened already. It is
-        conclusive when read with the labour distribution, which is why the
-        finding says "verify" rather than asserting."""
+        On these invoices that is not a gap: fringe is inside the labour
+        amount. The absence of a line is a presentation fact, not a recovery
+        one, and treating it as foregone recovery would overstate the claim."""
         return self.fringe_billed == 0
+
+    def labor_composition(self, fringe_rate: Decimal) -> tuple[Decimal, Decimal]:
+        """Split a burdened labour amount into base wages and embedded fringe.
+
+        The invoice face shows one number at quantity one, so the split has to
+        be derived: base = burdened / (1 + fringe). Needed to test the labour
+        line against payroll and the effort distribution, which are stated in
+        base wages — comparing a burdened invoice line to a wage control finds
+        a difference that is only the fringe.
+        """
+        burdened = self.by_category(Category.LABOR) + self.fringe_billed
+        if fringe_rate <= 0:
+            return money(burdened), Decimal(0)
+        base = money(burdened / (Decimal(1) + fringe_rate))
+        return base, money(burdened - base)
 
     @property
     def effective_indirect_rate(self) -> Decimal | None:
@@ -135,6 +150,8 @@ class Recovery:
     indirect_supported: Decimal
     fringe_billed: Decimal
     fringe_supported: Decimal
+    base_wages: Decimal = Decimal(0)
+    embedded_fringe: Decimal = Decimal(0)
     rate_label: str = ""
 
     @property
@@ -171,11 +188,6 @@ class Recovery:
             out.append(
                 f"Indirect over-collected by {abs(self.indirect_variance)}. "
                 f"This is returnable, not a negotiating position.")
-        if self.fringe_billed == 0 and self.fringe_supported > 0:
-            out.append(
-                f"No fringe line. Verify whether the labour amount is already "
-                f"burdened; if it is raw wages, {self.fringe_supported} of "
-                f"fringe was never billed.")
         return out
 
 
@@ -186,15 +198,20 @@ def assess(invoice: Invoice, *, indirect_rate: Decimal,
     """Measure one invoice against a rate set.
 
     ``labor_is_burdened`` says whether the labour line already carries fringe.
-    The sample invoices give no way to tell from their face — quantity one at a
-    rate equal to the whole amount — so the caller has to state which reading
-    is being tested, and the answer says so.
+    On the America Makes invoices it does, which is the default: the labour
+    amount is burdened and fringe is not separately foregone. Fringe is part of
+    MTDC either way, so the indirect base is unaffected by the reading — what
+    changes is whether unbilled fringe is added to the claim, and on these
+    invoices it must not be.
     """
     base = invoice.mtdc_as_billed
     labor = invoice.by_category(Category.LABOR)
 
     fringe_supported = (Decimal(0) if labor_is_burdened
                         else money(labor * fringe_rate))
+    base_wages, embedded_fringe = (invoice.labor_composition(fringe_rate)
+                                   if labor_is_burdened
+                                   else (labor, money(labor * fringe_rate)))
 
     # Fringe that was never billed also belongs in the base it would have
     # carried, so indirect is measured on the base as it should have stood.
@@ -208,5 +225,7 @@ def assess(invoice: Invoice, *, indirect_rate: Decimal,
         indirect_supported=indirect_supported,
         fringe_billed=invoice.fringe_billed,
         fringe_supported=fringe_supported,
+        base_wages=base_wages,
+        embedded_fringe=embedded_fringe,
         rate_label=rate_label,
     )

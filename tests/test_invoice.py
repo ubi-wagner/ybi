@@ -18,7 +18,8 @@ D = Decimal
 DE_MINIMIS = D("0.10")
 MODELLED_LOW = D("0.3595")     # scenario A, conservative
 MODELLED_HIGH = D("0.4642")    # scenario C, upper bound
-FRINGE = D("0.2245")
+FRINGE_2025 = D("0.2245")
+FRINGE_2026 = D("0.2363")
 
 
 def line(cat, amount, desc="", who="") -> InvoiceLine:
@@ -92,7 +93,9 @@ def test_two_of_three_carry_no_indirect_at_all():
     assert not LTM.carries_no_indirect
 
 
-def test_none_of_them_carry_a_fringe_line():
+def test_none_of_them_carry_a_separate_fringe_line():
+    """Fringe is inside the labour amount, confirmed by YBI. The absence of a
+    line is a presentation fact, not foregone recovery."""
     assert all(i.carries_no_fringe for i in ALL)
 
 
@@ -154,29 +157,46 @@ def test_one_month_across_all_three(rate, expected):
 # ------------------------------------------------------------- fringe
 
 
-def test_unburdened_labor_adds_fringe_and_widens_the_base():
-    """If the labour lines are raw wages, fringe was never billed either — and
-    the indirect base should have included it."""
-    burdened = assess(DRIVE_AM, indirect_rate=DE_MINIMIS, fringe_rate=FRINGE,
-                      labor_is_burdened=True)
-    raw = assess(DRIVE_AM, indirect_rate=DE_MINIMIS, fringe_rate=FRINGE,
-                 labor_is_burdened=False)
-
-    assert burdened.fringe_supported == 0
-    assert raw.fringe_supported == D("4141.60")
-    assert raw.indirect_supported > burdened.indirect_supported
-    assert raw.total_variance > burdened.total_variance
-    assert any("No fringe line" in f for f in raw.findings)
+def test_fringe_is_never_claimed_as_foregone():
+    """The labour amounts are burdened. Adding fringe on top would double it
+    and overstate the claim to NCDMM."""
+    for inv in ALL:
+        r = assess(inv, indirect_rate=DE_MINIMIS, fringe_rate=FRINGE_2026)
+        assert r.fringe_supported == 0
+        assert r.fringe_variance == 0
+        assert r.total_variance == r.indirect_variance
 
 
-def test_the_burdened_reading_is_not_assumed():
-    """The invoice face cannot distinguish the two readings, so the caller
-    states which is being tested and both are available."""
-    a = assess(LTM, indirect_rate=DE_MINIMIS, fringe_rate=FRINGE,
-               labor_is_burdened=True)
-    b = assess(LTM, indirect_rate=DE_MINIMIS, fringe_rate=FRINGE,
-               labor_is_burdened=False)
-    assert a.total_variance != b.total_variance
+@pytest.mark.parametrize("inv,base,fringe", [
+    (HYBRID,   "1111.38",  "262.62"),
+    (DRIVE_AM, "14922.03", "3526.08"),
+    (LTM,      "6061.25",  "1432.27"),
+])
+def test_base_wages_derive_from_the_burdened_line(inv, base, fringe):
+    """The face shows one number at quantity one, so the split is derived:
+    base = burdened / (1 + fringe). Needed to test the labour line against
+    payroll, which is stated in base wages."""
+    b, f = inv.labor_composition(FRINGE_2026)
+    assert b == D(base)
+    assert f == D(fringe)
+    assert b + f == inv.by_category(C.LABOR)
+
+
+def test_the_applicable_fringe_rate_is_the_invoice_year():
+    """These are April 2026 invoices. The controller's reference sheet carries
+    22.45% for 2025 and 23.63% for 2026, and using the wrong year misstates
+    base wages."""
+    at_2025, _ = LTM.labor_composition(FRINGE_2025)
+    at_2026, _ = LTM.labor_composition(FRINGE_2026)
+    assert at_2025 > at_2026
+    assert at_2025 - at_2026 > D("50")
+
+
+def test_backing_fringe_out_does_not_change_the_indirect_base():
+    """Fringe is in MTDC either way, so the indirect claim is unaffected."""
+    r = assess(DRIVE_AM, indirect_rate=DE_MINIMIS, fringe_rate=FRINGE_2026)
+    assert r.mtdc_as_billed == D("37593.90")
+    assert r.indirect_supported == D("3759.39")
 
 
 # --------------------------------------------------------- direction
