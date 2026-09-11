@@ -948,6 +948,38 @@ groups carry 94.7%" in `classify.py` was measured against a 4,020-line extract
 that predates the full ledger — it is 93.3% of 999 groups, and it had been
 quoted into a memo for the board.
 
+### CI runs against an empty database
+
+`.github/workflows/ci.yml` applies the migrations to a bare Postgres and runs
+`pytest`. It loads no foundation — deliberately, because the schema is the
+thing being tested and a suite that needs a seeded ledger is one nobody can
+run on a fresh clone.
+
+So **a test that reads whatever happens to be in the database passes for a
+developer and fails in CI**, and `tests/test_reconcile_db.py` did exactly
+that: `some_lines()` selected real ledger rows to hang a reconciling item
+off, found none, and three tests failed on `assert 0 == 2`. They make their
+own rows now, inside the transaction that is rolled back.
+
+Two things worth carrying from it:
+
+- **The failures were not the worst part.** `test_a_plug_is_refused` summed
+  nought lines to nought, claimed a dollar, and was refused for having no
+  lines at all — which is the *next* test's guarantee. It proved the wrong
+  thing and reported success. A test that cannot find its data usually fails
+  loudly; the dangerous one is the test whose assertion is still satisfied by
+  the empty case.
+- **A test whose premise the environment cannot meet states the premise.**
+  `test_a_loaded_period_still_evaluates` asserts that the 029 guard does not
+  make every control unevaluable. On an empty database nought of eleven are
+  evaluable and that is the guard working, so the test skips on an explicit
+  check for a loaded ledger and names `scripts/reconcile.py` as what covers
+  the other direction.
+
+**CI was red on `main` as well, for many commits.** Nothing merged was
+checked by it, which is the same shape as a status light that is green all
+day: nobody looks at it until the day it matters. Keep it green.
+
 ## Manuals for the team
 
 `docs/manuals/` — one per job, not one per role, because two people here hold
