@@ -572,6 +572,108 @@ the sweep quietly.
 
 ---
 
+## S8 — the milestone that was never there, and what looking for it found
+
+S8 was scoped as *zero milestones on record, so the auditor's tenth backward
+link is not walkable; the deliverables are in the agreements we hold*. Both
+halves turned out to be wrong, and the second one badly.
+
+### There are three milestones and all three are fiction
+
+    MS-FC0802  Drive deliverable FC0802  $25,000  ACCEPTED  Stephanie Gaffney
+    MS-473C37  Drive deliverable 473C37  $25,000  ACCEPTED  Stephanie Gaffney
+    MS-2A5076  Drive deliverable 2A5076  $25,000  ACCEPTED  Stephanie Gaffney
+
+`scripts/drive_contracts.py` creates one per run, named from a random tag,
+and never walks it back. Three runs, three deliverables on the record that
+nobody at YBI ever agreed to deliver.
+
+Worse, it then attaches one to a **real** invoice:
+
+    query("UPDATE invoice SET milestone_id = %s WHERE invoice_id = %s::uuid",
+          (ms, inv_id))
+
+Invoice **10018** — an invoice YBI actually issued to NCDMM for $37,593.90 —
+is on the record as claiming against "Drive deliverable 2A5076". Raw SQL,
+against a column no route in the application writes, so there is **no audit
+row for it at all**: an auditor asking who attached that invoice to that
+deliverable gets silence. Every other write in every other drive runs inside
+`mutating()`, which counts audit rows before and after and checks whose name
+is on the new one. This one goes round the side.
+
+And `drive_reverse`'s step 3 — *which milestone did that invoice claim
+against?* — **passes because of the forgery**. Remove the fiction and the
+check it was written to prove fails. A drive reading its own writing, which
+is the defect `review_system` was fixed for: *coverage climbed 0% to 36.8%
+across five runs and every figure was a review reading its own writing.*
+
+### The deliverables are not in the agreements, because there are none
+
+All four America Makes awards are **cost reimbursement, invoiced monthly**.
+ICAM says so in as many words at §6 CONTRACT TYPE — *"NCDMM is entering into
+a Cost Reimbursement No Fee Agreement with the Subrecipient"* — and the three
+invoices on file are cost invoices, carrying `direct_claimed`,
+`indirect_claimed`, `cost_share` and a service period. Not one is a
+deliverable invoice.
+
+The statements of work carry tasks, KPPs and a nine-month work-plan Gantt.
+They carry no CLIN, no deliverable value and no acceptance date, because
+that is not how these awards pay. So `milestone` models a contract shape YBI
+does not have, `invoice.milestone_id` has never been written by anything but
+the forgery above, and the "tenth backward link" is not a hole in the data.
+**It is a question the wrong way round**: the backward walk from a
+cost-reimbursement invoice is to the service period and the budget
+categories it claimed against, not to a deliverable.
+
+### And then the thing that matters
+
+Checking whether the milestone schedule was in the agreements meant reading
+the agreements, which turned up something else entirely.
+
+`award_term` carries, on three of the four awards:
+
+    Payment terms        "Net 30 from receipt of a correct invoice"   §26 Payment
+    Invoicing frequency  "Monthly, by the fifth business day"         §25 Invoicing
+    Indirect provision   "10% of ODCs only; no indirect on labor"     Attachment 3
+
+Those are **ICAM's** clauses. ICAM is the NCDMM *Subrecipient Agreement*
+template: fifty-two numbered ALL-CAPS clauses, §6 CONTRACT TYPE, §25
+INVOICING, §26 PAYMENT, and its recorded terms are long, specific and right.
+
+Hybrid Phase 2 and Last Tactical Mile are a **different instrument
+altogether** — ARTICLE-numbered, "ARTICLE 4. BUDGET AND PAYMENT", with no
+numbered ALL-CAPS clause anywhere in either document. Searched end to end:
+
+    §25 / §26 clause headings      not present in either
+    "Net 30"                       not present in either
+    "fifth business day"           not present in either
+
+So the register cites, on two federal subawards, **clauses that are not in
+the agreements** — and says "Net 30" where the document does not. Drive AM
+carries the same three, and its agreement is thirty-six pages of **image with
+no text layer at all**, so nothing in it has been read by anyone working from
+the file.
+
+The value is wrong too, and wrong in the direction that matters. The four
+budget schedules were transcribed in `052`, and they say: **Hybrid budgets no
+indirect at all** against $449,043 of labour, **LTM budgets $81,772.76**, and
+**ICAM alone is 10% of ODCs only**. The register asserts ICAM's provision on
+all three. That is the restatement's central claim — *no America Makes award
+budgets meaningful indirect* — resting in two places on a sentence copied
+from the one agreement it was true of.
+
+This is `FOR_TOM_TO_VERIFY.md`'s own rule one level down. That document was
+written because three dates had been *recalled* rather than read. Here it is
+the **citation** that was recalled, which is worse: a figure read back wrong
+is caught by a control, and a clause reference that does not exist is caught
+by nobody until a sponsor or an auditor turns to the page.
+
+None of it is mine to correct. What Hybrid's and LTM's payment terms actually
+are is a question for somebody holding the executed agreements, and Drive
+AM's cannot be answered by anyone until its pages are read off the images.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the
