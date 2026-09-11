@@ -195,6 +195,16 @@ export const api = {
   lanes: (period = "2025") => req(`/lanes?period=${period}`),
   createLane: (body) => req("/lanes", { method: "POST", body: JSON.stringify(body) }),
   laneBuildup: (id) => req(`/lanes/${id}/buildup`),
+  laneOverrides: (id) => req(`/lanes/${id}/overrides`),
+  addLaneOverride: (id, body) =>
+    req(`/lanes/${id}/overrides`, { method: "POST", body: JSON.stringify(body) }),
+  removeLaneOverride: (id, overrideId) =>
+    req(`/lanes/${id}/overrides/${overrideId}`, { method: "DELETE" }),
+  laneAssumptions: (id) => req(`/lanes/${id}/assumptions`),
+  setLaneAssumption: (id, body) =>
+    req(`/lanes/${id}/assumptions`, { method: "PUT", body: JSON.stringify(body) }),
+  compareLanes: (ids, period = "2025") =>
+    req(`/lanes/compare?lanes=${ids.join(",")}&period=${period}`),
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   imports: (period = "2025") => req(`/imports?period=${period}`),

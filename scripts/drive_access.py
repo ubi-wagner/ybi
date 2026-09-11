@@ -115,6 +115,21 @@ def main() -> int:
               "four portfolios do not add up to sealing", json={"note": "drive"})
         check(heidi2, "POST", "/api/rates/compute", 403,
               "nor to computing a rate", json={})
+        # A lane is a sandbox and still takes the portfolio to write in one:
+        # an override is a reading of the cost record with somebody's name on
+        # it, and `v_lane_disclosure` puts it in the audit package.
+        lane = heidi2.get("/api/lanes").json()
+        if lane:
+            lid = lane[0]["lane_id"]
+            check(heidi2, "POST", f"/api/lanes/{lid}/overrides", 403,
+                  "nor to trying a reading in a lane",
+                  json={"pool": "G&A", "reason": "Access drive: refused."})
+            check(heidi2, "PUT", f"/api/lanes/{lid}/assumptions", 403,
+                  "nor to varying an assumption in one",
+                  json={"key": "drive", "value": 1})
+            check(heidi2, "GET", f"/api/lanes/{lid}/overrides", 200,
+                  "though she may read what a lane has tried — a lane is "
+                  "disclosure, and disclosure is for reading")
         check(heidi2, "GET", "/api/facilities", 200,
               "her facilities work is untouched")
         check(heidi2, "GET", "/api/facilities/equipment", 200,

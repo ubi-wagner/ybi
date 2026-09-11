@@ -789,6 +789,79 @@ correctly:
 
 ---
 
+## S7 — a lane could not say anything
+
+Scoped as *the API exists; `Lanes.jsx` has no side-by-side view.* The API did
+exist. It could not answer.
+
+`lane_decision_override`, `lane_override_line` and `lane_assumption` were
+created in the first migrations and **nothing wrote any of them** — no route,
+no script, no migration. So every lane's build-up was the baseline's by
+construction, and `GET /lanes/compare` could only ever return zeroes.
+Building the side-by-side screen first would have shipped a screen that
+cannot say anything, which is the `FACILITY_UNPARTITIONED` mistake: it
+teaches the reader the comparison is broken, and the next real difference
+they see they will dismiss.
+
+That is the ninth, tenth and eleventh instance of the shape. It is not rare
+here; assume the next new table has it until something writes to it.
+
+The screen's own copy had been promising the missing capability the whole
+time — *"Reclassify Portfolio consulting and see what happens."*
+
+### What was built
+
+Routes that write the three tables, gated `CONTROLLER`, each inside
+`turn(period)` and each recording what it did. And one rule the schema did
+not have and should: **a BASELINE lane takes no overrides at all.** The
+baseline is *the classifications and assumptions that will be submitted*, and
+a lane override on it would be a way round the seal — change what will be
+submitted without going through the queue, the seal and the trigger that
+refuses a rate whose seal does not match. A lane is a question; the sealed
+set is the answer.
+
+### Migration 057, and the question a lane could not ask
+
+`v_lane_buildup` started `FROM lane JOIN decision`, so a lane could only
+re-read what had **already been judged** — which rules out the single most
+valuable question anybody can put to it:
+
+> 5227 Portfolio consulting, $588,539 across 442 lines, no objective signal —
+> the largest single open judgment in the ledger. What does the rate look
+> like if that is G&A?
+
+The group is unjudged, so it was not in the build-up at all and an override
+on it moved nothing. The view reads from both sides now.
+
+This is **not** the rule that unclassified cost is never defaulted into a
+pool. That rule is about the record, and it is why the rate reads high while
+the queue is open. An override is the opposite of a default: explicit, with a
+reason the schema refuses to let be empty, a grade, a name, in a sandbox that
+never touches the sealed set, and counted in the disclosure. `from_unjudged`
+keeps the two apart on the face of the build-up, because a lane that pulls
+$588,539 out of the queue and a lane that moves it between two pools are
+different claims and only the first changes how much there is left to judge.
+
+Three things worth keeping:
+
+- **One line carries one reading per lane**, or it is counted twice in that
+  lane's own build-up — the supersession defect in a new place. Put in the
+  schema rather than the handler, and `lane_id` on `lane_override_line` is
+  kept honest by a **composite foreign key** rather than a trigger: the pair
+  `(override_id, lane_id)` has to exist in the parent.
+- **Money was `float()`** on all three columns of `compare`, which is the one
+  thing `domain/core.py::money()` exists to stop. Strings now.
+- **Nothing is computed on the comparison screen** beyond the difference
+  between two recorded figures, and there is deliberately **no rate**: a lane
+  is not sealed, so it has no rate, and inventing one would put a figure on a
+  screen with nothing behind it.
+
+And the screen says when lanes read identically, rather than leaving a column
+of zeroes to be read as a broken page — which is what it would have shown
+every time before any of this.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the
