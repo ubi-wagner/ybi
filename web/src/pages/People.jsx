@@ -41,6 +41,7 @@ export default function People({ actor }) {
   const [view, setView] = useState("roster");
   const [creating, setCreating] = useState(null);
   const [granting, setGranting] = useState(null);
+  const [amending, setAmending] = useState(null);
   const toast = useToast();
 
   const load = useCallback(() => {
@@ -50,7 +51,8 @@ export default function People({ actor }) {
   useEffect(() => { load(); }, [load]);
 
   const mayCreate = actor.may_provision || [];
-  const onBootstrap = roster.filter((r) => r.holds_bootstrap_password && r.is_active);
+  const unset = roster.filter((r) => r.must_set_password && r.is_active);
+  const unconfirmed = roster.filter((r) => !r.email_confirmed && r.is_active);
 
   return (
     <div className="page">
@@ -63,21 +65,27 @@ export default function People({ actor }) {
         </p>
       </div>
 
-      <div className="grid three">
+      <div className="grid four">
         <Stat label="Accounts" value={roster.length} size="lg"
               note={`${roster.filter((r) => r.is_active).length} active`} />
         <Stat label="On payroll, no account"
               value={gaps?.without_account ?? "—"} size="lg"
               tone={gaps?.without_account ? "warn" : ""}
               note={gaps?.without_account ? "reconstructed on their behalf" : "everybody can sign in"} />
-        <Stat label="Still on an issued password" value={onBootstrap.length}
-              tone={onBootstrap.length ? "warn" : ""}
-              note={onBootstrap.length ? "cannot record anything until they change it"
-                                       : "every password is its owner's"} />
+        <Stat label="Have not set a password yet" value={unset.length}
+              tone={unset.length ? "warn" : ""}
+              note={unset.length ? "can sign in; cannot record anything until they do"
+                                 : "every password is its owner's"} />
+        <Stat label="Address needs checking" value={unconfirmed.length}
+              tone={unconfirmed.length ? "warn" : ""}
+              note={unconfirmed.length
+                ? "derived from the naming convention — they cannot sign in until it is right"
+                : "every address is confirmed"} />
       </div>
 
       <div className="seg" role="tablist">
         {[["roster", `Roster (${roster.length})`],
+          ["addresses", `Addresses to check (${unconfirmed.length})`],
           ["gaps", `Payroll without accounts (${gaps?.without_account ?? 0})`]]
           .map(([v, l]) => (
             <button key={v} role="tab" aria-selected={view === v}
@@ -100,6 +108,7 @@ export default function People({ actor }) {
             { label: "Person", align: "left" },
             { label: "Rank", align: "left" },
             { label: "May judge", align: "left" },
+            { label: "May read", align: "left" },
             { label: "Account", align: "left" },
             { label: "", align: "left", width: "92px" },
           ]}>
@@ -131,7 +140,25 @@ export default function People({ actor }) {
                           <Pill key={p} tone={p === "CONTROLLER" ? "accent" : ""}>{p}</Pill>
                         ))}
                   </td>
+                  <td className="l">
+                    {r.may_read_record
+                      ? (r.record_access
+                          ? <Pill tone="warn" >granted</Pill>
+                          : <span className="rowsub">by rank</span>)
+                      : <span className="rowsub">nothing</span>}
+                    {r.record_access && (
+                      <div className="rowsub">
+                        by {r.record_access_granted_by_name}
+                      </div>
+                    )}
+                  </td>
                   <td className="l rowsub">
+                    {!r.email_confirmed && (
+                      <div><strong>address unchecked</strong></div>
+                    )}
+                    {r.must_set_password && (
+                      <div>password not yet theirs</div>
+                    )}
                     {r.employee_key
                       ? <>timesheet {r.employee_key}</>
                       : <>no timesheet</>}
@@ -159,6 +186,43 @@ export default function People({ actor }) {
               );
             })}
           </Table>
+        </Card>
+      )}
+
+      {view === "addresses" && (
+        <Card title="Addresses derived from the naming convention">
+          <p className="rowsub">
+            Seeding the payroll produced an account for everybody who was paid
+            in 2025, but the register carries surnames only — so these
+            addresses were built from the pattern the known accounts use
+            rather than looked up. Any that are wrong belong to somebody who
+            cannot sign in, and because the payroll key is unique, the wrong
+            account is sitting in the right one's place. Correcting the
+            address in place is the fix; deleting an account never is.
+          </p>
+          {!unconfirmed.length ? (
+            <Empty mark="✓" title="Every address has been checked" />
+          ) : (
+            <Table columns={[
+              { label: "Person", align: "left" },
+              { label: "Payroll", align: "left" },
+              { label: "Address as derived", align: "left" },
+              { label: "", align: "left", width: "92px" },
+            ]}>
+              {unconfirmed.map((r) => (
+                <tr key={r.actor_id}>
+                  <td className="l">{r.display_name}</td>
+                  <td className="l rowsub">{r.employee_key}</td>
+                  <td className="l rowsub">{r.email}</td>
+                  <td className="l">
+                    <button className="btn sm" onClick={() => setAmending(r)}>
+                      Correct
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          )}
         </Card>
       )}
 
@@ -207,6 +271,11 @@ export default function People({ actor }) {
         <CreateDrawer actor={actor} seed={creating} onClose={() => setCreating(null)}
                       onDone={(msg) => { toast.show(msg); setCreating(null); load(); }}
                       onError={(m) => toast.show(m, { tone: "fail" })} />
+      )}
+      {amending && (
+        <AmendDrawer person={amending} onClose={() => setAmending(null)}
+                     onDone={(msg) => { toast.show(msg); setAmending(null); load(); }}
+                     onError={(m) => toast.show(m, { tone: "fail" })} />
       )}
       {granting && (
         <AccessDrawer actor={actor} person={granting} onClose={() => setGranting(null)}
@@ -447,6 +516,54 @@ function AccessDrawer({ actor, person, onClose, onDone, onError }) {
           {person.is_active ? "Deactivate this account" : "Reactivate this account"}
         </button>
       </div>
+    </Drawer>
+  );
+}
+
+
+/* ── Correcting an address ──────────────────────────────────────── */
+
+function AmendDrawer({ person, onClose, onDone, onError }) {
+  const [email, setEmail] = useState(person.email);
+  const [name, setName] = useState(person.display_name);
+  const [busy, setBusy] = useState(false);
+  const changed = email !== person.email || name !== person.display_name;
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api.amendActor(person.actor_id, {
+        email: email.trim().toLowerCase(),
+        display_name: name.trim(),
+        reason: "Corrected from the payroll register, where only the surname "
+                + "was carried.",
+      });
+      onDone(`${name.trim()} can sign in at ${email.trim().toLowerCase()}`);
+    } catch (err) {
+      onError(String(err.message || err).replace(/^\d+:\s*/, ""));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Drawer open title="Correct the address" subtitle={person.employee_key}
+            onClose={onClose}>
+      <p className="rowsub">
+        The payroll register gave a surname and nothing else, so this address
+        and name were built from a pattern. Put in what is actually right.
+        Correcting the address is what takes this account off the list.
+      </p>
+      <label className="field">
+        <span className="field-label">Name</span>
+        <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      </label>
+      <label className="field">
+        <span className="field-label">Email</span>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      </label>
+      <button className="btn primary" onClick={save} disabled={!changed || busy}>
+        {busy ? "Saving…" : "Save"}
+      </button>
     </Drawer>
   );
 }

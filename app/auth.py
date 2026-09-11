@@ -47,11 +47,17 @@ import jwt
 from fastapi import Depends, HTTPException, Request
 
 from app.db import one
+from app.settings import settings
 
 log = logging.getLogger("ybi.auth")
 
 SESSION_COOKIE = "ybi_session"
-SESSION_MAX_AGE = 12 * 60 * 60  # 12 hours; a working day, not a fortnight
+#: A plain expiry rather than an idle timer. A fixed lifetime is the one
+#: a person can reason about ("I sign in each morning"); a sliding one
+#: renews itself indefinitely on a screen nobody is sitting at. The
+#: session is checked against the database on every request as well, so
+#: a revoked one stops working immediately rather than at expiry.
+SESSION_MAX_AGE = settings.session_hours * 60 * 60
 _ALGORITHM = "HS256"
 
 
@@ -88,16 +94,22 @@ ADMINS = frozenset({Role.SYSTEM_ADMIN, Role.ORG_ADMIN})
 #: An employee is not here: they read their own time and their own documents,
 #: which are their own screens, not this one.
 #:
-#: Nor is SYSTEM_ADMIN. That account exists to stand the software up and to
-#: appoint the organisation's administrator — it belongs to whoever is
-#: running the system, who may be outside the organisation entirely. Letting
-#: it read every employee's timesheet and take the audit package away because
-#: it can also create accounts is exactly the conflation this module is
-#: written to avoid, and exactly what a reviewer would ask about first. It
-#: sees the roster and nothing else.
+#: Nor is SYSTEM_ADMIN, by rank. That account exists to stand the software
+#: up and to appoint the organisation's administrator — it belongs to
+#: whoever is running the system, who may be outside the organisation
+#: entirely. Reading every employee's timesheet because you can also create
+#: accounts is the conflation this module is written to avoid.
 #:
-#: ORG_ADMIN is here, because that is the organisation's own executive
-#: reading the organisation's own books.
+#: Which is not the same as saying such a person never reads the record.
+#: Often they are also the engagement lead, under an agreement with the
+#: organisation, and plainly do. That case is served by an explicit grant on
+#: the account (``actor.record_access``) which names who gave it and why,
+#: and which YBI's own administrator makes — the data is theirs, so they are
+#: who lets somebody read it. An auditor asking who authorised a consultant
+#: to see the payroll finds a row, not an inference about job titles.
+#:
+#: ORG_ADMIN is here by rank, because that is the organisation's own
+#: executive reading the organisation's own books.
 READERS = frozenset({Role.CONTROLLER, Role.AUDITOR, Role.ORG_ADMIN})
 
 
@@ -116,6 +128,9 @@ class Actor:
     session_id: str
     employee_key: str | None = None
     portfolios: frozenset[Portfolio] = frozenset()
+    #: Granted permission to read the cost record, for an account whose rank
+    #: does not carry it.
+    record_access: bool = False
 
     def holds(self, *portfolios: Portfolio) -> bool:
         """True when the actor holds any of these portfolios."""
@@ -139,7 +154,7 @@ class Actor:
 
     @property
     def can_read(self) -> bool:
-        return self.role in READERS
+        return self.role in READERS or self.record_access
 
     @property
     def is_admin(self) -> bool:
@@ -251,7 +266,7 @@ def current_actor(request: Request) -> Actor:
         raise HTTPException(401, "Session is invalid or has expired.")
 
     row = one("""SELECT s.session_id, a.actor_id, a.email, a.display_name,
-                        a.role, a.employee_key,
+                        a.role, a.employee_key, a.record_access,
                         COALESCE((SELECT array_agg(p.portfolio::text)
                                     FROM actor_portfolio p
                                    WHERE p.actor_id = a.actor_id
@@ -274,6 +289,7 @@ def current_actor(request: Request) -> Actor:
         session_id=str(row["session_id"]),
         employee_key=row["employee_key"],
         portfolios=frozenset(Portfolio(p) for p in row["portfolios"]),
+        record_access=bool(row["record_access"]),
     )
 
 
@@ -344,9 +360,19 @@ def require_portfolio(*portfolios: Portfolio):
     return guard
 
 
-#: Read the ledger, queue, rates and workpapers.
-require_reader = require_role(Role.CONTROLLER, Role.AUDITOR,
-                              Role.SYSTEM_ADMIN, Role.ORG_ADMIN)
+def require_reader(actor: Actor = Depends(current_actor)) -> Actor:
+    """Read the ledger, queue, rates and workpapers.
+
+    No longer a pure role check: an account can hold this by rank or by an
+    explicit grant the organisation made, and both are the same permission
+    once given.
+    """
+    if not actor.can_read:
+        raise HTTPException(
+            403, f"{actor.role.value} does not read the cost record. An "
+                 f"administrator can grant access to it, which is recorded "
+                 f"against them with a reason.")
+    return actor
 
 #: Classify, import, reconcile — and seal. The only portfolio that can fix
 #: the judgments and then produce a number from them.

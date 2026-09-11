@@ -63,7 +63,8 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
                  "again, or ask an administrator to reset your password.")
 
     row = one("""SELECT actor_id, email, display_name, role, password_hash,
-                        employee_key
+                        employee_key, record_access,
+                        password_set_by::text AS password_set_by
                    FROM actor WHERE email = %s AND is_active""", (email,))
 
     # Verify against a hash either way so a missing account and a wrong
@@ -95,7 +96,8 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
                       display_name=row["display_name"], role=Role(row["role"]),
                       session_id=str(session_id),
                       employee_key=row["employee_key"],
-                      portfolios=frozenset(Portfolio(p) for p in held))
+                      portfolios=frozenset(Portfolio(p) for p in held),
+                      record_access=bool(row["record_access"]))
     record(signed_in, "SIGN_IN", "actor_session", str(session_id),
            reason=request.headers.get("user-agent", "")[:200])
 
@@ -112,9 +114,23 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
         secure=settings.env != "dev",
         path="/",
     )
+    # The shell renders from whatever this returns, so it has to say the same
+    # things /me does. Leaving must_set_password out meant a newcomer landed
+    # on the application after signing in and only met the password screen on
+    # the next page load — and every write they tried in between was refused
+    # by an API that knew something the screen did not.
     return {"actor_id": str(row["actor_id"]), "email": row["email"],
             "display_name": row["display_name"], "role": row["role"],
-            "employee_key": row["employee_key"], "portfolios": held}
+            "employee_key": row["employee_key"], "portfolios": held,
+            "may_seal": Portfolio.CONTROLLER.value in held,
+            "is_admin": signed_in.is_admin,
+            "is_staff": signed_in.is_staff,
+            "can_read": signed_in.can_read,
+            "can_write": signed_in.can_write,
+            "record_access": signed_in.record_access,
+            "may_provision": sorted(r.value for r in Role
+                                    if signed_in.may_provision(r)),
+            "must_set_password": row["password_set_by"] != "SELF"}
 
 
 @router.post("/logout")
@@ -145,6 +161,7 @@ def me(actor: Actor = Depends(current_actor)) -> dict:
             "can_write": actor.can_write, "can_read": actor.can_read,
             "may_provision": sorted(r.value for r in Role
                                     if actor.may_provision(r)),
+            "record_access": actor.record_access,
             "password_set_by": standing.get("password_set_by"),
             "holds_bootstrap_password":
                 bool(standing.get("holds_bootstrap_password")),
@@ -442,8 +459,11 @@ def list_actors(admin: Actor = Depends(require_admin)) -> list[dict]:
                            is_active, employee_key, created_at, last_login_at,
                            password_set_by::text AS password_set_by,
                            password_set_at, holds_bootstrap_password,
+                           must_set_password, email_confirmed,
                            live_sessions, failures_24h,
                            portfolios::text[] AS portfolios, may_seal,
+                           may_read_record, record_access,
+                           record_access_reason, record_access_granted_by_name,
                            provisioned_by_name
                       FROM v_account_standing
                      ORDER BY provisioning_rank(role), display_name""")
@@ -481,3 +501,119 @@ def roster_gaps(admin: Actor = Depends(require_admin)) -> dict:
             "note": ("Email addresses are a suggestion from the naming "
                      "convention, not a lookup. Correct each one before "
                      "creating the account.")}
+
+
+class RecordAccessIn(BaseModel):
+    granted: bool
+    reason: str = Field(min_length=20)
+
+
+@router.post("/actors/{actor_id}/record-access")
+def set_record_access(actor_id: str, body: RecordAccessIn,
+                      admin: Actor = Depends(require_admin)) -> dict:
+    """Let somebody read the cost record, or stop them.
+
+    This one runs in the opposite direction from provisioning, and that is
+    correct. The data belongs to YBI, so YBI's own administrator is who lets
+    somebody read it — including somebody above them in rank, such as the
+    consultant running the system under an agreement with the organisation.
+    Provisioning is about who works for whom; this is about whose books they
+    are.
+
+    A grant names its reason. An auditor asking who authorised this person
+    to see the payroll should find a row, not have to infer it from a job
+    title.
+    """
+    if actor_id == admin.actor_id:
+        raise HTTPException(
+            403, "Nobody lets themselves into the books. Ask the other "
+                 "administrator — the trail should show two people.")
+    target = one("""SELECT display_name, role::text AS role, record_access
+                      FROM actor WHERE actor_id = %s""", (actor_id,))
+    if not target:
+        raise HTTPException(404, "No such account.")
+    if target["role"] in ("CONTROLLER", "AUDITOR", "ORG_ADMIN"):
+        raise HTTPException(
+            422, f"A {target['role']} reads the record by rank already; "
+                 f"there is nothing to grant.")
+
+    with transaction() as cur:
+        if body.granted:
+            cur.execute("""UPDATE actor
+                              SET record_access = true,
+                                  record_access_reason = %s,
+                                  record_access_granted_by = %s,
+                                  record_access_granted_at = now()
+                            WHERE actor_id = %s""",
+                        (body.reason.strip(), admin.actor_id, actor_id))
+        else:
+            cur.execute("""UPDATE actor
+                              SET record_access = false,
+                                  record_access_reason = NULL,
+                                  record_access_granted_by = NULL,
+                                  record_access_granted_at = NULL
+                            WHERE actor_id = %s""", (actor_id,))
+            cur.execute("""UPDATE actor_session SET revoked_at = now()
+                            WHERE actor_id = %s AND revoked_at IS NULL""",
+                        (actor_id,))
+        record(admin, "RECORD_ACCESS", "actor", actor_id,
+               after={"granted": body.granted, "who": target["display_name"]},
+               reason=body.reason.strip(), cursor=cur)
+    log.warning("%s %s record access for %s", admin.email,
+                "granted" if body.granted else "revoked", target["display_name"])
+    return {"actor_id": actor_id, "record_access": body.granted}
+
+
+class AmendIn(BaseModel):
+    email: EmailStr | None = None
+    display_name: str | None = None
+    reason: str = Field(min_length=10)
+
+
+@router.patch("/actors/{actor_id}")
+def amend_actor(actor_id: str, body: AmendIn,
+                admin: Actor = Depends(require_admin)) -> dict:
+    """Correct an account's address or name.
+
+    Seeding the payroll produces accounts whose email addresses came from a
+    naming convention rather than from anybody who knew them, and a person
+    who cannot sign in also cannot simply be given a second account: the
+    employee key is unique, so the wrong one squats the right one's place.
+    Correcting it in place is the only way out that does not involve deleting
+    an account — which is never right here, because every judgment,
+    certification and upload points at one.
+
+    Correcting the address marks it confirmed, which is what takes the
+    account off the "cannot sign in" list.
+    """
+    target = one("""SELECT email, display_name, role::text AS role
+                      FROM actor WHERE actor_id = %s""", (actor_id,))
+    if not target:
+        raise HTTPException(404, "No such account.")
+    if actor_id != admin.actor_id and not admin.may_provision(Role(target["role"])):
+        raise HTTPException(
+            403, f"{admin.role.value} may not amend a {target['role']} account.")
+    if body.email is None and body.display_name is None:
+        raise HTTPException(422, "Nothing to change.")
+
+    email = body.email.strip().lower() if body.email else None
+    if email and email != target["email"]:
+        if one("SELECT 1 FROM actor WHERE email = %s", (email,)):
+            raise HTTPException(409, "Another account already has that email.")
+
+    with transaction() as cur:
+        cur.execute("""UPDATE actor
+                          SET email = COALESCE(%s::text, email),
+                              display_name = COALESCE(%s::text, display_name),
+                              -- Correcting the address is what confirms it.
+                              email_confirmed = CASE WHEN %s::text IS NOT NULL
+                                                THEN true ELSE email_confirmed END
+                        WHERE actor_id = %s""",
+                    (email, body.display_name, email, actor_id))
+        record(admin, "ACTOR_AMEND", "actor", actor_id,
+               before={"email": target["email"],
+                       "display_name": target["display_name"]},
+               after={"email": email or target["email"],
+                      "display_name": body.display_name or target["display_name"]},
+               reason=body.reason.strip(), cursor=cur)
+    return {"actor_id": actor_id, "email": email or target["email"]}

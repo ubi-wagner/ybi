@@ -72,6 +72,13 @@ Two rules that fall out of this and are easy to break:
 - **Everybody on the payroll keeps a timesheet, controllers included.** The
   nav is assembled from what an actor holds (`tabsFor` in `App.jsx`), not
   switched on role. Never show a tab that will answer 403.
+- **Reading the cost record is a grant, not a side effect of rank.**
+  `CONTROLLER`, `AUDITOR` and `ORG_ADMIN` read it by rank. `SYSTEM_ADMIN`
+  does not — that account may belong to somebody outside the organisation.
+  Where such a person genuinely needs it (an engagement lead under an
+  agreement), `actor.record_access` carries it, granted by *YBI's own*
+  administrator to the account above them in rank. That direction is
+  deliberate: the data is theirs, so they are who lets somebody read it.
 - **An account on a password somebody else chose cannot write anything** —
   not a classification, not a timesheet, not a certification, not a document.
   `refuse_issued_password` covers the portfolio gates, the admin gate and
@@ -268,11 +275,20 @@ gained `Home.jsx` (one landing assembled from what you hold), `People.jsx`
 (the roster, provisioning, and the 40 payroll people with no account yet),
 `MyDocuments.jsx`, and `FirstPassword.jsx` in front of everything.
 
-One real bug came out of building the drive: the password gate covered
+Migration `027` adds `record_access` (above), and `email_confirmed` for the
+forty payroll accounts whose addresses were derived from the naming
+convention rather than looked up — they are listed on the People screen and
+corrected in place, because deleting an account is never right here.
+
+Two real bugs came out of building the drives. The password gate covered
 portfolio and admin writes and left the three screens everybody actually uses
 wide open, so a newcomer could sign a 2 CFR 200.430(i) certification on the
-password an administrator had handed them an hour earlier.
-`require_own_writes` closes it.
+password an administrator had handed them an hour earlier;
+`require_own_writes` closes it. And the login response did not carry
+`must_set_password`, so a newcomer landed on the application and only met the
+password screen on the next page load, with every write in between refused by
+an API that knew something the screen did not — login now returns the same
+shape as `/me`, and the access drive asserts they agree.
 
 ## Current plan
 

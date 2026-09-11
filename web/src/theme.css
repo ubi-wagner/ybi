@@ -127,6 +127,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012
 .grid { display: grid; gap: 14px; }
 .grid.two   { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .grid.three { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.grid.four  { grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); }
 .grid.form  { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 
 /* ---------------------------------------------------------------- stat -- */

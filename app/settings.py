@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     period: str = "2025"
     env: str = "dev"
     storage_dir: str = "storage"
+    #: How long a session lasts before it has to be signed in
+    #: again. A plain expiry, not an idle timer: a fixed lifetime
+    #: is the one people can reason about, and a sliding one
+    #: renews itself forever on a screen left open. Twelve hours
+    #: is a working day. YBI_SESSION_HOURS to change it.
+    session_hours: int = 12
     s3_bucket: str = ""
     s3_endpoint: str = ""
     s3_access_key: str = ""

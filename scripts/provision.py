@@ -76,6 +76,12 @@ STAFF = [
 ORG_ADMIN = ("bewing@ybi.org", "Barb Ewing", "EWING")
 SYSTEM_ADMIN = ("eric.c.wagner@gmail.com", "Eric Wagner")
 
+NDA_REASON = (
+    "Engagement lead for the 2025 cost allocation initiative, under a "
+    "non-disclosure agreement with YBI. Reads the record at the same level "
+    "as the organisation's administrator; holds no portfolio and makes no "
+    "cost judgments.")
+
 BARB_REASON = (
     "Chief executive and the organisation's administrator: sets up the "
     "finance accounts and hands out access. Deliberately holds no portfolio "
@@ -101,7 +107,7 @@ def set_own_password(c: httpx.Client, current: str, new: str, who: str) -> None:
                          f"({r.status_code}): {r.text[:200]}")
 
 
-def bootstrap_system_admin(password: str) -> str:
+def bootstrap_system_admin(password: str, supplied: bool = False) -> str:
     """Write the root account directly. The one step that cannot go through
     the API, because there is nobody yet to authorise it."""
     from app.auth import hash_password
@@ -115,9 +121,13 @@ def bootstrap_system_admin(password: str) -> str:
         # the script can proceed, unless this account is already in use by a
         # person who has set their own.
         if row["o"] == "SELF":
+            # Somebody real is using this account. Signing in as them with a
+            # password they chose is fine; silently replacing it is not.
+            if supplied:
+                return "in use"
             raise SystemExit(
                 f"{email} has set their own password. Run this with "
-                f"YBI_ROOT_PASSWORD set to it, or reset out of band.")
+                f"YBI_ROOT_PASSWORD set to it, or reset it out of band.")
         execute("""UPDATE actor SET password_hash=%s, role='SYSTEM_ADMIN',
                                     password_set_by='SEED'
                     WHERE email=%s""", (hash_password(password), email))
@@ -134,6 +144,10 @@ def main() -> int:
     ap.add_argument("--base", default="http://127.0.0.1:8000")
     ap.add_argument("--sheet", default="")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--staff-password", default="",
+                    help="seed an account for every person on the 2025 payroll "
+                         "with this shared password, each forced to replace it "
+                         "at first sign-in")
     ap.add_argument("--dev-password", default="",
                     help="development only: give every account this password, "
                          "marked self-chosen, so the drive scripts can sign in")
@@ -151,15 +165,18 @@ def main() -> int:
     issued: list[tuple[str, str, str, str]] = []   # name, email, role, password
 
     # ── The root, out of band ────────────────────────────────────────
+    supplied = bool(os.environ.get("YBI_ROOT_PASSWORD"))
     boot = os.environ.get("YBI_ROOT_PASSWORD") or one_time_password()
-    what = bootstrap_system_admin(boot)
-    eric_pw = one_time_password()
+    what = bootstrap_system_admin(boot, supplied=supplied)
+    eric_pw = boot if what == "in use" else one_time_password()
     print(f"System administrator {what}: {SYSTEM_ADMIN[0]}")
 
     with httpx.Client(base_url=args.base, timeout=120) as c:
         sign_in(c, SYSTEM_ADMIN[0], boot)
-        set_own_password(c, boot, eric_pw, "the system administrator")
-        issued.append((SYSTEM_ADMIN[1], SYSTEM_ADMIN[0], "SYSTEM_ADMIN", eric_pw))
+        if what != "in use":
+            set_own_password(c, boot, eric_pw, "the system administrator")
+            issued.append((SYSTEM_ADMIN[1], SYSTEM_ADMIN[0], "SYSTEM_ADMIN",
+                           eric_pw))
 
         # ── Eric sets up Barb, and stops ─────────────────────────────
         barb_pw = one_time_password()
@@ -171,6 +188,7 @@ def main() -> int:
         if r.status_code == 409:
             print(f"  exists    {email}")
             barb_pw = os.environ.get("YBI_ORG_ADMIN_PASSWORD", "")
+            barb_in_use = bool(barb_pw)
             if not barb_pw:
                 raise SystemExit(
                     f"{email} already exists. Set YBI_ORG_ADMIN_PASSWORD to "
@@ -180,6 +198,7 @@ def main() -> int:
         else:
             print(f"  ORG_ADMIN {email}  provisioned by Eric Wagner")
             issued.append((name, email, "ORG_ADMIN", barb_pw))
+            barb_in_use = False
 
         # The ladder refuses upward. Proving it here means the rule is
         # exercised on every run rather than asserted in a comment.
@@ -200,6 +219,7 @@ def main() -> int:
             for i, row in enumerate(issued):
                 if row[1] == ORG_ADMIN[0]:
                     issued[i] = (row[0], row[1], row[2], new)
+            barb_pw = new          # every later step signs in with this one
             sign_in(c, ORG_ADMIN[0], new)
 
         # An organisation administrator cannot mint a peer either.
@@ -226,21 +246,73 @@ def main() -> int:
                   f"{', '.join(portfolios) or 'no portfolio'}")
             issued.append((name, email, role, pw))
 
+        # ── The rest of the payroll ──────────────────────────────
+        #
+        # One password for everybody, which is what a bootstrap is, and every
+        # one of them must be replaced before the account can record
+        # anything. The addresses come from the naming convention the known
+        # accounts use — they are a starting point, not a lookup, so each
+        # account is marked with its address unconfirmed until somebody who
+        # knows it says otherwise. An account nobody can sign into is a
+        # better outcome than an account somebody else can.
+        gaps = c.get("/api/auth/roster-gaps")
+        seeded = 0
+        if gaps.status_code == 200 and args.staff_password:
+            if len(args.staff_password) < 12:
+                raise SystemExit("--staff-password must be at least 12 characters.")
+            for person in gaps.json()["people"]:
+                key = person["employee_key"]
+                r = c.post("/api/auth/actors", json={
+                    "email": person["suggested_email"],
+                    "display_name": person["employee_name"] or key,
+                    "role": "EMPLOYEE", "employee_key": key,
+                    "password": args.staff_password,
+                    "portfolios": [], "grant_reason": ""})
+                if r.status_code == 201:
+                    seeded += 1
+                elif r.status_code != 409:
+                    print(f"  FAILED    {key}: {r.text[:140]}", file=sys.stderr)
+            if seeded:
+                mark_unconfirmed([p["suggested_email"]
+                                  for p in gaps.json()["people"]])
+                print(f"  EMPLOYEE     {seeded} account(s) seeded from the 2025 "
+                      f"payroll, all on one password, all addresses derived")
+
         gaps = c.get("/api/auth/roster-gaps")
         if gaps.status_code == 200:
             n = gaps.json()["without_account"]
             if n:
-                print(f"\n  {n} people on the 2025 payroll have no account "
-                      f"yet — the register carries surnames only, so their "
-                      f"email addresses have to be typed in. They are listed "
-                      f"on the People screen.")
+                print(f"\n  {n} people on the 2025 payroll still have no "
+                      f"account. They are listed on the People screen.")
+
+    # ── The consultant's access to the client's books ────────────────
+    #
+    # Granted by YBI's own administrator, to the account above her in rank.
+    # That is backwards for provisioning and exactly right here: the data is
+    # theirs, so they are who lets somebody read it. An auditor asking who
+    # authorised an outside consultant to see the payroll finds this row.
+    with httpx.Client(base_url=args.base, timeout=120) as c:
+        sign_in(c, ORG_ADMIN[0], barb_pw)
+        roster = {a["email"]: a for a in c.get("/api/auth/actors").json()}
+        eric_id = roster[SYSTEM_ADMIN[0]]["actor_id"]
+        r = c.post(f"/api/auth/actors/{eric_id}/record-access", json={
+            "granted": True, "reason": NDA_REASON})
+        if r.status_code == 200:
+            print(f"  granted    {SYSTEM_ADMIN[1]} access to the cost record, "
+                  f"by {ORG_ADMIN[1]}")
+        else:
+            print(f"  FAILED     record access for {SYSTEM_ADMIN[0]}: "
+                  f"{r.text[:200]}", file=sys.stderr)
 
     # The two administrators had to hold a working password for this script
     # to act as them at all. That password was chosen by a script, not by
     # them — so it is marked as issued rather than self-chosen, and the gate
     # will ask each of them for their own before they can record anything.
     # Claiming otherwise would put a signature in the file that nobody chose.
-    mark_issued([SYSTEM_ADMIN[0], ORG_ADMIN[0]])
+    # Only the ones this run chose a password for. An account already in use
+    # by a person keeps the password that person set.
+    mark_issued([e for _, e, _, _ in issued
+                 if e in (SYSTEM_ADMIN[0], ORG_ADMIN[0])])
 
     if args.dev_password:
         n = dev_passwords(args.dev_password)
@@ -283,6 +355,20 @@ def dev_passwords(password: str) -> int:
                                      password_set_at = now()
                      RETURNING email""", (hash_password(password),))
     return len(rows)
+
+
+def mark_unconfirmed(emails: list[str]) -> None:
+    """Say which addresses were derived rather than known.
+
+    The convention is a good guess and a guess is not a fact. An account
+    flagged here shows on the roster as unable to sign in until somebody who
+    knows the address corrects it, which is a shorter list to work than
+    forty accounts that all look fine.
+    """
+    from app.db import execute
+    for email in emails:
+        execute("""UPDATE actor SET email_confirmed = false
+                    WHERE email = %s AND password_set_by = 'ADMIN'""", (email,))
 
 
 def mark_issued(emails: list[str]) -> None:

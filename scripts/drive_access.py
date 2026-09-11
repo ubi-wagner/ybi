@@ -191,6 +191,56 @@ def main() -> int:
         check(heidi, "GET", "/api/documents/inbox", 200,
               "Heidi does — she holds OFFICE")
 
+        # ── Reading the books is granted, not assumed ────────────────
+        print("\nReading the books is granted by whoever owns them")
+        eric_id = roster["eric.c.wagner@gmail.com"]["actor_id"]
+        me = eric.get("/api/auth/me").json()
+        (ok if me["record_access"] and me["can_read"] else bad)(
+            "the system administrator reads the record on a grant, not on rank")
+        (ok if not me["may_seal"] else bad)(
+            "and still cannot seal anything")
+        row = roster["eric.c.wagner@gmail.com"]
+        (ok if row["record_access_granted_by_name"] else bad)(
+            f"the grant names who made it — "
+            f"{row['record_access_granted_by_name']}")
+
+        check(barb, "POST", f"/api/auth/actors/{barb_id}/record-access", 403,
+              "nobody lets themselves into the books",
+              json={"granted": True,
+                    "reason": "Access drive: this must be refused."})
+        tom_id = roster["tom@ybi.org"]["actor_id"]
+        check(barb, "POST", f"/api/auth/actors/{tom_id}/record-access", 422,
+              "and there is nothing to grant somebody who reads by rank",
+              json={"granted": True,
+                    "reason": "Access drive: this must be refused."})
+
+        # ── A derived address is correctable, not deletable ──────────
+        print("\nAn address that was guessed can be put right")
+        derived = [a for a in barb.get("/api/auth/actors").json()
+                   if not a["email_confirmed"] and a["is_active"]]
+        if derived:
+            who = derived[0]
+            ok(f"{len(derived)} seeded account(s) carry a derived address")
+            r = barb.patch(f"/api/auth/actors/{who['actor_id']}", json={
+                "email": f"drive.{who['employee_key'].lower()}@ybi.org",
+                "reason": "Access drive: correcting a derived address."})
+            (ok if r.status_code == 200 else bad)(
+                f"the administrator corrects it — {r.status_code}")
+            after = [a for a in barb.get("/api/auth/actors").json()
+                     if a["actor_id"] == who["actor_id"]][0]
+            (ok if after["email_confirmed"] else bad)(
+                "and correcting it is what marks it checked")
+            check(barb, "PATCH", f"/api/auth/actors/{who['actor_id']}", 409,
+                  "an address already in use is refused",
+                  json={"email": "tom@ybi.org",
+                        "reason": "Access drive: must be refused."})
+        else:
+            ok("no derived addresses outstanding")
+        check(barb, "PATCH", f"/api/auth/actors/{eric_id}", 403,
+              "and rank still runs downward for amendments",
+              json={"display_name": "Nope",
+                    "reason": "Access drive: must be refused."})
+
         # ── An issued password cannot sign anything ──────────────────
         print("\nAn issued password cannot sign anything")
         # A fresh identity every run. This is the section that proves the

@@ -125,6 +125,11 @@ export const api = {
   revokePortfolio: (id, portfolio, reason) =>
     req(`/auth/actors/${id}/portfolios/revoke`,
         { method: "POST", body: JSON.stringify({ portfolio, reason }) }),
+  setRecordAccess: (id, granted, reason) =>
+    req(`/auth/actors/${id}/record-access`,
+        { method: "POST", body: JSON.stringify({ granted, reason }) }),
+  amendActor: (id, body) =>
+    req(`/auth/actors/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   setActorActive: (id, is_active, reason) =>
     req(`/auth/actors/${id}/active`,
         { method: "POST", body: JSON.stringify({ is_active, reason }) }),
