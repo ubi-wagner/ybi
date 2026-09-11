@@ -97,6 +97,13 @@ export default function ClassifyQueue({ actor }) {
         ...decision,
         objective_id: decision.pool === "DIRECT" ? decision.objective_id || null : null,
         decided_by: actor?.display_name || "",
+        /* What this screen believed was live when it was drawn. Two people
+           work this queue at once; if one of them judges a group while the
+           other's list is still showing it as it was, the server refuses
+           rather than letting the second judgment silently replace a
+           judgment nobody saw. */
+        based_on: Object.fromEntries(
+          groups.map((g) => [g.group_key, g.live_decision || "none"])),
       });
       const label = groups.length === 1
         ? `${groups[0].account} → ${decision.pool}`
@@ -131,6 +138,12 @@ export default function ClassifyQueue({ actor }) {
       await load();
     } catch (e) {
       toast(String(e.message || e), { tone: "bad", sticky: true });
+      /* A refusal because the record moved is the one error where the right
+         next step is automatic: redraw the queue so the person is looking at
+         what is actually there before they decide again. */
+      if (/changed while this screen was open/.test(String(e.message || e))) {
+        await load();
+      }
     } finally {
       setBusy(false);
     }

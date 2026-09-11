@@ -65,6 +65,13 @@ step "What one change moves, and what it must not"
 # drive_everyone it can do neither, and reports a correct refusal as a fault.
 run "drive_propagation" $PY scripts/drive_propagation.py --base "$BASE"
 
+step "Two people, one record, the same instant"
+# With drive_propagation, and for the same reason: it seals, and it proves a
+# sealed set refuses a judgment that was already in flight. It leaves the set
+# open and its own judgments reversed, so the drives after it start where they
+# expect to.
+run "drive_concurrency" $PY scripts/drive_concurrency.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

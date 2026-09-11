@@ -714,6 +714,70 @@ The drive runs **before every drive that seals**, because its third step is to
 seal and its fourth is to prove a sealed set refuses a reclassification. Run
 after one, it can do neither and reports the guarantee as a fault.
 
+## Two people at once
+
+Everything above describes one person acting. Tom and Heidi both hold
+`CONTROLLER` and both work the queue, and the system is fast enough that they
+will almost never collide — which is exactly what makes the collision worth
+guarding. A defect that appears once a month and cannot be reproduced is one
+people learn to explain away.
+
+`app/statelock.py` is the whole mechanism. **Every action that changes the
+cost record takes `turn(period)` and holds it until its transaction ends.**
+`pg_advisory_xact_lock` is the queue: Postgres orders the waiters, there is
+no second queue to keep alive, nothing to drain on restart, and it works
+across processes — which an in-memory queue would not on a deployment that
+runs more than one. It releases at COMMIT or ROLLBACK, so there is no unlock
+to forget and nothing left held by a process that died. Uncontended it is a
+hash table insert.
+
+The key is `crc32(period)`, not `hash(period)`: Python's hash is salted per
+process, so two workers would take different locks for the same period and
+serialise nothing at all.
+
+**The seal did not cover what it sealed.** `seal()` ran four statements on
+four pooled connections — find the open set, hash every live judgment in it,
+count them, write the hash — and `decide()` read *which set is open* on a
+fifth, before doing anything. So seven requests all read "set X is open", the
+seal froze X against two judgments, and the four still in flight inserted into
+X afterwards. The stored hash covered two; the set held six. Nothing would
+ever have shown it: the hash is only recomputed when somebody unseals, which
+may be months away or never. `scripts/drive_concurrency.py` reproduces it
+exactly, and reported it the first time it ran.
+
+Three rules came out of it:
+
+- **Read what you are about to depend on inside the turn.** The open-set
+  lookup was correct, on its own connection, and outside the lock — which is
+  the same defect in a shape that does not look like one.
+- **A sealed set is frozen in the schema too** (migration `046`).
+  `decision_respects_the_seal` refuses an insert into a sealed set and refuses
+  an update that moves anything the seal hashed, `reversed_at` included —
+  because `POST /api/undo` reverses a judgment that way and had nothing
+  stopping it doing so under a seal. `v_undoable.blocked_by_seal` is the
+  other kind of stop from `already_undone`: there *is* something left to walk
+  back, and the way past it is to unseal.
+- **A long read before a short write re-checks under the lock.**
+  `/api/rates/compute` builds the model from live rows on other connections
+  and then re-reads the seal; `/api/restate` re-reads the rate's status.
+  Either is a 409 that says what moved, rather than a raw constraint
+  violation that says nothing.
+
+**Serialising makes the order deterministic; it does not make it
+comprehensible.** Tom judges 5227 at 10:31, Barb's queue was drawn at 10:29,
+and her Enter at 10:32 silently replaces a judgment she never saw. So the
+queue carries `live_decision` — a decision id, `"none"`, or `"several"` — and
+the screen sends it straight back as `based_on`. Where it disagrees with what
+is actually live, the judgment is refused and the sentence names who
+classified it as what and when, and the queue redraws itself. `based_on` is
+optional and absent means *not participating*: a script doing a bulk
+reclassification has no screen to be stale, and refusing it would make the
+crosswalk unloadable.
+
+One more thing fell out: **`decide()` is one turn for the whole request**, not
+one per group. A refusal partway through a batch used to leave the groups
+before it recorded while the response said nothing was.
+
 ## Manuals for the team
 
 `docs/manuals/` — one per job, not one per role, because two people here hold
@@ -749,6 +813,7 @@ are tested at.
 | `scripts/review_system.py` | six dimensions, as all six people, forward and backward |
 | `scripts/drive_state_machine.py` | the lifecycle one action at a time, every invariant re-checked each turn, then walked back |
 | `scripts/drive_propagation.py` | what one reclassification moves, and what it must not |
+| `scripts/drive_concurrency.py` | two controllers acting at the same instant, four races |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
 `drive_everyone` is the one that answers "does each kind of person have a

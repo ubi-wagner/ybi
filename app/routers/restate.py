@@ -33,6 +33,7 @@ from pydantic import BaseModel, Field
 from app.audit import record
 from app.auth import Actor, require_controller, require_reader
 from app.db import one, query, transaction
+from app.statelock import turn
 from app.domain.invoice import Category, Invoice, InvoiceLine, assess
 from app.settings import settings
 
@@ -196,7 +197,21 @@ def restate(body: RestateIn, period: str = None,
         headroom = Decimal(str(award["ceiling_federal"])) - Decimal(str(claimed_to_date))
         capped = under > headroom
 
-    with transaction() as cur:
+    # Held, like every other act on the cost record. A restatement is measured
+    # against a rate read a few milliseconds ago; the rate can be superseded by
+    # an unseal in between, so this re-reads it under the lock before writing.
+    with turn(period) as cur:
+        cur.execute("""SELECT status::text AS status FROM rate WHERE rate_id = %s""",
+                    (rate["rate_id"],))
+        still = cur.fetchone()
+        if not still or still["status"] == 'SUPERSEDED':
+            raise HTTPException(409, {
+                "error": "RATE_SUPERSEDED",
+                "message": ("The rate this restatement was measured against was "
+                            "superseded while it was being computed — most "
+                            "likely the classifications were reopened. Nothing "
+                            "was written."),
+                "rate_id": str(rate["rate_id"])})
         cur.execute("""UPDATE restatement SET status = 'SUPERSEDED'
                         WHERE period = %s AND objective_id = %s
                           AND status = 'PROPOSED'""",

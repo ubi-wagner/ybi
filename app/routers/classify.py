@@ -33,6 +33,7 @@ from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
                        Pool)
 from app.auth import Actor
 from app.db import execute, one, query, transaction
+from app.statelock import turn
 from app.domain.advice import GroupFacts, advise
 from app.domain.chart import pool_for
 from app.domain.crosswalk import CROSSWALK
@@ -61,6 +62,14 @@ class GroupOut(BaseModel):
     sample_memos: list[str] = []
     decided: bool = False
     stale: bool = False
+    #: What is live on this group right now — a decision id, "none", or
+    #: "several" where the group is covered by more than one judgment. The
+    #: screen sends it straight back as `based_on` so a judgment made from a
+    #: stale queue is refused with a sentence rather than silently replacing
+    #: a colleague's work.
+    live_decision: str = "none"
+    #: Who made it, for that sentence.
+    decided_by: str = ""
     proposal: dict | None = None
     evidence_count: int = 0
     note_count: int = 0
@@ -83,6 +92,17 @@ class DecideIn(BaseModel):
     #: newer one need not send a field that means nothing.
     decided_by: str = ""
     supersedes: str | None = None
+    #: What the screen believed was live for each group when it was drawn:
+    #: group_key -> the live decision_id it showed, or "none" where it showed
+    #: the group unjudged. Where a key is present and what is actually live
+    #: differs, the judgment is refused and the person is told who changed it
+    #: and when — rather than silently superseding a colleague's work off a
+    #: screen drawn before they did it.
+    #:
+    #: Optional, and absent means "not participating". A script doing a bulk
+    #: reclassification has no screen to be stale, and refusing it would make
+    #: the crosswalk unloadable.
+    based_on: dict[str, str] = {}
 
 
 class CoverageOut(BaseModel):
@@ -146,6 +166,15 @@ def queue(period: str = "2025",
                (array_agg(l.description ORDER BY abs(l.amount) DESC)
                   FILTER (WHERE l.description <> ''))[1:3] AS sample_memos,
                bool_or(d.decision_id IS NOT NULL)    AS decided,
+               -- What the screen has to send back to prove it was not drawn
+               -- before somebody else's judgment. Exactly one live decision
+               -- is the ordinary case; the other two are named rather than
+               -- collapsed, because "several" and "none" are different
+               -- states and a judgment made against either is stale in a
+               -- different way.
+               count(DISTINCT d.decision_id)         AS live_decisions,
+               max(d.decision_id::text)              AS live_decision,
+               max(d.decided_by)                     AS decided_by,
                bool_or(rev.revision_id IS NOT NULL)  AS stale,
                count(DISTINCT att.attachment_id)     AS evidence_count,
                count(DISTINCT n.note_id)             AS note_count
@@ -187,6 +216,10 @@ def queue(period: str = "2025",
             objective_hint=r["objective_hint"] or "",
             sample_memos=[m for m in (r["sample_memos"] or []) if m],
             decided=bool(r["decided"]), stale=bool(r["stale"]),
+            live_decision=("none" if not r["live_decisions"]
+                           else r["live_decision"] if r["live_decisions"] == 1
+                           else "several"),
+            decided_by=r["decided_by"] or "",
             evidence_count=r["evidence_count"] or 0, note_count=r["note_count"] or 0,
         )
         g.proposal = propose(g)
@@ -439,27 +472,49 @@ def decide(body: DecideIn, period: str = "2025",
     if body.grade not in ("UNSUPPORTED", "TEST_ASSUMPTION") and not body.rationale.strip():
         raise ValueError("A supported grade requires a written rationale.")
 
-    st = one("""SELECT set_id FROM decision_set
-                 WHERE period = %s AND seal_hash IS NULL
-                 ORDER BY set_id LIMIT 1""", (period,))
-    if not st:
-        raise ValueError("No open decision set for this period. "
-                         "A sealed set cannot be modified — unseal it, with a reason.")
-    set_id = st["set_id"]
-
     created = 0
     replaced = 0
-    for key in body.group_keys:
-        account, _, payee = key.partition("\x1f")
-        with_lines = query("""SELECT line_id FROM ledger_line
-                               WHERE period = %s AND account = %s AND payee = %s""",
-                           (period, account, payee))
-        if not with_lines:
-            continue
-        # One transaction: the VERIFIED gate is a deferred constraint trigger
-        # that fires at COMMIT, so the decision and the evidence it cites must
-        # land together or an evidenced judgment is refused as unevidenced.
-        with transaction() as cur:
+    # One turn for the whole request, not one per group.
+    #
+    # Two reasons. The VERIFIED gate is a deferred constraint trigger that
+    # fires at COMMIT, so a decision and the evidence it cites have to land
+    # together or an evidenced judgment is refused as unevidenced. And a
+    # refusal partway through a batch used to leave the groups before it
+    # recorded while the response said nothing was — so a bulk judgment over
+    # eleven groups could half happen. Either all of it is on the record or
+    # none of it is, which is what the message below is entitled to claim.
+    with turn(period) as cur:
+        # Inside the turn, not before it.
+        #
+        # This lookup used to sit above, on its own connection, and that is
+        # how a judgment got into a sealed set: seven requests all read "set
+        # X is open", the seal took the lock and froze X, and the four
+        # judgments still queued behind it inserted into X afterwards — so
+        # the stored hash covered two judgments and the set held six. The
+        # concurrency drive reproduces it exactly. Read under the lock, a
+        # judgment arriving after the seal finds no open set and is refused,
+        # which is the whole meaning of sealing.
+        cur.execute("""SELECT set_id FROM decision_set
+                        WHERE period = %s AND seal_hash IS NULL
+                        ORDER BY set_id LIMIT 1""", (period,))
+        st = cur.fetchone()
+        if not st:
+            raise HTTPException(409, {
+                "error": "SET_IS_SEALED",
+                "message": ("The classifications for this period are sealed, so "
+                            "nothing can be added to them. Unsealing takes a "
+                            "written reason and supersedes any rate computed "
+                            "from them.")})
+        set_id = st["set_id"]
+
+        for key in body.group_keys:
+            account, _, payee = key.partition("\x1f")
+            cur.execute("""SELECT line_id FROM ledger_line
+                            WHERE period = %s AND account = %s AND payee = %s""",
+                        (period, account, payee))
+            with_lines = cur.fetchall()
+            if not with_lines:
+                continue
             # Reclassifying supersedes; it does not stack.
             #
             # `one_live_decision_per_unit` means a line already carrying a
@@ -482,6 +537,43 @@ def decide(body: DecideIn, period: str = "2025",
                               AND dl.line_id = ANY(%s)""",
                         ([l["line_id"] for l in with_lines],))
             superseded = [r["decision_id"] for r in cur.fetchall()]
+
+            # Is the screen this came from still describing the record?
+            #
+            # Two controllers work the queue at once. Tom judges 5227 at
+            # 10:31; Barb's queue was drawn at 10:29 and still shows it
+            # unjudged, so her Enter at 10:32 silently replaces a judgment
+            # she never saw. The lock makes that ordering deterministic —
+            # it does not make it comprehensible. This does.
+            expected = body.based_on.get(key)
+            if expected is not None:
+                actual = str(superseded[0]) if len(superseded) == 1 else (
+                    "none" if not superseded else "several")
+                if expected != actual:
+                    cur.execute("""SELECT d.decided_by, d.decided_at, d.pool::text
+                                          AS pool
+                                     FROM decision d
+                                     JOIN decision_line dl USING (decision_id)
+                                    WHERE dl.live AND d.reversed_at IS NULL
+                                      AND dl.line_id = ANY(%s)
+                                    ORDER BY d.decided_at DESC LIMIT 1""",
+                                ([l["line_id"] for l in with_lines],))
+                    cur_live = cur.fetchone()
+                    if cur_live:
+                        detail = (f"{cur_live['decided_by'] or 'Somebody'} "
+                                  f"classified it as {cur_live['pool']} at "
+                                  f"{cur_live['decided_at']:%H:%M}")
+                    else:
+                        detail = "the judgment it carried has since been undone"
+                    raise HTTPException(409, {
+                        "error": "GROUP_MOVED",
+                        "group_key": key,
+                        "message": (f"{account} changed while this screen was "
+                                    f"open — {detail}. Nothing was recorded. "
+                                    f"Reload the queue and decide again if you "
+                                    f"still want to replace it."),
+                        "expected": expected, "actual": actual})
+
             for old_id in superseded:
                 # A trigger flips decision_line.live when reversed_at is set,
                 # which is what frees the lines for the judgment replacing
@@ -541,8 +633,8 @@ def decide(body: DecideIn, period: str = "2025",
                            if superseded else None),
                    after=body.model_dump(mode="json"), reason=body.rationale,
                    cursor=cur)
-        created += 1
-        replaced += len(superseded)
+            created += 1
+            replaced += len(superseded)
 
     # `superseded` says so plainly, because "decisions_created: 1" read the
     # same whether a group was judged for the first time or rejudged — and
@@ -627,7 +719,7 @@ def segment(body: SegmentIn, period: str = "2025",
     plan = plan_segments({r["line_id"]: r["amount"] for r in rows}, parts)
 
     batch_key = f"SEG-{uuid4().hex[:12]}"
-    with transaction() as cur:
+    with turn(period) as cur:
         for line_id, entries in plan.by_line.items():
             for index, amount in entries:
                 part = parts[index]
@@ -673,7 +765,14 @@ def reverse_segment(batch_key: str, reason: str, reversed_by: str = "",
     reversed_by = actor.display_name or reversed_by
     if not reason.strip():
         raise HTTPException(422, "A reversal needs a reason.")
-    with transaction() as cur:
+    # The period comes off the batch rather than from the caller: a reversal
+    # names the segmentation it undoes, and the period is a property of that,
+    # not something a client should be able to disagree with.
+    b = one("""SELECT DISTINCT period FROM ledger_segment WHERE batch_key = %s""",
+            (batch_key,))
+    if not b:
+        raise HTTPException(404, "No segmentation with that key.")
+    with turn(b["period"]) as cur:
         cur.execute("""UPDATE ledger_segment
                           SET reversed_at = now(), reversed_by = %s,
                               reversal_reason = %s

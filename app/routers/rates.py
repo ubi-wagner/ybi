@@ -11,7 +11,8 @@ from pydantic import BaseModel
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.auth import Actor
-from app.db import execute, one, query, transaction
+from app.db import one, query
+from app.statelock import turn
 
 router = APIRouter(prefix="/rates", tags=["rates"],
                    dependencies=[Depends(require_reader)])
@@ -33,44 +34,63 @@ def seal(body: SealIn, period: str = "2025",
     the signed-in controller and body.sealed_by is only a label. An identity
     the client supplies is not evidence of who did this.
     """
-    st = one("""SELECT set_id FROM decision_set WHERE period=%s AND seal_hash IS NULL
-                 ORDER BY set_id LIMIT 1""", (period,))
-    if not st:
-        raise HTTPException(409, "No open decision set — this period is already sealed.")
-    h = one("""
-        SELECT encode(digest(string_agg(fp,'' ORDER BY fp),'sha256'),'hex') AS seal
-          FROM (SELECT encode(digest(
-                   d.decision_id::text || d.pool::text || d.function_990::text ||
-                   d.federal::text || coalesce(d.objective_id,'') || d.grade::text,
-                   'sha256'),'hex') AS fp
-                  FROM decision d
-                 WHERE d.set_id=%s AND d.reversed_at IS NULL) x
-    """, (st["set_id"],))
-    # string_agg over no rows is NULL, so sealing a set with nothing in it
-    # produced a null hash and a raw constraint violation — which is exactly
-    # the state a fresh deployment is in on its first morning, and exactly
-    # the wrong first impression. Sealing nothing is meaningless anyway: the
-    # seal is a hash across judgments, and there are none.
-    if not h or not h["seal"]:
-        raise HTTPException(409, {
-            "error": "NOTHING_TO_SEAL",
-            "message": ("There are no classifications to seal yet. The seal "
-                        "is a hash across every judgment in the set, and it "
-                        "is what lets a rate be computed — so it has to come "
-                        "after the work, not before it.")})
+    # One transaction, with the period held.
+    #
+    # This used to be four statements on four pooled connections: find the
+    # open set, hash every live judgment in it, count them, write the hash. A
+    # classification committing between the hash and the write landed in a
+    # set whose seal_hash does not cover it — and nothing would ever have
+    # shown it, because the hash is only recomputed when somebody unseals.
+    # That is the one guarantee the whole engagement rests on, so it is now
+    # taken as a single act over a period nobody else can be mid-turn on.
+    with turn(period) as cur:
+        cur.execute("""SELECT set_id FROM decision_set
+                        WHERE period=%s AND seal_hash IS NULL
+                        ORDER BY set_id LIMIT 1""", (period,))
+        st = cur.fetchone()
+        if not st:
+            raise HTTPException(409, "No open decision set — this period is "
+                                     "already sealed.")
+        cur.execute("""
+            SELECT encode(digest(string_agg(fp,'' ORDER BY fp),'sha256'),'hex') AS seal
+              FROM (SELECT encode(digest(
+                       d.decision_id::text || d.pool::text || d.function_990::text ||
+                       d.federal::text || coalesce(d.objective_id,'') || d.grade::text,
+                       'sha256'),'hex') AS fp
+                      FROM decision d
+                     WHERE d.set_id=%s AND d.reversed_at IS NULL) x
+        """, (st["set_id"],))
+        h = cur.fetchone()
+        # string_agg over no rows is NULL, so sealing a set with nothing in it
+        # produced a null hash and a raw constraint violation — which is exactly
+        # the state a fresh deployment is in on its first morning, and exactly
+        # the wrong first impression. Sealing nothing is meaningless anyway: the
+        # seal is a hash across judgments, and there are none.
+        if not h or not h["seal"]:
+            raise HTTPException(409, {
+                "error": "NOTHING_TO_SEAL",
+                "message": ("There are no classifications to seal yet. The seal "
+                            "is a hash across every judgment in the set, and it "
+                            "is what lets a rate be computed — so it has to come "
+                            "after the work, not before it.")})
 
-    sealed_by = actor.display_name or body.sealed_by
-    counts = one("""SELECT count(*) AS decisions,
-                           count(*) FILTER (WHERE grade IN ('UNSUPPORTED','TEST_ASSUMPTION'))
-                             AS weak
-                      FROM decision
-                     WHERE set_id = %s AND reversed_at IS NULL""", (st["set_id"],))
-    execute("""UPDATE decision_set SET seal_hash=%s, sealed_at=now(), sealed_by=%s
-                WHERE set_id=%s""", (h["seal"], sealed_by, st["set_id"]))
-    record(actor, "SEAL", "decision_set", str(st["set_id"]),
-           after={"seal_hash": h["seal"], "decisions": counts["decisions"],
-                  "weakly_graded": counts["weak"]},
-           reason=body.note.strip() or "decision set sealed")
+        sealed_by = actor.display_name or body.sealed_by
+        cur.execute("""SELECT count(*) AS decisions,
+                              count(*) FILTER (WHERE grade IN ('UNSUPPORTED',
+                                                               'TEST_ASSUMPTION'))
+                                AS weak
+                         FROM decision
+                        WHERE set_id = %s AND reversed_at IS NULL""",
+                    (st["set_id"],))
+        counts = cur.fetchone()
+        cur.execute("""UPDATE decision_set SET seal_hash=%s, sealed_at=now(),
+                              sealed_by=%s
+                        WHERE set_id=%s""",
+                    (h["seal"], sealed_by, st["set_id"]))
+        record(actor, "SEAL", "decision_set", str(st["set_id"]),
+               after={"seal_hash": h["seal"], "decisions": counts["decisions"],
+                      "weakly_graded": counts["weak"]},
+               reason=body.note.strip() or "decision set sealed", cursor=cur)
     return {"set_id": str(st["set_id"]), "seal_hash": h["seal"],
             "decisions": counts["decisions"]}
 
@@ -80,15 +100,24 @@ def unseal(reason: str, period: str = "2025",
            actor: Actor = Depends(require_controller)) -> dict:
     if not reason.strip():
         raise HTTPException(422, "Unsealing requires a reason for the audit trail.")
-    st = one("""SELECT set_id FROM decision_set WHERE period=%s AND seal_hash IS NOT NULL
-                 ORDER BY sealed_at DESC LIMIT 1""", (period,))
-    if not st:
-        raise HTTPException(404, "No sealed decision set for this period.")
-    execute("""UPDATE decision_set SET seal_hash=NULL, sealed_at=NULL,
-                      unsealed_reason=%s WHERE set_id=%s""", (reason, st["set_id"]))
-    execute("""UPDATE rate SET status='SUPERSEDED' WHERE set_id=%s AND status<>'ACCEPTED'""",
-            (st["set_id"],))
-    record(actor, "UNSEAL", "decision_set", str(st["set_id"]), reason=reason)
+    # Also one act. Unsealing and superseding the rates it invalidates were
+    # two separate transactions, so there was a moment where the set was open
+    # and a rate on file still read as current — the exact state `/review`
+    # presents as the rate on file.
+    with turn(period) as cur:
+        cur.execute("""SELECT set_id FROM decision_set
+                        WHERE period=%s AND seal_hash IS NOT NULL
+                        ORDER BY sealed_at DESC LIMIT 1""", (period,))
+        st = cur.fetchone()
+        if not st:
+            raise HTTPException(404, "No sealed decision set for this period.")
+        cur.execute("""UPDATE decision_set SET seal_hash=NULL, sealed_at=NULL,
+                              unsealed_reason=%s WHERE set_id=%s""",
+                    (reason, st["set_id"]))
+        cur.execute("""UPDATE rate SET status='SUPERSEDED'
+                        WHERE set_id=%s AND status<>'ACCEPTED'""", (st["set_id"],))
+        record(actor, "UNSEAL", "decision_set", str(st["set_id"]), reason=reason,
+               cursor=cur)
     return {"set_id": str(st["set_id"]), "status": "unsealed"}
 
 
@@ -308,7 +337,26 @@ def compute(body: ComputeIn, period: str = "2025",
     }
 
     written = []
-    with transaction() as cur:
+    with turn(period) as cur:
+        # The model above was built from live rows on other connections, which
+        # takes long enough for somebody to unseal underneath it. The period is
+        # held from here, so re-reading the seal settles it: if it moved, every
+        # figure computed above describes a set that no longer exists, and
+        # writing them would produce a rate carrying a seal nobody can
+        # reproduce. `rate_requires_seal` would refuse the insert anyway — as
+        # a raw constraint violation, which tells the controller nothing.
+        cur.execute("""SELECT seal_hash FROM decision_set WHERE set_id = %s""",
+                    (sealed["set_id"],))
+        still = cur.fetchone()
+        if not still or still["seal_hash"] != sealed["seal_hash"]:
+            raise HTTPException(409, {
+                "error": "SEAL_MOVED",
+                "message": ("The decision set was unsealed while this rate was "
+                            "being computed, so the figures describe a set that "
+                            "is no longer sealed. Nothing was written. Seal "
+                            "again and recompute."),
+                "seal_hash": sealed["seal_hash"]})
+
         # A recomputation supersedes what it replaces rather than sitting
         # beside it. Anything already accepted is left alone: an accepted rate
         # is a position taken with a sponsor and is not ours to overwrite.

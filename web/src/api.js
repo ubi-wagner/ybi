@@ -84,6 +84,11 @@ function detailOf(body) {
       return d.map((x) => `${(x.loc || []).slice(1).join(".")}: ${x.msg}`)
               .join("; ");
     }
+    /* A structured refusal carries its sentence in `message`; the rest of
+       the object is for the screen to act on, not for a person to read.
+       Without this the seal, the reconciliation and the stale-queue
+       refusals all arrived in a toast as raw JSON. */
+    if (d && typeof d.message === "string") return d.message;
     if (d) return JSON.stringify(d);
   } catch { /* not JSON; the body itself is the message */ }
   return (body || "").slice(0, 300);
