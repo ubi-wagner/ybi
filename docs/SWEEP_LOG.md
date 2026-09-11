@@ -752,6 +752,43 @@ long as it has existed.
 
 ---
 
+## S8, the part that is not ours to settle
+
+Two items on `FOR_TOM_TO_VERIFY.md`, taking it to twenty-one. Neither is
+answerable from the record — which is what the list is for.
+
+**6.1, six provisions citing a clause that is not there.** The question put
+to Tom is not "is this wrong" but "what do the agreements actually say, and
+if the substance came from somewhere else, which document and which clause".
+The substance may well be right and sourced from a flow-down nobody wrote
+down; that is a different answer from the citation being a copy, and they
+lead to different work.
+
+**6.2, nobody has read the Drive AM agreement.** Thirty-six pages, no text
+layer, eight provisions that cannot be checked against it. The ask includes
+whether a text-bearing copy exists, because that is the cheap fix and only
+somebody at YBI can know.
+
+### Three tests caught the drift, which is the point of having them
+
+Adding two items failed four checks in three files, every one of them
+correctly:
+
+- `test_the_worksheet_and_the_document_carry_the_same_items` — the narrative
+  had not been written yet. Two copies of one list is the shape that produced
+  13.0% and 2.2% at the same moment, and this is the test that stops it.
+- `test_the_count_the_document_claims_is_the_count_it_has` — and **its own
+  matching was wrong**. It looked up number words in dict order, so "Twenty"
+  matched inside "Twenty-one" and a document saying twenty-one read as
+  claiming twenty. A test for a document miscounting itself, miscounting the
+  document. Longest first now.
+- `drive_requests.py` had **"expected nineteen"** and **"expected thirteen"**
+  written into it by hand, so a correct workbook failed a drive. Derived from
+  the list now. That is the third shape again, in the fifth place it has
+  turned up: a hand-kept map of what the code does.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the

@@ -221,4 +221,47 @@ ITEMS: tuple[Item, ...] = (
          "A restatement is measured per invoice. With three on file the "
          "exercise can be demonstrated and not completed, and invoiced "
          "against recognised cannot be reconciled at all."),
+
+    Item("6.1", "Agreements",
+         "Six provisions cite a clause the agreement does not contain",
+         "6 of 36",
+         "Hybrid Phase 2 and Last Tactical Mile each carry Payment terms "
+         "cited to §26 Payment, Invoicing frequency cited to §25 Invoicing, "
+         "and Indirect provision cited to Attachment 3. Neither agreement "
+         "contains a §25, a §26 or an Attachment 3 — both are "
+         "ARTICLE-numbered instruments with no numbered clause headings "
+         "anywhere — and neither contains the phrase \u201cNet 30\u201d or "
+         "\u201cfifth business day\u201d. Those are ICAM\u2019s clauses; "
+         "ICAM is the numbered NCDMM Subrecipient Agreement template and its "
+         "ten provisions all check out against it. "
+         "v_award_citation_check names the six.",
+         "What do Hybrid\u2019s and LTM\u2019s agreements actually say about "
+         "payment terms, invoicing frequency and indirect? If the substance "
+         "is right but came from somewhere else \u2014 a flow-down, a "
+         "purchase order, the prime \u2014 which document and which clause?",
+         "The indirect provision is the one that matters. Schedule B says "
+         "Hybrid budgets no indirect at all against 449,043 of labour and LTM "
+         "budgets 81,772.76, while the register asserts \u201c10% of ODCs "
+         "only\u201d on both. That is the restatement\u2019s central claim "
+         "resting, in two places, on a sentence copied from the one agreement "
+         "it was true of. A citation to a clause that does not exist is also "
+         "the kind of thing a sponsor finds rather than a control."),
+
+    Item("6.2", "Agreements",
+         "Nobody has read the Drive AM agreement",
+         "36 pages, 0 words",
+         "The executed Drive AM subrecipient agreement on file is thirty-six "
+         "pages of image with no text layer. Its eight recorded provisions "
+         "\u2014 including the 1,103,594 total obligation at \u00a74.3, the "
+         "\u00a711.11 precedence rule and \u201cnone budgeted\u201d for "
+         "indirect \u2014 cannot be checked against it by anybody working "
+         "from the file.",
+         "Confirm the eight provisions against the paper agreement, and "
+         "whether a text-bearing copy exists \u2014 a Word original, or the "
+         "copy NCDMM holds.",
+         "Drive AM is the largest America Makes award and the one whose "
+         "Schedule B carries no indirect line at all against 583,594 of "
+         "labour. That absence is the strongest evidence the restatement has, "
+         "and at present it rests on a reading nobody can reproduce from the "
+         "document on file."),
 )

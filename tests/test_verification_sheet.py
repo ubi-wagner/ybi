@@ -49,9 +49,14 @@ def test_the_count_the_document_claims_is_the_count_it_has():
     """The first line says "Eighteen things". A document that miscounts itself
     is one a reader stops trusting on everything else."""
     words = {"Sixteen": 16, "Seventeen": 17, "Eighteen": 18,
-             "Nineteen": 19, "Twenty": 20, "Twenty-one": 21}
+             "Nineteen": 19, "Twenty": 20, "Twenty-one": 21,
+             "Twenty-two": 22, "Twenty-three": 23, "Twenty-four": 24}
     head = DOC.read_text().split("---")[0]
-    claimed = next((n for w, n in words.items() if w in head), None)
+    # Longest first: "Twenty" is a substring of "Twenty-one", and matching it
+    # would read a document that says twenty-one as claiming twenty — a test
+    # miscounting the document it is checking for miscounting itself.
+    claimed = next((n for w, n in sorted(words.items(), key=lambda kv: -len(kv[0]))
+                    if w in head), None)
     assert claimed is not None, "the opening does not say how many there are"
     assert claimed == len(ITEMS)
 

@@ -34,6 +34,8 @@ from io import BytesIO
 import httpx
 from openpyxl import load_workbook
 
+from app.domain.verification_items import ITEMS as VERIFICATION_ITEMS
+
 FINDINGS: list[str] = []
 CHECKS = 0
 XLSX = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -556,11 +558,18 @@ def drive_verification(tom, heidi, outsider) -> None:
     refs = [str(wb.cell(row=r, column=at["Ref"]).value or "").strip()
             for r in range(3, wb.max_row + 1)]
     refs = [x for x in refs if x]
-    if len(refs) == 19:
-        ok(f"nineteen items went out, each carrying the question — {refs[0]} to "
-           f"{refs[-1]}")
+    # Derived from the list, not written down again. Both of these were
+    # hard-coded — "expected nineteen", "expected thirteen" — so adding two
+    # items to `verification_items.py` made a correct workbook fail a drive.
+    # A hand-kept map of what the code does was wrong four times in one run
+    # of the system review; it is the same defect every time it appears.
+    expected = len(VERIFICATION_ITEMS)
+    if len(refs) == expected:
+        ok(f"all {expected} items went out, each carrying the question — "
+           f"{refs[0]} to {refs[-1]}")
     else:
-        finding(f"{len(refs)} items in the workbook, expected nineteen")
+        finding(f"{len(refs)} items in the workbook, "
+                f"expected {expected} — the list has {expected}")
 
     # The worked example goes out already answered, because it *is* the
     # example: it shows what a settled row looks like rather than describing
@@ -612,12 +621,14 @@ def drive_verification(tom, heidi, outsider) -> None:
     else:
         finding(f"{p['usable']} usable and {p['incomplete']} held back; "
                 f"expected five and one")
-    if p["untouched"] == 13:
-        ok("and the thirteen nobody reached are untouched rather than "
-           "incomplete — nobody started them, which is different from "
-           "starting and stopping")
+    # Everything except the five that will land and the one held back.
+    untouched = expected - 6
+    if p["untouched"] == untouched:
+        ok(f"and the {untouched} nobody reached are untouched rather than "
+           f"incomplete — nobody started them, which is different from "
+           f"starting and stopping")
     else:
-        finding(f"{p['untouched']} untouched, expected thirteen")
+        finding(f"{p['untouched']} untouched, expected {untouched}")
 
     refused = outsider.post(f"/api/requests/{rid}/accept", json={})
     if refused.status_code == 403:

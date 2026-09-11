@@ -1,6 +1,6 @@
 # Discrepancies for the controller to settle
 
-Nineteen things the record cannot resolve on its own. Every one was found by a
+Twenty-one things the record cannot resolve on its own. Every one was found by a
 control rather than by somebody reading — which is the point of the controls —
 and every one is a question Tom can answer from what he already knows or can
 reach today. Nothing here needs counsel, an outside document, or a decision
@@ -282,6 +282,64 @@ be tested from the system as it stands.
 
 *A restatement is measured per invoice. With three on file the exercise can be
 demonstrated and not completed.*
+
+---
+
+## 6. The agreements
+
+Both of these came out of looking for something else. The milestone schedule
+was thought to be in the agreements, so the agreements were read.
+
+### 6.1 Six provisions cite a clause the agreement does not contain — 6 of 36
+
+Hybrid Phase 2 and Last Tactical Mile each carry three provisions read, on the
+record, out of the executed agreement:
+
+```
+Payment terms        Net 30 from receipt of a correct invoice   §26 Payment
+Invoicing frequency  Monthly, by the fifth business day         §25 Invoicing
+Indirect provision   10% of ODCs only; no indirect on labor     Attachment 3
+```
+
+Neither agreement contains a §25, a §26 or an Attachment 3. Both are
+ARTICLE-numbered instruments — "ARTICLE 4. BUDGET AND PAYMENT" — with no
+numbered clause heading anywhere in either document, and neither contains the
+phrase "Net 30" or "fifth business day".
+
+Those are **ICAM's** clauses. ICAM is the numbered NCDMM Subrecipient
+Agreement template, it does contain §25 INVOICING and §26 PAYMENT, and all ten
+of its own provisions check out against it.
+
+**Tom:** what do Hybrid's and LTM's agreements actually say about payment
+terms, invoicing frequency and indirect? If the substance is right but came
+from somewhere else — a flow-down, a purchase order, the prime — which
+document and which clause?
+
+*The indirect provision is the one that moves. Schedule B says Hybrid budgets
+**no indirect at all** against $449,043 of labour and LTM budgets
+**$81,772.76**, while the register asserts "10% of ODCs only" on both. That is
+the restatement's central claim resting, in two places, on a sentence copied
+from the one agreement it was true of. And a citation to a clause that does
+not exist is the kind of thing a sponsor finds rather than a control.*
+
+`v_award_citation_check` names the six, and it found them by asking each
+document whether it contains what was cited — not from a list anybody kept.
+
+### 6.2 Nobody has read the Drive AM agreement — 36 pages, 0 words
+
+The executed Drive AM subrecipient agreement on file is thirty-six pages of
+**image with no text layer**. Its eight recorded provisions — including the
+$1,103,594 total obligation at §4.3, the §11.11 precedence rule, and "none
+budgeted" for indirect — cannot be checked against it by anybody working from
+the file.
+
+**Tom:** confirm the eight against the paper agreement, and say whether a
+text-bearing copy exists — a Word original, or the copy NCDMM holds.
+
+*Drive AM is the largest America Makes award and the one whose Schedule B
+carries no indirect line at all against $583,594 of labour. That absence is
+the strongest evidence the restatement has, and today it rests on a reading
+nobody can reproduce from the document on file.*
 
 ---
 
