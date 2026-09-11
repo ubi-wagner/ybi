@@ -10,7 +10,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Gaps | 1 |
 | Notes | 25 |
 | GET routes probed | 83 (× 6 people) |
-| Audit entries | 1719 |
+| Audit entries | 210 |
 
 ## Who was driven
 
@@ -133,29 +133,27 @@ Nothing found.
 
 ## Continuity
 
-### GAP — the chain stops at 'rates'
+### GAP — the chain stops at 'decisions recorded'
 
-Everything upstream is loaded; nothing downstream of rates exists yet.
+Everything upstream is loaded; nothing downstream of decisions recorded exists yet.
 
 *What to do:* This is the work, not a defect. It is named here so a reviewer is not left to infer it from an empty screen.
 
 ## Proportion
 
-### NOTE — propagation was not measured in this run
+### NOTE — the group carries 45 lines and 1 decision(s) were recorded
 
-The decision set is sealed, so no change could be made to measure. That is the correct state, not a defect.
-
-*What to do:* Run the review on a freshly seeded database, before the drives — they seal. ./scripts/seed.sh then this.
+Not necessarily wrong — scope may be the group rather than the line — but worth knowing which.
 
 ## What the system held at the moment of review
 
 ```json
 {
   "samples": {
-    "evidence_id": "EV-298b0ec6a358",
+    "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "cffcff27-6248-402d-9b92-44ea84061104",
+    "actor_id": "2fd0077a-a494-4bfb-9288-1c5c84422dd3",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -288,125 +286,80 @@ The decision set is sealed, so no change could be made to measure. That is the c
   "counts": {
     "/api/classify/queue": 50,
     "/api/reconcile": 11,
-    "/api/documents/library": 52,
+    "/api/documents/library": 18,
     "/api/contracts": 4,
     "/api/reports/invoices": 3,
     "/api/chart/accounts": 103,
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 1719,
+  "audit_rows": 210,
   "audit_by_action": {
-    "EXPORT": 386,
-    "SIGN_IN": 315,
-    "DOCUMENT_LIBRARY_READ": 288,
-    "EVIDENCE_DOWNLOAD": 115,
-    "REVIEW_READ": 96,
-    "AWARD_TERM": 68,
-    "DOCUMENT_UPLOAD": 68,
-    "TIME_ENTRY": 40,
-    "REQUEST_ISSUE": 34,
-    "REQUEST_REPLY": 33,
-    "REQUEST_ACCEPT": 33,
-    "ACTOR_CREATE": 25,
-    "EVIDENCE_ATTACH": 19,
+    "EXPORT": 42,
+    "AWARD_TERM": 36,
+    "SIGN_IN": 30,
+    "DOCUMENT_LIBRARY_READ": 27,
     "EVIDENCE_UPLOAD": 18,
-    "FACILITY": 15,
-    "PASSWORD_CHANGE": 12,
-    "PORTFOLIO_GRANT": 10,
-    "SEAL": 10,
-    "PORTFOLIO_REVOKE": 10,
-    "UNSEAL": 9,
-    "ACTOR_ACTIVE": 7,
+    "REVIEW_READ": 12,
+    "EVIDENCE_DOWNLOAD": 12,
+    "ACTOR_CREATE": 6,
     "RECONCILE_ITEM": 6,
-    "DEFER": 5,
-    "CHART_SPLIT": 5,
-    "CLASSIFY": 5,
-    "EVIDENCE_VIEW": 5,
-    "EQUIPMENT_USE": 5,
-    "SPACE_UNIT": 5,
-    "PASSWORD_RESET": 5,
-    "SEGMENT_REVERSE": 5,
-    "RATE_COMPUTE": 5,
-    "ACTOR_AMEND": 5,
-    "MATERIALITY": 5,
-    "TIME_REMOVE": 5,
-    "NOTE": 5,
-    "SEGMENT": 5,
-    "IN_KIND": 5,
-    "MILESTONE_STATE": 4,
-    "IMPORT_PARSE": 3,
+    "CLASSIFY": 4,
     "IMPORT_UPLOAD": 3,
-    "RECEIPT": 2,
-    "CHARGE_CODE_OPEN": 2,
-    "EVIDENCE_FACTS": 2,
+    "IMPORT_PARSE": 3,
+    "PASSWORD_CHANGE": 2,
     "IMPORT_ACCEPT": 2,
-    "MILESTONE_OPEN": 2,
-    "CHARGE_AUTHORISE": 2,
-    "CHARGE_REVOKE": 2,
-    "EVIDENCE_GENERATED": 1,
-    "RECORD_ACCESS": 1,
-    "RECONCILE_ALIAS": 1
+    "UNDO": 2,
+    "RECONCILE_ALIAS": 1,
+    "RATE_COMPUTE": 1,
+    "SEAL": 1,
+    "UNSEAL": 1,
+    "RECORD_ACCESS": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 493
-    },
-    {
-      "actor": "Engagement Auditor",
-      "role": "AUDITOR",
-      "n": 361
-    },
-    {
-      "actor": "Heidi Ruby",
-      "role": "CONTROLLER",
-      "n": 277
+      "n": 107
     },
     {
       "actor": "Barb Ewing",
       "role": "ORG_ADMIN",
-      "n": 271
+      "n": 27
     },
     {
-      "actor": "Stephanie Gaffney",
+      "actor": "Engagement Auditor",
+      "role": "AUDITOR",
+      "n": 21
+    },
+    {
+      "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 150
+      "n": 21
     },
     {
       "actor": "Eric Wagner",
       "role": "SYSTEM_ADMIN",
-      "n": 132
+      "n": 17
     },
     {
-      "actor": "First Day",
-      "role": "EMPLOYEE",
-      "n": 15
-    },
-    {
-      "actor": "Drive Newcomer",
-      "role": "EMPLOYEE",
-      "n": 15
+      "actor": "Stephanie Gaffney",
+      "role": "CONTROLLER",
+      "n": 16
     },
     {
       "actor": "New Starter",
       "role": "EMPLOYEE",
-      "n": 3
-    },
-    {
-      "actor": "Boundary Probe",
-      "role": "EMPLOYEE",
-      "n": 2
+      "n": 1
     }
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2474,
-    "decisions recorded": 5,
-    "sealed sets": 1,
+    "groups still unclassified": 2479,
+    "decisions recorded": 0,
+    "sealed sets": 0,
     "rates": 0,
-    "allocations": 80,
+    "allocations": 16,
     "invoices": 3,
     "restatements": 0
   },
@@ -429,7 +382,7 @@ The decision set is sealed, so no change could be made to measure. That is the c
     ],
     [
       "AM-DRIVE-AM provisions",
-      "11"
+      "8"
     ],
     [
       "everybody who charged time",
@@ -453,17 +406,39 @@ The decision set is sealed, so no change could be made to measure. That is the c
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "33.4",
-    "decisions": "5",
-    "audit": "1722",
+    "classified_dollars": "0.0",
+    "decisions": "0",
+    "audit": "213",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "3900 Grant Income:Digital Engineering",
-    "amount": "579074.25",
-    "lines": 7
+    "account": "5129 Payroll Expenses:5139 Wages:5140 Employee Wages",
+    "amount": "1678057.27",
+    "lines": 45
+  },
+  "proportion_after": {
+    "classified_dollars": "13.0",
+    "decisions": "1",
+    "audit": "214",
+    "ledger": "14371299.30",
+    "register": "1835047.18",
+    "open_controls": "55"
+  },
+  "proportion_moved": {
+    "classified_dollars": [
+      "0.0",
+      "13.0"
+    ],
+    "decisions": [
+      "0",
+      "1"
+    ],
+    "audit": [
+      "213",
+      "214"
+    ]
   }
 }
 ```

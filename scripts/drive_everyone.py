@@ -149,7 +149,15 @@ def tidy_up() -> None:
     execute("""DELETE FROM attachment
                 WHERE evidence_id IN (SELECT evidence_id FROM evidence
                                        WHERE filename LIKE 'drive-%')""")
-    execute("DELETE FROM evidence WHERE filename LIKE 'drive-%'")
+    # Never one a judgment cited. The decision may have been walked back and
+    # it is still on the record as what it was decided on; deleting the
+    # document behind it would leave the trail saying somebody graded a
+    # judgment against nothing, which is the one thing the grade exists to
+    # make impossible. `drive_evidence` leaves exactly one such document.
+    execute("""DELETE FROM evidence e
+                WHERE e.filename LIKE 'drive-%'
+                  AND NOT EXISTS (SELECT 1 FROM decision_evidence de
+                                   WHERE de.evidence_id = e.evidence_id)""")
     execute("""DELETE FROM asset
                 WHERE unit_id IN (SELECT unit_id FROM space_unit
                                    WHERE facility_id LIKE 'DRIVE-%')""")

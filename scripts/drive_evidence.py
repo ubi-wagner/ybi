@@ -198,8 +198,13 @@ def main() -> int:
         else:
             finding(f"a document with no amount came out as {b}")
 
+        # Stamped like everything else send() puts in. This one goes direct
+        # because it is testing the response shape rather than the happy
+        # path, and unstamped bytes deduped against the previous run — the
+        # drive reporting a finding about its own re-runnability again.
         bad = outsider.post("/api/documents/upload",
-                            files={"file": ("drive-typo.pdf", b"%PDF-1.4 C",
+                            files={"file": ("drive-typo.pdf",
+                                            b"%PDF-1.4 C " + RUN,
                                             "application/pdf")},
                             data={"kind": "invoice", "doc_amount": "about 400",
                                   "doc_date": "March", "vendor_name": "Acme"})
@@ -366,11 +371,18 @@ def main() -> int:
                           "than a group, so there is no group judgment to "
                           "grade here", flush=True)
                 else:
-                    body = {"group_keys": [group], "pool": "DIRECT_PROGRAM",
-                            "function_990": "PROGRAM", "federal": "ALLOWABLE",
-                            "grade": "VERIFIED",
+                    # OVERHEAD rather than DIRECT: `direct_needs_objective`
+                    # requires a final cost objective on a direct judgment,
+                    # and which objective this group belongs to is exactly
+                    # the judgment a drive must not invent. The pool is
+                    # beside the point here — what is being proved is the
+                    # grade, and the whole judgment is walked back.
+                    body = {"group_keys": [group], "pool": "OVERHEAD",
+                            "function_990": "MANAGEMENT_AND_GENERAL",
+                            "federal": "ALLOWABLE", "grade": "VERIFIED",
                             "rationale": "Evidence drive: graded against the "
-                                         "vendor invoice attached to this group."}
+                                         "vendor invoice attached to this "
+                                         "group, then walked back."}
                     r = tom.post("/api/classify/decide", json=body)
                     if r.status_code >= 400:
                         ok("a VERIFIED grade citing nothing is refused — "
@@ -401,22 +413,43 @@ def main() -> int:
             execute("""DELETE FROM attachment WHERE evidence_id = %s
                         AND target_type = %s AND target_id = %s""",
                     (eid_, ttype, tid))
-        if written:
-            execute("""DELETE FROM attachment WHERE evidence_id = ANY(%s)""",
-                    (written,))
-            execute("DELETE FROM evidence WHERE evidence_id = ANY(%s)", (written,))
+        # A document a judgment *cited* stays, even though that judgment has
+        # been walked back. The reversal is on the record and so is what it
+        # was decided on; deleting the document would leave the trail saying
+        # somebody graded a judgment VERIFIED against nothing, which is the
+        # one thing the grade is supposed to make impossible. The same answer
+        # audit_log gives by refusing a DELETE outright.
+        cited = [r["evidence_id"] for r in query(
+            """SELECT DISTINCT evidence_id FROM decision_evidence
+                WHERE evidence_id = ANY(%s)""", (written,))] if written else []
+        removable = [e for e in written if e not in cited]
+        if removable:
+            execute("DELETE FROM attachment WHERE evidence_id = ANY(%s)",
+                    (removable,))
+            execute("DELETE FROM evidence WHERE evidence_id = ANY(%s)",
+                    (removable,))
+        if cited:
+            execute("DELETE FROM attachment WHERE evidence_id = ANY(%s)", (cited,))
+            ok(f"{len(cited)} document(s) stay, because a judgment cited them "
+               f"— reversed, and still on the record as what it was decided on")
         # The audit entries stay. audit_log refuses a DELETE outright —
         # "append-only; correct by superseding, never by editing" — and it is
         # right to: the drive really did upload five documents and attach
         # one, under somebody's name, and a trail that can be tidied up
         # afterwards is not a trail. The rows it leaves say what happened.
-        left = one("""SELECT count(*) AS n FROM evidence
-                       WHERE filename LIKE 'drive-%'""")
-        if left["n"] == 0:
-            ok("every document this drive sent in is gone, and every "
-               "attachment with it")
+        left = one("""SELECT count(*) AS n FROM evidence e
+                       WHERE e.filename LIKE 'drive-%'
+                         AND NOT EXISTS (SELECT 1 FROM decision_evidence de
+                                          WHERE de.evidence_id = e.evidence_id)""")
+        hanging = one("""SELECT count(*) AS n FROM attachment a
+                          JOIN evidence e USING (evidence_id)
+                         WHERE e.filename LIKE 'drive-%'""")
+        if left["n"] == 0 and hanging["n"] == 0:
+            ok("every document this drive sent in is gone bar the ones a "
+               "judgment cited, and every attachment with them")
         else:
-            finding(f"{left['n']} drive document(s) left on the record")
+            finding(f"{left['n']} uncited drive document(s) and "
+                    f"{hanging['n']} attachment(s) left on the record")
 
     head("Summary")
     print(f"  {CHECKS} check(s), {len(FINDINGS)} finding(s)")
