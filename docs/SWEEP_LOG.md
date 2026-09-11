@@ -469,10 +469,113 @@ could disagree with it.
 
 ---
 
-## The three shapes
+## S13 — a name recalled rather than read
+
+Not on the sweep list. It went on it because the same defect was made **six
+times in one week** while working the list, and six instances of one mistake
+is a system problem rather than six mistakes.
+
+    ledger_import.loaded_by            the column is imported_by
+    audit_log.actor_name               the column is actor, and occurred_at
+    award_term.key                     the column is term_key
+    decision.period                    the column is scope
+    ledger_line.line_id                text assigned by the loader, not serial
+    evidence_grade 'RECONSTRUCTED'     the value is MANAGEMENT_RECONSTRUCTION
+    pool_type 'DIRECT_PROGRAM'         the value is DIRECT, which must then
+                                       carry an objective
+    row["amount"]                      off a query that selected line_id
+
+Each one cost a round trip through a running service to discover, and the
+last one shipped as a 500 on the route the whole engagement is worked from.
+They look like eight different mistakes and they are one: **a name recalled
+rather than read.** The source is syntactically perfect in every case. It is
+the database that disagrees with it, and the database only says so on the
+line of code that runs — which in this codebase means the line a controller
+is standing on.
+
+### The database checks the code, not the other way round
+
+`PREPARE` parses a statement, resolves every relation and column in it, and
+coerces every inline literal to the column's type, **without executing
+anything**. `tests/test_sql_is_real.py` walks `app/`, `scripts/` and
+`tests/` for every string handed to `execute`, `query` or `one`, converts
+psycopg's `%s` to Postgres's `$1`, and prepares all 632 of them.
+
+Every one of the eight above is caught, verified against deliberately broken
+copies rather than assumed:
+
+    column "loaded_by" does not exist
+    invalid input value for enum evidence_grade: "RECONSTRUCTED"
+    relation "charge_code" does not exist
+
+There is no list in it to fall out of date, which is the point — this
+repository has been bitten four times in one review by a hand-kept map of
+what the code does. CI applies the migrations to a bare Postgres, so the
+authority the code is checked against is the migrations and nothing else.
+It passes against that bare database as well as against a seeded one, which
+it has to: `PREPARE` reads the schema and never the rows.
+
+Two limits, written down rather than left to be discovered:
+
+- **An interpolated query cannot be reconstructed without guessing**, and a
+  test that guesses at correct code is worse than no test. Seventeen sites
+  build a `WHERE` clause from fragments. The relation is always in the
+  literal half, so those are checked that far and no further — a view
+  renamed in a migration while a router still names the old one is exactly
+  what this class produces.
+- **Reading a key off a row the query did not select is invisible to it.**
+  The SQL is valid; the Python is wrong.
+
+### And the half PREPARE cannot see
+
+`app/db.py` returns a `Row` rather than a `dict`. The only difference is
+what happens on a key that is not there:
+
+    KeyError: "'amount' is not in this row. The query selected 'line_id'.
+               Either the column is named something else — `python
+               scripts/schema.py <table>` prints what is actually there — or
+               the SELECT list does not reach far enough."
+
+`.get()` is deliberately untouched. Subscripting is a claim that the column
+is there; `.get()` is a statement that it might not be, and only the first
+is worth checking. This is the rule the toast surface already follows: a
+person — a developer is one — must never be left holding a true statement
+that tells them nothing.
+
+### And the half for before you write the query
+
+`scripts/schema.py` prints what is actually there, with **enum values
+inline on the column that takes them**, because that is the one thing that
+cannot be inferred from anything else:
+
+    grade   evidence_grade  NOT NULL = 'UNSUPPORTED'
+              UNSUPPORTED | TEST_ASSUMPTION | MANAGEMENT_RECONSTRUCTION |
+              CORROBORATED | VERIFIED
+
+It prints the CHECK constraints and the triggers with them, so
+`direct_needs_objective` is visible before it is hit rather than after, and
+it suggests near matches on a name that is not there — `charge_code` answers
+with `cost_objective` and `charge_authority`, which is the answer to the
+question actually being asked.
+
+### One thing found writing it
+
+The first draft of the sweep skipped any statement containing a semicolon,
+on the theory that `PREPARE` takes one statement. Three statements were
+skipped that way and **all three semicolons were inside `--` comments** — so
+the detector meant to catch a class of error was itself an instance of it,
+guessing at SQL structure instead of letting the parser say. The sweep does
+not pre-judge now: it hands everything to Postgres and reports what comes
+back. A skip is allowed only for a leading keyword that `PREPARE` genuinely
+refuses, and that list is asserted, so a real query can never fall out of
+the sweep quietly.
+
+---
+
+## The four shapes
 
 Every item found something the plan did not know about, and they were the
-same three things over and over.
+same few things over and over.
 
 **A column or table that looks usable and is filled by nothing.**
 `rate.superseded_by`, `space_partition`, the three `evidence` fact columns,
@@ -490,3 +593,10 @@ view its bug was found in, one in `test_document_access.py` asserting a
 literal fragment of punctuation. Each was verified afterwards against a
 deliberately broken copy — a test nobody has watched fail is a test nobody
 has tested.
+
+**A name recalled rather than read.** Eight instances in one week — a column,
+a table, an enum value, a key off a row that never selected it. The one
+shape of the four that is not a defect in the system at all: it is a defect
+in how the system was being *worked on*, which is why the answer is a tool
+rather than a migration. `tests/test_sql_is_real.py` and
+`scripts/schema.py`.

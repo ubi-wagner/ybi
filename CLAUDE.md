@@ -562,6 +562,28 @@ spent; everything around it stays quiet.
   a payee joined by 0x1f; a non-printable character in a path is not
   something every client will encode, and httpx refuses outright. Query
   parameter.
+- **Read the schema; never recall it.** `python scripts/schema.py <table>`
+  prints the columns, the CHECK constraints, the triggers, and — on a column
+  that takes one — **the enum's values inline**, which is the one thing that
+  cannot be inferred from anything else. `--like` searches names and a name
+  that is not there answers with the near misses. Eight defects in one week
+  came from a name written from memory: `ledger_import.loaded_by` for
+  `imported_by`, `award_term.key` for `term_key`, `decision.period` for
+  `scope`, `'RECONSTRUCTED'` for `MANAGEMENT_RECONSTRUCTION`,
+  `'DIRECT_PROGRAM'` for `DIRECT`. Each one is syntactically perfect source
+  that only the database disagrees with, so it surfaces on the line that
+  runs — which here is a line a controller is standing on.
+  `tests/test_sql_is_real.py` hands all 632 literal statements in `app/`,
+  `scripts/` and `tests/` to `PREPARE`, which resolves every relation,
+  column and inline literal without executing anything. It is the schema
+  checking the code rather than the code asserting things about the schema,
+  and there is no list in it to fall out of date.
+- **Subscripting a row is a claim; `.get()` is not.** `app/db.py` returns a
+  `Row`, and a key that is not there answers with what the query *did*
+  select rather than with a bare `KeyError: 'amount'`. `PREPARE` cannot see
+  that class — the SQL is valid and the Python is wrong — and it shipped
+  once as a 500 on `POST /api/classify/decide`. Use `.get()` where a column
+  genuinely may be absent, and subscript where it may not.
 
 ## The foundation
 
