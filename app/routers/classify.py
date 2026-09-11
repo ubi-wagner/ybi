@@ -4,9 +4,15 @@ Classification queue.
 This is the screen that decides whether the project succeeds. Everything else
 is reporting. Three rules shape the API:
 
-  1. Work at group grain. 4,020 ledger lines collapse to ~751 account x payee
-     groups, and the top 200 carry 94.7% of the dollars. A row-by-row queue is
-     a workload that does not need to exist and will not finish by November.
+  1. Work at group grain. The 5,096 P&L lines collapse to 999 account x payee
+     groups, and the top 200 carry 93.3% of the dollars — the top 100 carry
+     84.4%. A row-by-row queue is a workload that does not need to exist and
+     will not finish by November.
+
+     Those figures are read off `v_classification_coverage` and the queue
+     itself; the ones here were written against a 4,020-line extract that
+     predates the full ledger, said 751 groups and 94.7%, and were quoted
+     into a status memo for the board before anybody checked them.
 
   2. Propose, never ask blind. Every group arrives pre-filled from the QBO
      Customer:Job segment, the account name, or a prior-year decision. Tom

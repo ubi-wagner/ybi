@@ -8,13 +8,13 @@
   * { box-sizing: border-box; }
   body { font: 9.6pt/1.42 Georgia, "Times New Roman", serif; color: var(--ink); margin: 0; }
   h1 { font-size: 17pt; margin: 0 0 1pt; letter-spacing: -.2pt; }
-  h2 { font-size: 11pt; margin: 13pt 0 4pt; color: var(--accent);
+  h2 { font-size: 10.8pt; margin: 11pt 0 3pt; color: var(--accent);
        border-bottom: 1px solid var(--rule); padding-bottom: 2pt;
        break-after: avoid; }
   h3 { font-size: 9.6pt; margin: 8pt 0 2pt; break-after: avoid; }
-  p  { margin: 0 0 5pt; }
+  p  { margin: 0 0 4.5pt; }
   .sub { color: var(--mute); font-size: 9pt; margin: 0 0 9pt; }
-  table { border-collapse: collapse; width: 100%; margin: 4pt 0 7pt;
+  table { border-collapse: collapse; width: 100%; margin: 3pt 0 6pt;
           font-size: 8.8pt; break-inside: avoid; }
   th { text-align: left; font-weight: normal; color: var(--mute);
        border-bottom: 1px solid var(--rule); padding: 2pt 6pt 2pt 0;
@@ -22,15 +22,16 @@
   td { padding: 2.5pt 6pt 2.5pt 0; border-bottom: 1px solid #eef1ef; vertical-align: top; }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums;
                white-space: nowrap; padding-right: 0; }
+  td.n + td, th.n + th { padding-left: 12pt; }
   tr.total td { border-top: 1.4px solid var(--ink); border-bottom: none;
                 font-weight: bold; padding-top: 4pt; }
-  figure { margin: 7pt 0 9pt; break-inside: avoid; }
-  figure img { width: 92%; display: block; margin: 0 auto;
+  figure { margin: 6pt 0 8pt; break-inside: avoid; }
+  figure img { width: 90%; display: block; margin: 0 auto;
                border: 1px solid var(--rule); }
   figcaption { font-size: 8pt; color: var(--mute); margin: 3pt auto 0;
-               width: 92%; font-style: italic; }
+               width: 90%; font-style: italic; }
   .note { background:#fbf7ea; border-left:3px solid var(--warm);
-          padding: 5pt 9pt; margin: 6pt 0 8pt; font-size: 9pt;
+          padding: 5pt 9pt; margin: 5pt 0 7pt; font-size: 8.9pt;
           break-inside: avoid; }
   .flag { background:#fdf0ec; border-left-color: var(--fail); }
   .note p { margin: 0; }
@@ -47,8 +48,8 @@
 
 <p>The system is built and proven, and the books now agree with themselves at
 every point we can test. What remains is judgment work: Tom classifying the
-year, three documents we have asked YBI for, and eighteen specific questions
-only he can answer. None of it is software. All of it sits on one path that
+year, three documents we have asked YBI for, and eighteen open questions only
+he can answer. None of it is software. All of it sits on one path that
 ends with the Single Audit and the Form 990.</p>
 
 <h2>1 · The system</h2>
@@ -59,13 +60,13 @@ ends with the Single Audit and the Form 990.</p>
   <tr><td>Ledger lines loaded, proved to their own subtotals</td><td class="n">15,500</td></tr>
   <tr><td>Cross-reference control points tying</td><td class="n">11 of 11</td></tr>
   <tr><td>Differences left unexplained</td><td class="n">0.00</td></tr>
-  <tr><td>Contracts, with every clause read in</td><td class="n">3 · 26</td></tr>
-  <tr><td>Automated tests · permission boundaries</td><td class="n">581 · 68</td></tr>
+  <tr><td>Awards registered, with their clauses read in</td><td class="n">3 · 26</td></tr>
+  <tr><td>Automated tests · permission boundaries</td><td class="n">589 · 68</td></tr>
 </table>
 <table>
   <tr><th>Still to come</th><th class="n"></th></tr>
   <tr><td>Expense classified</td><td class="n">0.0%</td></tr>
-  <tr><td>Decisions to make (top 200 carry 94.7%)</td><td class="n">999</td></tr>
+  <tr><td>Decisions to make (top 200 carry 93.3%)</td><td class="n">999</td></tr>
   <tr><td>People who can certify their own effort</td><td class="n">6 of 43</td></tr>
   <tr><td>Assets with a funding source recorded</td><td class="n">0 of 263</td></tr>
   <tr><td>Buildings with square footage on file</td><td class="n">none</td></tr>
@@ -89,8 +90,9 @@ again if the books do not first agree with themselves.</p>
 
 <h2>2 · What Tom has to verify</h2>
 
-<p>Eighteen discrepancies, every one found by a control rather than by somebody
-reading, and every one answerable from what Tom already knows. Full detail in
+<p>Nineteen discrepancies — eighteen open and one already settled — every one
+found by a control rather than by somebody reading, and every one answerable
+from what Tom already knows. Full detail in
 <em>docs/FOR_TOM_TO_VERIFY.md</em>.</p>
 
 <div class="note">
@@ -120,9 +122,10 @@ Still outstanding: the entry has not been reposted in QuickBooks.</p>
           tenant across two of them, eight tenancies with no start date.</td><td class="n">4</td></tr>
   <tr><td>People</td><td>The payroll register identifies people by surname
           alone. Any two sharing one have had their hours joined together.</td><td class="n">1</td></tr>
-  <tr><td>Invoices</td><td>The real dates on the three America Makes invoices,
-          and whether any of the $57,961 issued has been paid — no cash is
-          recorded against them.</td><td class="n">3</td></tr>
+  <tr><td>Invoices</td><td>The real dates on the three invoices we hold, whether
+          any of the $57,961 has been paid — no cash is recorded against
+          them — and the rest of the 2025 invoices, which are not on file at
+          all.</td><td class="n">3</td></tr>
 </table>
 
 <h3>Three things we have asked YBI for</h3>
@@ -149,7 +152,8 @@ weeks, and nothing else on this list can compress it.</p>
 <h2>3 · Classification, evidence and certification</h2>
 
 <p><strong>Classification.</strong> Every expense is grouped by account and
-vendor, largest first; the top 200 groups carry 94.7% of the dollars. For each,
+vendor, largest first; the top 200 groups carry 93.3% of the dollars and the
+top 100 carry 84.4%. For each,
 Tom records four things — which cost pool, which column of the Form 990,
 whether it is allowable federally, and if direct, which contract. The system
 proposes an answer where it has a real signal (about two-thirds of the dollars)
@@ -205,7 +209,10 @@ estimate of where we land, with the range underneath.</p>
 
 <p>That uplift applies to every labour dollar in every 2026 proposal YBI writes.
 <strong>The recurring rate is the prize; the one-off 2025 recovery is
-secondary.</strong></p>
+secondary.</strong> And the 10% line above is generous to the status quo: it is
+what YBI <em>could</em> claim without a negotiated rate. On the America Makes
+awards it currently recovers no indirect at all, because none of the approved
+budgets carries an indirect line.</p>
 
 <table>
   <tr><th>What could move it</th><th class="n">Indirect</th><th class="n">$100k employee</th></tr>
@@ -223,38 +230,63 @@ filing cabinets.</p>
 method cannot see what was actually spent, and it produced errors in both
 directions — some awards over-billed, some substantially under-billed.</p>
 
-<p><strong>The central fact is an absence.</strong> The approved budget for
-Drive AM funds seven cost categories against $583,594 of labour and contains
-<em>no indirect line at all</em>. The invoice YBI issued carries exactly the
-five categories the budget funded — three of them at zero — and no indirect
-line, because there was none to carry. That document is itself the record of
-what YBI was never budgeted to claim, and it is the strongest evidence the
-restatement has.</p>
+<p><strong>The central fact is an absence.</strong> Drive AM's approved budget
+names seven cost categories and funds five of them, against $583,594 of
+labour, and contains <em>no indirect line at all</em>. The invoice YBI issued
+carries exactly those five — three of them at zero — and no indirect line,
+because there was none to carry. That document is itself the record of what
+YBI was never budgeted to claim.</p>
+
+<p><strong>The likely path is a refactor, not a claim for more money.</strong>
+America Makes is expected to allow the invoices to be restructured so the
+correct rate stack appears inside them, <em>provided the total does not exceed
+what was already invoiced</em>. The agreement itself points the same way: the
+clause on file records that because no indirect line exists, any indirect
+recovered has to displace direct cost inside the ceiling. So indirect goes
+<em>within</em> the existing total rather than on top of it.</p>
 
 <table>
-  <tr><th>Modelled 2025 position, five NCDMM objectives</th><th class="n">Amount</th></tr>
-  <tr><td>Direct cost base</td><td class="n">946,527</td></tr>
-  <tr><td>Indirect at the recommended rate</td><td class="n">300,806</td></tr>
-  <tr class="total"><td>Claimable</td><td class="n">1,247,334</td></tr>
+  <tr><th>Invoice 10018 — Drive AM, as issued and as it would be restated</th>
+      <th class="n">As issued</th><th class="n">Restated</th></tr>
+  <tr><td>Direct — labour and other direct cost</td><td class="n">37,593.90</td><td class="n">28,527.77</td></tr>
+  <tr><td>Indirect at 31.78%, inside the same total</td><td class="n">—</td><td class="n">9,066.13</td></tr>
+  <tr class="total"><td>Invoice total — unchanged</td><td class="n">37,593.90</td><td class="n">37,593.90</td></tr>
 </table>
 
-<p>America Makes has indicated it will accept restated rates applied to prior
-invoices, provided the restated total stays within the contracted ceiling. That
-turns this from an argument into arithmetic: per award, restate at the
-defensible rate, cap at the ceiling, and the sign of the difference decides
-between an amended invoice and a credit. Hybrid, over-billed, produces a credit;
-the others produce claims. The system does this invoice by invoice and records
-the arithmetic beside each. A restatement carries the seal of the rate it used,
-stays a proposal until the sponsor agrees in writing, and cannot be finalised
-without naming the clause that authorised changing the basis.</p>
+<p><strong>What that is worth is not 2025 cash.</strong> It is three things:
+the sponsor accepting the rate as the basis, which is what makes it usable in
+2026; invoices that state what the work actually cost instead of implying YBI
+incurred no overhead; and an audit exposure closed, because an invoice showing
+no indirect against $583,594 of budgeted labour is a question a reviewer will
+ask. One consequence to be clear-eyed about: displaced direct cost does not
+disappear — it becomes cost YBI carried and did not recover, which is worth
+capturing while the cost-share evidence is being assembled anyway.</p>
+
+<p>The system does this invoice by invoice and records the arithmetic beside
+each. A restatement carries the seal of the rate it used, stays a proposal
+until the sponsor agrees in writing, and cannot be finalised without naming the
+clause that authorised the change of basis — §4.4 on both Hybrid and Last
+Tactical Mile requires a written modification signed by both parties.</p>
+
+<table>
+  <tr><th>Contract ceilings, read from the agreements and on file</th>
+      <th class="n">Federal</th><th>Authority</th></tr>
+  <tr><td>Drive AM</td><td class="n">1,103,594</td><td>§4.3 Total Obligation</td></tr>
+  <tr><td>Last Tactical Mile</td><td class="n">899,500</td><td>§4.3 Total Obligation</td></tr>
+  <tr><td>Hybrid Phase 2</td><td class="n">512,409</td><td>§4.2 as amended by Modification 001</td></tr>
+  <tr><td>Digital Engineering</td><td class="n">not registered</td>
+      <td>the executed agreement is on file; the award is not yet on the register</td></tr>
+</table>
 
 <div class="note">
-<p><strong>Two things still block the numbers.</strong> The ceilings for Drive
-AM, Digital Engineering and Last Tactical Mile are not on file — only Hybrid's
-$500,043 is known, and the ceiling caps each claim. And two different "amounts
-billed" exist in YBI's own records, $1.58m apart, depending on whether you read
-the grant tabs or recognised revenue. Both have to be settled before anything
-is sent.</p>
+<p><strong>Two things still to settle before anything is sent.</strong> Digital
+Engineering has no award on the register at all, so it has no ceiling and
+nothing can be measured against it — even though its executed agreement has
+been on file since the first document drop. And the invoices themselves are
+not on file: the system holds three, while the 2025 ledger recognises
+$1,718,175 of America Makes revenue across four objectives. A restatement is
+measured invoice by invoice, so with three of them the exercise can be
+demonstrated and not completed. That is item 5.3 on Tom's list.</p>
 </div>
 
 <h2>6 · Audit close-out and the Form 990</h2>
@@ -262,34 +294,30 @@ is sent.</p>
 <p>Both come out of the same sealed record, and neither is produced by hand. The
 <strong>audit package</strong> is a workbook of numbered schedules — import,
 reconciliation, classifications, rate build-up, awards — each figure traceable
-to the ledger line and the document behind it, each stating what is unfinished
-on its first sheet, because a workbook travels and the caveat must travel with
-it. <strong>Form 990 Part IX</strong> is assembled from the same
+to the ledger line and the document behind it, and each stating what is
+unfinished on its first sheet, because a workbook travels and the caveat has to
+travel with it. <strong>Form 990 Part IX</strong> is assembled from the same
 classifications: every expense lands in programme services, management and
 general, or fundraising because somebody judged it so and said why.</p>
 
 <p><strong>The return prints NOT FILEABLE while any expense is unjudged</strong>,
-and cost nobody has classified appears in its own column rather than being
-spread across the three the return prints — the totals are deliberately short by
-that amount until the queue is empty. Nobody can file an incomplete return from
-this system by accident.</p>
-
-<p>The order is fixed and each step is refused until the one before it is
-complete: classify → seal → compute the rate → allocate to contracts → restate
-the America Makes invoices → produce the package and the return.</p>
+and cost nobody has classified appears in its own column rather than spread
+across the three the return prints — the totals are deliberately short by that
+amount until the queue is empty, so an incomplete return cannot be filed from
+this system by accident. The order is fixed and each step is refused until the
+one before it is complete: classify → seal → compute the rate → allocate to
+contracts → restate the invoices → produce the package and the return.</p>
 
 <h2>7 · Summary</h2>
 
 <table>
-  <tr><th>Where it stands</th><th>What it needs</th><th>From whom</th></tr>
-  <tr><td>System, controls, audit trail</td><td>Nothing — built and proved</td><td>—</td></tr>
-  <tr><td>The books reconcile</td><td>Eighteen questions answered</td><td>Tom, this week</td></tr>
-  <tr><td>Classification</td><td>About 200 real decisions; Portfolio consulting first</td><td>Tom</td></tr>
-  <tr><td>Depreciation</td><td>Funding source per asset</td><td>YBI — workbook ready</td></tr>
-  <tr><td>Occupancy</td><td>Square feet per suite</td><td>YBI — workbook ready</td></tr>
-  <tr><td>Labour certification</td><td>37 addresses and employment terms</td><td>YBI — start now</td></tr>
-  <tr><td>America Makes restatement</td><td>Three ceilings; one billing figure</td><td>Tom / NCDMM</td></tr>
-  <tr><td>Audit package and 990</td><td>Everything above, in order</td><td>—</td></tr>
+  <tr><th>What is needed</th><th>From whom</th><th>When</th></tr>
+  <tr><td>Thirty-seven email addresses and employment terms</td><td>YBI — workbook ready</td><td><strong>Start today</strong></td></tr>
+  <tr><td>Eighteen open questions answered</td><td>Tom</td><td>This week</td></tr>
+  <tr><td>About 200 classification decisions — <em>5227 Portfolio consulting</em> first</td><td>Tom</td><td>Continuous, from now</td></tr>
+  <tr><td>Funding source per asset, and square feet per suite</td><td>YBI — both workbooks ready</td><td>Two to three weeks</td></tr>
+  <tr><td>The 2025 America Makes invoices; the Digital Engineering award registered</td><td>Tom / NCDMM</td><td>Before any restatement</td></tr>
+  <tr><td>Seal, compute, allocate, restate, file</td><td>—</td><td>Once the above is in</td></tr>
 </table>
 
 <p>Two things to take away. <strong>The recurring value is the rate, not the

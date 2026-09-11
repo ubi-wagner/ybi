@@ -1,6 +1,6 @@
 # Discrepancies for the controller to settle
 
-Eighteen things the record cannot resolve on its own. Every one was found by a
+Nineteen things the record cannot resolve on its own. Every one was found by a
 control rather than by somebody reading — which is the point of the controls —
 and every one is a question Tom can answer from what he already knows or can
 reach today. Nothing here needs counsel, an outside document, or a decision
@@ -256,6 +256,32 @@ $57,961.42 issued, **zero** receipts on the record.
 
 **Tom:** have these been paid? Collections are currently unknowable from the
 system, and a receipt may be negative, so a clawback would show here too.
+
+---
+
+### 5.3 The full invoice register does not exist — 4 objectives
+
+The system holds three invoices — 10018, 10023 and 10039, $57,961.42 between
+them. The 2025 ledger recognises America Makes revenue on four objectives:
+
+| Objective | Revenue recognised |
+|---|---:|
+| Drive AM | 579,240.87 |
+| Digital Engineering | 579,074.25 |
+| Last Tactical Mile | 368,222.24 |
+| Hybrid Energy | 191,638.05 |
+| **Total** | **1,718,175.41** |
+
+Nothing reconciles what was invoiced across the year against what was
+recognised, because the invoices are not on file. The engagement analysis
+records two different "amounts billed" in YBI's own records depending on
+whether the grant tabs or recognised revenue are read; that difference cannot
+be tested from the system as it stands.
+
+**Tom:** every invoice issued to NCDMM in 2025, across all four objectives.
+
+*A restatement is measured per invoice. With three on file the exercise can be
+demonstrated and not completed.*
 
 ---
 

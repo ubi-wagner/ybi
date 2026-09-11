@@ -213,6 +213,18 @@ ITEMS: tuple[Item, ...] = (
          "Have these been paid, in whole or in part?",
          "Collections are unknowable from the system today. A receipt may be "
          "negative, so a clawback would show here too."),
+
+    Item("5.3", "Invoices", "The full invoice register does not exist",
+         "4 objectives",
+         "The system holds three invoices — 10018, 10023 and 10039, 57,961.42 "
+         "between them. The 2025 ledger recognises America Makes revenue on "
+         "four objectives: Drive AM 579,240.87, Digital Engineering "
+         "579,074.25, Last Tactical Mile 368,222.24 and Hybrid 191,638.05 — "
+         "1,718,175.41 in all.",
+         "Every invoice issued to NCDMM in 2025, across all four objectives.",
+         "A restatement is measured per invoice. With three on file the "
+         "exercise can be demonstrated and not completed, and invoiced "
+         "against recognised cannot be reconciled at all."),
 )
 
 

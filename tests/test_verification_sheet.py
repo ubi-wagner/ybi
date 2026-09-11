@@ -48,7 +48,8 @@ def test_the_worksheet_and_the_document_carry_the_same_items():
 def test_the_count_the_document_claims_is_the_count_it_has():
     """The first line says "Eighteen things". A document that miscounts itself
     is one a reader stops trusting on everything else."""
-    words = {"Eighteen": 18, "Seventeen": 17, "Nineteen": 19, "Twenty": 20}
+    words = {"Sixteen": 16, "Seventeen": 17, "Eighteen": 18,
+             "Nineteen": 19, "Twenty": 20, "Twenty-one": 21}
     head = DOC.read_text().split("---")[0]
     claimed = next((n for w, n in words.items() if w in head), None)
     assert claimed is not None, "the opening does not say how many there are"

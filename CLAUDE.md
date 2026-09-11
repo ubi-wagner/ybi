@@ -907,7 +907,7 @@ counts twice.
 Keep the figures in it read from the live record rather than recalled. Three
 dates in the first draft were written from memory and were wrong by weeks.
 
-`scripts/verification_sheet.py` turns the same eighteen into the two shapes
+`scripts/verification_sheet.py` turns the same nineteen into the two shapes
 somebody settles them in: a workbook with a status dropdown and a box to type
 in, and a printable worksheet with a tick box and ruled lines. The narrative
 has to be prose and the worksheet has to be structured, so neither can be
@@ -920,6 +920,33 @@ The status column is a dropdown and deliberately not a yes/no: *I have checked
 and the record is right* and *I have corrected it* lead to different work at
 our end, and *somebody else has to answer this* is a real outcome that
 otherwise looks like silence.
+
+### The ceiling the register enforces
+
+Hybrid Phase 2 was seeded from the executed agreement at $500,043 with
+performance to 10 October 2025. Modification 001 of 22 January 2026 raised it
+to **$512,409** and extended performance to 30 June 2026; the modification is
+on file as a document and the controller read it into `award_term`. The award
+row was never brought into line, so two records of one fact disagreed by
+$12,366 and eight months — and the one `POST /api/restate` reads to cap a
+claim was the stale one. It would have reported headroom YBI does not have,
+against a sponsor, in writing.
+
+None of the eleven cross-reference controls touched it, because a ceiling is
+not a derived figure — it is read off a clause. Migration `049` brings the row
+into line and adds `v_award_ceiling_check`, which is simply that the register
+says what the clause says. `NO CLAUSE READ` is not a pass, for the same reason
+`NO DATA` is not: an award whose agreement nobody has been through cannot be
+said to tie. Digital Engineering has no award row at all despite its executed
+agreement being on file since the first drop.
+
+**Figures in a document for somebody else get read from the record, not
+recalled.** Three dates in the first draft of the verification list were
+written from memory and were wrong by weeks; a status memo stated that only
+one of three ceilings was known when all three were on file; and the "top 200
+groups carry 94.7%" in `classify.py` was measured against a 4,020-line extract
+that predates the full ledger — it is 93.3% of 999 groups, and it had been
+quoted into a memo for the board.
 
 ## Manuals for the team
 
