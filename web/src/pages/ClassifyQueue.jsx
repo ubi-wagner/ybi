@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, money } from "../api.js";
 import {
-  Card, Drawer, Empty, Field, Keys, Meter, Pill, Search, Segmented, Stat, Table, Tick, useToast,
+  Card, Drawer, Empty, Field, Keys, Meter, PageHead, Pill, Search, Segmented,
+  Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
 
 /*

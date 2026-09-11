@@ -78,6 +78,7 @@ def main() -> int:
         browser = pw.chromium.launch(executable_path=chrome())
         page = browser.new_page(viewport={"width": 1440, "height": 1000})
         signed_in = None
+        blank: list[str] = []
         for email, path, name, what, tab in SHOTS:
             if email != signed_in:
                 page.context.clear_cookies()
@@ -88,7 +89,18 @@ def main() -> int:
                 page.wait_for_timeout(1500)
                 signed_in = email
             page.goto(args.base + path, wait_until="networkidle")
-            page.wait_for_timeout(1400)
+            # Wait for the screen to have drawn something, not for a fixed
+            # interval. The classification queue reads 999 groups and runs a
+            # proposal over each, and it took longer than the 1,400ms this
+            # used to allow — so the manual's most important chapter carried
+            # a photograph of an empty page, at 6KB against 78KB for every
+            # other screen, for as long as anybody had been looking at it.
+            try:
+                page.wait_for_function(
+                    "document.body.innerText.trim().length > 400", timeout=20000)
+            except Exception:
+                pass
+            page.wait_for_timeout(600)
             if tab:
                 try:
                     page.locator(f"button:has-text('{tab}')").first.click()
@@ -96,8 +108,28 @@ def main() -> int:
                 except Exception:
                     pass
             page.screenshot(path=str(OUT / f"{name}.png"), full_page=True)
-            print(f"  {name:22} {what}", flush=True)
+
+            # A photograph of nothing is not a photograph.
+            #
+            # tests/test_manual.py checks that every screenshot the manual
+            # references exists, which a blank file does. Emptiness is the
+            # failure mode a file-exists test cannot see, and a blank screen
+            # in a manual teaches a reader that the screen is blank.
+            text = page.evaluate("document.body.innerText.trim()")
+            size = (OUT / f"{name}.png").stat().st_size
+            if len(text) < 400 or size < 20_000:
+                blank.append(f"{name} ({path}, {size:,} bytes, "
+                             f"{len(text)} characters on the page)")
+                print(f"  BLANK {name:22} {what}", flush=True)
+            else:
+                print(f"  {name:22} {what}", flush=True)
         browser.close()
+
+    if blank:
+        print(f"\n{len(blank)} screen(s) photographed blank:")
+        for b in blank:
+            print(f"    {b}")
+        return 1
     print(f"\n{len(SHOTS)} screens photographed into {OUT}")
     return 0
 
