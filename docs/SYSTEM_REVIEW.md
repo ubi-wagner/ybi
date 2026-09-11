@@ -8,9 +8,9 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | --- | --- |
 | Faults | 0 |
 | Gaps | 1 |
-| Notes | 25 |
-| GET routes probed | 84 (× 6 people) |
-| Audit entries | 2210 |
+| Notes | 28 |
+| GET routes probed | 85 (× 6 people) |
+| Audit entries | 2693 |
 
 ## Who was driven
 
@@ -26,6 +26,10 @@ Six dimensions, because a system can be sound on one and broken on another and t
 Nothing found.
 
 ## Capability
+
+### NOTE — Eric is not shown 'My time' but /api/timesheet/donations answers 200
+
+Reachable by URL and absent from the nav.
 
 ### NOTE — Eric is not shown 'Import' but /api/imports answers 200
 
@@ -107,6 +111,10 @@ Reachable by URL and absent from the nav.
 
 Reachable by URL and absent from the nav.
 
+### NOTE — Tom is not shown 'My time' but /api/timesheet/donations answers 200
+
+Reachable by URL and absent from the nav.
+
 ### NOTE — Tom is not shown 'Evidence' but /api/evidence answers 200
 
 Reachable by URL and absent from the nav.
@@ -120,6 +128,10 @@ Reachable by URL and absent from the nav.
 Reachable by URL and absent from the nav.
 
 ### NOTE — Tom is not shown 'Contracts' but /api/contracts answers 200
+
+Reachable by URL and absent from the nav.
+
+### NOTE — Auditor is not shown 'My time' but /api/timesheet/donations answers 200
 
 Reachable by URL and absent from the nav.
 
@@ -152,7 +164,7 @@ The decision set is sealed, so no change could be made to measure. That is the c
 ```json
 {
   "samples": {
-    "evidence_id": "EV-ded0231395ed",
+    "evidence_id": "EV-ae3b6483b605",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
     "actor_id": "cffcff27-6248-402d-9b92-44ea84061104",
@@ -161,7 +173,7 @@ The decision set is sealed, so no change could be made to measure. That is the c
     "period": "2025",
     "kind": "rate-buildup"
   },
-  "routes_probed": 84,
+  "routes_probed": 85,
   "routes_skipped": 6,
   "tabs": [
     {
@@ -288,58 +300,59 @@ The decision set is sealed, so no change could be made to measure. That is the c
   "counts": {
     "/api/classify/queue": 50,
     "/api/reconcile": 11,
-    "/api/documents/library": 71,
+    "/api/documents/library": 96,
     "/api/contracts": 4,
     "/api/reports/invoices": 3,
     "/api/chart/accounts": 103,
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 2210,
+  "audit_rows": 2693,
   "audit_by_action": {
-    "EXPORT": 490,
-    "SIGN_IN": 414,
-    "DOCUMENT_LIBRARY_READ": 351,
-    "EVIDENCE_DOWNLOAD": 146,
-    "REVIEW_READ": 120,
-    "DOCUMENT_UPLOAD": 84,
+    "EXPORT": 592,
+    "SIGN_IN": 500,
+    "DOCUMENT_LIBRARY_READ": 409,
+    "EVIDENCE_DOWNLOAD": 176,
+    "REVIEW_READ": 144,
+    "DOCUMENT_UPLOAD": 100,
+    "REQUEST_ISSUE": 79,
+    "REQUEST_REPLY": 77,
+    "REQUEST_ACCEPT": 76,
+    "TIME_ENTRY": 74,
     "AWARD_TERM": 71,
-    "TIME_ENTRY": 56,
-    "REQUEST_ISSUE": 54,
-    "REQUEST_REPLY": 52,
-    "REQUEST_ACCEPT": 51,
-    "ACTOR_CREATE": 33,
-    "EVIDENCE_ATTACH": 23,
-    "FACILITY": 21,
+    "ACTOR_CREATE": 39,
+    "EVIDENCE_ATTACH": 27,
+    "FACILITY": 27,
+    "PASSWORD_CHANGE": 20,
     "EVIDENCE_UPLOAD": 18,
-    "PASSWORD_CHANGE": 16,
-    "SEAL": 14,
-    "PORTFOLIO_GRANT": 14,
-    "PORTFOLIO_REVOKE": 14,
-    "UNSEAL": 13,
-    "ACTOR_ACTIVE": 10,
-    "DEFER": 7,
-    "CHART_SPLIT": 7,
-    "CLASSIFY": 7,
-    "EVIDENCE_VIEW": 7,
-    "EQUIPMENT_USE": 7,
-    "SPACE_UNIT": 7,
-    "PASSWORD_RESET": 7,
-    "SEGMENT_REVERSE": 7,
-    "RATE_COMPUTE": 7,
-    "ACTOR_AMEND": 7,
-    "MATERIALITY": 7,
-    "TIME_REMOVE": 7,
-    "NOTE": 7,
-    "SEGMENT": 7,
-    "IN_KIND": 7,
+    "SEAL": 18,
+    "PORTFOLIO_GRANT": 18,
+    "PORTFOLIO_REVOKE": 18,
+    "UNSEAL": 17,
+    "ACTOR_ACTIVE": 12,
+    "DEFER": 9,
+    "CHART_SPLIT": 9,
+    "CLASSIFY": 9,
+    "EVIDENCE_VIEW": 9,
+    "EQUIPMENT_USE": 9,
+    "SPACE_UNIT": 9,
+    "PASSWORD_RESET": 9,
+    "SEGMENT_REVERSE": 9,
+    "RATE_COMPUTE": 9,
+    "ACTOR_AMEND": 9,
+    "MATERIALITY": 9,
+    "TIME_REMOVE": 9,
+    "NOTE": 9,
+    "SEGMENT": 9,
+    "IN_KIND": 9,
     "MILESTONE_STATE": 6,
     "RECONCILE_ITEM": 6,
-    "CHARGE_REVOKE": 3,
+    "DONATION_RATE": 6,
     "RECEIPT": 3,
     "CHARGE_CODE_OPEN": 3,
     "IMPORT_PARSE": 3,
     "CHARGE_AUTHORISE": 3,
+    "CHARGE_REVOKE": 3,
     "MILESTONE_OPEN": 3,
     "IMPORT_UPLOAD": 3,
     "IMPORT_ACCEPT": 2,
@@ -352,42 +365,42 @@ The decision set is sealed, so no change could be made to measure. That is the c
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 621
+      "n": 749
     },
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 465
+      "n": 569
     },
     {
       "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 366
+      "n": 465
     },
     {
       "actor": "Barb Ewing",
       "role": "ORG_ADMIN",
-      "n": 351
+      "n": 425
     },
     {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 191
+      "n": 223
     },
     {
       "actor": "Eric Wagner",
       "role": "SYSTEM_ADMIN",
-      "n": 167
+      "n": 201
     },
     {
       "actor": "First Day",
       "role": "EMPLOYEE",
-      "n": 21
+      "n": 27
     },
     {
       "actor": "Drive Newcomer",
       "role": "EMPLOYEE",
-      "n": 21
+      "n": 27
     },
     {
       "actor": "New Starter",
@@ -402,11 +415,11 @@ The decision set is sealed, so no change could be made to measure. That is the c
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2472,
-    "decisions recorded": 7,
+    "groups still unclassified": 2470,
+    "decisions recorded": 9,
     "sealed sets": 1,
     "rates": 0,
-    "allocations": 112,
+    "allocations": 144,
     "invoices": 3,
     "restatements": 0
   },
@@ -453,17 +466,17 @@ The decision set is sealed, so no change could be made to measure. That is the c
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "40.1",
-    "decisions": "7",
-    "audit": "2213",
+    "classified_dollars": "45.7",
+    "decisions": "9",
+    "audit": "2696",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "4800 Innovation Hub:4801 IH Grant Income",
-    "amount": "451170.39",
-    "lines": 66
+    "account": "3900 Grant Income:Last Tactical Mile",
+    "amount": "368222.24",
+    "lines": 72
   }
 }
 ```

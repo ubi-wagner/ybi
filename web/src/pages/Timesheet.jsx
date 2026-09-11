@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import { Card, Empty, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
+import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
 import TimeRoster from "./TimeRoster.jsx";
 
 /*
@@ -68,11 +68,30 @@ export default function Timesheet({ actor }) {
      no timesheet of its own. It gets the roster instead, and can open anyone's
      sheet from there to read. */
   const [viewing, setViewing] = useState(null);
+
+  /* Donated time sits above both, because it is the organisation's record
+     rather than this sheet's — and because the person who has to value it is
+     very often the one with no timesheet of their own.
+     `Donated` lived inside `Sheet` for about ten minutes, which meant Tom —
+     a controller with no payroll key — could not see it at all, and the
+     worklist item pointing him here would have sent him to a screen with
+     nothing on it. The same defect as a nav stricter than the API, one
+     component further in. */
+  const [given, setGiven] = useState(null);
+  const loadGiven = useCallback(
+    () => api.donations().then(setGiven).catch(() => setGiven(null)), []);
+  useEffect(() => { loadGiven(); }, [loadGiven]);
+
+  const donated = given && given.people.length > 0 && (
+    <Donated given={given} actor={actor} onDone={loadGiven} />
+  );
+
   if (!actor?.employee_key && !viewing) {
-    return <TimeRoster onOpen={setViewing} />;
+    return <>{donated}<TimeRoster onOpen={setViewing} /></>;
   }
-  return <Sheet actor={actor} viewing={viewing}
-                onBack={() => setViewing(null)} />;
+  return <>{donated}
+    <Sheet actor={actor} viewing={viewing} onBack={() => setViewing(null)} />
+  </>;
 }
 
 function Sheet({ actor, viewing, onBack }) {
@@ -110,6 +129,7 @@ function Sheet({ actor, viewing, onBack }) {
 
   useEffect(() => { api.timesheetObjectives().then(setVocab).catch(() => {}); }, []);
   useEffect(() => { load(); }, [load]);
+
 
   /* Entries indexed by day and objective, so a cell is a lookup. */
   const byCell = useMemo(() => {
@@ -616,5 +636,121 @@ function DayPanel({ day, entries, onClose }) {
         </ul>
       )}
     </div>
+  );
+}
+
+
+/* Hours given rather than paid, and what they are worth.
+ *
+ * They never enter the paid labour distribution — that would move every
+ * other share — so they are valued separately or not at all.
+ *
+ * The rate is the controller's judgment and **never for their own hours**:
+ * 2 CFR 200.306(e) wants a rate consistent with what YBI pays for similar
+ * work, and that is a judgment about somebody's time rather than theirs to
+ * make. The schema refuses it and so does the handler; this just does not
+ * offer the box, so nobody meets a refusal they could not have predicted.
+ */
+function Donated({ given, actor, onDone }) {
+  const [open, setOpen] = useState(null);
+  const [rate, setRate] = useState("");
+  const [basis, setBasis] = useState("");
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const isController = (actor?.portfolios || []).includes("CONTROLLER");
+  const mine = (actor?.employee_key || "").toUpperCase();
+
+  async function save(key) {
+    setBusy(true);
+    try {
+      const r = await api.putDonationRate({
+        employee_key: key, hourly_rate: rate, basis,
+      });
+      toast.ok(`${r.hours} donated hours valued at $${r.valued_at}`
+               + (r.superseded ? " — the earlier rate is superseded" : ""));
+      setOpen(null); setRate(""); setBasis("");
+      await onDone();
+    } catch (e) { toast.fail(String(e.message || e)); }
+    setBusy(false);
+  }
+
+  return (
+    <Card title="Donated time"
+          aside={given.unvalued
+            ? `${given.unvalued} person${given.unvalued === 1 ? "" : "s"} not yet valued`
+            : `valued at $${Number(given.valued_total).toLocaleString()}`}>
+      <p className="quiet small" style={{ marginTop: -4, marginBottom: 12 }}>
+        Hours given rather than paid. They never enter the paid labour
+        distribution — that would move every other share — so they are valued
+        separately, at a rate consistent with what YBI pays for similar work
+        (2 CFR 200.306(e)). Nobody values their own.
+      </p>
+      <Table columns={[
+        { label: "Who", align: "left" },
+        { label: "Hours" },
+        { label: "Rate" },
+        { label: "Worth" },
+        { label: "On what basis", align: "left" },
+      ]}>
+        {given.people.map((p) => (
+          <React.Fragment key={p.employee_key}>
+            <tr>
+              <td className="l strong">{p.employee_key}
+                <div className="quiet small">
+                  {p.objectives.map((o) => o.objective_id).join(", ")}
+                </div>
+              </td>
+              <td className="num">{Number(p.hours).toFixed(2)}</td>
+              <td className="num">{p.hourly_rate ? `$${p.hourly_rate}` : "—"}</td>
+              <td className="num">
+                {p.valued_at ? `$${Number(p.valued_at).toLocaleString()}`
+                             : <span className="quiet">not valued</span>}
+              </td>
+              <td className="l wrap quiet small">
+                {p.rate_basis || (
+                  isController && p.employee_key !== mine ? (
+                    <button className="btn sm"
+                            onClick={() => { setOpen(p.employee_key); setRate(""); setBasis(""); }}>
+                      Set the rate
+                    </button>
+                  ) : isController && p.employee_key === mine
+                    ? "Yours to give, somebody else's to value."
+                    : "Not yet valued."
+                )}
+              </td>
+            </tr>
+            {open === p.employee_key && (
+              <tr className="subrow">
+                <td className="l" colSpan={5}>
+                  <div className="upload-form">
+                    {/* The narrow column of `.upload-form` is 220px, so
+                        the short label belongs to the short field. The
+                        200.306(e) guidance is on the card above rather than
+                        crammed into a hint that wraps to four lines. */}
+                    <Field label="An hour is worth" hint="In dollars.">
+                      <input value={rate} inputMode="decimal"
+                             onChange={(e) => setRate(e.target.value)}
+                             placeholder="72.50" />
+                    </Field>
+                    <Field label="On what basis"
+                           hint="What YBI pays for similar work, or the labour market where it has no such work. This is what an auditor reads — 'market' is not a statement of anything, and the schema will not take it.">
+                      <input value={basis} onChange={(e) => setBasis(e.target.value)}
+                             placeholder="Comparable is programme delivery; Ohio market, 2025 survey." />
+                    </Field>
+                    <div className="upload-actions">
+                      <button className="btn primary" disabled={busy || !rate || basis.length < 11}
+                              onClick={() => save(p.employee_key)}>
+                        {busy ? "Recording…" : "Record the rate"}
+                      </button>
+                      <button className="btn quiet" onClick={() => setOpen(null)}>Cancel</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </React.Fragment>
+        ))}
+      </Table>
+    </Card>
   );
 }

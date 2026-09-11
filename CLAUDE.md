@@ -952,6 +952,34 @@ joins to its space totals, so a building that does not add up drops out of
 the carve-out entirely and every dollar of its occupancy cost reaches the
 federal pool unchallenged.
 
+## Donated time
+
+Hours given rather than paid. They **never enter the paid labour
+distribution** — that would move every other share — so they are valued
+separately, or not at all.
+
+`donation_rate` (migration `019`) carried every invariant it needed from the
+day it was written and **nothing ever wrote it**: the fifth instance of the
+dead-table shape after `space_partition`, `rate.superseded_by`, the
+`evidence` fact columns and `award_budget_line`. `PUT /api/timesheet/
+donation-rate` is the door it was designed for.
+
+**Nobody values their own donated time.** The comment above the table has
+always said so — *a volunteer valuing their own time is the whole problem
+200.306(e) is guarding against* — and `require_controller` delivers only half
+of it, because a controller is on the payroll like everybody else. Tested
+against the live record the auditor got 403, the administrator got 403, and
+a controller valued her own six donated hours at whatever she liked.
+Migration `055` closes it in the schema *and* the handler, which is how the
+three rules of this shape are already held: nobody grants themselves a
+portfolio, nobody assigns themselves a charge code, a manager cannot sign
+somebody's certification.
+
+`v_donation_rate_conflict` says how many controllers other than each
+volunteer could value their hours. Zero is not a defect — it is one
+controller who is also the volunteer — but it is the kind of thing to find
+out about in October rather than in the week the return is due.
+
 ## Two people at once
 
 Everything above describes one person acting. Tom and Heidi both hold

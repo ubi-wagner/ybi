@@ -104,8 +104,8 @@ export const KINDS = {
     title: "Donated time with no rate",
     plural: "Donated time with no rate",
     short: "Hours on the record, no documented valuation",
-    why: "Donated hours are recorded against an objective with no documented hourly rate, so they cannot be valued. A rate chosen later, once the effect on the total is visible, is not a valuation.",
-    where: "The hours are in Timesheet. Nothing in the application records the rate yet.",
+    why: "Donated hours are recorded against an objective with no documented hourly rate, so they cannot be valued. A rate chosen later, once the effect on the total is visible, is not a valuation — which is why the basis is required and why nobody sets it on their own hours.",
+    where: "Set the rate in Timesheet, under Donated time. Not on your own hours — 2 CFR 200.306(e) wants a rate consistent with what YBI pays for similar work, and that is a judgment about your time rather than yours to make.",
     to: "/timesheet",
   },
   CHARGE_CODE_UNASSIGNED: {

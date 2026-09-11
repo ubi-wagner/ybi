@@ -345,6 +345,18 @@ time that cannot be valued is cost share that cannot be evidenced, and
 $617,065 of untracked cost share is already the largest obligation in the
 file.
 
+**Done.** `GET /api/timesheet/donations`,
+`PUT /api/timesheet/donation-rate`, migration `055`, and a panel on
+`/timesheet` above the sheet itself.
+
+The table needed no changes — `019` gave it every invariant, and nothing had
+ever written it. What it needed was the second half of its own comment:
+`require_controller` keeps out everybody without the portfolio and does not
+keep out the volunteer, who very likely has it. Against the live record the
+auditor got 403, the administrator got 403, and a controller valued her own
+six donated hours at $500 an hour. `055` refuses that in the schema and in
+the handler, the way the three rules of the same shape are already held.
+
 **Effort.** Half a day. **Depends on** nothing.
 
 ### S10 · Take Tom's verification sheet back in
@@ -439,7 +451,7 @@ and seeded from nothing.
 | ~~4~~ | ~~S5~~ | done; S10 remains |
 | ~~5~~ | ~~S10~~ | done — his answers land under his name, with the workbook behind them |
 | ~~6~~ | ~~S11~~ | done — and it found a defect in PL_FOOTING |
-| 7 | S7, S8, S9, S9a | two and a half days |
+| 7 | S7, S8, S9 | two days — ~~S9a~~ done |
 
 S12 whenever you get to it; everything deployable waits behind it.
 

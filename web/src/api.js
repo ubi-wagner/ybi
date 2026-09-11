@@ -115,6 +115,13 @@ export const api = {
   timesheetRoster: (period = "2025") => req(`/timesheet/roster?period=${period}`),
   timesheetMonths: (params) => req("/timesheet/months?" + new URLSearchParams(params || {})),
   employment: (params) => req("/timesheet/employment?" + new URLSearchParams(params || {})),
+  /* Hours given rather than paid, and what each is worth. Reading is open —
+     somebody who gave a day should be able to see it was recorded and what
+     it was put at. Setting the rate is the controller's, and never for
+     their own hours: 2 CFR 200.306(e). */
+  donations: (period = "2025") => req(`/timesheet/donations?period=${period}`),
+  putDonationRate: (body) =>
+    req("/timesheet/donation-rate", { method: "PUT", body: JSON.stringify(body) }),
   putEmployment: (body) =>
     req("/timesheet/employment", { method: "PUT", body: JSON.stringify(body) }),
   timesheetCoverage: (params) =>

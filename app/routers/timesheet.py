@@ -18,6 +18,7 @@ recorded, and the row carries both.
 from __future__ import annotations
 
 from datetime import date, timedelta
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -27,6 +28,7 @@ from app.auth import (Actor, Role, current_actor, require_controller,
                       require_own_writes)
 from app.db import one, query, transaction
 from app.settings import settings
+from app.statelock import turn
 from app.vocab import EmploymentStatus, TimeBasis
 
 router = APIRouter(prefix="/timesheet", tags=["timesheet"])
@@ -594,6 +596,149 @@ def put_employment(body: EmploymentIn, period: str = None,
                    (period, body.employee_key.upper()))
     return {"employment_id": r["employment_id"],
             "expected_hours": expected["expected_hours"] if expected else None}
+
+
+# ── Donated time, and what it is worth ────────────────────────────────
+#
+# Hours given rather than paid. They never enter the paid labour
+# distribution — that would move every other share — so they are valued
+# separately or not at all.
+#
+# `donation_rate` has been in the schema since `019` with every invariant it
+# needs: immutable once set, no delete, one live rate per person per period,
+# a basis of at least ten characters, a positive rate. **Nothing has ever
+# written it.** `DONATION_RATE_MISSING` is a worklist kind pointing at a
+# screen where there was nothing to do on arrival — which is the same defect
+# as a BLOCKING item that doing the work cannot clear, one step earlier.
+
+class DonationRateIn(BaseModel):
+    employee_key: str
+    hourly_rate: Decimal = Field(gt=0)
+    #: What the rate rests on. Ten characters is the schema's floor and it is
+    #: not arbitrary: 2 CFR 200.306(e) wants a rate consistent with what the
+    #: organisation pays for similar work, or with the labour market where it
+    #: has no such work — and "market" is not a statement of either.
+    basis: str = Field(min_length=11)
+    source_document: str = ""
+
+
+@router.get("/donations")
+def donations(period: str = None,
+              actor: Actor = Depends(current_actor)) -> dict:
+    """Donated hours by person, and what each is valued at.
+
+    A read, so anybody signed in sees it — including the person whose hours
+    they are, which is the point: somebody who gave a day should be able to
+    see that it was recorded and what it was put at.
+    """
+    period = period or settings.period
+    rows = query("""SELECT * FROM v_donated_time WHERE period = %s
+                     ORDER BY employee_key, objective_id""", (period,))
+    people = {}
+    for r in rows:
+        p = people.setdefault(r["employee_key"], {
+            "employee_key": r["employee_key"], "hours": Decimal(0),
+            "objectives": [], "hourly_rate": r["hourly_rate"],
+            "rate_basis": r["rate_basis"], "valued_at": Decimal(0),
+            "rate_missing": r["rate_missing"]})
+        p["hours"] += r["hours"]
+        if r["valued_at"] is not None:
+            p["valued_at"] += r["valued_at"]
+        p["objectives"].append({"objective_id": r["objective_id"],
+                                "label": r["objective_label"],
+                                "is_federal": r["is_federal"],
+                                "hours": str(r["hours"]),
+                                "valued_at": (str(r["valued_at"])
+                                              if r["valued_at"] is not None
+                                              else None)})
+    out = [{**p, "hours": str(p["hours"]),
+            "hourly_rate": str(p["hourly_rate"]) if p["hourly_rate"] else None,
+            "valued_at": str(p["valued_at"]) if not p["rate_missing"] else None}
+           for p in people.values()]
+    return {"period": period, "people": out,
+            "unvalued": sum(1 for p in out if p["rate_missing"]),
+            # Deliberately not a total across everybody: a total over a
+            # population where some are unvalued reads as the value of the
+            # donated time, and it is the value of the part somebody has got
+            # to. The count of the rest is beside it for that reason.
+            "valued_total": str(sum(Decimal(p["valued_at"]) for p in out
+                                    if not p["rate_missing"]))}
+
+
+@router.put("/donation-rate")
+def put_donation_rate(body: DonationRateIn, period: str = None,
+                      actor: Actor = Depends(require_controller)) -> dict:
+    """What an hour of somebody's donated time is worth.
+
+    The controller's judgment and nobody else's — **a volunteer valuing their
+    own time is the whole problem 2 CFR 200.306(e) is guarding against**, and
+    the rate has to be consistent with what YBI pays for similar work, or
+    with the labour market where it has no such work. So the basis is
+    required and the schema will not take a short one.
+
+    Superseded, never edited. The rate is immutable once set, which is what
+    makes "what was this valued at when the rate was computed" answerable
+    afterwards; a second rate closes the first and both stay.
+    """
+    period = period or settings.period
+    key = body.employee_key.upper()
+    with turn(period) as cur:
+        cur.execute("""SELECT count(*) AS n FROM v_timesheet_entry
+                        WHERE period = %s AND employee_key = %s AND donated""",
+                    (period, key))
+        if not cur.fetchone()["n"]:
+            # Not a refusal of a wrong value — a refusal of a value with
+            # nothing to apply to. A rate against nobody's hours is a figure
+            # somebody will later find and wonder about.
+            raise HTTPException(
+                422, f"{key} has no donated hours in {period}, so there is "
+                     f"nothing for a rate to value. Record the hours first.")
+
+        # The handler half of `nobody_values_their_own_time`. The trigger is
+        # what makes it hold when this is wrong; this is what makes the
+        # refusal a sentence somebody can act on rather than a constraint
+        # violation.
+        if actor.employee_key and actor.employee_key.upper() == key:
+            raise HTTPException(
+                422, "A donated hour cannot be valued by the person who gave "
+                     "it. 2 CFR 200.306(e) wants a rate consistent with what "
+                     "YBI pays for similar work, and that is a judgment "
+                     "about your time rather than yours to make. Ask one of "
+                     "the other controllers.")
+
+        cur.execute("""SELECT rate_id, hourly_rate FROM donation_rate
+                        WHERE period = %s AND employee_key = %s
+                          AND superseded_at IS NULL""", (period, key))
+        prior = cur.fetchone()
+        if prior:
+            # Close the old one first: `one_live_donation_rate` is a partial
+            # unique index and is checked at the insert, not at COMMIT.
+            cur.execute("""UPDATE donation_rate SET superseded_at = now()
+                            WHERE rate_id = %s""", (prior["rate_id"],))
+        cur.execute("""INSERT INTO donation_rate
+                         (period, employee_key, hourly_rate, basis,
+                          source_document, set_by, set_by_name)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s)
+                       RETURNING rate_id""",
+                    (period, key, body.hourly_rate, body.basis.strip(),
+                     body.source_document.strip(), actor.actor_id,
+                     actor.display_name))
+        rate_id = cur.fetchone()["rate_id"]
+        record(actor, "DONATION_RATE", "employee", key,
+               before=({"hourly_rate": str(prior["hourly_rate"])}
+                       if prior else None),
+               after={"hourly_rate": str(body.hourly_rate),
+                      "basis": body.basis.strip()},
+               reason=body.basis.strip()[:400], cursor=cur)
+        cur.execute("""SELECT sum(hours) AS hours, sum(valued_at) AS valued
+                         FROM v_donated_time
+                        WHERE period = %s AND employee_key = %s""",
+                    (period, key))
+        got = cur.fetchone()
+    return {"rate_id": rate_id, "employee_key": key,
+            "hourly_rate": str(body.hourly_rate),
+            "superseded": bool(prior),
+            "hours": str(got["hours"]), "valued_at": str(got["valued"])}
 
 
 @router.get("/roster")

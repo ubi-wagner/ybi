@@ -387,6 +387,57 @@ books actually do.
 
 ---
 
+### S9a · Nothing wrote the table its own comment described
+
+**Found by** routing `DONATION_RATE_MISSING` in S1 — a worklist kind pointing
+at a screen where there was nothing to do on arrival. Recorded there rather
+than left to be discovered by clicking.
+
+`donation_rate` has been in the schema since `019` with **every invariant it
+needs**: immutable once set, no delete, one live rate per person per period, a
+basis of at least ten characters, a positive rate. Nothing has ever written
+it. The fifth instance of the dead-table shape, and the most complete one —
+somebody designed this carefully and then never built the door.
+
+**The comment above it says what the rule is, and the gate delivers half of
+it.**
+
+> The controller sets it and says what it rests on, because a volunteer
+> valuing their own time is the whole problem 200.306(e) is guarding against.
+
+`require_controller` keeps out everybody without the portfolio. It does not
+keep out the one person the rule is actually about, because a controller is
+on the payroll like everybody else. Tested against the live record: the
+auditor 403, the administrator 403, and **Heidi — who holds `CONTROLLER` —
+recorded six donated hours and valued them at $500 an hour**. 2 CFR 200.306(e)
+wants a rate consistent with what YBI pays for similar work, and that is a
+judgment about somebody's time that the person whose time it is cannot make.
+
+Migration `055` is the second half, in the schema *and* the handler, which is
+how this codebase already holds the three rules of the same shape: nobody
+grants themselves a portfolio, nobody assigns themselves a charge code, a
+manager cannot sign somebody's certification. `v_donation_rate_conflict` says
+how many controllers other than each volunteer could value their hours — zero
+is not a defect, it is one controller who is also the volunteer, and it is
+worth knowing in October rather than in the week the return is due.
+
+**Two more, both found by a browser rather than by a test.**
+
+`from __future__ import annotations` turns a missing import in a Pydantic
+model into a **runtime** failure. `DonationRateIn` shipped with `Decimal`
+unimported: the module parsed, the router mounted, the application started,
+and the first request that touched it would have answered 500 with
+*"`DonationRateIn` is not fully defined"*. `tests/test_request_models_resolve.py`
+builds every request model's validator — 52 of them — and catches the whole
+class; verified against the real defect.
+
+And the panel lived inside `Sheet`, which only renders for an account with an
+`employee_key`. Tom is a controller with no payroll key, so the screen the
+worklist points him at showed him nothing at all. The same defect as a nav
+stricter than the API, one component further in.
+
+---
+
 ## The three shapes
 
 Every item found something the plan did not know about, and they were the
