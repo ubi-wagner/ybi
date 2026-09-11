@@ -39,16 +39,19 @@ fi
 step "The three source documents against each other"
 run "schedule A-1 reconciliation" $PY scripts/reconcile.py --base "$BASE"
 
+step "The manual"
+# Before the drives, not after. The drives put fixtures on screens the manual
+# photographs, and a new person should not open the Space chapter to find a
+# building called "Drive Test Building".
+run "screenshots are current" $PY scripts/walk_manuals.py --base "$BASE"
+run "manual tests" $PY -m pytest -q tests/test_manual.py
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 
 step "The boundaries"
 run "drive_access" $PY scripts/drive_access.py --base "$BASE"
 run "drive_actors" $PY scripts/drive_actors.py --base "$BASE"
-
-step "The manual"
-run "screenshots are current" $PY scripts/walk_manuals.py --base "$BASE"
-run "manual tests" $PY -m pytest -q tests/test_manual.py
 
 if [ "$fail" -eq 0 ]; then
   printf '\n\033[1mEverything proved.\033[0m\n'

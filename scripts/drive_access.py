@@ -292,6 +292,14 @@ def main() -> int:
         else:
             bad(f"could not provision a newcomer — {r.status_code}")
     finally:
+        # The buildings this drive invents are litter, and the Space screen is
+        # one the user manual photographs.
+        from app.db import execute
+        execute("""DELETE FROM space_unit
+                    WHERE facility_id LIKE 'DRIVE%'""")
+        execute("""DELETE FROM space_partition
+                    WHERE facility_id LIKE 'DRIVE%'""")
+        execute("DELETE FROM facility WHERE facility_id LIKE 'DRIVE%'")
         for c in (eric, barb, tom, heidi, auditor):
             c.close()
 

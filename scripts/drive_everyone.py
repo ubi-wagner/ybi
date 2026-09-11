@@ -16,7 +16,9 @@ because a change nobody can attribute is the one thing this system exists to
 prevent.
 
 Run it after scripts/provision.py and the loaders. It is re-runnable: it
-works on its own fixtures and puts back what it borrows.
+works on its own fixtures and clears them up afterwards, because a building
+called "Drive Test Building" left on the Space screen is litter — and the
+manual photographs that screen.
 """
 
 from __future__ import annotations
@@ -115,6 +117,27 @@ def sign_in(base: str, email: str, password: str) -> httpx.Client:
     return c
 
 
+def tidy_up() -> None:
+    """Remove the fixtures this drive invented.
+
+    Not the record — a classification, a timesheet entry or a document is a
+    judgment somebody made and stays. But a building called "Drive Test
+    Building" is litter: it sits on the Space screen where a real one should
+    be, and it ends up photographed into the user manual, where a new person
+    reads it as an example of how YBI keeps its estate.
+
+    Only rows whose id this drive generated, and only the ones nothing else
+    has come to depend on.
+    """
+    from app.db import execute
+    execute("""DELETE FROM asset
+                WHERE unit_id IN (SELECT unit_id FROM space_unit
+                                   WHERE facility_id LIKE 'DRIVE-%')""")
+    execute("DELETE FROM space_unit WHERE facility_id LIKE 'DRIVE-%'")
+    execute("DELETE FROM space_partition WHERE facility_id LIKE 'DRIVE-%'")
+    execute("DELETE FROM facility WHERE facility_id LIKE 'DRIVE-%'")
+
+
 def rows_of(r: httpx.Response, key: str = "") -> list:
     """Some endpoints return a bare list, some wrap it. Read either."""
     if r.status_code != 200:
@@ -170,6 +193,7 @@ def main() -> int:
         drive_undo(args, heidi)
         drive_feed(args, tom, started)
     finally:
+        tidy_up()
         for c in (barb, eric, tom, heidi, steph, auditor):
             c.close()
 
