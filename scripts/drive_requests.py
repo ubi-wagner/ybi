@@ -97,12 +97,26 @@ def known_row_count(data: bytes, sheet: str) -> int:
     return n
 
 
+#: The requests this run issued.
+#:
+#: The chase-list check used to count ACCEPTED rows in the whole register and
+#: compare against three, so it passed the first time this drive was ever run
+#: and never again: a second run reported "6 of 7", a third "9 of 10". An
+#: assertion over absolute state on a database the drive has already touched
+#: is an assertion about how many times somebody has run it.
+#:
+#: The review script learned the same thing when coverage climbed 0% to 36.8%
+#: across five runs and every figure was a review reading its own writing.
+ISSUED: list[int] = []
+
+
 def issue(client: httpx.Client, form: str, sent_to: str) -> tuple[int, bytes]:
     r = client.post(f"/api/requests/{form}/issue",
                     json={"sent_to": sent_to, "note": "Weekend drive."})
     if r.status_code != 200:
         raise SystemExit(f"issuing {form} answered {r.status_code}: {r.text[:300]}")
     rid = r.json()["request_id"]
+    ISSUED.append(rid)
     wb = client.get(f"/api/requests/{rid}/workbook")
     if wb.status_code != 200:
         raise SystemExit(f"workbook for {rid} answered {wb.status_code}")
@@ -280,6 +294,11 @@ def check_assets_landed() -> None:
 
 def drive_space(tom, heidi, outsider) -> None:
     head("Floor space — the carve-out that cannot be computed at all today")
+    from app.db import one
+    # Whether accepting *creates* the building depends on whether a previous
+    # run already did. The note is only owed in the first case, so read which
+    # case this is rather than assuming the drive has never been run here.
+    existing = one("""SELECT facility_id FROM facility WHERE name = 'Tech Block 5'""")
     rid, blank = issue(tom, "SPACE_INVENTORY", "Facilities")
     known = known_row_count(blank, "Space")
 
@@ -314,11 +333,20 @@ def drive_space(tom, heidi, outsider) -> None:
     if refused.status_code == 200:
         got = refused.json()
         ok(f"the facilities portfolio accepted it — {got['written']} unit(s)")
-        if any("Created" in n for n in got["notes"]):
+        created = any("Created" in n for n in got["notes"])
+        if existing is None and created:
             ok("and it says it invented the building from the rows reported, "
                "so the square-foot control cannot test it yet")
-        else:
+        elif existing is not None and not created:
+            ok(f"and it filed against the building already on record "
+               f"({existing['facility_id']}) rather than inventing a second "
+               f"one — two registers of one building is how the carve-out "
+               f"read a table nothing wrote")
+        elif existing is None:
             finding("a building was created without saying so")
+        else:
+            finding(f"a second building was invented alongside "
+                    f"{existing['facility_id']}, which already carries that name")
     else:
         finding(f"facilities accepting answered {refused.status_code}: "
                 f"{refused.text[:200]}")
@@ -506,12 +534,19 @@ def check_chase_list(tom) -> None:
     if r.status_code != 200:
         finding(f"the request register answered {r.status_code}")
         return
-    rows = r.json()["requests"]
+    everything = r.json()["requests"]
+    rows = [x for x in everything if x["request_id"] in ISSUED]
+    if len(rows) != len(ISSUED):
+        finding(f"{len(ISSUED)} requests were issued and {len(rows)} came "
+                f"back from the register")
+        return
     accepted = [x for x in rows if x["state"] == "ACCEPTED"]
-    if len(accepted) == 3:
-        ok("three requests issued, replied to and accepted, each on the record")
+    if len(accepted) == len(ISSUED):
+        ok(f"{len(ISSUED)} requests issued, replied to and accepted, each on "
+           f"the record — of {len(everything)} in the register")
     else:
-        finding(f"{len(accepted)} of {len(rows)} requests reached ACCEPTED")
+        finding(f"{len(accepted)} of {len(ISSUED)} requests this run reached "
+                f"ACCEPTED")
     if all(x["days"] is not None for x in rows):
         ok("every one carries how long it took")
     else:

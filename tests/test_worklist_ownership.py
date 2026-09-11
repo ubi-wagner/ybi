@@ -18,13 +18,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SQL = ROOT / "app" / "sql"
 DASH = (ROOT / "app" / "routers" / "dashboard.py").read_text()
 
-#: Every kind v_worklist and v_worklist_extra can emit.
-KINDS = ["UNCLASSIFIED", "BLOCKS_SEAL", "STALE_DECISION", "NEEDS_EVIDENCE",
-         "NEEDS_CERTIFICATION", "EMPLOYMENT_UNKNOWN", "FACILITY_UNPARTITIONED",
-         "SPACE_UNMEASURED", "SPACE_UNATTRIBUTED", "ASSET_FUNDING_UNKNOWN",
-         "INVOICE_NO_INDIRECT", "INVOICE_NO_AWARD", "CHARGE_CODE_UNASSIGNED",
-         "AWARD_NO_CEILING"]
-
 PORTFOLIOS = {"CONTROLLER", "INVENTORY", "PROJECT", "FACILITIES", "OFFICE"}
 
 
@@ -50,6 +43,28 @@ def _view(name: str) -> str:
 
 OWNED = _view("v_worklist_owned")
 
+#: Every kind v_worklist and v_worklist_extra can emit, read out of them.
+#:
+#: This was a list kept by hand, and the hand-kept list was missing
+#: STALE_CERTIFICATION and DONATION_RATE_MISSING — which is exactly how both
+#: came to be unrouted, landing on the ELSE with the controller as owner and
+#: `/` as destination. A test whose subject is "no kind falls off the end"
+#: cannot keep its own list of the kinds; it has the same defect it is
+#: looking for. The review script learned this when a hand-kept map of what
+#: each screen calls reported four correct responses as faults.
+KINDS = sorted({
+    kind
+    for view in ("v_worklist", "v_worklist_extra")
+    for kind in re.findall(r"SELECT\s+'([A-Z_]{4,})'", _view(view))
+})
+
+
+def test_the_kinds_were_actually_found():
+    """If the derivation breaks, every test below passes over an empty list."""
+    assert len(KINDS) >= 14, (
+        f"only {len(KINDS)} kinds read out of the worklist views: {KINDS}. "
+        f"The parametrised tests below would pass over whatever is missing.")
+
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_every_kind_has_an_owner(kind):
@@ -58,16 +73,33 @@ def test_every_kind_has_an_owner(kind):
         f"lands on the controller by accident rather than by decision.")
 
 
+#: The two CASE expressions, cut apart. A window taken as a fixed number of
+#: characters back from "AS goes_to" overlapped the owner CASE, so the
+#: destination test was passing on the owner routing — it could not fail for
+#: the thing it names, and did not when two kinds had no destination.
+OWNERS = OWNED[:OWNED.index("AS owner_portfolio")]
+DESTINATIONS = OWNED[OWNED.index("AS owner_portfolio"):OWNED.index("AS goes_to")]
+
+
+def test_the_two_case_expressions_were_actually_separated():
+    assert "/classify" not in OWNERS and "'CONTROLLER'" not in DESTINATIONS, (
+        "the owner and destination CASE expressions overlap, so each test "
+        "below can pass on the other one's routing.")
+
+
 @pytest.mark.parametrize("kind", KINDS)
 def test_every_kind_says_where_to_go(kind):
     """A list that says what is wrong and not where to fix it is a list
     somebody hunts through the nav for."""
-    after_goes_to = OWNED[OWNED.index("AS goes_to") - 2200:OWNED.index("AS goes_to")]
-    assert f"'{kind}'" in after_goes_to, f"{kind} has no destination"
+    assert f"'{kind}'" in DESTINATIONS, f"{kind} has no destination"
 
 
 def test_the_owner_is_a_real_portfolio():
-    routed = set(re.findall(r"THEN '([A-Z_]+)'\s*\n", OWNED))
+    #: `THEN 'X'` followed by a newline matched nothing at all once the view
+    #: was lifted out of pg_get_viewdef, which writes `THEN 'X'::text`. The
+    #: set was empty and the test passed over it.
+    routed = set(re.findall(r"THEN '([A-Z_]+)'(?:::text)?\s*$", OWNERS, re.M))
+    assert routed, "no portfolio routing found at all; the regex matches nothing"
     unknown = {r for r in routed if r not in PORTFOLIOS}
     assert not unknown, (
         f"routed to something that is not a portfolio: {sorted(unknown)}. "

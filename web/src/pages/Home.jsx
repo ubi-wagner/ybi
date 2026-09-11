@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, money } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
 import Manual from "../components/Manual.jsx";
+import { forKind } from "../worklistKinds.js";
 
 /* Where each person lands.
  *
@@ -304,22 +305,6 @@ function describe(actor) {
  * the portfolio means rather than a special case — and it is why the card
  * says whose work each row is, even to somebody who holds all of them. */
 
-const KIND_LABEL = {
-  UNCLASSIFIED: ["Cost to classify", "In scope, with no live decision"],
-  BLOCKS_SEAL: ["Judgments that block the seal", "Graded unsupported"],
-  STALE_DECISION: ["Stale decisions", "The line moved underneath the judgment"],
-  NEEDS_EVIDENCE: ["Judgments with no document", "Federally chargeable, nothing cited"],
-  NEEDS_CERTIFICATION: ["Effort not yet certified", "Only the person whose effort it was can sign"],
-  EMPLOYMENT_UNKNOWN: ["Employment terms missing", "No weekly hours to measure a timesheet against"],
-  SPACE_UNMEASURED: ["Square footage not on file", "The facilities carve-out is sized by area"],
-  SPACE_UNATTRIBUTED: ["Space with nobody in it", "Measured, but no partition saying who uses it"],
-  FACILITY_UNPARTITIONED: ["Buildings not partitioned", "No space schedule, no carve-out"],
-  ASSET_FUNDING_UNKNOWN: ["Assets with no funding source", "Depreciation reads as fully allowable"],
-  INVOICE_NO_INDIRECT: ["Invoices billing no indirect", "Recovery forgone on the face of it"],
-  INVOICE_NO_AWARD: ["Invoices with no award", "No ceiling to test against"],
-  CHARGE_CODE_UNASSIGNED: ["Codes with nobody assigned", "Hours booked that nobody authorised"],
-};
-
 const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
 
 function MyWork({ actor }) {
@@ -342,7 +327,7 @@ function MyWork({ actor }) {
         { label: "", align: "left", width: "110px" },
       ]}>
         {d.groups.map((g) => {
-          const [label, note] = KIND_LABEL[g.kind] || [g.kind, ""];
+          const { plural: label, short: note } = forKind(g.kind);
           return (
             <tr key={g.kind}>
               <td className="l">

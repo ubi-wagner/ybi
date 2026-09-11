@@ -328,8 +328,28 @@ fact already on the record rather than a new field to maintain.
 
 Three worklist kinds were added with it: `SPACE_UNMEASURED` (no building has
 square footage, which is what the facilities carve-out is sized by),
-`SPACE_UNATTRIBUTED` (measured, but no partition saying who uses it) and
-`CHARGE_CODE_UNASSIGNED` (hours booked to a code nobody was assigned to).
+`SPACE_UNATTRIBUTED` (measured, but its space units do not account for it in
+full) and `CHARGE_CODE_UNASSIGNED` (hours booked to a code nobody was
+assigned to).
+
+**What a kind means is written down once**, in `web/src/worklistKinds.js`.
+There were three maps of it — `Worklist.jsx`, `Dashboard.jsx`, `Home.jsx` —
+each kept by hand and each missing different kinds, and every one falls back
+to the raw database name. So the failure mode was never a broken screen: it
+was a screen that starts speaking SQL, showing the controller
+`DONATION_RATE_MISSING` and no destination. Two kinds were in none of the
+three.
+
+**And no test of "nothing falls off the end" may keep its own list of the
+ends.** `test_worklist_ownership.py` is exactly that test, its `KINDS` was
+hand-kept, and it was missing the same two — so both sat on the `ELSE` with
+the controller as owner and `/` as destination for as long as the list did.
+Two of its other assertions could not fail at all: the destination test took
+a fixed-width window back from `AS goes_to` that overlapped the owner `CASE`
+and so passed on the owner routing, and the portfolio regex matched nothing
+against a lifted view body. All of it derives from the views now. A
+hand-kept map of what the code does was wrong four times in one run of the
+system review; it is the same defect every time it appears.
 
 ## Suggesting a classification
 
@@ -820,8 +840,21 @@ written `space_partition`** — not a route, not a script, not a migration. So
 `PUT /api/facilities/space` wrote a row, the screen showed it,
 `v_space_unit_control` tied, and the rate carried tenant and vacant space
 into the federal pool regardless. Migration `048` points the view at
-`space_unit`. `space_partition` is dead and six worklist views still test
-`NOT EXISTS` against it; `049` should drop both.
+`space_unit`; `051` takes the two live worklist views off the same table and
+drops it — which is how
+`FACILITY_UNPARTITIONED` came to fire BLOCKING on a building with 5,400 of
+5,400 square feet accounted for. **A BLOCKING item that doing the work
+cannot clear is worse than no item**: it teaches the reader that the list is
+wrong, and the next one they dismiss will be real.
+
+`SPACE_UNATTRIBUTED` is the survivor of the two and reads
+`v_space_unit_control` rather than an existence test, so one suite entered
+against a building of three is still outstanding — which is what the
+constraint trigger on the dead table was for, and what an existence test
+never caught. It keeps the BLOCKING severity: `v_facility_occupancy` inner-
+joins to its space totals, so a building that does not add up drops out of
+the carve-out entirely and every dollar of its occupancy cost reaches the
+federal pool unchallenged.
 
 ## Two people at once
 

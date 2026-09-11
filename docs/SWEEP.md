@@ -28,7 +28,9 @@ has ever written `space_partition`** — migration `048` already moved the
 occupancy view onto `space_unit` for exactly this reason and left the worklist
 behind. Two live views still read it: `v_worklist` and `v_worklist_extra`.
 
-**The change.** Migration `050`:
+**Done** — migration `051` (050 went to S2, which was done first).
+
+**The change.** Migration `051`:
 
 - Redefine both views over `space_unit`, **lifted from their current
   definitions rather than retyped** — the rule from `044`, where a view body
@@ -45,6 +47,29 @@ behind. Two live views still read it: `v_worklist` and `v_worklist_extra`.
 against a facility, no space item is raised for it. The existing
 `tests/test_worklist_ownership.py` already fails a kind that lands on the
 `ELSE`, so a removed kind has to leave the routing consistent.
+
+**What it actually found.** Lifting `v_worklist` to edit it showed two kinds
+— `STALE_CERTIFICATION` and `DONATION_RATE_MISSING` — routed by neither CASE,
+so both landed on the `ELSE` with the controller as owner and `/` as
+destination. `tests/test_worklist_ownership.py` is the test that exists to
+fail exactly that, and it kept its list of kinds by hand; the hand-kept list
+was missing the same two. Two of its other assertions could not fail either:
+the destination test took a fixed-width window back from `AS goes_to` that
+overlapped the owner CASE, so it was passing on the owner routing, and the
+portfolio test's regex matched nothing at all against a lifted view body.
+All three derive from the views now.
+
+The screens had the same shape: three hand-kept maps of the kinds, in
+`Worklist.jsx`, `Dashboard.jsx` and `Home.jsx`, each missing different ones
+and all three falling back to the raw database name — so the failure mode was
+not a broken screen but a screen showing the controller `DONATION_RATE_MISSING`
+with nowhere to go. One map now, in `web/src/worklistKinds.js`, with
+`tests/test_worklist_labels.py` deriving the kinds from the migrations.
+
+`drive_requests.py` was also asserting absolute counts over the whole
+register, so it passed the first time it was ever run and never again — "6 of
+7", then "9 of 10", then "12 of 13". It measures the requests its own run
+issued now, and passes twice in a row.
 
 **Effort.** Half a day. **Depends on** nothing.
 
@@ -66,6 +91,11 @@ supersession is what caused this twice.
 reference to `rate.superseded_by`, the same shape as
 `tests/test_supersession.py`. That is the guard that was missing: the first
 instance was fixed without one, so the second survived in the same file.
+
+**Done** — migration `050`. The column is dropped; `tests/test_review.py`
+sweeps every view in every migration, reading the schema as Postgres does so
+the defect's original body in `033` is not treated as a live reader, and asks
+the database directly whether the column has come back.
 
 **Effort.** An hour. **Depends on** nothing.
 
@@ -197,6 +227,22 @@ That is right, and the review's proportion check could not tell it from a bug
 from the outside — neither can a reviewer. One sentence on the screen, and
 the same sentence in the audit package. **An hour.**
 
+### S9a · Nothing records a rate for donated time
+
+**The evidence.** `DONATION_RATE_MISSING` is a worklist kind, `donation_rate`
+is a table, `v_donated_time` reads it — and **no route writes it**, so the
+item points at `/timesheet` where the hours are and there is nothing to do
+when you arrive. Found while routing the kind in S1, which is why it is
+recorded here rather than left to be discovered by clicking.
+
+**The change.** A rate per person per period with its basis, recorded as a
+judgment like any other: superseded rather than edited, and graded. Donated
+time that cannot be valued is cost share that cannot be evidenced, and
+$617,065 of untracked cost share is already the largest obligation in the
+file.
+
+**Effort.** Half a day. **Depends on** nothing.
+
 ### S10 · Take Tom's verification sheet back in
 
 Nineteen answers currently land in a spreadsheet on his laptop. The
@@ -240,11 +286,11 @@ fixed, and it sits upstream of every other deployment item.
 
 | | | |
 |---|---|---|
-| 1 | S2, S1, S3 | half a day — two of them are lying on screens today |
+| 1 | ~~S2~~, ~~S1~~, S3 | S2 and S1 done; S3 remains |
 | 2 | **S4** | two to three days — its value decays the moment Tom starts |
 | 3 | S6 | half a day — unblocks the restatement |
 | 4 | S5, then S10 | a day and a half |
 | 5 | S11 | a day |
-| 6 | S7, S8, S9 | two days |
+| 6 | S7, S8, S9, S9a | two and a half days |
 
 S12 whenever you get to it; everything deployable waits behind it.

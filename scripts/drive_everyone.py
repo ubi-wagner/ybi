@@ -154,7 +154,6 @@ def tidy_up() -> None:
                 WHERE unit_id IN (SELECT unit_id FROM space_unit
                                    WHERE facility_id LIKE 'DRIVE-%')""")
     execute("DELETE FROM space_unit WHERE facility_id LIKE 'DRIVE-%'")
-    execute("DELETE FROM space_partition WHERE facility_id LIKE 'DRIVE-%'")
     execute("DELETE FROM facility WHERE facility_id LIKE 'DRIVE-%'")
 
 

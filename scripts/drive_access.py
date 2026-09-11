@@ -420,8 +420,6 @@ def main() -> int:
         execute("DELETE FROM evidence WHERE filename LIKE 'drive-%'")
         execute("""DELETE FROM space_unit
                     WHERE facility_id LIKE 'DRIVE%'""")
-        execute("""DELETE FROM space_partition
-                    WHERE facility_id LIKE 'DRIVE%'""")
         execute("DELETE FROM facility WHERE facility_id LIKE 'DRIVE%'")
         for c in (eric, barb, tom, heidi, auditor):
             c.close()

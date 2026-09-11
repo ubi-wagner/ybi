@@ -10,7 +10,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Gaps | 1 |
 | Notes | 25 |
 | GET routes probed | 82 (× 6 people) |
-| Audit entries | 193 |
+| Audit entries | 355 |
 
 ## Who was driven
 
@@ -133,27 +133,29 @@ Nothing found.
 
 ## Continuity
 
-### GAP — the chain stops at 'decisions recorded'
+### GAP — the chain stops at 'rates'
 
-Everything upstream is loaded; nothing downstream of decisions recorded exists yet.
+Everything upstream is loaded; nothing downstream of rates exists yet.
 
 *What to do:* This is the work, not a defect. It is named here so a reviewer is not left to infer it from an empty screen.
 
 ## Proportion
 
-### NOTE — the group carries 45 lines and 1 decision(s) were recorded
+### NOTE — propagation was not measured in this run
 
-Not necessarily wrong — scope may be the group rather than the line — but worth knowing which.
+The decision set is sealed, so no change could be made to measure. That is the correct state, not a defect.
+
+*What to do:* Run the review on a freshly seeded database, before the drives — they seal. ./scripts/seed.sh then this.
 
 ## What the system held at the moment of review
 
 ```json
 {
   "samples": {
-    "evidence_id": "EV-b3e05669a68f",
+    "evidence_id": "EV-908010a6cb4f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "2fba13e0-0f34-42c4-a87f-d3d0d195178e",
+    "actor_id": "cffcff27-6248-402d-9b92-44ea84061104",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -280,73 +282,117 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "counts": {
     "/api/classify/queue": 50,
     "/api/reconcile": 11,
-    "/api/documents/library": 18,
+    "/api/documents/library": 28,
     "/api/contracts": 3,
     "/api/reports/invoices": 3,
     "/api/chart/accounts": 103,
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 193,
+  "audit_rows": 355,
   "audit_by_action": {
-    "EXPORT": 42,
-    "DOCUMENT_LIBRARY_READ": 26,
-    "AWARD_TERM": 26,
-    "SIGN_IN": 25,
+    "SIGN_IN": 72,
+    "DOCUMENT_LIBRARY_READ": 53,
+    "EXPORT": 51,
+    "AWARD_TERM": 29,
     "EVIDENCE_UPLOAD": 18,
-    "EVIDENCE_DOWNLOAD": 12,
+    "EVIDENCE_DOWNLOAD": 15,
     "REVIEW_READ": 12,
+    "REQUEST_ISSUE": 10,
+    "REQUEST_ACCEPT": 9,
+    "ACTOR_CREATE": 9,
+    "REQUEST_REPLY": 9,
+    "TIME_ENTRY": 8,
     "RECONCILE_ITEM": 6,
-    "ACTOR_CREATE": 5,
-    "CLASSIFY": 4,
+    "DOCUMENT_UPLOAD": 4,
+    "PASSWORD_CHANGE": 4,
+    "FACILITY": 3,
     "IMPORT_UPLOAD": 3,
     "IMPORT_PARSE": 3,
+    "ACTOR_ACTIVE": 2,
+    "SEAL": 2,
+    "MILESTONE_STATE": 2,
+    "PORTFOLIO_GRANT": 2,
+    "PORTFOLIO_REVOKE": 2,
     "IMPORT_ACCEPT": 2,
-    "UNDO": 2,
-    "PASSWORD_CHANGE": 2,
+    "CHARGE_REVOKE": 1,
+    "SPACE_UNIT": 1,
+    "MATERIALITY": 1,
+    "EQUIPMENT_USE": 1,
+    "TIME_REMOVE": 1,
+    "CHARGE_CODE_OPEN": 1,
+    "NOTE": 1,
+    "SEGMENT": 1,
+    "IN_KIND": 1,
+    "DEFER": 1,
+    "CHART_SPLIT": 1,
+    "EVIDENCE_GENERATED": 1,
+    "CLASSIFY": 1,
+    "RECONCILE_ALIAS": 1,
+    "RECEIPT": 1,
+    "CHARGE_AUTHORISE": 1,
+    "EVIDENCE_VIEW": 1,
+    "SEGMENT_REVERSE": 1,
+    "MILESTONE_OPEN": 1,
+    "PASSWORD_RESET": 1,
     "RATE_COMPUTE": 1,
-    "SEAL": 1,
-    "RECORD_ACCESS": 1,
+    "ACTOR_AMEND": 1,
     "UNSEAL": 1,
-    "RECONCILE_ALIAS": 1
+    "RECORD_ACCESS": 1,
+    "EVIDENCE_ATTACH": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 93
+      "n": 132
     },
     {
       "actor": "Barb Ewing",
       "role": "ORG_ADMIN",
-      "n": 26
+      "n": 61
     },
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 21
+      "n": 57
     },
     {
       "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 20
-    },
-    {
-      "actor": "Eric Wagner",
-      "role": "SYSTEM_ADMIN",
-      "n": 17
+      "n": 50
     },
     {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 16
+      "n": 27
+    },
+    {
+      "actor": "Eric Wagner",
+      "role": "SYSTEM_ADMIN",
+      "n": 21
+    },
+    {
+      "actor": "Drive Newcomer",
+      "role": "EMPLOYEE",
+      "n": 3
+    },
+    {
+      "actor": "First Day",
+      "role": "EMPLOYEE",
+      "n": 3
+    },
+    {
+      "actor": "Boundary Probe",
+      "role": "EMPLOYEE",
+      "n": 1
     }
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2479,
-    "decisions recorded": 0,
-    "sealed sets": 0,
+    "groups still unclassified": 2478,
+    "decisions recorded": 1,
+    "sealed sets": 1,
     "rates": 0,
     "allocations": 16,
     "invoices": 3,
@@ -371,7 +417,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     ],
     [
       "AM-DRIVE-AM provisions",
-      "8"
+      "11"
     ],
     [
       "everybody who charged time",
@@ -395,39 +441,17 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "0.0",
-    "decisions": "0",
-    "audit": "196",
+    "classified_dollars": "13.0",
+    "decisions": "1",
+    "audit": "358",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "5129 Payroll Expenses:5139 Wages:5140 Employee Wages",
-    "amount": "1678057.27",
-    "lines": 45
-  },
-  "proportion_after": {
-    "classified_dollars": "13.0",
-    "decisions": "1",
-    "audit": "197",
-    "ledger": "14371299.30",
-    "register": "1835047.18",
-    "open_controls": "55"
-  },
-  "proportion_moved": {
-    "classified_dollars": [
-      "0.0",
-      "13.0"
-    ],
-    "decisions": [
-      "0",
-      "1"
-    ],
-    "audit": [
-      "196",
-      "197"
-    ]
+    "account": "4015 Program Fees:4010 State Funding-ODSA-ESP",
+    "amount": "1211515.20",
+    "lines": 13
   }
 }
 ```
