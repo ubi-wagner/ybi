@@ -329,7 +329,13 @@ backward chain.
 Classifying a group of 45 lines records **one** decision with a scope, not 45.
 That is right, and the review's proportion check could not tell it from a bug
 from the outside — neither can a reviewer. One sentence on the screen, and
-the same sentence in the audit package. **An hour.**
+the same sentence in the audit package.
+
+**Done.** `decide()` returns `lines` and `amount` — the count read back out
+of `decision_line` after the insert, which is the number already computed to
+prove the lines landed. The queue's toast says it, the audit package's index
+carries it beside the decision count, and Schedule B's heading says a row is
+a judgment rather than a line. **An hour.**
 
 ### S9a · Nothing records a rate for donated time
 
@@ -451,7 +457,7 @@ and seeded from nothing.
 | ~~4~~ | ~~S5~~ | done; S10 remains |
 | ~~5~~ | ~~S10~~ | done — his answers land under his name, with the workbook behind them |
 | ~~6~~ | ~~S11~~ | done — and it found a defect in PL_FOOTING |
-| 7 | S7, S8, S9 | two days — ~~S9a~~ done |
+| 7 | S7, S8 | a day and a half — ~~S9~~ and ~~S9a~~ done |
 
 S12 whenever you get to it; everything deployable waits behind it.
 

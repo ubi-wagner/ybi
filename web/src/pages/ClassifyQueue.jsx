@@ -93,7 +93,7 @@ export default function ClassifyQueue({ actor }) {
     if (!groups.length) return;
     setBusy(true);
     try {
-      await api.decide({
+      const got = await api.decide({
         group_keys: groups.map((g) => g.group_key),
         ...decision,
         objective_id: decision.pool === "DIRECT" ? decision.objective_id || null : null,
@@ -106,9 +106,24 @@ export default function ClassifyQueue({ actor }) {
         based_on: Object.fromEntries(
           groups.map((g) => [g.group_key, g.live_decision || "none"])),
       });
-      const label = groups.length === 1
+      /* What the judgment covered, said out loud.
+       *
+       * Classifying a group of forty-five lines records **one** decision
+       * with a scope, not forty-five. That is right, and from the outside it
+       * is indistinguishable from a judgment that landed on one line — the
+       * system review's proportion check could not tell the difference, and
+       * neither can somebody reading "Recorded" after judging $1.2m across
+       * thirteen lines. So the toast says the lines and the money. */
+      const covered = got?.lines
+        ? ` · ${got.lines} line${got.lines === 1 ? "" : "s"}`
+          + (got.amount ? `, $${Number(got.amount).toLocaleString(undefined,
+              { maximumFractionDigits: 0 })}` : "")
+        : "";
+      const label = (groups.length === 1
         ? `${groups[0].account} → ${decision.pool}`
-        : `${groups.length} groups → ${decision.pool}`;
+        : `${groups.length} groups → ${decision.pool}`) + covered
+        + (got?.superseded ? ` · replaced ${got.superseded} earlier judgment`
+                             + (got.superseded === 1 ? "" : "s") : "");
       /* The undo here reverses the decision that was just recorded. It used
          to show a message saying a reversal had been recorded while recording
          nothing at all, which is worse than having no undo: it told somebody

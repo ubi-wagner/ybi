@@ -438,6 +438,37 @@ stricter than the API, one component further in.
 
 ---
 
+### S9 · What one decision covers
+
+**Found by** the plan, and it is a communication defect rather than a code
+one: classifying a group of forty-five lines records **one** decision with a
+scope, not forty-five. That is right — a scope is an account and a payee, and
+the judgment covers every line in it — and from the outside it is
+indistinguishable from a judgment that reached one line.
+
+The system review's proportion check could not tell the difference. Neither
+can somebody reading "Recorded" after judging $1.2m across thirteen lines,
+nor an auditor reading two hundred decisions against five thousand ledger
+lines, which reads as coverage and is not.
+
+`decide()` returns the lines and the money now — **the count read back out of
+`decision_line` after the insert**, not `len(with_lines)`, because that
+number is already computed to prove the lines landed and using the other one
+would make the response an assumption again. The queue says it in the toast,
+and the audit package says it in two places: a second figure on the index
+beside the decision count, and a sentence at the head of Schedule B saying a
+row is a judgment rather than a line.
+
+**One thing broke doing it**, and it is worth the line: `with_lines` selects
+`line_id` and nothing else, so summing `l["amount"]` off it was a `KeyError`
+and a 500. Caught by exercising the route rather than by a test — the tests
+read the source, which is the right shape for "does the response say this"
+and no shape at all for "does the handler run". The fix reads `amount` from
+the same query the decision is attached from, rather than a separate sum that
+could disagree with it.
+
+---
+
 ## The three shapes
 
 Every item found something the plan did not know about, and they were the

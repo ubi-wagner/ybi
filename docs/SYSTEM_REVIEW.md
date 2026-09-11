@@ -10,7 +10,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Gaps | 1 |
 | Notes | 28 |
 | GET routes probed | 85 (× 6 people) |
-| Audit entries | 2693 |
+| Audit entries | 2881 |
 
 ## Who was driven
 
@@ -307,100 +307,101 @@ The decision set is sealed, so no change could be made to measure. That is the c
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 2693,
+  "audit_rows": 2881,
   "audit_by_action": {
-    "EXPORT": 592,
-    "SIGN_IN": 500,
-    "DOCUMENT_LIBRARY_READ": 409,
-    "EVIDENCE_DOWNLOAD": 176,
-    "REVIEW_READ": 144,
-    "DOCUMENT_UPLOAD": 100,
+    "EXPORT": 643,
+    "SIGN_IN": 530,
+    "DOCUMENT_LIBRARY_READ": 432,
+    "EVIDENCE_DOWNLOAD": 191,
+    "REVIEW_READ": 156,
+    "DOCUMENT_UPLOAD": 108,
+    "TIME_ENTRY": 82,
     "REQUEST_ISSUE": 79,
     "REQUEST_REPLY": 77,
     "REQUEST_ACCEPT": 76,
-    "TIME_ENTRY": 74,
     "AWARD_TERM": 71,
-    "ACTOR_CREATE": 39,
-    "EVIDENCE_ATTACH": 27,
-    "FACILITY": 27,
-    "PASSWORD_CHANGE": 20,
+    "ACTOR_CREATE": 42,
+    "FACILITY": 30,
+    "EVIDENCE_ATTACH": 29,
+    "PASSWORD_CHANGE": 22,
+    "SEAL": 21,
+    "PORTFOLIO_REVOKE": 20,
+    "PORTFOLIO_GRANT": 20,
+    "UNSEAL": 18,
     "EVIDENCE_UPLOAD": 18,
-    "SEAL": 18,
-    "PORTFOLIO_GRANT": 18,
-    "PORTFOLIO_REVOKE": 18,
-    "UNSEAL": 17,
-    "ACTOR_ACTIVE": 12,
-    "DEFER": 9,
-    "CHART_SPLIT": 9,
-    "CLASSIFY": 9,
-    "EVIDENCE_VIEW": 9,
-    "EQUIPMENT_USE": 9,
-    "SPACE_UNIT": 9,
-    "PASSWORD_RESET": 9,
-    "SEGMENT_REVERSE": 9,
-    "RATE_COMPUTE": 9,
-    "ACTOR_AMEND": 9,
-    "MATERIALITY": 9,
-    "TIME_REMOVE": 9,
-    "NOTE": 9,
-    "SEGMENT": 9,
-    "IN_KIND": 9,
+    "ACTOR_ACTIVE": 13,
+    "CLASSIFY": 13,
+    "DEFER": 10,
+    "CHART_SPLIT": 10,
+    "EVIDENCE_VIEW": 10,
+    "EQUIPMENT_USE": 10,
+    "SPACE_UNIT": 10,
+    "PASSWORD_RESET": 10,
+    "SEGMENT_REVERSE": 10,
+    "RATE_COMPUTE": 10,
+    "ACTOR_AMEND": 10,
+    "MATERIALITY": 10,
+    "TIME_REMOVE": 10,
+    "NOTE": 10,
+    "SEGMENT": 10,
+    "IN_KIND": 10,
     "MILESTONE_STATE": 6,
-    "RECONCILE_ITEM": 6,
     "DONATION_RATE": 6,
+    "RECONCILE_ITEM": 6,
+    "UNDO": 4,
+    "CHARGE_REVOKE": 3,
     "RECEIPT": 3,
     "CHARGE_CODE_OPEN": 3,
-    "IMPORT_PARSE": 3,
-    "CHARGE_AUTHORISE": 3,
-    "CHARGE_REVOKE": 3,
     "MILESTONE_OPEN": 3,
     "IMPORT_UPLOAD": 3,
-    "IMPORT_ACCEPT": 2,
+    "IMPORT_PARSE": 3,
+    "CHARGE_AUTHORISE": 3,
     "EVIDENCE_FACTS": 2,
-    "EVIDENCE_GENERATED": 1,
+    "IMPORT_ACCEPT": 2,
+    "RECONCILE_ALIAS": 1,
     "RECORD_ACCESS": 1,
-    "RECONCILE_ALIAS": 1
+    "EVIDENCE_GENERATED": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 749
+      "n": 803
     },
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 569
+      "n": 602
     },
     {
       "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 465
+      "n": 498
     },
     {
       "actor": "Barb Ewing",
       "role": "ORG_ADMIN",
-      "n": 425
+      "n": 454
     },
     {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 223
+      "n": 239
     },
     {
       "actor": "Eric Wagner",
       "role": "SYSTEM_ADMIN",
-      "n": 201
+      "n": 218
     },
     {
       "actor": "First Day",
       "role": "EMPLOYEE",
-      "n": 27
+      "n": 30
     },
     {
       "actor": "Drive Newcomer",
       "role": "EMPLOYEE",
-      "n": 27
+      "n": 30
     },
     {
       "actor": "New Starter",
@@ -415,11 +416,11 @@ The decision set is sealed, so no change could be made to measure. That is the c
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2470,
-    "decisions recorded": 9,
+    "groups still unclassified": 2469,
+    "decisions recorded": 10,
     "sealed sets": 1,
     "rates": 0,
-    "allocations": 144,
+    "allocations": 160,
     "invoices": 3,
     "restatements": 0
   },
@@ -466,17 +467,17 @@ The decision set is sealed, so no change could be made to measure. That is the c
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "45.7",
-    "decisions": "9",
-    "audit": "2696",
+    "classified_dollars": "47.8",
+    "decisions": "10",
+    "audit": "2884",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "3900 Grant Income:Last Tactical Mile",
-    "amount": "368222.24",
-    "lines": 72
+    "account": "3900 Grant Income:AAMEN",
+    "amount": "313050.84",
+    "lines": 12
   }
 }
 ```

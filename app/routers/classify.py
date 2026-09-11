@@ -28,13 +28,12 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import uuid4
 
-from decimal import Decimal
-
 from fastapi import Depends, APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.auth import require_controller, require_reader
 from app.audit import record
+from app.domain.core import money
 from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
                        Pool)
 from app.auth import Actor
@@ -480,6 +479,8 @@ def decide(body: DecideIn, period: str = "2025",
 
     created = 0
     replaced = 0
+    lines_covered = 0
+    amount_covered = Decimal(0)
     # One turn for the whole request, not one per group.
     #
     # Two reasons. The VERIFIED gate is a deferred constraint trigger that
@@ -515,7 +516,11 @@ def decide(body: DecideIn, period: str = "2025",
 
         for key in body.group_keys:
             account, _, payee = key.partition("\x1f")
-            cur.execute("""SELECT line_id FROM ledger_line
+            # `amount` as well as `line_id`, so the response can say what
+            # the judgment covered without a second round trip — and from
+            # the same rows the decision is attached to, rather than from a
+            # separate sum that could disagree with them.
+            cur.execute("""SELECT line_id, amount FROM ledger_line
                             WHERE period = %s AND account = %s AND payee = %s""",
                         (period, account, payee))
             with_lines = cur.fetchall()
@@ -641,12 +646,24 @@ def decide(body: DecideIn, period: str = "2025",
                    cursor=cur)
             created += 1
             replaced += len(superseded)
+            lines_covered += attached
+            amount_covered += sum(l["amount"] for l in with_lines)
 
     # `superseded` says so plainly, because "decisions_created: 1" read the
     # same whether a group was judged for the first time or rejudged — and
     # the screen has no other way to tell a person their change replaced
     # something.
+    #
+    # `lines` and `amount` for the same reason one step along. **Classifying
+    # a group of forty-five lines records one decision with a scope, not
+    # forty-five** — which is right, and which from the outside is
+    # indistinguishable from a judgment that only landed on one of them. The
+    # system review's proportion check could not tell the difference, and
+    # neither can a person reading "1 decision recorded" after judging
+    # $1.2m across thirteen lines. The count is already computed to prove
+    # the lines landed; this is saying it out loud.
     return {"decisions_created": created, "superseded": replaced,
+            "lines": lines_covered, "amount": str(money(amount_covered)),
             "set_id": str(set_id)}
 
 

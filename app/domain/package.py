@@ -71,7 +71,14 @@ def build_package(model, decisions, rates, trueup, ledger_total: Decimal,
     ws["B5"] = decisions.sealed_at or ""
     ws["A6"] = "Classification decisions"
     ws["B6"] = len(decisions)
-    for r in range(4, 7):
+    # And what they cover. A reader who sees two hundred decisions against
+    # five thousand ledger lines has to be told, once, that this is the
+    # design rather than the state of the work: classifying a group records
+    # **one** judgment with a scope, not one per line. Without the second
+    # figure the first reads as coverage, and it is not.
+    ws["A7"] = "Ledger lines those decisions cover"
+    ws["B7"] = sum(len(d.line_ids) for d in decisions)
+    for r in range(4, 8):
         ws.cell(row=r, column=1).font = BOLD
         ws.cell(row=r, column=2).font = INK
     ws["A8"] = ("The seal is a hash of every classification judgment in the build. It is "
@@ -138,7 +145,10 @@ def build_package(model, decisions, rates, trueup, ledger_total: Decimal,
     # ---------------- B: Decisions ----------------
     ws = wb.create_sheet("B-Decisions")
     _title(ws, "Schedule B — Decision register",
-           "One row per classification judgment. Rationale and citation are required fields.")
+           "One row per classification judgment — not one per ledger line. A "
+           "judgment carries a scope (an account and a payee) and covers "
+           "every line in it, so the Lines column is how many each one "
+           "reached. Rationale and citation are required fields.")
     _headers(ws, 4, ["ID", "Scope", "Lines", "Pool", "990 function", "Federal",
                      "Objective", "Evidence", "Rationale", "Citation"],
              [10, 40, 8, 14, 22, 14, 16, 24, 52, 16])
