@@ -512,6 +512,18 @@ tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
 /* What is on the face of a document: the amount, the date, the vendor.
    Side by side because they are read off one piece of paper in one go, and
    a column of three stacked fields reads as three separate questions. */
+/* The three things we are asking for, side by side. Each is a whole ask
+   with its own lead time, so they read as cards rather than as rows. */
+.ask-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) { .ask-grid { grid-template-columns: 1fr; } }
+.card.ask { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.card.ask p { margin: 0; }
+.card.ask .btn { align-self: flex-start; margin-top: auto; }
+
+.preview { padding: 4px 0 8px; }
+.problems { margin: 8px 0 0; padding-left: 18px; }
+.problems li { margin-bottom: 3px; }
+
 /* A cell that may hold a sentence. Table cells default to not wrapping so
    figures stay on one line; a reason has to wrap or it is clipped at the
    card edge, and a reason nobody can read is not a reason. */

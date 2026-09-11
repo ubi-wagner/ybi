@@ -17,6 +17,7 @@ import Reconcile from "./pages/Reconcile.jsx";
 import MyDocuments from "./pages/MyDocuments.jsx";
 import People from "./pages/People.jsx";
 import Home from "./pages/Home.jsx";
+import Requests from "./pages/Requests.jsx";
 import FirstPassword from "./components/FirstPassword.jsx";
 import Evidence from "./pages/Evidence.jsx";
 import Facilities from "./pages/Facilities.jsx";
@@ -63,6 +64,12 @@ const ALL_TABS = [
   ["/chart",     "Chart",      "H",   "CONTROLLER"],
   ["/classify",  "Classify",   "B",   "CONTROLLER"],
   ["/evidence",  "Evidence",   "E",   "OFFICE"],
+  /* Reading what has been asked for takes the same gate the router asks for,
+     `require_reader`. Accepting a reply takes the portfolio that owns the
+     data, which the screen itself decides — so somebody who may read this
+     and not write it sees everything and is told whose judgment the last
+     step is, rather than meeting a 403 they could not have predicted. */
+  ["/requests",  "Requests",   "E",   "reader"],
   ["/space",     "Space",      "I",   "FACILITIES"],
   ["/inventory", "Inventory",  "I",   "INVENTORY"],
   ["/contracts", "Contracts",  "F",   "PROJECT"],
@@ -219,6 +226,7 @@ export default function App() {
           <Route path="/chart" element={<Chart />} />
           <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
           <Route path="/evidence" element={<Evidence actor={actor} />} />
+          <Route path="/requests" element={<Requests actor={actor} />} />
           <Route path="/space" element={<Facilities actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />

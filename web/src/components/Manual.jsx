@@ -105,6 +105,31 @@ const CHAPTERS = [
     shot: ["m-documents", "Drop a file, say what it relates to, send it."],
   },
   {
+    id: "requests",
+    needs: "reader",
+    title: "Asking for what is missing",
+    lede: "Three things are not on the record and none can be worked out.",
+    steps: [
+      ["Ask, and a workbook comes back to send.",
+       "Which assets federal money paid for, who uses which square foot, and " +
+       "an address for everybody who has to sign their own effort. Each goes " +
+       "out pre-filled from what YBI already holds, so the ask collapses to " +
+       "the one column those files do not carry."],
+      ["Anybody may send the filled one back.",
+       "The same door as sending a document in. Writing it onto the record " +
+       "is a judgment and takes the portfolio that owns the data."],
+      ["The preview says what it will do before it does it.",
+       "Every cell that will not read, named by sheet, row and column, and " +
+       "the rows that will land. A bad cell costs that cell; a bad cell in a " +
+       "required column holds the row back, because a figure somebody " +
+       "guessed is worse than one nobody recorded."],
+      ["A blank is unanswered, and unanswered is a value.",
+       "\"There is no federal money in this asset\" and \"nobody has looked\" " +
+       "stay different facts all the way onto the record."],
+    ],
+    shot: ["m-requests", "What has been asked for, of whom, and how long ago."],
+  },
+  {
     id: "classify",
     needs: "CONTROLLER",
     title: "Classifying cost",

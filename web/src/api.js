@@ -309,6 +309,31 @@ export const api = {
   /* The amount, date and vendor on the face of a document. Transcription
      rather than judgment — but it decides what the matcher may propose, so
      it takes the portfolio that says what a document supports. */
+  /* Asking for what only somebody else knows — three things nothing on the
+     record can be made to infer. Issuing and replying are open to anybody
+     who may read the period; accepting takes the portfolio that owns the
+     data, because writing somebody's answer into the cost record is the same
+     judgment as typing it in by hand. */
+  requestForms: () => req("/requests/forms"),
+  requests: (period = "2025", state = "") =>
+    req(`/requests?period=${period}${state ? `&state=${state}` : ""}`),
+  issueRequest: (form, body) =>
+    req(`/requests/${encodeURIComponent(form)}/issue`,
+        { method: "POST", body: JSON.stringify(body) }),
+  requestWorkbookUrl: (id) => `/api/requests/${id}/workbook`,
+  requestPreview: (id) => req(`/requests/${id}/preview`),
+  acceptRequest: (id, note = "") =>
+    req(`/requests/${id}/accept`, { method: "POST", body: JSON.stringify({ note }) }),
+  /* Multipart, so it cannot go through req(): setting Content-Type by hand
+     drops the boundary the browser generates and the server sees no file. */
+  replyToRequest: async (id, form) => {
+    const res = await fetch(`/api/requests/${id}/reply`,
+                            { method: "POST", credentials: "same-origin", body: form });
+    if (res.status === 401) throw new Unauthorized("Not signed in");
+    if (res.status === 403) throw new Forbidden(await res.text());
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+    return res.json();
+  },
   documentFacts: (id, body) =>
     req(`/documents/${encodeURIComponent(id)}/facts`,
         { method: "PATCH", body: JSON.stringify(body) }),

@@ -799,6 +799,14 @@ says exactly what it will do, and only then is it written.
     GET  /requests/{id}/preview    what it says, and what is wrong with it
     POST /requests/{id}/accept     write it
 
+`/requests` in the SPA is that cycle in the order somebody holds it in their
+head: what we asked for, what has come back, what it says, and only then what
+it will do. It is gated `reader`, which is what the router asks for — and the
+**Accept** button is offered only to whoever holds the portfolio that owns
+the data, so a person who may read the page and not write it sees all of it
+and is told whose judgment the last step is, rather than meeting a 403 they
+could not have predicted.
+
 **The form is defined once and both directions read it.**
 `domain/request_forms.py` holds the columns; `request_workbook.py` writes and
 `request_intake.py` reads, through the same definition. A workbook cannot ask

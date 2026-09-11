@@ -70,6 +70,7 @@ SHOTS = [
     ("hruby@ybi.org",   "/space",      "m-space",         "Buildings and the rent roll", []),
     ("hruby@ybi.org",   "/inventory",  "m-inventory",     "The equipment register", []),
     ("hruby@ybi.org",   "/evidence",   "m-evidence",      "Filing what people send in", []),
+    ("tom@ybi.org",     "/requests",   "m-requests",      "Asking for what is missing", []),
     # The shelf, as the person who arrives wanting to read something rather
     # than to file anything — which is the auditor, who holds no portfolio.
     ("auditor@ybi.org", "/library",    "m-library",       "The document library", []),

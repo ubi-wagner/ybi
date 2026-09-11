@@ -238,6 +238,21 @@ stricter than the API.
 derives what each screen calls from `App.jsx` and `api.js` rather than from a
 hand-kept list.
 
+**Done.** `web/src/pages/Requests.jsx`, `/requests` in the nav on Schedule E
+beside Evidence. The three asks as cards with what each is for and what it
+costs not to have it, the chase list with days and overdue, the reply
+upload, the full preview — every cell that will not read, named by sheet,
+row and column, the controls it has to add up to, and the first rows as they
+will land — and Accept. `review_system.py` derives `/requests` →
+`/api/requests/forms` from the source and reports no fault for any of the six
+people.
+
+The Accept button is offered only to whoever holds the portfolio that owns
+the data, and anybody else is told whose judgment it is rather than meeting a
+403 they could not have predicted. A manual chapter came with it, gated on
+`reader` like the tab, because a tab with no chapter is the gap the manual
+exists to close.
+
 **Effort.** A day. **Depends on** nothing.
 
 ### S6 · Transcribe what we already hold
@@ -349,7 +364,7 @@ fixed, and it sits upstream of every other deployment item.
 | 1 | ~~S2~~, ~~S1~~, ~~S3~~ | Wave 1 done |
 | 2 | ~~**S4**~~ | done |
 | 3 | S6 | half a day — unblocks the restatement |
-| 4 | S5, then S10 | a day and a half |
+| 4 | ~~S5~~, then S10 | S5 done; S10 remains |
 | 5 | S11 | a day |
 | 6 | S7, S8, S9, S9a | two and a half days |
 
