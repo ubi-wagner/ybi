@@ -171,7 +171,8 @@ function ContractDrawer({ awardId, canWrite, onClose }) {
       </Card>
 
       <Card title="Terms and conditions"
-            aside="Each with the clause it came from" style={{ marginTop: 14 }}>
+            aside="Each with the clause it came from, and the document asked"
+            style={{ marginTop: 14 }}>
         {d.terms.length === 0 ? (
           <div className="rowsub">
             No provisions recorded. A ceiling is not a contract — what may be
@@ -179,21 +180,32 @@ function ContractDrawer({ awardId, canWrite, onClose }) {
             clauses, and a reviewer asks for the clause.
           </div>
         ) : (
-          <Table columns={[
-            { label: "Provision", align: "left" },
-            { label: "What it says", align: "left" },
-            { label: "Clause", align: "left" },
-          ]}>
-            {d.terms.map((t) => (
-              <tr key={t.term_key}>
-                <td className="l"><strong>{t.term_key}</strong></td>
-                <td className="l wrap">{t.term_value}</td>
-                <td className="l rowsub wrap">
-                  {t.citation || <span className="warnish">no clause cited</span>}
-                </td>
-              </tr>
-            ))}
-          </Table>
+          <>
+            <CitationSummary c={d.citations} />
+            <Table columns={[
+              { label: "Provision", align: "left" },
+              { label: "What it says", align: "left" },
+              { label: "Clause", align: "left" },
+              { label: "In the document", align: "left" },
+            ]}>
+              {d.terms.map((t) => (
+                <tr key={t.term_key}>
+                  <td className="l"><strong>{t.term_key}</strong></td>
+                  <td className="l wrap">
+                    {t.term_value}
+                    {t.note && (
+                      <div className="rowsub warnish wrap"
+                           style={{ marginTop: 4 }}>{t.note}</div>
+                    )}
+                  </td>
+                  <td className="l rowsub wrap">
+                    {t.citation || <span className="warnish">no clause cited</span>}
+                  </td>
+                  <td className="l"><CitationState t={t} /></td>
+                </tr>
+              ))}
+            </Table>
+          </>
         )}
         {canWrite && <TermForm awardId={awardId} onDone={() => { load(); toast("Term recorded"); }} />}
       </Card>
@@ -203,8 +215,12 @@ function ContractDrawer({ awardId, canWrite, onClose }) {
             style={{ marginTop: 14 }}>
         {d.milestones.length === 0 ? (
           <div className="rowsub">
-            No milestones. Without them an invoice claims against the contract
-            as a whole, and nobody can say what a payment was for.
+            No milestones, and under this contract none is expected. It is
+            cost reimbursement invoiced monthly against a budget by category,
+            not against deliverables — the statement of work carries tasks
+            and no CLIN, no deliverable value and no acceptance date. An
+            invoice here claims a month of cost, and what a payment was for
+            is answered by its service period and the categories it claimed.
           </div>
         ) : (
           <Table columns={[
@@ -260,7 +276,11 @@ function ContractDrawer({ awardId, canWrite, onClose }) {
                 </td>
                 <td className="amt">{money(i.received)}</td>
                 <td className="l rowsub">
-                  {i.milestone_id || <span className="warnish">unattached</span>}
+                  {/* Not "unattached" — that read as missing data for as long
+                      as it was there, and the only thing that ever filled
+                      this column was a drive script inventing a deliverable
+                      and attaching invoice 10018 to it. */}
+                  {i.milestone_id || <span className="rowsub">n/a</span>}
                 </td>
               </tr>
             ))}
@@ -275,6 +295,80 @@ function ContractDrawer({ awardId, canWrite, onClose }) {
   );
 }
 
+
+/* Whether the document a provision was read out of actually contains the
+   clause it cites. Only FOUND is a pass: an unreadable agreement is
+   unevaluable rather than clean, the way NO CLAUSE READ is on the ceiling
+   check, and a prose citation a pattern cannot check is untestable rather
+   than wrong — reporting that as a failure teaches the reader the list is
+   wrong, and the next real one they see they will dismiss. */
+const CITATION = {
+  FOUND: { tick: "done", says: "in the document",
+           why: "The agreement on file contains what this cites." },
+  "NOT IN DOCUMENT": { tick: "failed", says: "not in the document",
+           why: "The agreement on file is readable end to end and does not " +
+                "contain this clause. Either the citation points at another " +
+                "document or it is a copy from one." },
+  "NO TEXT LAYER": { tick: "flagged", says: "cannot be checked",
+           why: "The agreement on file has pages and no text in them — a " +
+                "scan. Nobody working from the file has read a clause of it." },
+  "NOT READ": { tick: "flagged", says: "not read",
+           why: "The document is on file and nothing has read its text yet." },
+  "NO DOCUMENT": { tick: "flagged", says: "no document",
+           why: "This provision names no document it was read out of." },
+  UNTESTABLE: { tick: "open", says: "prose citation",
+           why: "The citation names no section or attachment to look for. " +
+                "Not a defect — good for a person, poor for a pattern." },
+};
+
+function CitationState({ t }) {
+  const c = CITATION[t.citation_state];
+  if (!c) return <span className="rowsub">—</span>;
+  return (
+    <span title={c.why + (t.citation_looked_for
+                          ? ` Looked for: ${t.citation_looked_for}.` : "")}>
+      <Tick state={c.tick} /> <span className="rowsub">{c.says}</span>
+    </span>
+  );
+}
+
+function CitationSummary({ c }) {
+  if (!c) return null;
+  if (c.agreement_is_an_image) {
+    return (
+      <div className="rowsub warnish" style={{ marginBottom: 10 }}>
+        The agreement on file — <strong>{c.agreement}</strong> — is{" "}
+        {c.page_count} pages of image with no text in it, so none of its{" "}
+        {c.terms} provisions can be checked against it by anybody working
+        from the file. Unevaluable is not a pass.
+      </div>
+    );
+  }
+  if (c.not_in_document > 0) {
+    return (
+      <div className="rowsub failish" style={{ marginBottom: 10 }}>
+        <strong>{c.not_in_document} of {c.terms}</strong> cite a clause{" "}
+        {c.agreement} does not contain. Recorded as they stand with a note
+        rather than removed — the substance may be right and sourced
+        elsewhere, which is a different answer from the citation being a copy.
+      </div>
+    );
+  }
+  if (!c.agreement) {
+    return (
+      <div className="rowsub warnish" style={{ marginBottom: 10 }}>
+        No executed agreement is on file for this award, so no citation on it
+        can be checked against anything.
+      </div>
+    );
+  }
+  return (
+    <div className="rowsub" style={{ marginBottom: 10 }}>
+      {c.found} of {c.terms} check out against {c.agreement}
+      {c.untestable > 0 && <> · {c.untestable} cite prose a pattern cannot check</>}.
+    </div>
+  );
+}
 
 function TermForm({ awardId, onDone }) {
   const toast = useToast();

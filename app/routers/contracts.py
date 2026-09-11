@@ -325,10 +325,28 @@ def contract(award_id: str, period: str | None = None) -> dict:
                    WHERE award_id = %s AND period = %s""", (award_id, period))
     if not head:
         raise HTTPException(404, f"No contract {award_id} in {period}.")
-    terms = query("""SELECT term_key, term_value, citation, note, recorded_by,
-                            recorded_at
-                       FROM award_term WHERE award_id = %s
-                       ORDER BY term_key""", (award_id,))
+    # Each provision with the document it was read out of and whether that
+    # document contains what the citation names. A citation with no document
+    # behind it is somebody's recollection of a contract, which is the rule
+    # `load_contract_terms.py` has always opened with — and six provisions on
+    # two federal subawards cited clauses that are not in either agreement
+    # for as long as nothing could ask.
+    terms = query("""SELECT t.term_key, t.term_value, t.citation, t.note,
+                            t.recorded_by, t.recorded_at,
+                            c.state        AS citation_state,
+                            c.looked_for   AS citation_looked_for,
+                            c.document     AS citation_document
+                       FROM award_term t
+                       LEFT JOIN v_award_citation_check c
+                              ON c.award_id = t.award_id
+                             AND c.term_key = t.term_key
+                      WHERE t.award_id = %s
+                      ORDER BY t.term_key""", (award_id,))
+    citations = one("""SELECT agreement, page_count, agreement_is_an_image,
+                              terms, found, not_in_document, untestable,
+                              unevaluable
+                         FROM v_award_citations WHERE award_id = %s""",
+                    (award_id,))
     milestones = query("""SELECT milestone_id, name, clin, description, value,
                                  due_on, delivered_on, accepted_on,
                                  state::text AS state, invoices, invoiced,
@@ -350,7 +368,8 @@ def contract(award_id: str, period: str | None = None) -> dict:
                        WHERE period = %s AND objective_id = %s
                        ORDER BY hours DESC""", (period, head["objective_id"]))
     return {"period": period, "contract": head, "terms": terms,
-            "milestones": milestones, "invoices": invoices, "people": people}
+            "citations": citations, "milestones": milestones,
+            "invoices": invoices, "people": people}
 
 
 @router.put("/{award_id}/terms", status_code=201)
