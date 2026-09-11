@@ -84,7 +84,8 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012
 
 /* --------------------------------------------------------------- shell -- */
 
-.shell { max-width: 1240px; margin: 0 auto; padding: 0 24px 96px; }
+.shell { max-width: 1240px; margin: 0 auto; padding: 0 24px 96px;
+         overflow-x: clip; }
 
 .topbar { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; padding: 24px 0 0; }
 .wordmark { font-family: var(--serif); font-size: 20px; letter-spacing: -0.015em; }
@@ -93,7 +94,12 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012
 
 /* Navigation echoes the audit package: each tab carries the schedule it
    eventually prints as. The reference is information, not decoration. */
-.tabs { display: flex; gap: 2px; margin-top: 18px; border-bottom: 1px solid var(--rule); }
+/* Wraps. The nav is assembled from what an actor holds, so somebody with
+   every portfolio carries fifteen tabs and a row that cannot wrap simply
+   runs off the side of the page, taking the horizontal scrollbar with
+   it. */
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 18px;
+        border-bottom: 1px solid var(--rule); }
 .tab { display: flex; align-items: baseline; gap: 7px; padding: 9px 14px;
        text-decoration: none; color: var(--graphite);
        border: 1px solid transparent; border-bottom: none;
@@ -163,8 +169,14 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012
 
 /* --------------------------------------------------------------- table -- */
 
+/* `min-width: 0` is what makes `overflow: auto` mean anything here. A flex
+   or grid child sizes to its content by default, so a wide table stretches
+   the track it sits in and the page scrolls sideways instead of the table
+   scrolling inside its card — which is how the auditor's report came to be
+   1,782px wide in a 1,240px shell. */
 .table-wrap { background: var(--surface); border: 1px solid var(--rule);
-              border-radius: var(--r); overflow: auto; }
+              border-radius: var(--r); overflow: auto; min-width: 0; }
+.grid > *, .card { min-width: 0; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 thead th { position: sticky; top: 0; z-index: 2; background: var(--surface);
            text-align: right; white-space: nowrap; font-size: 11px; font-weight: 600;
@@ -712,3 +724,34 @@ tbody tr.ts-foot td { border-top: 1px solid var(--ink); border-bottom: none;
 .gate-list { margin: 9px 0 11px; padding-left: 0; list-style: none;
              display: grid; gap: 4px; font-size: 12.5px; }
 .gate-list li { padding-left: 11px; border-left: 2px solid var(--rule); }
+
+/* -------------------------------------------------------------- review -- */
+/* The three deliverables: the rate, the auditor's report, the return. Each
+   screen has one figure that is the answer and a build-up underneath it that
+   is the reason. The figure gets the weight; the reasoning stays quiet. */
+
+.rate-figure { font-family: var(--serif); font-size: 40px; line-height: 1.05;
+               letter-spacing: -0.02em; margin: 2px 0 14px; }
+
+table.buildup { width: 100%; font-size: 13px; border-collapse: collapse; }
+table.buildup th { text-align: left; font-weight: 400; color: var(--graphite);
+                   padding: 5px 0; border-bottom: 1px solid var(--rule-soft); }
+table.buildup td { text-align: right; padding: 5px 0; font-variant-numeric: tabular-nums;
+                   border-bottom: 1px solid var(--rule-soft); }
+/* A component of the line above it, not a line in its own right. */
+table.buildup tr.sub th { padding-left: 14px; color: var(--muted); font-size: 12px; }
+table.buildup tr.sub td { color: var(--muted); font-size: 12px; }
+table.buildup tr:last-child th, table.buildup tr:last-child td { border-bottom: none; }
+
+.seal-line { margin-top: 10px; padding-top: 9px;
+             border-top: 1px solid var(--rule-soft); }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Cost nobody has judged. Warm, not red: it is unfinished work, not an error,
+   and the annotation colours in this system are pencil rather than traffic
+   light. */
+.warnish { color: var(--warn, #8a6d1f); }
+
+tbody tr.total-row td, tbody tr.total-row th {
+  border-top: 1px solid var(--ink); border-bottom: none; padding-top: 10px; }

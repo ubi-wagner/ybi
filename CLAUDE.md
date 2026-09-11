@@ -120,6 +120,7 @@ app/
                      is decided. The kind decides the tree.
   routers/
     classify.py      the queue — the screen that matters
+    review.py        the three deliverables: rate, auditor's report, 990
     imports.py       QBO upload -> parse -> preview -> accept
     documents.py     the document inbox everybody in the org gets
     reconcile.py     the three source documents against each other
@@ -181,6 +182,37 @@ what decide who sees a document, and they are unchanged by where it sits.
 `scripts/seed_documents.py` files the ten foundational documents through the
 real upload route, signed in as a real person, so the trail shows who filed
 them. It is content-addressed, so running it twice files nothing twice.
+
+## Final review
+
+Three deliverables, one tab. `/review` holds the auditor's report, the
+indirect rate build-up and Form 990 Part IX, each its own URL
+(`/review/report`, `/review/rate`, `/review/form-990`) so a link still lands
+where it says. They are read together — rate, then the allocation it feeds,
+then the report carrying both — and three nav entries made one journey look
+like three errands.
+
+**Nothing on a review screen is computed.** Every figure is read from the row
+it was recorded in, because a figure derived twice is one that can disagree
+with itself and the workpaper would carry the version nobody can reproduce.
+`tests/test_review.py` fails a screen that starts dividing a pool by a base.
+
+**Each one states what is unfinished, above the figures.** A reviewer handed a
+total has formed a view before they reach a footnote — so the rate says it is
+a working figure while classification is open, the return says NOT FILEABLE
+while any expense is unjudged, and the report says the record is incomplete.
+The workbooks repeat it on their first sheet, because a workbook travels and
+the caveat has to travel with it.
+
+**`NOT_YET_CLASSIFIED` is a column of the 990, not a rounding.** Cost nobody
+has judged is never spread across the three functions the return prints; the
+totals are short by that amount on purpose until the queue is empty.
+
+One trap worth knowing: **`rate.superseded_by` is dead.** The column exists and
+no code path writes it — recomputing and unsealing both express supersession
+through `status`, and every reader filters on that. `v_rate_buildup` first
+filtered on the column, which is a no-op, and presented four SUPERSEDED rates
+as the rate on file.
 
 ## Design system
 

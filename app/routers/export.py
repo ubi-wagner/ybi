@@ -247,3 +247,83 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
     return FileResponse(
         out, filename=name,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+# ── The three deliverables ────────────────────────────────────────────
+#
+# The audit package above is the whole record. These are the three things
+# somebody signs, and each is assembled from the same review endpoints the
+# screens read — so a figure on a workbook and the same figure on a screen
+# cannot disagree, which is the only way either is worth anything.
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _out(period: str, slug: str) -> tuple[Path, str]:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+    name = f"YBI-{period}-{slug}-{stamp}.xlsx"
+    return Path(tempfile.gettempdir()) / name, name
+
+
+@router.get("/rate-buildup")
+def rate_buildup_export(period: str = None,
+                        actor: Actor = Depends(require_reader)):
+    """The rate, with the pool and the seal behind it."""
+    from app.domain.review_workbooks import build_rate_buildup
+    from app.routers.review import rate_buildup as _rate
+
+    period = period or settings.period
+    d = _rate(period)
+    out, name = _out(period, "indirect-rate")
+    build_rate_buildup(period=period, out_path=out, rates=d["rates"],
+                       carve_outs=d["carve_outs"], coverage=d["coverage"],
+                       open_controls=d["open_controls"], final=d["final"])
+    record(actor, "EXPORT", "rate_buildup", name,
+           after={"period": period, "rates": len(d["rates"]),
+                  "final": d["final"]},
+           reason="indirect rate build-up downloaded")
+    return FileResponse(out, filename=name, media_type=XLSX)
+
+
+@router.get("/auditors-report")
+def auditors_report_export(period: str = None,
+                           actor: Actor = Depends(require_reader)):
+    """What the engagement asserts, and what proves each assertion."""
+    from app.domain.review_workbooks import build_auditors_report
+    from app.routers.review import auditors_report as _report
+
+    period = period or settings.period
+    d = _report(period, actor)
+    out, name = _out(period, "auditors-report")
+    build_auditors_report(
+        period=period, out_path=out, controls=d["controls"],
+        asset_control=d["asset_control"], exceptions=d["exceptions"],
+        coverage=d["coverage"], evidence_coverage=d["evidence_coverage"],
+        rates=d["rates"], reconciling_items=d["reconciling_items"])
+    record(actor, "EXPORT", "auditors_report", name,
+           after={"period": period, "controls": len(d["controls"]),
+                  "exceptions": len(d["exceptions"])},
+           reason="auditor's report downloaded")
+    return FileResponse(out, filename=name, media_type=XLSX)
+
+
+@router.get("/form-990")
+def form_990_export(period: str = None, actor: Actor = Depends(require_reader)):
+    """Part IX and the documents behind it."""
+    from app.domain.review_workbooks import build_form_990
+    from app.routers.review import attachments as _attachments
+    from app.routers.review import form_990 as _f990
+
+    period = period or settings.period
+    d = _f990(period)
+    docs = _attachments(period)["documents"]
+    out, name = _out(period, "form-990-part-ix")
+    build_form_990(period=period, out_path=out, functions=d["functions"],
+                   categories=d["categories"], totals=d["totals"],
+                   readiness=d["readiness"], documents=docs)
+    record(actor, "EXPORT", "form_990", name,
+           after={"period": period,
+                  "unallocated": str((d["readiness"] or {}).get("unallocated")),
+                  "documents": len(docs)},
+           reason="Form 990 Part IX downloaded")
+    return FileResponse(out, filename=name, media_type=XLSX)

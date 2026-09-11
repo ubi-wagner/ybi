@@ -26,7 +26,7 @@ from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
 from app.routers import (auth, awards, certify, chart, classify, dashboard,
                          documents, evidence, export, facilities, health,
-                         imports, lanes, rates, reconcile, restate,
+                         imports, lanes, rates, reconcile, restate, review,
                          timesheet, undo)
 from app.settings import settings
 
@@ -93,7 +93,7 @@ app.add_middleware(
 
 for r in (health, auth, dashboard, imports, chart, classify, lanes,
           rates, evidence, documents, awards, facilities, certify,
-          timesheet, undo, restate, reconcile,
+          timesheet, undo, restate, review, reconcile,
           export):
     app.include_router(r.router, prefix="/api")
 

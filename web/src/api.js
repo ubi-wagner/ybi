@@ -59,6 +59,17 @@ export const api = {
   certificationStatus: () => req("/certify/status"),
   certificationFor: (key) => req(`/certify/${encodeURIComponent(key)}`),
   auditPackageUrl: (period = "2025") => `/api/export/audit-package?period=${period}`,
+
+  // Final review — the three deliverables somebody signs. Each screen reads
+  // the same endpoint its workbook is built from, so a figure on screen and
+  // the same figure in the file cannot disagree.
+  reviewRate: (period = "2025") => req(`/review/rate?period=${period}`),
+  reviewForm990: (period = "2025") => req(`/review/form-990?period=${period}`),
+  reviewAttachments: (period = "2025") => req(`/review/attachments?period=${period}`),
+  auditorsReport: (period = "2025") => req(`/review/auditors-report?period=${period}`),
+  rateBuildupUrl: (period = "2025") => `/api/export/rate-buildup?period=${period}`,
+  auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
+  form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,
   coverage: (period = "2025") => req(`/classify/coverage?period=${period}`),
   queue: (params) => req("/classify/queue?" + new URLSearchParams(params)),
   vocabulary: () => req("/classify/vocabulary"),

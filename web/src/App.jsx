@@ -22,6 +22,7 @@ import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
 import Lanes from "./pages/Lanes.jsx";
 import Rates from "./pages/Rates.jsx";
+import Review from "./pages/Review.jsx";
 import Awards from "./pages/Awards.jsx";
 
 /* Navigation carries the schedule each step eventually prints as in the audit
@@ -56,6 +57,7 @@ const ALL_TABS = [
   ["/awards",    "Awards",     "F",   "PROJECT"],
   ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
   ["/rates",     "Rates",      "D",   "CONTROLLER"],
+  ["/review",    "Review",     "A-1", "reader"],
   ["/help",      "Help",       "?",   null],
 ];
 
@@ -65,6 +67,10 @@ function tabsFor(actor) {
     if (!needs) return true;
     if (needs === "staff") return Boolean(actor.employee_key);
     if (needs === "admin") return Boolean(actor.is_admin);
+    // The review screens belong to anybody who may read the cost record —
+    // the controller, the auditor, the organisation's administrator, and
+    // anyone holding a recorded grant. They write nothing.
+    if (needs === "reader") return Boolean(actor.can_read);
     // An auditor reads the whole record and writes none of it, so the
     // reviewing screens are theirs even with no portfolio.
     if (actor.role === "AUDITOR") return true;
@@ -192,6 +198,8 @@ export default function App() {
           <Route path="/space" element={<Facilities actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />
+          <Route path="/review" element={<Review />} />
+          <Route path="/review/:pane" element={<Review />} />
           <Route path="/awards" element={<Awards />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
