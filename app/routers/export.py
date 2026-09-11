@@ -115,13 +115,23 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
                ties, state, note
           FROM v_statement_reconciliation
          WHERE period = %s ORDER BY seq""", (period,)) or [])
+    # `ties` reads `evaluable` as well as the variance, for the same reason
+    # migration 029 gave the other eleven a state: with no register loaded the
+    # variance is the whole of the ledger's depreciation, which reads as a
+    # disagreement rather than as a missing document.
     controls += query("""SELECT 'ASSET_REGISTER' AS control,
                                 'Asset register agrees with the ledger' AS description,
-                                '' AS left_label, 0 AS left_value,
-                                '' AS right_label, 0 AS right_value,
-                                variance, (variance = 0) AS ties,
-                                'The register is the basis for depreciation, so it '
-                                'has to be the same assets the ledger carries.' AS note
+                                'Register' AS left_label,
+                                register_depreciation AS left_value,
+                                'Ledger' AS right_label,
+                                ledger_depreciation AS right_value,
+                                variance, (variance = 0 AND evaluable) AS ties,
+                                state,
+                                CASE WHEN evaluable THEN
+                                  'The register is the basis for depreciation, so it '
+                                  'has to be the same assets the ledger carries.'
+                                ELSE 'Not evaluated: this needs ' || needs || '.'
+                                END AS note
                            FROM v_asset_control WHERE period = %s""", (period,))
 
     gl_pl = query("""SELECT account, section, gl_amount, gl_lines, pl_amount,
