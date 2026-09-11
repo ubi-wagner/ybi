@@ -30,11 +30,11 @@ def _view(name: str) -> str:
 
 
 def test_the_rate_buildup_reads_the_column_the_system_maintains():
-    """`rate.superseded_by` exists on the table and nothing writes it.
+    """`rate.superseded_by` was a column nothing wrote.
 
     Recomputing and unsealing both express supersession by setting `status`,
     and every other reader — export, restate, /rates/current — filters on
-    that. Filtering on the dead column returns superseded rates as live,
+    that. Filtering on the dead column returned superseded rates as live,
     which is exactly what this view did on its first run: four rates marked
     SUPERSEDED, presented as the rate on file.
     """
@@ -42,13 +42,72 @@ def test_the_rate_buildup_reads_the_column_the_system_maintains():
     assert "status <> 'SUPERSEDED'" in body, (
         "v_rate_buildup does not filter on status. A superseded rate shown "
         "as live is a rate somebody will quote.")
-    assert "superseded_by" not in body, (
-        "v_rate_buildup filters on rate.superseded_by, which no code path "
-        "writes — the filter is a no-op and every superseded rate comes back.")
+
+
+def test_no_view_anywhere_reads_the_dead_column():
+    """The widening that should have come with the first fix.
+
+    That test named one view, because one view was where the bug was found.
+    `v_form_990_readiness` had the identical filter thirty lines below the
+    comment explaining why not to, and survived for as long as the narrow
+    test did — its `rate_on_file` flag went true the moment any rate existed
+    and could never go false again, on the screen that says whether a tax
+    return may be filed.
+
+    Migration `050` corrects it and drops the column, so this is now a
+    statement about the schema rather than a hope about readers.
+
+    The sweep reads the schema as Postgres does: migrations run in filename
+    order and a `CREATE OR REPLACE` supersedes what came before it, so only
+    the *last* definition of each view is a reader. An applied migration is
+    never edited — 033 still carries the defect in its original body, and a
+    test that failed on that would be a test asking for history to be
+    rewritten.
+    """
+    live: dict[str, tuple[str, str]] = {}
+    loose: list[str] = []
+    for path in sorted(SQL.glob("*.sql")):
+        # Comments are where the rule is written down; they are not readers.
+        body = re.sub(r"--[^\n]*", "", path.read_text())
+        for statement in body.split(";"):
+            named = re.search(r"CREATE (?:OR REPLACE )?VIEW\s+(\w+)",
+                              statement, re.I)
+            if named:
+                live[named.group(1)] = (path.name, statement)
+            elif re.search(r"\brate\.superseded_by\b", statement, re.I):
+                # Anything that is not a view and still names the column.
+                loose.append(path.name)
+
+    offenders = [f"{where}:{name}"
+                 for name, (where, statement) in sorted(live.items())
+                 if re.search(r"\brate\b", statement, re.I)
+                 and "superseded_by" in statement]
+    assert not offenders + loose, (
+        "these read rate.superseded_by, which nothing writes and 050 drops: "
+        + ", ".join(offenders + loose))
+
+
+def test_the_dead_column_is_gone_from_the_schema():
+    """The definitive version of the test above.
+
+    Sweeping migration text catches a reader; it cannot prove the column is
+    gone, because a later migration could add it back and the sweep would
+    only notice once something read it. This asks the database.
+    """
+    if not os.environ.get("DATABASE_URL"):
+        pytest.skip("needs a database; the sweep above covers the text")
+    from app.db import one, open_pool, run_migrations
+    open_pool()
+    run_migrations()
+    row = one("""SELECT count(*) AS n FROM information_schema.columns
+                  WHERE table_name = 'rate' AND column_name = 'superseded_by'""")
+    assert row["n"] == 0, (
+        "rate.superseded_by is back. Supersession is expressed through "
+        "status; two ways to say one thing is what produced this twice.")
 
 
 def test_nothing_writes_rate_superseded_by():
-    """If that ever changes, the test above needs revisiting rather than luck."""
+    """If the column ever comes back, it comes back deliberately."""
     writers = [
         f"{p.name}:{i}"
         for p in sorted((ROOT / "app").rglob("*.py"))
@@ -57,7 +116,7 @@ def test_nothing_writes_rate_superseded_by():
     ]
     assert not writers, (
         "something now sets rate.superseded_by: " + ", ".join(writers)
-        + ". v_rate_buildup filters on status instead — make them agree.")
+        + ". It was dropped in 050; supersession is expressed through status.")
 
 
 def test_the_functional_allocation_never_spreads_unjudged_cost():
