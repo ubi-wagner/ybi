@@ -384,13 +384,43 @@ fixed, and it sits upstream of every other deployment item.
 
 ## Suggested order
 
+**Waves 1 and 2 are done** — S1, S2, S3, S4, S5 and S6 — and
+`./scripts/prove.sh` runs clean end to end against a database created empty
+and seeded from nothing.
+
 | | | |
 |---|---|---|
-| 1 | ~~S2~~, ~~S1~~, ~~S3~~ | Wave 1 done |
-| 2 | ~~**S4**~~ | done |
-| 3 | ~~S6~~ | done — the restatement is unblocked |
-| 4 | ~~S5~~, then S10 | S5 done; S10 remains |
-| 5 | S11 | a day |
-| 6 | S7, S8, S9, S9a | two and a half days |
+| ~~1~~ | ~~S2~~, ~~S1~~, ~~S3~~ | done — nothing on a screen is now saying something untrue |
+| ~~2~~ | ~~**S4**~~ | done — before Tom classifies, as intended |
+| ~~3~~ | ~~S6~~ | done — the restatement is unblocked |
+| ~~4~~ | ~~S5~~ | done; S10 remains |
+| 5 | S10 | half a day — Tom's verification sheet back in through /requests |
+| 6 | S11 | a day — CI proves the empty direction only |
+| 7 | S7, S8, S9, S9a | two and a half days |
 
 S12 whenever you get to it; everything deployable waits behind it.
+
+### What the two waves actually turned up
+
+Every item was written from evidence read off the live record, and each one
+found something the plan did not know about. The pattern is worth naming
+because it recurred five times:
+
+**A column or table that looks usable and is filled by nothing.**
+`rate.superseded_by` (S2), `space_partition` (S1), `evidence.doc_amount` /
+`doc_date` / `vendor_name` (S4), `award_budget_line` (S6). Four instances, in
+four unrelated parts of the schema, each one read by views that quietly
+answered the wrong question for as long as nobody looked. All four are gone
+or filled.
+
+**A list kept by hand of what the code does.** `test_worklist_ownership.py`'s
+kinds, three separate maps of the same kinds across three screens, the
+manual's screenshots against the walk's. Each was missing something, and in
+every case the thing it was missing was the defect. All of them derive now.
+
+**A test that could not fail for the thing it names.** Two in
+`test_worklist_ownership.py` — one passing on the wrong `CASE`, one whose
+regex matched nothing at all — one in `test_review.py` scoped to the single
+view its bug was found in, and one in `test_document_access.py` asserting a
+literal fragment of punctuation. Each verified against a deliberately broken
+copy afterwards.
