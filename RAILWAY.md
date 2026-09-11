@@ -1,6 +1,6 @@
 # Provisioning on Railway
 
-One service, one Postgres, one volume. Merge to `main` deploys it.
+One service, one Postgres, one volume. A push to `main` deploys it.
 
 ```
 Railway project
@@ -71,8 +71,9 @@ Legend: ⛔ the service will not start without it · ⚙️ Railway injects it �
 | `YBI_JWT_SECRET` | Signs session cookies. **At least 32 bytes** — `app/auth.py` refuses to authenticate anyone with a shorter one rather than signing weakly. Generate: `python3 -c 'import secrets; print(secrets.token_urlsafe(48))'` | ⛔ |
 | `YBI_ENV` | `prod`. Sets the session cookie's `Secure` flag and closes CORS. The service **refuses to boot** on Railway while this says `dev`, because that misconfiguration is otherwise invisible: everything works, over an insecure cookie | ⛔ |
 | `YBI_PERIOD` | `2025`. The period every screen defaults to | ○ (defaults to 2025) |
+| `YBI_SESSION_HOURS` | How long a session lasts before signing in again. A plain expiry, not an idle timer | ○ (defaults to 12) |
 | `YBI_STORAGE_DIR` | `/srv/storage` — must equal the volume mount path | ⛔ once a volume exists |
-| `YBI_SEED_PASSWORD` | Bootstrap password for `scripts/seed_actors.py`. Set it, seed, then **delete the variable** — see step 5 | ○ (seeding only) |
+| `YBI_SEED_PASSWORD` | Not needed. `scripts/provision.py` generates a password per person and prints them once; the drives in step 7 take theirs on the command line. Leave it unset | ○ (not used) |
 | `S3_BUCKET` · `S3_ENDPOINT` · `S3_ACCESS_KEY` · `S3_SECRET_KEY` | Object-store offload is configured for but **not implemented**: `app/routers/evidence.py` writes to the local path regardless of these. Setting them does nothing | 💤 |
 | `PORT` · `RAILWAY_ENVIRONMENT_NAME` · `RAILWAY_GIT_COMMIT_SHA` | injected | ⚙️ |
 
@@ -106,35 +107,65 @@ Two rules that hold forever after that:
 - Numbering is the order. `016_*.sql` runs after `015_*.sql` because of the
   filename, not because of when it was committed.
 
-## Step 5 — Seed the accounts
+## Step 5 — Provision the people
 
-The first ADMIN cannot be created through the API, because creating an actor
-requires an ADMIN. That is what a bootstrap is, and `scripts/seed_actors.py`
-is it. The script ships inside the image, so it runs against the private
-database URL without exposing the database to the internet:
+The first system administrator cannot be created through the API, because
+creating an account requires an account. That one is written directly, which
+is what a bootstrap is; everything after it goes through the real endpoints
+signed in as the person doing it, so the audit trail shows the organisation
+being set up rather than appearing fully formed.
 
 ```bash
-railway run --service ybi-cost -- python scripts/seed_actors.py
+railway run --service ybi-cost -- \
+  python scripts/provision.py --base https://<your-domain> --sheet /tmp/handout.txt
 ```
 
-It provisions five accounts — Eric (ADMIN), Tom (CONTROLLER), the engagement
-auditor (AUDITOR), and Barb and Stephanie (EMPLOYEE, each bound to the
-employee they certify for). It refuses to run without `YBI_SEED_PASSWORD` and
-refuses a password under twelve characters; it never invents one.
+`--base` is not optional here. `railway run` executes in a **separate**
+one-off container, not inside the running service, so the default of
+`127.0.0.1:8000` has nothing behind it. The script writes the root account
+straight to the database — through the `DATABASE_URL` Railway injects — and
+then does everything else through the real API, which means it has to be able
+to reach it.
 
-**All five accounts start with that same password.** So the order is: seed,
-run the boundary drive in step 7 while they still share it, then hand them
-over:
+It walks the ladder: the system administrator sets up the organisation's
+administrator, and she sets up the controllers, the auditor and the finance
+accounts. It proves on every run that neither can create a peer. It prints a
+sheet with one password per person; hand each person their own line and no
+more than their own line, then destroy it.
 
-1. Have each person sign in and use **Password** in the top bar to set their
-   own. The endpoint requires the current password, so nobody can be locked
-   out of their own account from a borrowed screen.
-2. Delete `YBI_SEED_PASSWORD` from the Railway variables once everyone has.
+Once the general ledger and the payroll workbook are loaded (step 6), run it
+again to give everybody on the payroll an account:
 
-Until each person holds a password only they know, every signature in the
-system is one that four other people could have written — which is precisely
-what the record exists to rule out. Re-running the seed is safe: it skips
-accounts that already exist and will not reset a password anyone has changed.
+```bash
+railway run --service ybi-cost -- python scripts/provision.py \
+  --base https://<your-domain> \
+  --staff-password 'one-password-for-the-first-morning'
+```
+
+Re-running is safe: existing accounts are skipped. If the two administrator
+accounts have already had their passwords changed by the people who own them,
+pass those in as `YBI_ROOT_PASSWORD` and `YBI_ORG_ADMIN_PASSWORD` so the
+script can sign in as them rather than resetting anybody.
+
+Two things to know about that second run.
+
+**Everybody gets the same password and none of them can keep it.** An account
+on a password somebody else chose cannot record anything at all — not a
+timesheet, not a certification, not a document. The first screen each person
+sees asks them to choose their own, and until they do the API refuses every
+write. That is the same gate a password reset goes through, so there is no
+separate first-run path to maintain.
+
+**The email addresses are derived, not looked up.** The 2025 payroll register
+carries surnames only, so the addresses are built from the pattern the known
+accounts use. Each is flagged unconfirmed and listed on the **People** screen
+under *Addresses to check*. Anybody whose address is wrong cannot sign in, and
+because the payroll key is unique their account is sitting in the right one's
+place — so correcting it there is the fix, and it is about twenty minutes with
+a staff list.
+
+`YBI_SEED_PASSWORD` is not used by this path and does not need to be set in
+Railway at all. The passwords are generated per run and printed once.
 
 ## Step 6 — Load 2025
 
@@ -175,26 +206,39 @@ curl https://<your-domain>/api/health
 and expenses tie to the P&L you imported, and check that **Recent activity**
 shows your own sign-in. That last one proves the audit spine is writing.
 
-The access boundaries can be proved against the deployment itself:
+The drives run against the deployment itself. They need to sign in as several
+people, so they take one password that all of those accounts hold — which is
+true only in the window between provisioning and handing the sheet out. Run
+them then, or not at all.
 
 ```bash
-YBI_SEED_PASSWORD=... python3 scripts/drive_actors.py --base https://<your-domain>
+YBI_SEED_PASSWORD=<the shared one> ./scripts/prove.sh   # BASE=https://<your-domain>
 ```
 
-Twenty-one checks: the auditor reads the ledger and is refused a
-classification, a seal, a note and a split; an employee is refused the ledger
-and another person's certification; anonymous requests are refused everything.
-Exit 0 is a pass, exit 2 means it **could not run**, which is not a pass — a
-logged-out client and a deny-all look identical, so the drive proves it can
+| | |
+|---|---|
+| `drive_everyone` | every person, every process they own, and an audit row under their own name for every change |
+| `drive_access` | rank runs downward, portfolios never add up to the seal, an issued password signs nothing |
+| `drive_actors` | anonymous, auditor and plain-employee boundaries |
+| `reconcile.py` | the three source documents against each other |
+
+Exit 0 is a pass. Exit 2 means it **could not run**, which is not a pass — a
+logged-out client and a deny-all look identical, so each drive proves it can
 read real rows before it claims a boundary held.
 
-Two things about when to run it. Point it at the `https://` domain, not at a
-plain-HTTP host: in `prod` the session cookie carries `Secure`, so an HTTP
-client never sends it back and every check after sign-in fails as a false
-negative. And run it **while the accounts still share the bootstrap
-password** — it signs in as all four actors with the one value in
-`YBI_SEED_PASSWORD`, so once people have set their own it can no longer drive
-them. Verify, then hand the accounts over.
+Point them at the `https://` domain, never a plain-HTTP host: in `prod` the
+session cookie carries `Secure`, so an HTTP client never sends it back and
+every check after sign-in fails as a false negative.
+
+The drives write real rows — classifications, timesheet entries, documents,
+one seal — under names that say `Drive:` in every reason field. They clear up
+the fixtures they invent (a test building, a test account) but they do not
+unwind the judgments, because a judgment is a record. On a deployment that is
+about to carry the real engagement, run them once to prove the thing works
+and then reset the database before real work starts; or run them on a staging
+deployment and keep production clean. What you must not do is run them
+halfway through Tom's classification and leave `Drive:` reasons interleaved
+with his.
 
 ---
 
