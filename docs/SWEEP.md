@@ -160,9 +160,21 @@ schema again.
 **The highest-value item on this list.**
 
 **The evidence.** 21 documents on file; **zero attached to any ledger line**.
-A judgment cannot be graded `VERIFIED` without a document attached to the
-cost it judges — the deferred trigger refuses the whole set otherwise — so
-the ceiling on all ~200 of Tom's decisions today is `CORROBORATED`.
+A judgment cannot be graded `VERIFIED` without a document **cited on it** —
+the deferred trigger `decision_verified_check` counts `decision_evidence`,
+not `attachment` — so the ceiling on all ~200 of Tom's decisions today is
+`CORROBORATED`. The precise wording matters: attaching says "this paper is
+about that money" and citing says "this paper is why I judged it the way I
+did", and a matcher that attached in bulk and left somebody believing the
+grade had risen would be telling them something that did not happen.
+
+**And a second thing, found on starting it.** `evidence.doc_amount`,
+`doc_date` and `vendor_name` — the three signals the matching is supposed to
+score on — are columns four views read and **nothing had ever written**. All
+forty-three documents carried NULL in each. Same shape as
+`rate.superseded_by` and `space_partition`, both of which turned out to be
+defects rather than spare capacity. So the first step is that a document can
+say what it is of, and the second is the matching.
 
 **Why the order matters.** Building this after Tom classifies means reopening
 200 judgments to re-grade them, each of which supersedes and leaves a trail.
@@ -188,6 +200,21 @@ the asset-schedule attribution does. Follow it.
 **Proved by.** A drive that files a folder, accepts the unambiguous matches,
 proves the ambiguous ones were not proposed, and then grades a judgment
 `VERIFIED` that could not have been graded so before.
+
+**Done.** `app/domain/evidence_match.py` (pure, sixteen tests),
+`GET /api/documents/propose`, `POST /api/documents/attach/bulk`,
+`PATCH /api/documents/{id}/facts`, the three facts on the upload, a folder at
+a time on `/evidence`, and `scripts/drive_evidence.py` — sixteen checks, no
+findings, twice in a row, walking its own documents back at the end.
+
+Three things came out of it. The columns the matching scores on had never
+been written by anything; the wording "a document attached to the cost"
+turned out to be wrong in a way that matters (the trigger counts citations,
+not attachments), which is now held in
+`tests/test_verified_requires_a_citation.py`; and `Evidence.jsx` gated its
+upload form on `actor.role === "CONTROLLER"` — a *rank* — while
+`/api/evidence/upload` asks for the `OFFICE` portfolio, so the person whose
+whole job that screen is saw the register and no way to add to it.
 
 **Effort.** Two to three days. **Depends on** nothing. **Do first.**
 
@@ -320,7 +347,7 @@ fixed, and it sits upstream of every other deployment item.
 | | | |
 |---|---|---|
 | 1 | ~~S2~~, ~~S1~~, ~~S3~~ | Wave 1 done |
-| 2 | **S4** | two to three days — its value decays the moment Tom starts |
+| 2 | ~~**S4**~~ | done |
 | 3 | S6 | half a day — unblocks the restatement |
 | 4 | S5, then S10 | a day and a half |
 | 5 | S11 | a day |

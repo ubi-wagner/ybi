@@ -71,6 +71,13 @@ step "What is still being asked for, and the answer coming back"
 # leaves the decision set exactly as it found it.
 run "drive_requests" $PY scripts/drive_requests.py --base "$BASE"
 
+step "A folder of documents, matched to the cost they support"
+# Before the drives that seal. Its last step makes a judgment citing the
+# document it matched, to prove the grade the whole matcher exists to reach,
+# and a sealed set correctly refuses that — so run after one it reports the
+# guarantee as a gap. It walks every document and attachment back itself.
+run "drive_evidence" $PY scripts/drive_evidence.py --base "$BASE"
+
 step "Two people, one record, the same instant"
 # With drive_propagation, and for the same reason: it seals, and it proves a
 # sealed set refuses a judgment that was already in flight. It leaves the set

@@ -9,8 +9,8 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Faults | 0 |
 | Gaps | 1 |
 | Notes | 25 |
-| GET routes probed | 82 (× 6 people) |
-| Audit entries | 707 |
+| GET routes probed | 83 (× 6 people) |
+| Audit entries | 989 |
 
 ## Who was driven
 
@@ -152,7 +152,7 @@ The decision set is sealed, so no change could be made to measure. That is the c
 ```json
 {
   "samples": {
-    "evidence_id": "EV-aacc26a5ba6f",
+    "evidence_id": "EV-2299c5dd75ff",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
     "actor_id": "cffcff27-6248-402d-9b92-44ea84061104",
@@ -161,7 +161,7 @@ The decision set is sealed, so no change could be made to measure. That is the c
     "period": "2025",
     "kind": "rate-buildup"
   },
-  "routes_probed": 82,
+  "routes_probed": 83,
   "routes_skipped": 6,
   "tabs": [
     {
@@ -282,105 +282,106 @@ The decision set is sealed, so no change could be made to measure. That is the c
   "counts": {
     "/api/classify/queue": 50,
     "/api/reconcile": 11,
-    "/api/documents/library": 43,
+    "/api/documents/library": 46,
     "/api/contracts": 3,
     "/api/reports/invoices": 3,
     "/api/chart/accounts": 103,
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 707,
+  "audit_rows": 989,
   "audit_by_action": {
-    "SIGN_IN": 161,
-    "DOCUMENT_LIBRARY_READ": 146,
-    "EXPORT": 102,
-    "EVIDENCE_DOWNLOAD": 30,
+    "SIGN_IN": 221,
+    "DOCUMENT_LIBRARY_READ": 177,
+    "EXPORT": 155,
+    "DOCUMENT_UPLOAD": 52,
+    "EVIDENCE_DOWNLOAD": 46,
+    "REVIEW_READ": 36,
     "AWARD_TERM": 29,
-    "REQUEST_ISSUE": 25,
-    "REVIEW_READ": 24,
-    "REQUEST_REPLY": 24,
-    "REQUEST_ACCEPT": 24,
+    "REQUEST_ISSUE": 28,
+    "REQUEST_ACCEPT": 27,
+    "REQUEST_REPLY": 27,
+    "TIME_ENTRY": 24,
+    "ACTOR_CREATE": 18,
     "EVIDENCE_UPLOAD": 18,
-    "TIME_ENTRY": 16,
-    "ACTOR_CREATE": 14,
-    "DOCUMENT_UPLOAD": 8,
+    "EVIDENCE_ATTACH": 15,
+    "FACILITY": 9,
+    "PASSWORD_CHANGE": 8,
+    "PORTFOLIO_GRANT": 6,
+    "SEAL": 6,
     "RECONCILE_ITEM": 6,
-    "PASSWORD_CHANGE": 6,
-    "FACILITY": 6,
-    "SEAL": 4,
-    "PORTFOLIO_GRANT": 4,
-    "PORTFOLIO_REVOKE": 4,
-    "UNSEAL": 3,
+    "PORTFOLIO_REVOKE": 6,
+    "ACTOR_ACTIVE": 5,
+    "UNSEAL": 5,
+    "DEFER": 3,
+    "CHART_SPLIT": 3,
+    "CLASSIFY": 3,
+    "EVIDENCE_VIEW": 3,
+    "EQUIPMENT_USE": 3,
+    "SPACE_UNIT": 3,
     "IMPORT_PARSE": 3,
+    "PASSWORD_RESET": 3,
+    "SEGMENT_REVERSE": 3,
+    "RATE_COMPUTE": 3,
+    "ACTOR_AMEND": 3,
     "IMPORT_UPLOAD": 3,
-    "ACTOR_ACTIVE": 3,
-    "IN_KIND": 2,
-    "CHART_SPLIT": 2,
-    "ACTOR_AMEND": 2,
-    "EVIDENCE_ATTACH": 2,
-    "MATERIALITY": 2,
-    "TIME_REMOVE": 2,
-    "IMPORT_ACCEPT": 2,
-    "DEFER": 2,
-    "RATE_COMPUTE": 2,
-    "SEGMENT": 2,
-    "CLASSIFY": 2,
-    "NOTE": 2,
-    "EVIDENCE_VIEW": 2,
-    "EQUIPMENT_USE": 2,
-    "SPACE_UNIT": 2,
+    "MATERIALITY": 3,
+    "TIME_REMOVE": 3,
+    "NOTE": 3,
+    "SEGMENT": 3,
+    "IN_KIND": 3,
     "MILESTONE_STATE": 2,
-    "SEGMENT_REVERSE": 2,
-    "PASSWORD_RESET": 2,
-    "EVIDENCE_GENERATED": 1,
+    "EVIDENCE_FACTS": 2,
+    "IMPORT_ACCEPT": 2,
     "RECONCILE_ALIAS": 1,
-    "RECEIPT": 1,
-    "CHARGE_CODE_OPEN": 1,
+    "EVIDENCE_GENERATED": 1,
+    "MILESTONE_OPEN": 1,
+    "RECORD_ACCESS": 1,
     "CHARGE_REVOKE": 1,
     "CHARGE_AUTHORISE": 1,
-    "MILESTONE_OPEN": 1,
-    "RECORD_ACCESS": 1
+    "RECEIPT": 1,
+    "CHARGE_CODE_OPEN": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 218
+      "n": 304
     },
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 143
-    },
-    {
-      "actor": "Heidi Ruby",
-      "role": "CONTROLLER",
-      "n": 121
+      "n": 224
     },
     {
       "actor": "Barb Ewing",
       "role": "ORG_ADMIN",
-      "n": 121
+      "n": 159
+    },
+    {
+      "actor": "Heidi Ruby",
+      "role": "CONTROLLER",
+      "n": 157
     },
     {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 51
+      "n": 67
     },
     {
       "actor": "Eric Wagner",
       "role": "SYSTEM_ADMIN",
-      "n": 38
+      "n": 56
     },
     {
       "actor": "First Day",
       "role": "EMPLOYEE",
-      "n": 6
+      "n": 9
     },
     {
       "actor": "Drive Newcomer",
       "role": "EMPLOYEE",
-      "n": 6
+      "n": 9
     },
     {
       "actor": "New Starter",
@@ -390,16 +391,16 @@ The decision set is sealed, so no change could be made to measure. That is the c
     {
       "actor": "Boundary Probe",
       "role": "EMPLOYEE",
-      "n": 1
+      "n": 2
     }
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2477,
-    "decisions recorded": 2,
+    "groups still unclassified": 2476,
+    "decisions recorded": 3,
     "sealed sets": 1,
     "rates": 0,
-    "allocations": 32,
+    "allocations": 48,
     "invoices": 3,
     "restatements": 0
   },
@@ -446,17 +447,17 @@ The decision set is sealed, so no change could be made to measure. That is the c
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "20.1",
-    "decisions": "2",
-    "audit": "710",
+    "classified_dollars": "25.1",
+    "decisions": "3",
+    "audit": "992",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "5010 Depreciation Expense",
-    "amount": "850382.89",
-    "lines": 12
+    "account": "Program Expenses:ESP:5227 Portfolio consulting",
+    "amount": "-25953.75",
+    "lines": 4
   }
 }
 ```

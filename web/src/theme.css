@@ -509,6 +509,30 @@ tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
   background: var(--wash, #fafaf8); transition: border-color .12s, background .12s; }
 .dropzone:hover, .dropzone.on { border-color: var(--accent, #0f6b64);
   background: #f1f6f5; }
+/* What is on the face of a document: the amount, the date, the vendor.
+   Side by side because they are read off one piece of paper in one go, and
+   a column of three stacked fields reads as three separate questions. */
+/* A cell that may hold a sentence. Table cells default to not wrapping so
+   figures stay on one line; a reason has to wrap or it is clipped at the
+   card edge, and a reason nobody can read is not a reason. */
+td.wrap { white-space: normal; max-width: 46ch; }
+
+.section-h { margin: 22px 0 8px; font-size: 13px; font-weight: 600;
+             letter-spacing: .02em; color: var(--muted); }
+.unread-note { margin-top: 18px; padding-top: 14px;
+               border-top: 1px solid var(--rule); }
+.unread-list { margin: 10px 0 0; padding-left: 18px; columns: 2; }
+@media (max-width: 720px) { .unread-list { columns: 1; } }
+
+.facts-row { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { .facts-row { grid-template-columns: 1fr; } }
+
+/* A document the matcher would not propose for. Present, legible, and
+   visibly not part of what the button is about to do — the reason it gives
+   is the useful part of the row. */
+tbody tr.unmatched td { color: var(--muted); background: var(--surface-sunk); }
+tbody tr.unmatched td.strong { color: var(--ink); }
+
 .upload-form { display: grid; gap: 12px; margin-top: 16px;
   grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
 .upload-form select, .upload-form input { width: 100%; padding: 8px 10px;

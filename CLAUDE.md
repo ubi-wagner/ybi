@@ -207,6 +207,55 @@ and downloads, which is the right answer for an unrecognised file.
 `scripts/retype_documents.py` repairs rows written before this, and is the
 last thing in the system permitted to read a stored path backwards.
 
+## Matching a document to the cost it supports
+
+Twenty-one documents on file and **none attached to a single ledger line**,
+so the ceiling on every one of the controller's two hundred judgments was
+`CORROBORATED`. `app/domain/evidence_match.py` proposes; `/api/documents/
+propose` reads the live rows through it and **applies nothing**.
+
+**Attaching is not citing, and the difference decides a grade.**
+`decision_verified_check` counts `decision_evidence`, not `attachment`.
+Attaching says *this paper is about that money*; citing says *this paper is
+why I judged it the way I did*. So bulk confirmation raises nobody's grade on
+its own — it makes the document findable, and `decide()` carries
+`evidence_ids` from there. `tests/test_verified_requires_a_citation.py` holds
+the trigger against a database, including the case where the document is
+attached to the cost and `VERIFIED` is still refused.
+
+**Amount is necessary and nothing else is sufficient.** A document proposes
+only where its amount equals a candidate's to the cent; date proximity and
+vendor similarity raise confidence and break ties, and neither can carry a
+proposal alone. An invoice dated in March near a group that ran in March is
+not evidence that it is *that* group's invoice.
+
+**More than one candidate means no candidate** — the rule
+`/api/reconcile/propose` follows and the asset schedule's variance
+attribution follows, for the same reason: an attribution that could equally
+have been something else is not evidence. The answer says how many tied and
+shows them, so the person knows to look rather than assuming there was
+nothing to find.
+
+**The signal has to exist before it can be scored.** `evidence.doc_amount`,
+`doc_date` and `vendor_name` were columns four views read and **nothing had
+ever written** — all forty-three documents carried NULL in each, so there was
+nothing to match on. The same shape as `rate.superseded_by` and
+`space_partition`, both of which turned out to be defects rather than spare
+capacity: a column that looks usable and is filled by nothing is an
+invitation. The upload takes them now, because what is on the face of a
+document is transcription rather than judgment and the person holding the
+paper can do it; `PATCH /api/documents/{id}/facts` takes `OFFICE`, because a
+wrong amount typed there produces a confident proposal for the wrong cost.
+A blank stays NULL — *there is no amount on this document* and *nobody has
+read it off yet* are different facts, and the second must never be written
+as 0.00.
+
+**"No proposal" covers two situations and a screen that prints them as one
+list is unreadable.** Thirty-two request-reply workbooks nobody has read the
+face of, each repeating the same sentence, buried three real proposals. The
+screen separates *proposed*, *says what it is and nothing fits* — worth
+reading one by one — and a single collapsed count of what has not been read.
+
 ## The library
 
 `GET /api/documents/library` and `/library` in the SPA. Every document in the
@@ -1049,6 +1098,7 @@ are tested at.
 | `scripts/drive_state_machine.py` | the lifecycle one action at a time, every invariant re-checked each turn, then walked back |
 | `scripts/drive_propagation.py` | what one reclassification moves, and what it must not |
 | `scripts/drive_requests.py` | the ask, the imperfect answer, and what it writes |
+| `scripts/drive_evidence.py` | a folder of documents, what it proposes, and what it refuses to |
 | `scripts/drive_concurrency.py` | two controllers acting at the same instant, four races |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 

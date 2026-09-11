@@ -18,6 +18,8 @@ period's record it ends up supporting is decided when somebody attaches it.
 from __future__ import annotations
 
 import hashlib
+from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from fastapi import (APIRouter, Depends, File, Form, HTTPException, UploadFile)
@@ -29,6 +31,9 @@ from app.auth import (Actor, Portfolio, current_actor, require_office,
                       require_own_writes, require_reader)
 from app import storage
 from app.db import execute, one, query
+from app.domain.evidence_match import Document as MatchDocument
+from app.domain.evidence_match import Target as MatchTarget
+from app.domain.evidence_match import propose as match_propose
 from app.settings import settings
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -39,18 +44,56 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 MAX_BYTES = 40 * 1024 * 1024
 
 
+def _facts(doc_amount: str, doc_date: str, vendor_name: str) -> tuple:
+    """What is on the face of the document, or nothing.
+
+    A blank stays NULL. "There is no amount on this document" and "nobody
+    has read it off yet" are not the same fact, and the second must never be
+    written as 0.00 — the intake rule, and the same reason unclassified cost
+    is never defaulted into a pool.
+
+    A cell that will not read costs that one field and no more: the document
+    still lands. A receipt held back because somebody typed "March" in the
+    date box is a receipt in a drawer, which is what the wide upload door
+    exists to prevent.
+    """
+    amount = None
+    if doc_amount.strip():
+        try:
+            amount = Decimal(doc_amount.strip().replace(",", "").lstrip("$"))
+        except (InvalidOperation, ValueError):
+            amount = None
+    when = None
+    if doc_date.strip():
+        try:
+            when = date.fromisoformat(doc_date.strip())
+        except ValueError:
+            when = None
+    return amount, when, vendor_name.strip()
+
+
 @router.post("/upload")
 async def upload(file: UploadFile = File(...),
                  kind: str = Form("document"),
                  period: str = Form(""),
                  note: str = Form(""),
                  suggested_for: str = Form(""),
+                 doc_amount: str = Form(""),
+                 doc_date: str = Form(""),
+                 vendor_name: str = Form(""),
                  actor: Actor = Depends(require_own_writes)) -> dict:
     """Put a document in. Anybody signed in.
 
     Nothing is attached to anything here, deliberately. The uploader says in
     their own words what it relates to; somebody with the portfolio decides
     what it supports.
+
+    What they may say is what is **on the face of it** — the amount, the
+    date, the vendor. That is not a judgment, it is transcription, and it is
+    the person holding the paper who can do it. Those three columns were
+    read by four views and written by nothing at all, so every one of the
+    forty-three documents on file carried NULL in each, and nothing could be
+    matched to any cost.
     """
     period = period or settings.period
     raw = await file.read()
@@ -90,19 +133,34 @@ async def upload(file: UploadFile = File(...),
     dest = storage.place(
         storage.evidence_path(period, kind, sha, safe), raw)
     eid = f"EV-{sha[:12]}"
+    amount, when, vendor = _facts(doc_amount, doc_date, vendor_name)
     execute("""INSERT INTO evidence (evidence_id, period, kind, uri, sha256,
                                      received_from, byte_size, mime_type,
                                      ingest_channel, uploaded_by, note,
-                                     suggested_for, filename)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s)""",
+                                     suggested_for, filename,
+                                     doc_amount, doc_date, vendor_name)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s,%s,%s,%s)""",
             (eid, period, kind, str(dest), sha, actor.display_name, len(raw),
-             mime, actor.actor_id, note, suggested_for, safe))
+             mime, actor.actor_id, note, suggested_for, safe,
+             amount, when, vendor))
     record(actor, "DOCUMENT_UPLOAD", "evidence", eid,
            after={"kind": kind, "filename": safe, "bytes": len(raw),
-                  "suggested_for": suggested_for},
+                  "suggested_for": suggested_for,
+                  "doc_amount": str(amount) if amount is not None else None,
+                  "doc_date": when.isoformat() if when else None,
+                  "vendor_name": vendor or None},
            reason=note or "uploaded")
+    unread = [n for n, given, got in
+              (("amount", doc_amount, amount), ("date", doc_date, when))
+              if given.strip() and got is None]
     return {"evidence_id": eid, "deduplicated": False,
-            "filename": safe, "bytes": len(raw), "mime_type": mime}
+            "filename": safe, "bytes": len(raw), "mime_type": mime,
+            "doc_amount": str(amount) if amount is not None else None,
+            "doc_date": when.isoformat() if when else None,
+            "vendor_name": vendor or None,
+            # A field that would not read is named rather than dropped. The
+            # document still landed, which is the point of saying so.
+            "could_not_read": unread}
 
 
 @router.get("/mine")
@@ -336,3 +394,212 @@ def attach(body: AttachIn, actor: Actor = Depends(require_office)) -> dict:
            after={"evidence_id": body.evidence_id},
            reason=body.relevance)
     return {"evidence_id": body.evidence_id, "target_id": body.target_id}
+
+
+# ── What a document is of, after the fact ─────────────────────────────
+
+class FactsIn(BaseModel):
+    """A blank field is left alone; an explicit null clears it.
+
+    Those are different acts. "I do not know the vendor" must not wipe one
+    somebody else read off the paper, and "there is no amount on this
+    document" has to be recordable — otherwise the only way to say it is to
+    leave the field looking unread for ever.
+    """
+    doc_amount: Decimal | None = None
+    doc_date: date | None = None
+    vendor_name: str | None = None
+    clear: list[str] = Field(default_factory=list)
+
+
+@router.patch("/{evidence_id}/facts")
+def facts(evidence_id: str, body: FactsIn,
+          actor: Actor = Depends(require_office)) -> dict:
+    """Read the amount, date and vendor off a document already on file.
+
+    Transcription rather than judgment — but it decides what the matcher may
+    propose, and a wrong amount typed here produces a confident proposal for
+    the wrong cost. So it takes the portfolio that says what a document
+    supports, and it is on the record like everything else.
+
+    Forty-three documents were filed before the upload could carry these,
+    including every one of the eighteen foundational ones. This is how they
+    are brought up without re-uploading them.
+    """
+    before = one("""SELECT doc_amount, doc_date, vendor_name
+                      FROM evidence WHERE evidence_id = %s""", (evidence_id,))
+    if not before:
+        raise HTTPException(404, "No such document.")
+
+    sets, args = [], []
+    for column, given in (("doc_amount", body.doc_amount),
+                          ("doc_date", body.doc_date),
+                          ("vendor_name", body.vendor_name)):
+        if column in body.clear:
+            sets.append(f"{column} = %s")
+            args.append("" if column == "vendor_name" else None)
+        elif given is not None:
+            sets.append(f"{column} = %s")
+            args.append(given)
+    if not sets:
+        raise HTTPException(422, "Nothing to record. Give an amount, a date "
+                                 "or a vendor, or name a field to clear.")
+    execute(f"UPDATE evidence SET {', '.join(sets)} WHERE evidence_id = %s",
+            (*args, evidence_id))
+    after = one("""SELECT doc_amount, doc_date, vendor_name
+                     FROM evidence WHERE evidence_id = %s""", (evidence_id,))
+    record(actor, "EVIDENCE_FACTS", "evidence", evidence_id,
+           before=_readable(before), after=_readable(after),
+           reason="read off the face of the document")
+    return {"evidence_id": evidence_id, **_readable(after)}
+
+
+def _readable(row: dict) -> dict:
+    return {"doc_amount": str(row["doc_amount"]) if row["doc_amount"] is not None else None,
+            "doc_date": row["doc_date"].isoformat() if row["doc_date"] else None,
+            "vendor_name": row["vendor_name"] or None}
+
+
+# ── Proposing what a document supports ────────────────────────────────
+
+def _targets(period: str) -> list[MatchTarget]:
+    """Every cost a document could be about, as a group and as a line.
+
+    Both, because a document supports whichever the person says it does: an
+    invoice for one transaction belongs on the line, and a statement
+    covering a month of them belongs on the group. Offering only groups
+    would make the second impossible and the first imprecise.
+    """
+    rows = query("""
+        SELECT l.account || %s || l.payee              AS target_id,
+               l.account || ' · ' || l.payee           AS label,
+               sum(l.amount)                           AS amount,
+               max(l.payee)                            AS payee,
+               min(l.txn_date)                         AS first_day,
+               max(l.txn_date)                         AS last_day,
+               count(*)                                AS lines
+          FROM ledger_line l
+         WHERE l.period = %s AND l.statement = 'P&L'
+         GROUP BY l.account, l.payee
+        HAVING sum(l.amount) <> 0""", ("\x1f", period))
+    out = [MatchTarget(target_type="LEDGER_GROUP", target_id=r["target_id"],
+                       label=r["label"], amount=r["amount"],
+                       payee=r["payee"] or "", first_day=r["first_day"],
+                       last_day=r["last_day"], lines=r["lines"])
+           for r in rows]
+    lines = query("""
+        SELECT l.line_id::text                         AS target_id,
+               l.account || ' · ' || coalesce(l.description, '') AS label,
+               l.amount, l.payee, l.txn_date
+          FROM ledger_line l
+         WHERE l.period = %s AND l.statement = 'P&L' AND l.amount <> 0""",
+        (period,))
+    out.extend(MatchTarget(target_type="LEDGER_LINE", target_id=r["target_id"],
+                           label=r["label"], amount=r["amount"],
+                           payee=r["payee"] or "", first_day=r["txn_date"],
+                           last_day=r["txn_date"], lines=1)
+               for r in lines)
+    return out
+
+
+@router.get("/propose")
+def propose_attachments(period: str | None = None, limit: int = 50,
+                        actor: Actor = Depends(require_office)) -> dict:
+    """What each unattached document looks like it supports.
+
+    **Nothing here is applied.** A proposal is never a decision — the rule
+    the classification queue's `propose()` already follows — and the reasons
+    are written out so the person confirming is confirming something rather
+    than trusting a score.
+
+    Where two costs fit a document equally well, nothing is proposed for it
+    and the answer says how many tied. Matching on amount alone will pair a
+    $1,200 invoice with the wrong $1,200 line, and the honest answer to that
+    is to say so.
+    """
+    period = period or settings.period
+    docs = query("""SELECT e.evidence_id, e.filename, e.doc_amount, e.doc_date,
+                           coalesce(e.vendor_name, '') AS vendor_name
+                      FROM evidence e
+                     WHERE e.period = %s
+                       AND NOT EXISTS (SELECT 1 FROM attachment a
+                                        WHERE a.evidence_id = e.evidence_id
+                                          AND a.detached_at IS NULL)
+                     ORDER BY e.received_at DESC
+                     LIMIT %s""", (period, limit))
+    targets = _targets(period)
+    out = []
+    for d in docs:
+        p = match_propose(
+            MatchDocument(evidence_id=d["evidence_id"], filename=d["filename"] or "",
+                          doc_amount=d["doc_amount"], doc_date=d["doc_date"],
+                          vendor_name=d["vendor_name"]),
+            targets)
+        out.append({
+            "evidence_id": d["evidence_id"],
+            "filename": d["filename"],
+            "doc_amount": str(d["doc_amount"]) if d["doc_amount"] is not None else None,
+            "doc_date": d["doc_date"].isoformat() if d["doc_date"] else None,
+            "vendor_name": d["vendor_name"] or None,
+            "proposes": p.proposes,
+            "why_not": p.why_not,
+            "target": ({"target_type": p.match.target.target_type,
+                        "target_id": p.match.target.target_id,
+                        "label": p.match.target.label,
+                        "amount": str(p.match.target.amount),
+                        "because": p.match.because,
+                        "signals": [s.name for s in p.match.signals]}
+                       if p.proposes else None),
+            "also_fits": [{"label": m.target.label,
+                           "target_id": m.target.target_id,
+                           "target_type": m.target.target_type}
+                          for m in p.runners_up],
+        })
+    return {"period": period, "considered": len(targets),
+            "documents": out,
+            "proposed": sum(1 for d in out if d["proposes"]),
+            "unmatched": sum(1 for d in out if not d["proposes"])}
+
+
+class BulkAttachIn(BaseModel):
+    attachments: list[AttachIn] = Field(min_length=1, max_length=200)
+
+
+@router.post("/attach/bulk", status_code=201)
+def attach_bulk(body: BulkAttachIn,
+                actor: Actor = Depends(require_office)) -> dict:
+    """Confirm a screenful of proposals at once.
+
+    Each one is still its own attachment, recorded under the person's name
+    with its own stated relevance — accepting in bulk is a way of pressing
+    the key faster, not a different kind of act with a weaker record.
+
+    One transaction: a batch that refused halfway through and left the first
+    nine attached while reporting nothing was is exactly the defect
+    `decide()` had, where a refusal partway through a batch left the groups
+    before it recorded.
+    """
+    from app.db import transaction
+    missing = [a.evidence_id for a in body.attachments
+               if not one("SELECT 1 FROM evidence WHERE evidence_id = %s",
+                          (a.evidence_id,))]
+    if missing:
+        raise HTTPException(404, f"No such document: {', '.join(sorted(set(missing)))}")
+
+    with transaction() as cur:
+        for a in body.attachments:
+            cur.execute("""INSERT INTO attachment (evidence_id, target_type,
+                                                   target_id, relevance,
+                                                   attached_by)
+                           VALUES (%s,%s,%s,%s,%s)
+                           ON CONFLICT (evidence_id, target_type, target_id)
+                             DO UPDATE SET relevance = EXCLUDED.relevance,
+                                           detached_at = NULL""",
+                        (a.evidence_id, a.target_type, a.target_id,
+                         a.relevance, actor.display_name))
+    for a in body.attachments:
+        record(actor, "EVIDENCE_ATTACH", a.target_type, a.target_id,
+               after={"evidence_id": a.evidence_id, "in_bulk": True},
+               reason=a.relevance)
+    return {"attached": len(body.attachments),
+            "documents": sorted({a.evidence_id for a in body.attachments})}

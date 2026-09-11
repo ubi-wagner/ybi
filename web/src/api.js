@@ -299,6 +299,19 @@ export const api = {
     `/api/documents/${encodeURIComponent(id)}/file`,
   attachDocument: (body) =>
     req("/documents/attach", { method: "POST", body: JSON.stringify(body) }),
+  /* What each unattached document looks like it supports. Applies nothing:
+     a proposal is never a decision. */
+  documentProposals: (period = "2025", limit = 60) =>
+    req(`/documents/propose?period=${period}&limit=${limit}`),
+  attachDocuments: (attachments) =>
+    req("/documents/attach/bulk",
+        { method: "POST", body: JSON.stringify({ attachments }) }),
+  /* The amount, date and vendor on the face of a document. Transcription
+     rather than judgment — but it decides what the matcher may propose, so
+     it takes the portfolio that says what a document supports. */
+  documentFacts: (id, body) =>
+    req(`/documents/${encodeURIComponent(id)}/facts`,
+        { method: "PATCH", body: JSON.stringify(body) }),
 
   addReconcilingItem: (body) =>
     req("/reconcile/items", { method: "POST", body: JSON.stringify(body) }),

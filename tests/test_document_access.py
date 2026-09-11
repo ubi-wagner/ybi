@@ -122,7 +122,14 @@ def test_the_filename_is_a_column_and_not_a_parsed_path():
     assert "ALTER TABLE evidence ADD COLUMN filename" in joined, (
         "evidence.filename is gone; the library has no name to print")
     src = DOCUMENTS.read_text()
-    assert "suggested_for, filename)" in src, (
+    # The column, in the INSERT's column list — not a literal fragment of
+    # punctuation. This asserted `"suggested_for, filename)"`, which broke
+    # the day the upload learned to record the amount, date and vendor as
+    # well, and argued against a correct change. A test that can only pass on
+    # one spelling of working code is a test about the spelling.
+    insert = src[src.index("INSERT INTO evidence"):]
+    columns = insert[:insert.index("VALUES")]
+    assert "filename" in columns, (
         "the upload route no longer records the name the document arrived "
         "under, so every new document joins the library nameless")
 
