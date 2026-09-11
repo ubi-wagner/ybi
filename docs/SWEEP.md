@@ -11,6 +11,10 @@ fourth is infrastructure.
 
 Figures read on 11 September 2026.
 
+`docs/SWEEP_LOG.md` is what actually happened doing them — written as the
+work is done and committed as it goes, because this machine is ephemeral and
+a finding that lives only in a terminal is a finding that did not happen.
+
 ---
 
 ## Wave 1 — screens that mislead
