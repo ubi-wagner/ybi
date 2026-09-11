@@ -400,6 +400,21 @@ data it made, and the skip goes away.
 it would make the controls agree with a misunderstanding. Build it from the
 control definitions, not from what makes them pass.
 
+**Done.** `tests/fixture_period.py` builds a period from the control
+definitions — three expense accounts, one income account, two balance-sheet
+accounts, two people — and `tests/test_reconciliation_loaded.py` proves all
+eleven evaluable and tying on it, then breaks each one on purpose. Fifteen
+tests, on a bare database, in CI.
+
+**The warning above earned its keep.** Building it from the definitions
+rather than from what makes them pass found that `PL_FOOTING` computes net
+income as nought for any P&L with no COGS section: a `FILTER` over no rows is
+NULL, NULL propagates, and a single `COALESCE` around the whole expression
+turned that into 0.00. The quiet failure is a period whose sheet has no "Net
+income" leaf either — 0 against 0, tying — which is the defect `029` exists
+to close, inside one of the eleven points `029` checks. Migration `054`
+coalesces each term. The real 2025 books are unmoved.
+
 **Effort.** A day. **Depends on** nothing, but do it after Wave 1 so it is not
 competing with defects.
 
@@ -423,7 +438,7 @@ and seeded from nothing.
 | ~~3~~ | ~~S6~~ | done — the restatement is unblocked |
 | ~~4~~ | ~~S5~~ | done; S10 remains |
 | ~~5~~ | ~~S10~~ | done — his answers land under his name, with the workbook behind them |
-| 6 | S11 | a day — CI proves the empty direction only |
+| ~~6~~ | ~~S11~~ | done — and it found a defect in PL_FOOTING |
 | 7 | S7, S8, S9, S9a | two and a half days |
 
 S12 whenever you get to it; everything deployable waits behind it.

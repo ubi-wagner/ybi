@@ -331,6 +331,62 @@ and the workbook, the worksheet and the form all read it.
 
 ---
 
+### S11 · CI proved the register in the empty direction only
+
+**Found by** the plan, and then the plan's own warning turned out to be the
+interesting part: *a fixture that encodes a wrong shape is worse than no
+fixture — build it from the control definitions, not from what makes them
+pass.*
+
+Building it that way found a defect in one of the eleven.
+
+**`PL_FOOTING` computed net income as nought for any P&L with no COGS
+line.** It read
+`sum(Income) − sum(Expense) − sum(COGS) + sum(Other Income)` with each term a
+`FILTER`ed aggregate and a **single `COALESCE` around the whole expression**.
+A `FILTER` matching no rows is NULL and NULL propagates, so an absent section
+erased the entire calculation and the outer COALESCE turned it into 0.00.
+
+YBI's 2025 export carries all four sections — COGS $37,261.00 in two
+accounts, Other Income $116,948.46 in two — which is why it never showed. A
+small nonprofit P&L with no cost of goods sold is an ordinary thing for a
+P&L to be, and 2026 is a new chart.
+
+**The variance is not the dangerous part.** It would read as the whole of net
+income, which somebody would notice. The quiet case is a period whose sheet
+has no printed "Net income" leaf either — an early import, a partial export —
+which compares **0 against 0 and ties**. That is exactly the defect `029` was
+written to close, living inside one of the eleven points `029` was checking:
+`029` made each control say whether it could be *evaluated*, and PL_FOOTING
+passes that the moment a P&L and a sheet both exist. It had no way of knowing
+the arithmetic in between had collapsed.
+
+Migration `054` gives each term its own `COALESCE`. The real 2025 books are
+unmoved — PL_FOOTING reads 4,329.28 against 4,329.28 before and after, and
+all eleven still tie.
+
+**Two shapes the fixture carries on purpose.** `GL_BS_COVERAGE` counts
+accounts absent from the sheet *carrying a balance*; with nothing absent the
+count is nought either way and the control passes over a case it never saw.
+So the fixture has a clearing account that opens at nothing, moves twice and
+closes flat — what QuickBooks actually produces. And the eleventh needs both
+a distribution and wage accounts, equal, because that is what tying means.
+
+**Breaking each one on purpose is the half that matters.** A fixture that
+makes the register go green proves it can say yes. `test_reconciliation_
+loaded.py` then disturbs each control in turn and asserts it says no —
+including the payroll one, where a $45,000 credit is booked against a wage
+account and the other ten are held in step deliberately, so the claim that
+*only* the eleventh can see it is the thing being tested rather than an
+incidental tidiness.
+
+**And `ledger_line` is append-only**, which the first draft of those tests
+discovered by being refused: "correct by superseding, never by editing". They
+add correcting entries now, which is both what the schema allows and what the
+books actually do.
+
+---
+
 ## The three shapes
 
 Every item found something the plan did not know about, and they were the

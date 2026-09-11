@@ -301,9 +301,14 @@ def test_a_loaded_period_still_evaluates(cur):
     evaluable — which is the guard working, not failing. Asserting otherwise
     made the test fail for being right.
 
-    So it states its premise rather than assuming it. The loaded direction is
-    covered by `scripts/reconcile.py` in `prove.sh`, which runs against the
-    seeded foundation and exits non-zero on an open point.
+    So it states its premise rather than assuming it.
+
+    The loaded direction is no longer only covered elsewhere:
+    `tests/test_reconciliation_loaded.py` builds a period from the control
+    definitions and proves all eleven evaluable and tying, then breaks each
+    one on purpose. That runs in CI. This one stays because it is about the
+    *real* period when there is one — a developer's seeded copy, and the
+    deployment.
     """
     cur.execute("SELECT count(*) AS n FROM ledger_line WHERE period = '2025'")
     if not cur.fetchone()["n"]:
