@@ -373,9 +373,16 @@ def drive_people(tom, barb, outsider) -> None:
         {"Payroll ID": who["employee_key"], "First name": "Dolores",
          "Surname": "Wallace",
          "Working email address": f"  {who['email'].upper()}  ",
-         "Still employed?": "yes"},
+         "Still employed?": "yes",
+         "Employment type": "PART_TIME",
+         "Hours a week they were employed to work": 24,
+         "Employed from": "2025-01-01"},
         {"Payroll ID": "NOBODY-42", "First name": "Ray", "Surname": "Okonkwo",
-         "Working email address": "rokonkwo@ybi.org", "Still employed?": "yes"},
+         "Working email address": "rokonkwo@ybi.org", "Still employed?": "yes",
+         # Terms given but no hours: not a partial row, no row — and the
+         # person has to be told which, not handed a constraint violation.
+         "Employment type": "FULL_TIME",
+         "Employed from": "2025-03-01"},
     ] + ([{"Payroll ID": settled["employee_key"], "First name": "Somebody",
            "Surname": "Else",
            "Working email address": "takeover@example.com",
@@ -419,6 +426,34 @@ def drive_people(tom, barb, outsider) -> None:
     else:
         finding(f"a spreadsheet renamed an account: {who['display_name']!r} "
                 f"became {confirmed['display_name']!r}")
+
+    # The terms, and the denominator they give the distribution.
+    span = one("""SELECT status::text AS status, weekly_hours, employed_from
+                    FROM employment
+                   WHERE period = '2025' AND employee_key = %s
+                     AND superseded_at IS NULL""", (who["employee_key"],))
+    if span and span["weekly_hours"] == 24:
+        ok(f"employment terms landed — {span['status']} at "
+           f"{span['weekly_hours']} hours a week from {span['employed_from']}")
+    else:
+        finding(f"the employment span did not land: {span}")
+
+    expected = one("""SELECT expected_hours FROM v_employment_expected
+                       WHERE period = '2025' AND employee_key = %s""",
+                   (who["employee_key"],))
+    if expected and expected["expected_hours"]:
+        ok(f"and the distribution has a denominator at last — "
+           f"{expected['expected_hours']} hours that person was employed to "
+           f"work, which is what an effort percentage is measured against")
+    else:
+        finding("v_employment_expected still has nothing for that person")
+
+    if any("could not be recorded" in n for n in got["notes"]):
+        ok("terms given without hours were held back and named — a blank "
+           "defaulted to 40 would understate every part-timer by exactly "
+           "the amount that matters")
+    else:
+        finding("a row with no weekly hours was not reported")
 
     # The takeover: an account somebody has already confirmed must be
     # untouchable from a spreadsheet. Without this a payroll key collision

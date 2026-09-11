@@ -699,8 +699,11 @@ def _write_people(cur, period: str, filled: Filled, actor: Actor):
     notes: list[str] = []
     no_account: list[str] = []
     already: list[str] = []
+    spans = 0
+    span_held: list[str] = []
     for row in filled.usable:
         v = row.values
+        spans += _employment_span(cur, period, v, actor, span_held)
         # Only where nobody has confirmed an address yet.
         #
         # This is the rule provisioning already follows for passwords, and it
@@ -731,6 +734,13 @@ def _write_people(cur, period: str, filled: Filled, actor: Actor):
         else:
             no_account.append(f"{v.get('first_name','')} {v.get('surname','')} "
                               f"({v['employee_key']})".strip())
+    if spans:
+        notes.append(f"{spans} employment span(s) recorded — the effort "
+                     f"distribution has a denominator for those people now.")
+    if span_held:
+        notes.append(f"{len(span_held)} row(s) gave terms that could not be "
+                     f"recorded: {', '.join(span_held[:6])}"
+                     f"{'…' if len(span_held) > 6 else ''}.")
     if already:
         notes.append(f"{len(already)} address(es) were left alone because "
                      f"somebody has already confirmed them: "
@@ -747,3 +757,56 @@ def _write_people(cur, period: str, filled: Filled, actor: Actor):
                      f"from the People screen — an account is handed over by "
                      f"a person, not conjured from a spreadsheet.")
     return written, notes
+
+
+def _employment_span(cur, period: str, v: dict, actor: Actor,
+                     held: list[str]) -> int:
+    """The terms somebody worked under, where the row says all three.
+
+    Status, weekly hours and a start date are each NOT NULL on `employment`,
+    so a partial answer is not a partial row — it is no row, and saying which
+    is more use than a constraint violation. Hours especially: defaulting a
+    blank to 40 would understate every part-timer's effort by exactly the
+    amount that matters, and this is the one figure that may never come from
+    the person being measured.
+
+    An existing live span is never superseded from a spreadsheet. Correcting
+    somebody's terms is the same kind of act as changing their address —
+    `employment` is immutable and append-only by trigger, a correction closes
+    one span and opens another, and that belongs to a person on the
+    Employment screen rather than to a file arriving by email.
+    """
+    key = v.get("employee_key")
+    status = v.get("status")
+    hours = v.get("weekly_hours")
+    start = v.get("employed_from")
+    if not key or not any((status, hours, start)):
+        return 0                    # the row said nothing about terms
+    who = f"{v.get('first_name','')} {v.get('surname','')}".strip() or key
+    missing = [name for name, got in (("employment type", status),
+                                      ("hours a week", hours),
+                                      ("employed from", start)) if not got]
+    if missing:
+        held.append(f"{who} (no {', no '.join(missing)})")
+        return 0
+    if not (0 < hours <= 80):
+        held.append(f"{who} ({hours} hours a week is outside 0 to 80)")
+        return 0
+
+    cur.execute("""SELECT 1 FROM employment
+                    WHERE period = %s AND employee_key = %s
+                      AND superseded_at IS NULL LIMIT 1""", (period, key))
+    if cur.fetchone():
+        held.append(f"{who} (terms already on file — correct them on the "
+                    f"Employment screen, which closes the old span)")
+        return 0
+
+    cur.execute("""INSERT INTO employment
+                     (period, employee_key, status, weekly_hours,
+                      employed_from, employed_to, source_document, note,
+                      recorded_by, recorded_name)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (period, key, status, hours, start, v.get("employed_to"),
+                 "Roster reply", v.get("job_title") or "",
+                 actor.actor_id, actor.display_name))
+    return 1

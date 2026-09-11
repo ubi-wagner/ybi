@@ -128,6 +128,7 @@ FUNDING_KINDS = ("FEDERAL", "STATE", "LOCAL", "PRIVATE", "DEBT", "UNRESTRICTED")
 SPACE_USES = ("TENANT", "PROGRAM", "ADMINISTRATIVE", "SHARED_LAB",
               "COMMON", "VACANT", "COMMITTED")
 OCCUPANCY = ("OCCUPIED", "VACANT", "INTERNAL", "COMMITTED", "COMMON")
+EMPLOYMENT_STATUS = ("FULL_TIME", "PART_TIME", "TEMPORARY", "INTERN", "CONTRACT")
 
 
 # ── 1. The asset register ─────────────────────────────────────────────
@@ -325,22 +326,30 @@ SPACE_INVENTORY = Form(
 
 PEOPLE_ROSTER = Form(
     name="PEOPLE_ROSTER",
-    version=1,
-    title="Employee roster — working email addresses",
+    version=2,
+    title="Employee roster — addresses, and the terms they worked under",
     for_whom="whoever administers payroll or IT accounts",
     purpose=(
-        "2 CFR 200.430(i) wants a statement from the person whose effort it "
-        "was. Nobody may sign on their behalf — not a manager, not the "
-        "controller. So every person who worked on a federal award in 2025 "
-        "needs an account, and an account needs an address somebody has "
-        "confirmed."),
+        "Two things, and they arrive from the same filing cabinet.\n\n"
+        "First, an address. 2 CFR 200.430(i) wants a statement from the "
+        "person whose effort it was, and nobody may sign on their behalf — "
+        "not a manager, not the controller. So everybody who worked on a "
+        "federal award in 2025 needs an account, and an account needs an "
+        "address somebody has confirmed.\n\n"
+        "Second, the terms. Hours worked mean nothing without the hours "
+        "somebody was employed to work: twenty hours a week is the whole of "
+        "a half-time job and half of a full-time one, and the record cannot "
+        "tell which without being told. That figure is the denominator every "
+        "effort percentage is measured against, and it may never come from "
+        "the person being measured."),
     consequence=(
-        "Thirty-seven of forty-three people on the payroll register have no "
-        "confirmed address, so they cannot certify. Until they can, the "
-        "labour evidence behind the fringe base is a reconstruction that "
-        "names its sources — defensible, but not a certification. This is the "
-        "longest lead time of anything outstanding: it is the item to start "
-        "today."),
+        "Thirty-seven of forty-three people have no confirmed address, so "
+        "they cannot certify; and none of the forty-three has employment "
+        "terms on file, so the effort distribution has no denominator at "
+        "all. Until both arrive the labour evidence behind the fringe base "
+        "is a reconstruction that names its sources — defensible, and not a "
+        "certification. This is the longest lead time of anything "
+        "outstanding: it is the item to start today."),
     sheet="People",
     prefilled=("employee_key", "surname", "note"),
     instructions=(
@@ -352,6 +361,9 @@ PEOPLE_ROSTER = Form(
         "certification is still wanted if they can be reached.",
         "An address that was guessed from a naming convention is worse than "
         "a blank one: it will bounce, or worse, it will not.",
+        "Terms that changed during the year — part-time until June, "
+        "full-time after — need a second row for the same person with the "
+        "later dates. Two spans, one year; we add them up.",
     ),
     columns=(
         Column("employee_key", "Payroll ID", Kind.TEXT, required=True,
@@ -363,6 +375,26 @@ PEOPLE_ROSTER = Form(
         Column("email", "Working email address", Kind.TEXT, required=True,
                why="The one they actually read.", width=34),
         Column("job_title", "Job title", Kind.TEXT, width=30),
+        Column("status", "Employment type", Kind.CHOICE,
+               choices=EMPLOYMENT_STATUS,
+               why="INTERN matters on its own — intern wages sit in their own "
+                   "account and one of them carries a $45,000 donor credit "
+                   "we are still unpicking.",
+               width=20),
+        Column("weekly_hours", "Hours a week they were employed to work",
+               Kind.NUMBER,
+               why="Not the hours they worked — the hours the job was. This "
+                   "is the denominator every effort percentage is measured "
+                   "against, and 40 for everybody would be a guess that "
+                   "understates every part-timer's effort.",
+               citation="2 CFR 200.430(i)", width=24),
+        Column("employed_from", "Employed from", Kind.DATE,
+               why="The start of these terms, not necessarily of their "
+                   "employment. If the terms changed mid-year, use a second "
+                   "row.", width=16),
+        Column("employed_to", "Employed to", Kind.DATE,
+               why="Leave blank if these terms were still running at 31 "
+                   "December 2025.", width=16),
         Column("still_employed", "Still employed?", Kind.YES_NO, width=16),
         Column("note", "Anything we should know", Kind.TEXT, width=40),
     ),

@@ -67,7 +67,7 @@ def test_the_workbook_says_what_it_is(form):
     data = build_request_workbook(form, "2025")
     wb = load_workbook(BytesIO(data))
     line = wb[IDENTITY_SHEET][IDENTITY_CELL].value
-    assert form.name in line and "v1" in line and "2025" in line
+    assert form.name in line and f"v{form.version}" in line and "2025" in line
 
 
 @pytest.mark.parametrize("form", list(FORMS.values()), ids=list(FORMS))

@@ -781,6 +781,23 @@ the same judgment as typing it in by hand.
 "where did this funding source come from" answers with the spreadsheet
 somebody sent, under their name.
 
+**The roster asks for two things because they come from one filing cabinet**
+(v2). An address, so a person can sign their own 200.430(i) certification —
+and the terms they worked under, because `v_employment_expected` is *the
+denominator every effort percentage is measured against* and it is empty for
+all forty-three. Twenty hours a week is the whole of a half-time job and half
+of a full-time one, and nothing on the record can tell which. Status, weekly
+hours and a start date are each `NOT NULL` on `employment`, so a partial
+answer is no row rather than a partial one, and the reply says whose and
+why — a blank defaulted to 40 would understate every part-timer by exactly
+the amount that matters. A live span is never superseded from a spreadsheet,
+for the same reason a confirmed address is not.
+
+**Send the reply to `/intake/` or through the upload route, never to
+`docs/source-documents/`.** The eighteen foundational documents are committed;
+a roster is forty-three people's names and addresses and `/intake/` is
+gitignored for exactly this.
+
 Two defects came out of building it, both found by the drive rather than by
 anything failing:
 
