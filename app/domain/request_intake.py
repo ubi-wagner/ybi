@@ -221,9 +221,31 @@ def _cell(col: Column, raw: Any) -> Any:
             return False
         raise ValueError("is not a yes or a no")
     if col.kind is Kind.CHOICE:
-        text = _text(raw).upper().replace(" ", "_")
-        if text in col.choices:
-            return text
+        # What came back, against what the column offers.
+        #
+        # This was `_text(raw).upper().replace(" ", "_")` and nothing else,
+        # which silently assumed every choice list is identifier-shaped —
+        # true of FULL_TIME, TENANT and OCCUPIED, and false the moment a form
+        # offers a sentence. VERIFICATION's statuses are prose on purpose
+        # ("CONFIRMED — the record is right" and "CORRECTED — I have changed
+        # something" lead to different work and a dropdown reading CONFIRMED
+        # / CORRECTED does not say so), and every one of them came back as
+        # "is not one of" a list it was plainly in.
+        #
+        # So: match what the column actually offers first, ignoring case and
+        # runs of whitespace, and give back the declared spelling rather than
+        # whatever the cell held — a value that differs from the choice only
+        # in a stray double space is the same answer, and storing it as typed
+        # would put two spellings of one status on the record.
+        given = " ".join(_text(raw).split())
+        for choice in col.choices:
+            if given.casefold() == " ".join(choice.split()).casefold():
+                return choice
+        # And then the identifier reading, so somebody typing "part time"
+        # into a column offering PART_TIME is still understood.
+        snake = given.upper().replace(" ", "_")
+        if snake in col.choices:
+            return snake
         raise ValueError("is not one of " + ", ".join(col.choices))
     raise ValueError("cannot be read")           # unreachable by construction
 
@@ -312,8 +334,27 @@ def read_request_workbook(data: bytes, form: Form) -> Filled:
                 values[col.key] = None
                 problems.append(Problem(form.sheet, r, col.heading,
                                         _text(raw[col.key])[:60], str(exc)))
-        absent = tuple(col.heading for col in form.required
-                       if values.get(col.key) in (None, ""))
+        absent = list(col.heading for col in form.required
+                      if values.get(col.key) in (None, ""))
+        # A cell that has to say something, and only where another column
+        # says it must. See Column.substantial_when.
+        for col, _ in columns:
+            rule = col.substantial_when
+            if rule is None or col.heading in absent:
+                continue
+            other, triggers, least = rule
+            if values.get(other) not in triggers:
+                continue
+            said = len(str(values.get(col.key) or "").strip())
+            if said < least:
+                absent.append(col.heading)
+                problems.append(Problem(
+                    form.sheet, r, col.heading,
+                    str(values.get(col.key) or "")[:60],
+                    f"says {said} character(s) against a status that asserts "
+                    f"somebody went and looked. A status is not a thing that "
+                    f"happened; say what you found."))
+        absent = tuple(absent)
         # A row we did not issue is theirs entirely, whatever is in it. A
         # row we did issue counts as touched only where something outside
         # the columns we pre-filled has been answered.

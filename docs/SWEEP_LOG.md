@@ -264,6 +264,73 @@ guard now.
 
 ---
 
+## Wave 3
+
+### S10 · The controller's answers, on the record
+
+**Found by** the plan: nineteen answers landing in a spreadsheet on a laptop.
+An auditor asking "who said the Bacon credit was confirmed, and when" had a
+file attachment and a memory to go on.
+
+The `/requests` machinery already did all of it — issue a workbook, take the
+reply, preview every cell, file the reply as evidence. What was missing was a
+form and somewhere for the answers to land. Four things came out of building
+it, and two of them were latent defects.
+
+**The choice parser assumed every choice list is identifier-shaped.**
+`_cell()` did `_text(raw).upper().replace(" ", "_")` and compared that. True
+of `FULL_TIME`, `TENANT`, `OCCUPIED` — false the moment a form offers a
+sentence. Every one of the verification statuses came back as *"is not one
+of"* a list it was plainly in. The statuses are prose on purpose:
+"CONFIRMED — the record is right" and "CORRECTED — I have changed something"
+lead to different work at our end, and a dropdown reading CONFIRMED /
+CORRECTED does not say so. The parser now matches what the column actually
+offers, case- and whitespace-insensitively, returns the declared spelling,
+and keeps the identifier reading as a fallback.
+
+**`superseded_by` would have been the fifth dead column.** The first draft of
+`053` had one, and it failed in a way that proved it pointless: the successor
+could not be inserted while the predecessor was live
+(`one_live_answer_per_item` is a partial unique index, checked at insert and
+not at COMMIT), and the predecessor could not be marked superseded until the
+successor existed to be named. A column that makes its own invariant
+unsatisfiable is a column doing no work — and it was doing none anyway,
+because `answer_id` is a bigserial and the sequence is `ORDER BY answer_id`
+within `(period, ref)`. `rate.superseded_by` was exactly this. It is gone,
+and the writer supersedes before it inserts.
+
+**A status that claims a settlement has to carry words**, and the preview is
+where that is caught. The `CHECK` refuses a two-character CONFIRMED either
+way, but a database refusal on accept rolls back the *whole* batch — one
+thin answer would have taken four good ones with it. `Column.substantial_when`
+puts the rule in the parser, so the preview names the row and holds back one
+cell rather than the file. The rule itself is the `DELIVERED`-with-no-date
+rule: a status somebody picked from a dropdown is not a thing that happened.
+STILL CHECKING and SOMEBODY ELSE HAS TO ANSWER are exempt — they are honest
+reports of not knowing yet, and demanding prose would produce "still
+checking" twice.
+
+**And the accept note read the state it was about to change, on the wrong
+connection.** It reported "0 of 19 items settled" in the same breath as
+writing three settlements, because `query()` runs on a pooled connection and
+the transaction had not committed. The rule CLAUDE.md already states for the
+seal, in a smaller shape: *read what you are about to depend on inside the
+turn.*
+
+**And the drive's own history check could only pass once** — it asserted
+that item 1.5 carries exactly two answers, which is true on a fresh database
+and false on the second run. Third instance of that shape in this file. It
+measures what its own run added now.
+
+**One structural move.** The nineteen items lived in
+`scripts/verification_sheet.py`, and the form needed them too. Two copies of
+one list is the shape that produced 13.0% and 2.2% at the same moment; a
+third would have been worse, because it would have stopped matching the day
+somebody added an item. They are in `app/domain/verification_items.py` now
+and the workbook, the worksheet and the form all read it.
+
+---
+
 ## The three shapes
 
 Every item found something the plan did not know about, and they were the

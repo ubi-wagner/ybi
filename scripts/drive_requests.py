@@ -85,6 +85,37 @@ def type_into(data: bytes, sheet: str, rows: list[dict],
     return out.getvalue()
 
 
+def answer_rows(data: bytes, sheet: str, answers: dict[str, dict]) -> bytes:
+    """Fill in the rows a workbook already carries, found by their reference.
+
+    Different from `type_into`, which adds rows after the pre-filled ones.
+    The verification workbook goes out with all nineteen items in it and a
+    person answers the ones they can — so the reply is the same rows with
+    three more columns filled, not new rows.
+    """
+    wb = load_workbook(BytesIO(data))
+    ws = wb[sheet]
+    at = {}
+    for i, cell in enumerate(ws[1], start=1):
+        text = str(cell.value or "").strip().rstrip(" *")
+        if text:
+            at.setdefault(text, i)
+    ref_col = at["Ref"]
+    seen = set()
+    for r in range(3, ws.max_row + 1):
+        ref = str(ws.cell(row=r, column=ref_col).value or "").strip()
+        if ref in answers:
+            seen.add(ref)
+            for heading, value in answers[ref].items():
+                ws.cell(row=r, column=at[heading], value=value)
+    missing = set(answers) - seen
+    if missing:
+        raise SystemExit(f"the workbook has no row for {sorted(missing)}")
+    out = BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
 def known_row_count(data: bytes, sheet: str) -> int:
     wb = load_workbook(BytesIO(data))
     ws = wb[sheet]
@@ -503,6 +534,185 @@ def drive_people(tom, barb, outsider) -> None:
 
 # ── The reply is a document ───────────────────────────────────────────
 
+# ── 4. The controller's own list ──────────────────────────────────────
+
+def drive_verification(tom, heidi, outsider) -> None:
+    head("The nineteen the record cannot settle — answers onto the record")
+    from app.db import one, query
+
+    before = one("""SELECT count(*) AS n FROM v_verification_status
+                     WHERE period = '2025'""")["n"]
+    # How much history item 1.5 already carries. This drive answers it twice,
+    # and a second run over the first run's leavings would see four rows and
+    # report working code as a fault — the same defect the chase-list check
+    # had, measuring absolute state on a database it has already written to.
+    history_before = one("""SELECT count(*) AS n FROM verification_answer
+                             WHERE period = '2025' AND ref = '1.5'""")["n"]
+
+    rid, blank = issue(tom, "VERIFICATION", "Tom Metzinger")
+    wb = load_workbook(BytesIO(blank))["Verification"]
+    at = {str(c.value or "").strip().rstrip(" *"): i
+          for i, c in enumerate(wb[1], start=1) if c.value}
+    refs = [str(wb.cell(row=r, column=at["Ref"]).value or "").strip()
+            for r in range(3, wb.max_row + 1)]
+    refs = [x for x in refs if x]
+    if len(refs) == 19:
+        ok(f"nineteen items went out, each carrying the question — {refs[0]} to "
+           f"{refs[-1]}")
+    else:
+        finding(f"{len(refs)} items in the workbook, expected nineteen")
+
+    # The worked example goes out already answered, because it *is* the
+    # example: it shows what a settled row looks like rather than describing
+    # one.
+    example = wb.cell(row=3, column=at["Where it stands"]).value
+    if example and "CONFIRMED" in str(example):
+        ok("and the worked example goes out already settled, so the shape of "
+           "an answer is shown rather than described")
+    else:
+        finding("the Bacon example went out blank")
+
+    filled = answer_rows(blank, "Verification", {
+        "1.3": {"Where it stands": "CONFIRMED — the record is right",
+                "Your answer": "The register is the 2026 export; the "
+                               "122,921.14 is 2026 additions. Asking for the "
+                               "31 December cut."},
+        "2.1": {"Where it stands": "CORRECTED — I have changed something",
+                "Your answer": "Reclassified out of Rising Tides on 14 "
+                               "January, after the GL ran and before the P&L. "
+                               "Reposted so both agree.",
+                "Answered by": "Heidi Ruby"},
+        "1.5": {"Where it stands": "STILL CHECKING",
+                "Your answer": "Asking whether the Xjet was donated."},
+        # A settlement with nothing behind it. The status asserts somebody
+        # went and looked; two characters is not what they found.
+        "1.6": {"Where it stands": "CONFIRMED — the record is right",
+                "Your answer": "ok"},
+        # And a case with no words at all, which is honest for this status.
+        "2.2": {"Where it stands": "SOMEBODY ELSE HAS TO ANSWER",
+                "Your answer": "One for the awarding agency."},
+    })
+
+    send_back(outsider, rid, filled)
+    p = tom.get(f"/api/requests/{rid}/preview").json()
+    thin = [x for x in p["problems"] if "went and looked" in x["says"]]
+    if thin:
+        ok("a two-character confirmation is caught in the preview, not by the "
+           "database on accept — “" + thin[0]["says"][:58] + "…”")
+    else:
+        finding("a settlement with nothing behind it was not reported")
+    # Five: the four this run answered usably, plus the worked example,
+    # which goes out already settled and is therefore a row with usable
+    # content whoever put it there. The writer's own check is what stops it
+    # being written again — see "already said" below.
+    if p["usable"] == 5 and p["incomplete"] == 1:
+        ok("five answers will land — four given here and the worked example "
+           "that went out settled — and the thin one is held back, named. A "
+           "bad cell costs one cell.")
+    else:
+        finding(f"{p['usable']} usable and {p['incomplete']} held back; "
+                f"expected five and one")
+    if p["untouched"] == 13:
+        ok("and the thirteen nobody reached are untouched rather than "
+           "incomplete — nobody started them, which is different from "
+           "starting and stopping")
+    else:
+        finding(f"{p['untouched']} untouched, expected thirteen")
+
+    refused = outsider.post(f"/api/requests/{rid}/accept", json={})
+    if refused.status_code == 403:
+        ok("and somebody with no portfolio may send the answers back and may "
+           "not write them onto the record")
+    else:
+        finding(f"the verification accept admitted an outsider — "
+                f"{refused.status_code}")
+    refused = heidi.post(f"/api/requests/{rid}/accept", json={})
+    if refused.status_code == 200:
+        got = refused.json()
+        ok(f"the controller accepted it — {got['written']} answer(s) written, "
+           f"{got['held_back']} held back")
+        if any("still open" in n for n in got["notes"]):
+            ok("and it says how many of the nineteen are settled — "
+               + next(n for n in got["notes"] if "still open" in n))
+        else:
+            finding("the accept does not say where the list stands")
+    else:
+        finding(f"the controller was refused — {refused.status_code}: "
+                f"{refused.text[:200]}")
+
+    rows = {r["ref"]: r for r in query(
+        """SELECT * FROM v_verification_status WHERE period = '2025'""")}
+    if rows.get("2.1", {}).get("answered_by") == "Heidi Ruby":
+        ok("an answer names who settled it, not who sent the file — a row "
+           "answered by the person who knows is worth more than one answered "
+           "by whoever had the workbook")
+    else:
+        finding("the answered_by column did not survive the round trip")
+    if rows.get("1.3", {}).get("evidence_id"):
+        ok("and every answer carries the workbook it came out of, so 'who "
+           "said this and on what' answers with a file")
+    else:
+        finding("an answer landed with no document behind it")
+    if "1.6" not in rows:
+        ok("the thin confirmation is nowhere on the record — held back, not "
+           "half written")
+    else:
+        finding("a two-character confirmation reached the record")
+
+    # ── Answered again ────────────────────────────────────────────────
+    #
+    # Several of these are *expected* to change answer. The sequence is what
+    # an auditor is reconstructing, so a second answer supersedes rather than
+    # overwrites and both stay.
+    rid2, blank2 = issue(tom, "VERIFICATION", "Tom Metzinger")
+    carried = load_workbook(BytesIO(blank2))["Verification"]
+    answered_out = sum(1 for r in range(3, carried.max_row + 1)
+                       if carried.cell(row=r, column=at["Where it stands"]).value)
+    if answered_out >= 5:
+        ok(f"a second issue is a chase rather than a blank page — "
+           f"{answered_out} rows come back out already answered")
+    else:
+        finding(f"only {answered_out} answers were carried into the re-issue")
+
+    again = answer_rows(blank2, "Verification", {
+        "1.5": {"Where it stands": "CONFIRMED — the record is right",
+                "Your answer": "Donated by Xjet in 2018. Nothing was paid, so "
+                               "there is no basis to carry."},
+    })
+    send_back(outsider, rid2, again)
+    r = heidi.post(f"/api/requests/{rid2}/accept", json={})
+    notes = r.json().get("notes", []) if r.status_code == 200 else []
+    if any("superseded" in n for n in notes):
+        ok("answering again supersedes rather than overwrites, and says so")
+    else:
+        finding(f"a second answer did not supersede: {r.status_code} "
+                f"{notes or r.text[:200]}")
+    hist = query("""SELECT status, superseded_at IS NOT NULL AS gone
+                      FROM verification_answer
+                     WHERE period = '2025' AND ref = '1.5'
+                     ORDER BY answer_id""")
+    added = hist[history_before:]
+    live = [h for h in hist if not h["gone"]]
+    if (len(added) == 2 and added[0]["gone"] and not added[1]["gone"]
+            and len(live) == 1):
+        ok(f"both answers are on the record and exactly one is live — the "
+           f"sequence is what an auditor is reconstructing, and 1.5 now "
+           f"carries {len(hist)} of them")
+    else:
+        finding(f"this run added {len(added)} answer(s) to 1.5 and {len(live)} "
+                f"is live: {added}")
+    if any("already said" in n for n in notes):
+        ok("and the rows that came back saying what they already said were "
+           "left alone rather than superseded with themselves")
+    else:
+        finding("re-answering an unchanged row was recorded as a change")
+
+    after = one("""SELECT count(*) AS n FROM v_verification_status
+                     WHERE period = '2025'""")["n"]
+    print(f"  note     {before} item(s) answered before this run, {after} after",
+          flush=True)
+
+
 def check_library(auditor) -> None:
     head("Where the answers came from")
     from app.db import query
@@ -578,6 +788,7 @@ def main() -> int:
     drive_assets(tom, outsider)
     drive_space(tom, heidi, outsider)
     drive_people(tom, barb, outsider)
+    drive_verification(tom, heidi, outsider)
     check_library(auditor)
     check_chase_list(tom)
 

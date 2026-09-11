@@ -37,6 +37,8 @@ funding source come from" gets the spreadsheet somebody signed off.
 
 from __future__ import annotations
 
+import functools
+
 import hashlib
 from decimal import Decimal
 from pathlib import Path
@@ -47,12 +49,13 @@ from pydantic import BaseModel
 
 from app import storage
 from app.audit import record
-from app.auth import (Actor, current_actor, require_admin, require_facilities,
+from app.auth import (Actor, current_actor, require_admin, require_controller, require_facilities,
                       require_inventory, require_own_writes, require_reader)
 from app.db import execute, one, query, transaction
 from app.domain.request_forms import FORMS, Form as FormDef
 from app.domain.request_intake import (Filled, WorkbookNotRecognised,
                                        read_request_workbook)
+from app.domain.request_forms import verification_rows
 from app.domain.request_workbook import build_request_workbook
 from app.settings import settings
 from app.statelock import turn
@@ -156,6 +159,28 @@ def _known_rows(form: FormDef, period: str) -> list[dict]:
                                "please overwrite it."
                                if r["known_email"] else "")}
                 for r in rows]
+
+    if form.name == "VERIFICATION":
+        # The nineteen items, read out of domain/verification_items.py — the
+        # same list the printed worksheet and docs/FOR_TOM_TO_VERIFY.md are
+        # checked against. Any answer already on the record goes out in the
+        # row, so a second issue of this workbook is a chase rather than a
+        # blank page: somebody who settled six items last week should see
+        # their six answers and the thirteen still open.
+        answered = {r["ref"]: r for r in query(
+            """SELECT ref, status, answer, answered_by
+                 FROM verification_answer
+                WHERE period = %s AND superseded_at IS NULL""", (period,))}
+        out = []
+        for row in verification_rows():
+            prior = answered.get(row["ref"])
+            if prior:
+                row = {**row, "status": prior["status"],
+                       "answer": prior["answer"],
+                       "answered_by": prior["answered_by"]}
+            out.append(row)
+        return out
+
     return []
 
 
@@ -316,6 +341,44 @@ def outstanding(period: str = None, state: str = "") -> dict:
 
 # ── The reply ─────────────────────────────────────────────────────────
 
+@router.get("/verification")
+def verification(period: str = None) -> dict:
+    """Where the nineteen stand, and what each one moves.
+
+    Reading, so it takes the router's own `require_reader` and nothing
+    narrower — the auditor's first question about any of these is going to be
+    "who said that, and on what", and the answer is on this screen with the
+    workbook behind it.
+
+    An item with no answer is **unanswered**, which is a different fact from
+    STILL CHECKING and stays different all the way to the screen: one means
+    nobody has looked and the other means somebody has and cannot say yet.
+    """
+    period = period or settings.period
+    live = {r["ref"]: r for r in query(
+        """SELECT * FROM v_verification_status WHERE period = %s""", (period,))}
+    items = []
+    for row in verification_rows():
+        got = live.get(row["ref"])
+        items.append({
+            "ref": row["ref"], "area": row["area"], "title": row["title"],
+            "figure": row["figure"], "asks": row["asks"], "moves": row["moves"],
+            "status": got["status"] if got else None,
+            "answer": got["answer"] if got else "",
+            "answered_by": got["answered_by"] if got else "",
+            "accepted_by": got["accepted_by"] if got else "",
+            "accepted_at": got["accepted_at"].isoformat() if got else None,
+            "evidence_id": got["evidence_id"] if got else None,
+            "evidence_filename": got["evidence_filename"] if got else None,
+            "answers": got["answers"] if got else 0,
+            "settled": bool(got and got["settled"]),
+        })
+    return {"period": period, "items": items,
+            "settled": sum(1 for i in items if i["settled"]),
+            "answered": sum(1 for i in items if i["status"]),
+            "total": len(items)}
+
+
 @router.post("/{request_id}/reply")
 async def reply(request_id: int, file: UploadFile = File(...),
                 received_from: str = Form(""),
@@ -449,7 +512,14 @@ def preview(request_id: int) -> dict:
 
 _GATES = {"ASSET_REGISTER": require_inventory,
           "SPACE_INVENTORY": require_facilities,
-          "PEOPLE_ROSTER": require_admin}
+          "PEOPLE_ROSTER": require_admin,
+          # The narrow portfolios do not add up to CONTROLLER and this list
+          # does not divide along them: item 1.3 is the asset register
+          # against the balance sheet, 2.2 is whether Rising Tides is
+          # federally funded, 5.1 is an invoice date. Settling any of them
+          # changes what the rate rests on, which is the controller's
+          # judgment by the same rule that only a controller may seal.
+          "VERIFICATION": require_controller}
 
 
 class AcceptIn(BaseModel):
@@ -480,7 +550,16 @@ def accept(request_id: int, body: AcceptIn,
 
     writer = {"ASSET_REGISTER": _write_assets,
               "SPACE_INVENTORY": _write_space,
-              "PEOPLE_ROSTER": _write_people}[form.name]
+              "PEOPLE_ROSTER": _write_people,
+              # The only writer that records where its rows came from. The
+              # other three write facts — an asset's funding source, a
+              # suite's square footage — whose provenance is the request row
+              # itself. An answer is somebody's judgment, so it carries the
+              # workbook it was given in, and "who said this and on what"
+              # answers with a file rather than with a join.
+              "VERIFICATION": functools.partial(
+                  _write_verification,
+                  evidence_id=r["reply_evidence_id"])}[form.name]
 
     with turn(r["period"]) as cur:
         written, notes = writer(cur, r["period"], filled, actor)
@@ -506,6 +585,95 @@ def accept(request_id: int, body: AcceptIn,
             "untouched": len(filled.untouched),
             "problems": len(filled.problems),
             "notes": notes}
+
+
+def _write_verification(cur, period: str, filled: Filled, actor: Actor,
+                        evidence_id: str | None = None):
+    """The controller's answers, each against the item it settles.
+
+    Superseding rather than editing. A second answer to the same item marks
+    the first superseded and both stay — several of these are *expected* to
+    change answer, and the sequence is what an auditor is reconstructing.
+    Item 1.3 will become "confirmed, timing" when the 31 December register
+    arrives; item 0 is confirmed except that the QuickBooks entry has not
+    been reposted, and when it is the reconciling item has to come off with
+    it.
+    """
+    known = {i["ref"] for i in verification_rows()}
+    written = 0
+    notes: list[str] = []
+    unknown: list[str] = []
+    unchanged: list[str] = []
+    replaced = 0
+
+    for row in filled.usable:
+        v = row.values
+        ref = str(v["ref"]).strip()
+        if ref not in known:
+            # A ref we did not send is a row somebody added, and there is
+            # nothing for it to be an answer *to*. Named rather than written,
+            # because the alternative is an answer floating free of any item.
+            unknown.append(f"row {row.number} ({ref!r})")
+            continue
+
+        status = str(v["status"]).strip()
+        answer = str(v.get("answer") or "").strip()
+        by = str(v.get("answered_by") or "").strip() or actor.display_name
+
+        cur.execute("""SELECT answer_id, status, answer FROM verification_answer
+                        WHERE period = %s AND ref = %s AND superseded_at IS NULL""",
+                    (period, ref))
+        prior = cur.fetchone()
+        if prior and prior["status"] == status and prior["answer"] == answer:
+            # The workbook goes out carrying the answers already on the
+            # record, so a second issue is a chase rather than a blank page —
+            # which means most rows in a returned one say what they already
+            # said. Superseding an answer with itself would fill the history
+            # with movement that did not happen.
+            unchanged.append(ref)
+            continue
+
+        # Supersede first, then insert. `one_live_answer_per_item` is a
+        # partial unique index and an index is checked at the moment of the
+        # insert, not at COMMIT — so writing the successor while the
+        # predecessor is still live is refused outright. It was, the first
+        # time this ran.
+        if prior:
+            cur.execute("""UPDATE verification_answer SET superseded_at = now()
+                            WHERE answer_id = %s""", (prior["answer_id"],))
+            replaced += 1
+        cur.execute("""INSERT INTO verification_answer
+                         (period, ref, status, answer, answered_by,
+                          accepted_by, evidence_id)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                    (period, ref, status, answer, by, actor.display_name,
+                     evidence_id))
+        written += 1
+
+    if replaced:
+        notes.append(f"{replaced} item(s) answered again — the earlier answer "
+                     f"is superseded and still on the record")
+    if unchanged:
+        notes.append(f"{len(unchanged)} item(s) came back saying what they "
+                     f"already said, and were left alone: "
+                     + ", ".join(sorted(unchanged)[:8])
+                     + ("…" if len(unchanged) > 8 else ""))
+    if unknown:
+        notes.append("no such item on the list, so nothing was written for "
+                     + ", ".join(unknown)
+                     + " — an answer with no question is not an answer")
+
+    # On `cur`, not on a pooled connection. `query()` here read the state
+    # before this transaction and reported "0 of 19 items settled" in the
+    # same breath as writing three settlements — the rule CLAUDE.md already
+    # states for the seal, in a smaller shape: read what you are about to
+    # depend on inside the turn.
+    cur.execute("""SELECT count(*) AS n FROM v_verification_status
+                    WHERE period = %s AND settled""", (period,))
+    settled = cur.fetchone()["n"]
+    notes.append(f"{settled} of {len(known)} items settled, "
+                 f"{len(known) - settled} still open")
+    return written, notes
 
 
 def _write_assets(cur, period: str, filled: Filled, actor: Actor):

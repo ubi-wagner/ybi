@@ -514,8 +514,12 @@ tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
    a column of three stacked fields reads as three separate questions. */
 /* The three things we are asking for, side by side. Each is a whole ask
    with its own lead time, so they read as cards rather than as rows. */
-.ask-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 900px) { .ask-grid { grid-template-columns: 1fr; } }
+/* As many as fit, rather than three. A fourth form arrived and sat alone on
+   a second row looking like an afterthought; auto-fit puts four across on a
+   wide screen and two-by-two on a narrow one, and a fifth needs no change
+   here at all. */
+.ask-grid { display: grid; gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
 .card.ask { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .card.ask p { margin: 0; }
 .card.ask .btn { align-self: flex-start; margin-top: auto; }

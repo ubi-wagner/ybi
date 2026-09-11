@@ -9,8 +9,8 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Faults | 0 |
 | Gaps | 1 |
 | Notes | 25 |
-| GET routes probed | 83 (× 6 people) |
-| Audit entries | 210 |
+| GET routes probed | 84 (× 6 people) |
+| Audit entries | 2210 |
 
 ## Who was driven
 
@@ -133,33 +133,35 @@ Nothing found.
 
 ## Continuity
 
-### GAP — the chain stops at 'decisions recorded'
+### GAP — the chain stops at 'rates'
 
-Everything upstream is loaded; nothing downstream of decisions recorded exists yet.
+Everything upstream is loaded; nothing downstream of rates exists yet.
 
 *What to do:* This is the work, not a defect. It is named here so a reviewer is not left to infer it from an empty screen.
 
 ## Proportion
 
-### NOTE — the group carries 45 lines and 1 decision(s) were recorded
+### NOTE — propagation was not measured in this run
 
-Not necessarily wrong — scope may be the group rather than the line — but worth knowing which.
+The decision set is sealed, so no change could be made to measure. That is the correct state, not a defect.
+
+*What to do:* Run the review on a freshly seeded database, before the drives — they seal. ./scripts/seed.sh then this.
 
 ## What the system held at the moment of review
 
 ```json
 {
   "samples": {
-    "evidence_id": "EV-b3e05669a68f",
+    "evidence_id": "EV-ded0231395ed",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "2fd0077a-a494-4bfb-9288-1c5c84422dd3",
+    "actor_id": "cffcff27-6248-402d-9b92-44ea84061104",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
     "kind": "rate-buildup"
   },
-  "routes_probed": 83,
+  "routes_probed": 84,
   "routes_skipped": 6,
   "tabs": [
     {
@@ -286,80 +288,125 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "counts": {
     "/api/classify/queue": 50,
     "/api/reconcile": 11,
-    "/api/documents/library": 18,
+    "/api/documents/library": 71,
     "/api/contracts": 4,
     "/api/reports/invoices": 3,
     "/api/chart/accounts": 103,
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 210,
+  "audit_rows": 2210,
   "audit_by_action": {
-    "EXPORT": 42,
-    "AWARD_TERM": 36,
-    "SIGN_IN": 30,
-    "DOCUMENT_LIBRARY_READ": 27,
+    "EXPORT": 490,
+    "SIGN_IN": 414,
+    "DOCUMENT_LIBRARY_READ": 351,
+    "EVIDENCE_DOWNLOAD": 146,
+    "REVIEW_READ": 120,
+    "DOCUMENT_UPLOAD": 84,
+    "AWARD_TERM": 71,
+    "TIME_ENTRY": 56,
+    "REQUEST_ISSUE": 54,
+    "REQUEST_REPLY": 52,
+    "REQUEST_ACCEPT": 51,
+    "ACTOR_CREATE": 33,
+    "EVIDENCE_ATTACH": 23,
+    "FACILITY": 21,
     "EVIDENCE_UPLOAD": 18,
-    "REVIEW_READ": 12,
-    "EVIDENCE_DOWNLOAD": 12,
-    "ACTOR_CREATE": 6,
+    "PASSWORD_CHANGE": 16,
+    "SEAL": 14,
+    "PORTFOLIO_GRANT": 14,
+    "PORTFOLIO_REVOKE": 14,
+    "UNSEAL": 13,
+    "ACTOR_ACTIVE": 10,
+    "DEFER": 7,
+    "CHART_SPLIT": 7,
+    "CLASSIFY": 7,
+    "EVIDENCE_VIEW": 7,
+    "EQUIPMENT_USE": 7,
+    "SPACE_UNIT": 7,
+    "PASSWORD_RESET": 7,
+    "SEGMENT_REVERSE": 7,
+    "RATE_COMPUTE": 7,
+    "ACTOR_AMEND": 7,
+    "MATERIALITY": 7,
+    "TIME_REMOVE": 7,
+    "NOTE": 7,
+    "SEGMENT": 7,
+    "IN_KIND": 7,
+    "MILESTONE_STATE": 6,
     "RECONCILE_ITEM": 6,
-    "CLASSIFY": 4,
-    "IMPORT_UPLOAD": 3,
+    "CHARGE_REVOKE": 3,
+    "RECEIPT": 3,
+    "CHARGE_CODE_OPEN": 3,
     "IMPORT_PARSE": 3,
-    "PASSWORD_CHANGE": 2,
+    "CHARGE_AUTHORISE": 3,
+    "MILESTONE_OPEN": 3,
+    "IMPORT_UPLOAD": 3,
     "IMPORT_ACCEPT": 2,
-    "UNDO": 2,
-    "RECONCILE_ALIAS": 1,
-    "RATE_COMPUTE": 1,
-    "SEAL": 1,
-    "UNSEAL": 1,
-    "RECORD_ACCESS": 1
+    "EVIDENCE_FACTS": 2,
+    "EVIDENCE_GENERATED": 1,
+    "RECORD_ACCESS": 1,
+    "RECONCILE_ALIAS": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 107
-    },
-    {
-      "actor": "Barb Ewing",
-      "role": "ORG_ADMIN",
-      "n": 27
+      "n": 621
     },
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 21
+      "n": 465
     },
     {
       "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 21
+      "n": 366
     },
     {
-      "actor": "Eric Wagner",
-      "role": "SYSTEM_ADMIN",
-      "n": 17
+      "actor": "Barb Ewing",
+      "role": "ORG_ADMIN",
+      "n": 351
     },
     {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 16
+      "n": 191
+    },
+    {
+      "actor": "Eric Wagner",
+      "role": "SYSTEM_ADMIN",
+      "n": 167
+    },
+    {
+      "actor": "First Day",
+      "role": "EMPLOYEE",
+      "n": 21
+    },
+    {
+      "actor": "Drive Newcomer",
+      "role": "EMPLOYEE",
+      "n": 21
     },
     {
       "actor": "New Starter",
       "role": "EMPLOYEE",
-      "n": 1
+      "n": 4
+    },
+    {
+      "actor": "Boundary Probe",
+      "role": "EMPLOYEE",
+      "n": 3
     }
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2479,
-    "decisions recorded": 0,
-    "sealed sets": 0,
+    "groups still unclassified": 2472,
+    "decisions recorded": 7,
+    "sealed sets": 1,
     "rates": 0,
-    "allocations": 16,
+    "allocations": 112,
     "invoices": 3,
     "restatements": 0
   },
@@ -382,7 +429,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     ],
     [
       "AM-DRIVE-AM provisions",
-      "8"
+      "11"
     ],
     [
       "everybody who charged time",
@@ -406,39 +453,17 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "0.0",
-    "decisions": "0",
-    "audit": "213",
+    "classified_dollars": "40.1",
+    "decisions": "7",
+    "audit": "2213",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "5129 Payroll Expenses:5139 Wages:5140 Employee Wages",
-    "amount": "1678057.27",
-    "lines": 45
-  },
-  "proportion_after": {
-    "classified_dollars": "13.0",
-    "decisions": "1",
-    "audit": "214",
-    "ledger": "14371299.30",
-    "register": "1835047.18",
-    "open_controls": "55"
-  },
-  "proportion_moved": {
-    "classified_dollars": [
-      "0.0",
-      "13.0"
-    ],
-    "decisions": [
-      "0",
-      "1"
-    ],
-    "audit": [
-      "213",
-      "214"
-    ]
+    "account": "4800 Innovation Hub:4801 IH Grant Income",
+    "amount": "451170.39",
+    "lines": 66
   }
 }
 ```

@@ -353,6 +353,30 @@ Nineteen answers currently land in a spreadsheet on his laptop. The
 `/requests` machinery already parses a returned workbook, reports bad cells by
 row and files the reply as evidence; a `VERIFICATION` form would put his
 answers on the record under his name, each against the item it settles.
+
+**Done.** The form, migration `053` (`verification_answer`,
+`v_verification_status`), `GET /api/requests/verification`, and a card on
+`/requests` showing where the nineteen stand with the workbook behind each
+answer. Accepting takes `CONTROLLER`: the list does not divide along the
+narrow portfolios — 1.3 is the asset register against the balance sheet, 2.2
+is whether Rising Tides is federally funded, 5.1 is an invoice date — and
+settling any of them changes what the rate rests on.
+
+Two latent defects came out of it. The choice parser normalised every value
+to `UPPER_SNAKE` before comparing, silently assuming choice lists are
+identifier-shaped — so every one of the prose statuses came back as "is not
+one of" a list it was plainly in. And the first draft of `053` carried a
+`superseded_by` column that made its own invariant unsatisfiable and would
+have been the fifth instance of the dead-column shape; `ORDER BY answer_id`
+already carries the sequence.
+
+`Column.substantial_when` is new and reusable: a cell that has to say
+something rather than merely be non-empty, and only when another column
+holds one of these values. It puts the "a status that claims a settlement
+carries words" rule in the *parser*, so the preview names the row and holds
+back one cell — a `CHECK` firing on accept would have rolled back four good
+answers with the thin one.
+
 **Half a day.** **Depends on** S5 for the screen.
 
 ---
@@ -398,7 +422,7 @@ and seeded from nothing.
 | ~~2~~ | ~~**S4**~~ | done — before Tom classifies, as intended |
 | ~~3~~ | ~~S6~~ | done — the restatement is unblocked |
 | ~~4~~ | ~~S5~~ | done; S10 remains |
-| 5 | S10 | half a day — Tom's verification sheet back in through /requests |
+| ~~5~~ | ~~S10~~ | done — his answers land under his name, with the workbook behind them |
 | 6 | S11 | a day — CI proves the empty direction only |
 | 7 | S7, S8, S9, S9a | two and a half days |
 

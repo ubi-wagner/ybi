@@ -315,6 +315,12 @@ export const api = {
      data, because writing somebody's answer into the cost record is the same
      judgment as typing it in by hand. */
   requestForms: () => req("/requests/forms"),
+  /* Where the nineteen things the record cannot settle on its own stand,
+     and who said so. A read, so anybody who may read the record gets it —
+     the auditor's first question about any of them is "who said that, and
+     on what". */
+  verificationStatus: (period = "2025") =>
+    req(`/requests/verification?period=${period}`),
   requests: (period = "2025", state = "") =>
     req(`/requests?period=${period}${state ? `&state=${state}` : ""}`),
   issueRequest: (form, body) =>

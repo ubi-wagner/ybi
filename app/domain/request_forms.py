@@ -39,6 +39,9 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
 
+from app.domain.verification_items import ITEMS as VERIFICATION_ITEMS
+from app.domain.verification_items import STATUS as VERIFICATION_STATUS
+
 
 class Kind(StrEnum):
     """How a cell is read. The heading says which, so there is nothing to
@@ -69,6 +72,26 @@ class Column:
     #: Filled in before the workbook is sent. The person confirms or corrects
     #: it; they do not type it.
     known: bool = False
+
+    #: A cell that has to say something rather than merely be non-empty, and
+    #: only when another column holds one of these values.
+    #:
+    #:     substantial_when = ("status", ("CONFIRMED …", "CORRECTED …"), 10)
+    #:
+    #: The verification form is the reason. A status somebody picked from a
+    #: dropdown is not a thing that happened — the same rule as DELIVERED
+    #: with no delivery date — so CONFIRMED and CORRECTED both assert that
+    #: somebody went and looked and both have to say what they found. STILL
+    #: CHECKING and SOMEBODY ELSE HAS TO ANSWER are honest with nothing
+    #: attached: they are reports of not knowing yet, and demanding prose for
+    #: one would produce "still checking" twice.
+    #:
+    #: It belongs in the *parser* rather than in the writer because the
+    #: preview is the promise that nothing surprising happens on accept. The
+    #: database refuses a two-character confirmation either way; catching it
+    #: here is the difference between one row held back and named, and a
+    #: whole batch of good answers rolled back with it.
+    substantial_when: tuple[str, tuple[str, ...], int] | None = None
 
 
 @dataclass(frozen=True)
@@ -418,5 +441,96 @@ ISSUED_MARKER = Column(
 ISSUED = "YBI"
 
 
+VERIFICATION = Form(
+    name="VERIFICATION",
+    version=1,
+    title="The nineteen things the record cannot settle on its own",
+    for_whom="the controller",
+    purpose=(
+        "Every one of these was found by a control rather than by somebody "
+        "reading, and none of them can be resolved from what is on file — "
+        "each needs something the controller knows or can reach.\n\n"
+        "They have been going out as a spreadsheet and coming back as a "
+        "spreadsheet on a laptop. This puts the answers on the record under "
+        "the name of whoever gave them, each against the item it settles, "
+        "with the workbook itself filed as the evidence behind it."),
+    consequence=(
+        "Ordered by how much each moves the rate. The worked example at the "
+        "top is closed — the Bacon $45,000, which ten of the eleven controls "
+        "were blind to and the eleventh caught, and which moved the fringe "
+        "rate from 22.45% to 21.90%. The rest are open, and the rate is a "
+        "working figure until they are not."),
+    sheet="Verification",
+    # Everything but the answer. A reference that changes is a row nobody can
+    # match back, and the question is ours to ask rather than theirs to
+    # restate — so all of it goes out locked and only the three columns on
+    # the right are typed into.
+    prefilled=("ref", "area", "title", "figure", "found", "asks", "moves"),
+    instructions=(
+        "One row per item. The left-hand columns are ours and are locked; "
+        "the three on the right are yours.",
+        "A blank status is unanswered, not a no. Leaving a row alone and "
+        "saying STILL CHECKING are different answers and we would rather "
+        "have the second.",
+        "Say what you did in the answer column even where the status covers "
+        "it — 'corrected' tells us to look and 'corrected: reposted the "
+        "credit to 4100 on 12 Sep' tells us where.",
+        "Nothing here is written to the record until somebody with the "
+        "controller's portfolio accepts it, and the preview says exactly "
+        "what will land first.",
+    ),
+    columns=(
+        Column("ref", "Ref", Kind.TEXT, required=True, known=True, width=8,
+               why="Ours. It is how the answer joins back to the item, so "
+                   "please leave it as it is."),
+        Column("area", "Area", Kind.TEXT, known=True, width=16),
+        Column("title", "What it is", Kind.TEXT, known=True, width=46),
+        Column("figure", "Amount", Kind.TEXT, known=True, width=16,
+               why="Text rather than money on purpose: some of these are "
+                   "'4 buildings' and '1 lease', and a column that is a "
+                   "number for some rows and a phrase for others is a column "
+                   "nobody can total. Nothing here is meant to be added up."),
+        Column("found", "What the record shows", Kind.TEXT, known=True, width=60),
+        Column("asks", "What we are asking", Kind.TEXT, known=True, width=60),
+        Column("moves", "What turns on it", Kind.TEXT, known=True, width=50),
+        Column("status", "Where it stands", Kind.CHOICE,
+               choices=VERIFICATION_STATUS, required=True, width=34,
+               why="A dropdown rather than free text, because "
+                   "'yes', 'confirmed' and 'OK — see email' are three "
+                   "answers to a question that has one."),
+        Column("answer", "Your answer", Kind.TEXT, required=True, width=70,
+               why="In your words. This is what an auditor reads, so a "
+                   "sentence beats a tick.",
+               substantial_when=("status", (VERIFICATION_STATUS[0],
+                                            VERIFICATION_STATUS[1]), 10)),
+        Column("answered_by", "Answered by", Kind.TEXT, width=24,
+               why="Leave blank and we record it under whoever sends the "
+                   "workbook back. Fill it in where somebody else settled "
+                   "the item — a row answered by the person who knows is "
+                   "worth more than a row answered by whoever had the file."),
+    ),
+)
+
+
+def verification_rows() -> list[dict]:
+    """The nineteen items as the workbook will carry them.
+
+    Read out of `domain/verification_items.py` — the same list the printed
+    worksheet and `docs/FOR_TOM_TO_VERIFY.md` are checked against — so a
+    twentieth item appears in the workbook without anybody editing a second
+    copy of it.
+    """
+    return [{"ref": i.ref, "area": i.area, "title": i.title,
+             "figure": i.figure, "found": i.found, "asks": i.asks,
+             "moves": i.moves,
+             # The worked example goes out already answered, because it is
+             # the example: it shows what a settled row looks like rather
+             # than describing one.
+             **({"status": i.answered[0], "answer": i.answered[1],
+                 "answered_by": i.answered[2]} if i.answered else {})}
+            for i in VERIFICATION_ITEMS]
+
+
 FORMS: dict[str, Form] = {f.name: f for f in
-                          (ASSET_REGISTER, SPACE_INVENTORY, PEOPLE_ROSTER)}
+                          (ASSET_REGISTER, SPACE_INVENTORY, PEOPLE_ROSTER,
+                           VERIFICATION)}

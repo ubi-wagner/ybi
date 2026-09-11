@@ -58,6 +58,8 @@ function mayAccept(actor, form) {
 export default function Requests({ actor }) {
   const [forms, setForms] = useState(null);
   const [data, setData] = useState(null);
+  const [checks, setChecks] = useState(null);
+  const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(null);        // request_id whose preview is open
   const [preview, setPreview] = useState(null);
@@ -70,8 +72,8 @@ export default function Requests({ actor }) {
   const toast = useToast();
 
   const load = useCallback(() =>
-    Promise.all([api.requestForms(), api.requests()])
-      .then(([f, d]) => { setForms(f); setData(d); setError(""); })
+    Promise.all([api.requestForms(), api.requests(), api.verificationStatus()])
+      .then(([f, d, v]) => { setForms(f); setData(d); setChecks(v); setError(""); })
       .catch((e) => setError(String(e.message || e))), []);
 
   useEffect(() => { load(); }, [load]);
@@ -192,6 +194,78 @@ export default function Requests({ actor }) {
           </div>
         )}
       </Card>
+
+      {/* ── Where the nineteen stand ────────────────────────────────── */}
+      {checks && (
+      <Card title="What the record cannot settle on its own"
+            aside={`${checks.settled} of ${checks.total} settled`}>
+        <p className="quiet small" style={{ marginTop: -4, marginBottom: 12 }}>
+          Each of these was found by a control rather than by somebody
+          reading, and none can be resolved from what is on file. They are
+          ordered by how much each moves the rate. An item with no answer is
+          unanswered, which is a different fact from <em>still checking</em>:
+          one means nobody has looked and the other means somebody has and
+          cannot say yet.
+        </p>
+
+        <Table columns={[
+          { label: "", align: "left" },
+          { label: "Ref", align: "left" },
+          { label: "What it is", align: "left" },
+          { label: "Amount", align: "left" },
+          { label: "Where it stands", align: "left" },
+        ]}>
+          {checks.items
+            .filter((i) => showAll || !i.settled)
+            .map((i) => (
+            <tr key={i.ref} className={i.settled ? "unmatched" : ""}>
+              <td className="l">
+                <Tick state={i.settled ? "done" : i.status ? "flagged" : "open"} />
+              </td>
+              <td className="l mono-ref">{i.ref}</td>
+              <td className="l wrap">
+                <div className="strong">{i.title}</div>
+                <div className="quiet small">{i.area} · {i.moves}</div>
+              </td>
+              <td className="l num small">{i.figure}</td>
+              <td className="l wrap">
+                {i.status ? (
+                  <>
+                    <div className="small">{i.status}</div>
+                    <div className="quiet small">{i.answer}</div>
+                    <div className="quiet small">
+                      {i.answered_by}
+                      {i.accepted_by && i.accepted_by !== i.answered_by
+                        && <> · accepted by {i.accepted_by}</>}
+                      {i.evidence_id && <> · <a
+                        href={api.documentDownloadUrl(i.evidence_id)}>
+                        {i.evidence_filename || "the workbook"}</a></>}
+                      {i.answers > 1 && <> · answered {i.answers} times</>}
+                    </div>
+                  </>
+                ) : (
+                  <span className="quiet small">{i.asks}</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </Table>
+
+        <div className="upload-actions" style={{ marginTop: 12 }}>
+          <button className="btn quiet sm" onClick={() => setShowAll(!showAll)}>
+            {showAll ? "Hide the settled ones"
+                     : `Show the ${checks.settled} already settled`}
+          </button>
+          <span className="quiet small">
+            Answers come back through the workbook above, and each carries the
+            file it was given in. Nothing here is edited — a second answer
+            supersedes the first and both stay, because several of these are
+            expected to change answer and the sequence is what an auditor is
+            reconstructing.
+          </span>
+        </div>
+      </Card>
+      )}
 
       {/* ── The chase list ──────────────────────────────────────────── */}
       <Card title="What we have asked for"
