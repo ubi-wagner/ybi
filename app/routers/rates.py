@@ -240,7 +240,7 @@ def compute(body: ComputeIn, period: str = "2025",
     # An explained difference is not an open one: a reconciling item with the
     # ledger lines behind it closes the control. What this refuses is a
     # difference nobody has accounted for.
-    open_controls = query("""SELECT control, description, note,
+    open_controls = query("""SELECT control, description, note, state,
                                     variance::text AS variance,
                                     exceptions::text AS exceptions
                                FROM v_statement_reconciliation
@@ -249,10 +249,11 @@ def compute(body: ComputeIn, period: str = "2025",
     if open_controls:
         raise HTTPException(409, {
             "error": "STATEMENTS_DO_NOT_RECONCILE",
-            "message": ("The general ledger does not yet agree with the "
-                        "statements it came from. A rate built on it would be "
-                        "built on the wrong numbers. Name the differences on "
-                        "the reconciliation first."),
+            "message": ("The books do not yet agree with themselves. A rate "
+                        "built on them would be built on the wrong numbers. "
+                        "Points marked OPEN have a difference to name; points "
+                        "marked NO DATA are waiting on a document that has "
+                        "not been imported."),
             "open": open_controls})
 
     sealed = one("""SELECT set_id, seal_hash FROM decision_set

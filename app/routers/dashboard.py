@@ -54,7 +54,7 @@ def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
         SELECT description AS control,
                CASE WHEN basis = 'VARIANCE' THEN variance ELSE exceptions END
                    AS variance,
-               ties
+               ties, state
           FROM v_statement_reconciliation
          WHERE period = %s ORDER BY seq""", (period,)) or []
     controls += query("""

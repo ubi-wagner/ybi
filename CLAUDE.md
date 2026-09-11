@@ -188,6 +188,24 @@ spent; everything around it stays quiet.
   Customer:Job, account names, prior year — is a suggestion a human confirms.
 - **Every derived figure ties to a control.** If a new calculation cannot be
   reconciled to the ledger, it does not ship.
+- **A control that cannot be evaluated has not passed.** Read `state` on the
+  register — `TIES`, `OPEN` or `NO DATA` — never `variance = 0` alone. Both
+  sides of most controls are `COALESCE(..., 0)`, so an empty period compares
+  zero against zero and looks green; it reported all eleven points tying over
+  no books at all until `029` fixed it. The general ledger's printed
+  subtotals had the same shape: an export that saved formulas without their
+  cached values read as zero and reconciled against zero. When you add a
+  control, say what it needs in order to mean anything.
+- **Never join on a name where a key exists, and never on a name that can
+  repeat.** Joining the ledger to the P&L on the leaf account name
+  mislabelled 138 lines worth $1,570,174.17, because four leaves live under
+  both an income and an expense parent. `v_gl_bs_account` still joins the
+  balance sheet on leaf, because the sheet's path and the chart's path never
+  match — it is guarded rather than safe by luck.
+- **A composite key never goes in a URL path.** A group key is an account and
+  a payee joined by 0x1f; a non-printable character in a path is not
+  something every client will encode, and httpx refuses outright. Query
+  parameter.
 
 ## Proving it
 

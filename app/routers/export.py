@@ -58,7 +58,7 @@ def reconciliation(period: str = None, actor: Actor = Depends(require_reader)) -
     period = period or settings.period
     controls = query("""SELECT control, basis, description, left_label, left_value,
                                right_label, right_value, variance, exceptions,
-                               ties, note
+                               ties, state, note
                           FROM v_statement_reconciliation
                          WHERE period = %s ORDER BY seq""", (period,))
     pl = query("""SELECT account, section, gl_amount, gl_lines, pl_amount,
@@ -112,7 +112,7 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
                left_label, left_value, right_label, right_value,
                CASE WHEN basis = 'VARIANCE' THEN variance ELSE exceptions END
                    AS variance,
-               ties, note
+               ties, state, note
           FROM v_statement_reconciliation
          WHERE period = %s ORDER BY seq""", (period,)) or [])
     controls += query("""SELECT 'ASSET_REGISTER' AS control,

@@ -37,12 +37,14 @@ def register(period: str | None = None) -> dict:
     period = period or settings.period
     controls = query("""SELECT control, basis, description, left_label, left_value,
                                right_label, right_value, variance, exceptions,
-                               ties, note
+                               ties, evaluable, state, note
                           FROM v_statement_reconciliation
                          WHERE period = %s ORDER BY seq""", (period,))
     return {"period": period, "controls": controls,
             "failing": [c["control"] for c in controls if not c["ties"]],
-            "ties": all(c["ties"] for c in controls)}
+            "open": [c["control"] for c in controls if c["state"] == "OPEN"],
+            "no_data": [c["control"] for c in controls if c["state"] == "NO DATA"],
+            "ties": bool(controls) and all(c["ties"] for c in controls)}
 
 
 @router.get("/gl-pl")

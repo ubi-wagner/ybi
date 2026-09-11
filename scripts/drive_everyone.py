@@ -527,6 +527,23 @@ def drive_controller(args, c):
                              "any reading, and this explanation is long enough "
                              "to pass the length test on its own.")})
 
+    # A control that cannot be evaluated must not report that it passed.
+    # An empty period used to answer that all eleven points tie, which is the
+    # most misleading thing this system could say.
+    empty = call(c, "GET", "/api/reconcile", 200,
+                 "reads the register for a period with nothing in it",
+                 params={"period": "2024"})
+    if empty.status_code == 200:
+        d = empty.json()
+        states = {x["state"] for x in d["controls"]}
+        if d["ties"]:
+            finding("an empty period reports that every point ties")
+        elif states == {"NO DATA"}:
+            ok("every point reads NO DATA, and each says which document it "
+               "is waiting on")
+        else:
+            finding(f"an empty period reports {states}")
+
     recon = call(c, "GET", "/api/reconcile", 200, "reads schedule A-1")
     if recon.status_code == 200 and recon.json()["ties"]:
         ok("every cross-reference point ties")

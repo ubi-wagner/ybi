@@ -181,7 +181,9 @@ def main() -> int:
 
     print(f"Cross-reference register — {args.period}\n")
     for ctl in reg["controls"]:
-        mark = "tie " if ctl["ties"] else "OPEN"
+        mark = {"TIES": "tie ", "OPEN": "OPEN",
+                "NO DATA": "----"}.get(ctl.get("state"),
+                                       "tie " if ctl["ties"] else "OPEN")
         print(f"  [{mark}] {ctl['control']:22s} {ctl['description']}")
         print(f"         {ctl['left_label']:38s} {money(ctl['left_value']):>18}")
         print(f"         {ctl['right_label']:38s} {money(ctl['right_value']):>18}")
@@ -194,7 +196,11 @@ def main() -> int:
     if reg["ties"]:
         print("Every cross-reference point ties.")
         return 0
-    print("Open: " + ", ".join(reg["failing"]))
+    if reg.get("open"):
+        print("Open: " + ", ".join(reg["open"]))
+    if reg.get("no_data"):
+        print("Not yet evaluable, waiting on a document: "
+              + ", ".join(reg["no_data"]))
     return 1
 
 

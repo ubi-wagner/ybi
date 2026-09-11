@@ -79,13 +79,24 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                 execute("""INSERT INTO attachment (evidence_id,target_type,target_id,
                                                    relevance,attached_by)
                            VALUES (%s,'LEDGER_LINE',%s,%s,%s)
-                           ON CONFLICT DO NOTHING""",
+                           ON CONFLICT (evidence_id,target_type,target_id)
+                             DO UPDATE SET relevance = EXCLUDED.relevance,
+                                           attached_by = EXCLUDED.attached_by,
+                                           detached_at = NULL""",
                         (eid, line["line_id"], relevance, uploaded_by))
             attached = len(lines)
         else:
+            # DO UPDATE, not DO NOTHING: attaching the same document to the
+            # same target again with a different relevance is somebody
+            # correcting what they said it supports, and silently keeping the
+            # old wording loses the correction.
             execute("""INSERT INTO attachment (evidence_id,target_type,target_id,
                                                relevance,attached_by)
-                       VALUES (%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+                       VALUES (%s,%s,%s,%s,%s)
+                       ON CONFLICT (evidence_id,target_type,target_id)
+                         DO UPDATE SET relevance = EXCLUDED.relevance,
+                                       attached_by = EXCLUDED.attached_by,
+                                       detached_at = NULL""",
                     (eid, target_type, target_id, relevance, uploaded_by))
             attached = 1
 
@@ -182,8 +193,17 @@ def for_group(group_key: str, period: str = "2025") -> dict:
     }
 
 
-@router.get("/for/{target_type}/{target_id}")
+@router.get("/for")
 def for_target(target_type: str, target_id: str) -> dict:
+    """What is attached to one thing, and what has been said about it.
+
+    Query parameters rather than path segments. A LEDGER_GROUP target is an
+    account and a payee joined by a unit separator (0x1f), and a
+    non-printable character in a URL path is not something every client will
+    encode for you — the segment-reverse route had the same shape and was
+    uncallable for any real group until it moved. The browser happened to be
+    encoding it correctly here; a script would not have.
+    """
     return {
         "documents": query("""SELECT e.evidence_id,e.kind,e.uri,e.byte_size,e.mime_type,
                                      a.relevance,a.attached_by,a.attached_at

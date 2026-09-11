@@ -96,8 +96,11 @@ export default function Reconcile({ actor }) {
         <Stat label="Cross-reference points" value={reg.controls.length} size="lg" />
         <Stat label="Tying" value={reg.controls.length - open.length}
               tone={open.length ? "" : "good"} size="lg" />
-        <Stat label="Open" value={open.length} tone={open.length ? "warn" : ""} size="lg"
-              note={open.length ? open.map((c) => c.control).join(", ") : "Everything ties"} />
+        <Stat label="Open" value={reg.controls.filter((c) => c.state === "OPEN").length}
+              tone={open.length ? "warn" : ""} size="lg"
+              note={(reg.no_data || []).length
+                ? `${reg.no_data.length} more waiting on a document`
+                : open.length ? "a difference to name" : "Everything ties"} />
         <Stat label="Named reconciling items" value={items.length}
               note={items.length ? money(items.reduce((s, i) => s + Math.abs(Number(i.amount)), 0)) : "none"} />
       </div>
@@ -126,7 +129,13 @@ export default function Reconcile({ actor }) {
             {reg.controls.map((c) => (
               <React.Fragment key={c.control}>
                 <tr>
-                  <td><Tick state={c.ties ? "done" : "flagged"} title={c.ties ? "ties" : "open"} /></td>
+                  <td>
+                    <Tick state={c.state === "TIES" ? "done"
+                                 : c.state === "NO DATA" ? "open" : "flagged"}
+                          title={c.state === "NO DATA"
+                            ? "nothing to compare yet"
+                            : c.state === "TIES" ? "ties" : "open"} />
+                  </td>
                   <td className="l wrap">
                     <strong>{c.description}</strong>
                     <div className="rowsub">{c.control}</div>
@@ -140,9 +149,11 @@ export default function Reconcile({ actor }) {
                     <strong>{money(c.right_value)}</strong>
                   </td>
                   <td className={"amt strong" + (c.ties ? "" : " neg")}>
-                    {c.basis === "VARIANCE"
-                      ? money(c.variance)
-                      : `${c.exceptions} exception${Number(c.exceptions) === 1 ? "" : "s"}`}
+                    {c.state === "NO DATA"
+                      ? <span className="rowsub">no data</span>
+                      : c.basis === "VARIANCE"
+                        ? money(c.variance)
+                        : `${c.exceptions} exception${Number(c.exceptions) === 1 ? "" : "s"}`}
                   </td>
                 </tr>
                 <tr className="subrow">

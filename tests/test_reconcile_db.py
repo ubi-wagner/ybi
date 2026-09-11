@@ -223,3 +223,38 @@ def test_the_fringe_base_is_the_register_not_the_ledger(cur):
     assert on_register != on_ledger or r["register_wages"] == r["ledger_wages"], (
         "the two bases give the same rate, so either they agree or the view "
         "is not reading what it thinks it is")
+
+
+def test_a_control_that_cannot_be_evaluated_has_not_passed(cur):
+    """The most misleading thing this system could say.
+
+    Every figure on both sides of a control was COALESCEd to zero, so a
+    period with nothing in it reconciled zero against zero and reported all
+    eleven points green. A brand-new deployment would have shown a controller
+    a fully reconciled file over no books at all.
+    """
+    cur.execute("""SELECT control, state, ties, evaluable, note
+                     FROM v_statement_reconciliation
+                    WHERE period = '2024' ORDER BY seq""")
+    rows = cur.fetchall()
+    if not rows:
+        pytest.skip("no empty period to test against")
+    assert not any(r["ties"] for r in rows), (
+        "a period with no data reports that its controls tie: "
+        + ", ".join(r["control"] for r in rows if r["ties"]))
+    assert all(r["state"] == "NO DATA" for r in rows)
+    for r in rows:
+        assert "waiting" in r["note"] or "needs" in r["note"], (
+            f"{r['control']} says NO DATA without saying what it needs")
+
+
+def test_a_loaded_period_still_evaluates(cur):
+    """The guard must not make everything unevaluable."""
+    cur.execute("""SELECT count(*) FILTER (WHERE evaluable) AS ok,
+                          count(*)                          AS total
+                     FROM v_statement_reconciliation WHERE period = '2025'""")
+    r = cur.fetchone()
+    assert r["total"] >= 11
+    assert r["ok"] == r["total"], (
+        f"only {r['ok']} of {r['total']} controls are evaluable on a period "
+        f"that has been fully loaded")

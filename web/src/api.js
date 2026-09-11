@@ -80,7 +80,8 @@ export const api = {
   evidenceForGroup: (groupKey, period = "2025") =>
     req(`/evidence/group?period=${period}&group_key=${encodeURIComponent(groupKey)}`),
   evidenceFor: (targetType, targetId) =>
-    req(`/evidence/for/${targetType}/${encodeURIComponent(targetId)}`),
+    req("/evidence/for?" + new URLSearchParams({ target_type: targetType,
+                                                 target_id: targetId })),
   evidenceFileUrl: (id) => `/api/evidence/${encodeURIComponent(id)}/file`,
   addNote: (body) => req("/evidence/note", { method: "POST", body: JSON.stringify(body) }),
   /* Multipart, so it cannot go through req(): setting Content-Type by hand
