@@ -41,7 +41,8 @@ SHOTS = [
     ("hruby@ybi.org",   "/space",      "m-space",         "Buildings and the rent roll", None),
     ("hruby@ybi.org",   "/inventory",  "m-inventory",     "The equipment register", None),
     ("hruby@ybi.org",   "/evidence",   "m-evidence",      "The document library", None),
-    ("sgaffney@ybi.org", "/awards",    "m-awards",        "Awards and what they bear", None),
+    ("sgaffney@ybi.org", "/contracts", "m-contracts",     "Contracts and what each earns", None),
+    ("sgaffney@ybi.org", "/contracts/codes", "m-charge-codes", "Charge codes and who may charge them", None),
     ("sgaffney@ybi.org", "/chart",     "m-chart",         "The 2026 chart", None),
     # Administration
     ("bewing@ybi.org",  "/people",     "m-people",        "The roster", None),

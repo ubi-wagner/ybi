@@ -755,3 +755,14 @@ table.buildup tr:last-child th, table.buildup tr:last-child td { border-bottom: 
 
 tbody tr.total-row td, tbody tr.total-row th {
   border-top: 1px solid var(--ink); border-bottom: none; padding-top: 10px; }
+
+/* ------------------------------------------------------------ contracts -- */
+
+/* A drawer carrying tables rather than a form. A contract with its terms,
+   milestones, invoices and the money against each does not read in a column
+   narrow enough for a single field. */
+.drawer.wide { width: min(1000px, 100%); }
+
+.checkline { display: flex; align-items: center; gap: 8px; font-size: 13px;
+             color: var(--graphite); }
+.checkline input { width: auto; }

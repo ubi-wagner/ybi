@@ -235,19 +235,55 @@ const CHAPTERS = [
                           "floor it consumes."],
   },
   {
-    id: "awards",
+    id: "contracts",
     needs: "PROJECT",
-    title: "Awards and objectives",
-    lede: "What each contract will bear.",
+    title: "Contracts and charge codes",
+    lede: "What each contract earns, and who may charge it.",
     steps: [
-      ["Every award carries its ceiling and its cost share.",
-       "Both are constraints the allocation has to respect, not notes."],
-      ["The true-up shows what has been drawn against what was promised.",
-       "That is the number a programme officer asks for."],
-      ["Cost share that was obligated and never tracked is a finding.",
-       "Better found here than in the Single Audit."],
+      ["Every contract carries its ceiling, its cost share and its terms.",
+       "A ceiling is not a contract — what may be charged and when it is " +
+       "paid live in clauses, so each provision is recorded with the clause " +
+       "it came from."],
+      ["A milestone is what an invoice claims against.",
+       "Without one, a payment arrives with nothing to say what it was for."],
+      ["Money in is recorded against the invoice that earned it.",
+       "Invoiced less received is the number worth chasing; received more " +
+       "than invoiced is worth finding before the sponsor does."],
+      ["A charge code is a cost objective — the same one the ledger is " +
+       "classified into.",
+       "So an hour and a dollar spent on the same work land in the same " +
+       "place. There is no second list."],
+      ["Assign people to a code before they charge it.",
+       "Charging is gated on codes that have somebody assigned. A code with " +
+       "an empty list predates the mechanism and stays open, which is what " +
+       "makes reconstructing 2025 possible."],
+      ["Nobody assigns themselves.",
+       "The same rule the portfolios follow, for the same reason."],
     ],
-    shot: ["m-awards", "Ceilings, cost share, and what each award has drawn."],
+    shot: ["m-contracts", "Contracts, what each has earned, and what it has " +
+                          "cost so far."],
+  },
+  {
+    id: "charge-codes",
+    needs: "PROJECT",
+    title: "Opening a charge code",
+    lede: "Before anybody books an hour to it.",
+    steps: [
+      ["Open the code, say what it is, and say why.",
+       "The reason goes on the record — a code with no purpose is a code " +
+       "somebody will charge anything to."],
+      ["A federal code needs its CFDA number.",
+       "Without it the award cannot reach the SEFA, and the Single Audit " +
+       "scope is decided by what is on the SEFA."],
+      ["Assign the people who will work on it, with their role.",
+       "An assignment can carry a window: an engagement that ends in June " +
+       "should not be chargeable in July."],
+      ["Taking somebody off keeps the grant, revoked.",
+       "It does not delete it. Who could charge what, and when, is part of " +
+       "the record."],
+    ],
+    shot: ["m-charge-codes", "Every code, who is assigned, and what has been " +
+                             "charged to it."],
   },
   {
     id: "evidence",

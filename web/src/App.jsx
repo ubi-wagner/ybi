@@ -23,6 +23,7 @@ import Chart from "./pages/Chart.jsx";
 import Lanes from "./pages/Lanes.jsx";
 import Rates from "./pages/Rates.jsx";
 import Review from "./pages/Review.jsx";
+import Contracts from "./pages/Contracts.jsx";
 import Awards from "./pages/Awards.jsx";
 
 /* Navigation carries the schedule each step eventually prints as in the audit
@@ -54,7 +55,7 @@ const ALL_TABS = [
   ["/evidence",  "Evidence",   "E",   "OFFICE"],
   ["/space",     "Space",      "I",   "FACILITIES"],
   ["/inventory", "Inventory",  "I",   "INVENTORY"],
-  ["/awards",    "Awards",     "F",   "PROJECT"],
+  ["/contracts", "Contracts",  "F",   "PROJECT"],
   ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
   ["/rates",     "Rates",      "D",   "CONTROLLER"],
   ["/review",    "Review",     "A-1", "reader"],
@@ -201,6 +202,8 @@ export default function App() {
           <Route path="/review" element={<Review />} />
           <Route path="/review/:pane" element={<Review />} />
           <Route path="/awards" element={<Awards />} />
+          <Route path="/contracts" element={<Contracts actor={actor} />} />
+          <Route path="/contracts/:pane" element={<Contracts actor={actor} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

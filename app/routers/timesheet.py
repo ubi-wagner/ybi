@@ -200,6 +200,43 @@ def put_entry(body: EntryIn, period: str = None,
             422, "That day has not happened yet. Time is recorded after it is "
                  "worked, not before.")
 
+    # Is this person allowed to charge this code?
+    #
+    # Enforced only where the code has somebody on it. A code nobody has been
+    # assigned to predates the mechanism — which for the whole of 2025 is all
+    # of them, because the year was worked before any of this existed — and
+    # refusing those would make reconstructing the year impossible. A code
+    # with an assignment list is a code being managed, and charging outside
+    # the list is then a real answer to a question somebody asked.
+    #
+    # v_charge_authorised is the single place the question is answered. The
+    # screen asks it to decide what to offer and this asks it to decide what
+    # to accept; neither gets its own opinion about who may charge what.
+    managed = one("""SELECT count(*) AS n FROM charge_authority
+                      WHERE period = %s AND objective_id = %s
+                        AND revoked_at IS NULL""",
+                  (period, body.objective_id))["n"]
+    if managed:
+        allowed = one("""SELECT opens_on, closes_on FROM v_charge_authorised
+                          WHERE period = %s AND objective_id = %s
+                            AND employee_key = %s""",
+                      (period, body.objective_id, key))
+        if not allowed:
+            raise HTTPException(
+                403, f"You are not authorised to charge {body.objective_id}. "
+                     f"{managed} person(s) are. Ask the project manager or "
+                     f"the controller to assign you before booking time to "
+                     f"it.")
+        opens, closes = allowed["opens_on"], allowed["closes_on"]
+        if opens and body.work_date < opens:
+            raise HTTPException(
+                422, f"Your assignment to {body.objective_id} starts on "
+                     f"{opens}. {body.work_date} is before it.")
+        if closes and body.work_date > closes:
+            raise HTTPException(
+                422, f"Your assignment to {body.objective_id} ended on "
+                     f"{closes}. {body.work_date} is after it.")
+
     lag = (date.today() - body.work_date).days
     if body.basis == "AS_WORKED" and lag > CONTEMPORANEOUS_DAYS:
         raise HTTPException(

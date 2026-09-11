@@ -60,6 +60,39 @@ export const api = {
   certificationFor: (key) => req(`/certify/${encodeURIComponent(key)}`),
   auditPackageUrl: (period = "2025") => `/api/export/audit-package?period=${period}`,
 
+  // Contracts and charge codes — the income side.
+  contracts: (period = "2025") => req(`/contracts?period=${period}`),
+  contract: (id, period = "2025") => req(`/contracts/${encodeURIComponent(id)}?period=${period}`),
+  chargeCodes: (period = "2025") => req(`/contracts/charge-codes?period=${period}`),
+  chargeCodePeople: (id, period = "2025") =>
+    req(`/contracts/charge-codes/${encodeURIComponent(id)}/people?period=${period}`),
+  createChargeCode: (body, period = "2025") =>
+    req(`/contracts/charge-codes?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  authoriseCharge: (id, body, period = "2025") =>
+    req(`/contracts/charge-codes/${encodeURIComponent(id)}/authorise?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  revokeCharge: (id, body, period = "2025") =>
+    req(`/contracts/charge-codes/${encodeURIComponent(id)}/revoke?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  putAwardTerm: (id, body) =>
+    req(`/contracts/${encodeURIComponent(id)}/terms`,
+        { method: "PUT", body: JSON.stringify(body) }),
+  createMilestone: (id, body) =>
+    req(`/contracts/${encodeURIComponent(id)}/milestones`,
+        { method: "POST", body: JSON.stringify(body) }),
+  setMilestoneState: (id, body) =>
+    req(`/contracts/milestones/${encodeURIComponent(id)}/state`,
+        { method: "POST", body: JSON.stringify(body) }),
+  milestone: (id, period = "2025") =>
+    req(`/contracts/milestones/${encodeURIComponent(id)}?period=${period}`),
+  addReceipt: (invoiceId, body) =>
+    req(`/contracts/invoices/${encodeURIComponent(invoiceId)}/receipts`,
+        { method: "POST", body: JSON.stringify(body) }),
+  chargingPeople: (period = "2025") => req(`/contracts/employees?period=${period}`),
+  employeeCharging: (key, period = "2025") =>
+    req(`/contracts/employees/${encodeURIComponent(key)}/charging?period=${period}`),
+
   // Final review — the three deliverables somebody signs. Each screen reads
   // the same endpoint its workbook is built from, so a figure on screen and
   // the same figure in the file cannot disagree.

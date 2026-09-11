@@ -170,7 +170,11 @@ export function Keys({ hints }) {
   );
 }
 
-export function Drawer({ open, title, subtitle, onClose, footer, children }) {
+/* `wide` is for a drawer that carries tables rather than a form — a contract
+   with its terms, milestones, invoices and the money against each does not
+   read in a 560px column. */
+export function Drawer({ open, title, subtitle, onClose, footer, wide = false,
+                         children }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -182,7 +186,8 @@ export function Drawer({ open, title, subtitle, onClose, footer, children }) {
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={title}>
+      <aside className={`drawer ${wide ? "wide" : ""}`} role="dialog"
+             aria-modal="true" aria-label={title}>
         <header>
           <div>
             <h3 style={{ fontSize: 17 }}>{title}</h3>

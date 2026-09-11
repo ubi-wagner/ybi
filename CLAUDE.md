@@ -120,6 +120,7 @@ app/
                      is decided. The kind decides the tree.
   routers/
     classify.py      the queue — the screen that matters
+    contracts.py     charge codes, who may charge them, milestones, money in
     review.py        the three deliverables: rate, auditor's report, 990
     imports.py       QBO upload -> parse -> preview -> accept
     documents.py     the document inbox everybody in the org gets
@@ -182,6 +183,51 @@ what decide who sees a document, and they are unchanged by where it sits.
 `scripts/seed_documents.py` files the ten foundational documents through the
 real upload route, signed in as a real person, so the trail shows who filed
 them. It is content-addressed, so running it twice files nothing twice.
+
+## The income side
+
+Everything else here reads a year already spent: the ledger arrives, the
+controller judges it, a rate falls out. `/contracts` is the half that has to
+exist *before* the year is worked — a code opened, somebody assigned to it, a
+deliverable worth something, an invoice against the deliverable, and the money
+that arrives against the invoice.
+
+**The cost objective is the charge code.** There is deliberately no second
+register of codes. An hour and a dollar spent on the same work have to land in
+the same place, and two lists of "the thing you charge to" is how they stop
+doing that. `charge_authority` hangs off `cost_objective`; a test fails a
+migration that creates a `charge_code` table.
+
+**Charging is gated, but only on a code somebody has been assigned to.** A
+code with an empty assignment list predates the mechanism — which for all of
+2025 is every code, because the year was worked before any of this existed —
+and refusing those would make reconstructing it impossible. Assign one person
+and the gate turns on for that code. `POST /api/timesheet/entry` and the
+screen both ask `v_charge_authorised`, so neither can hold its own opinion
+about who may charge what.
+
+**Nobody assigns themselves**, the table keeps a revoked grant rather than
+deleting it, and one live grant per person per code means an amendment
+supersedes instead of stacking. All three are the rules the portfolios
+already follow.
+
+**A milestone state that claims a date carries one.** `DELIVERED` with no
+delivery date is a status somebody set, not a thing that happened, and the
+schema refuses it.
+
+**A receipt may be negative.** A refund and a clawback are money moving the
+other way; constraining it positive would overstate collections for ever.
+
+The auditor's path runs `/contracts/people` → a person → every code they
+charged, with `authorised` on each → the contract → its terms with the clause
+each came from → a milestone → the invoice against it, the money in, and the
+cost classified underneath. `scripts/drive_contracts.py` walks the whole chain
+as the people who own it.
+
+**No margin is shown anywhere.** Cost against a contract is what has been
+*classified* to its objective, and classification is unfinished — a margin
+over an incomplete cost side flatters in exactly the direction nobody should
+be flattered.
 
 ## Final review
 
@@ -300,6 +346,7 @@ are tested at.
 | `pytest` | the engine, and two structural checks: every mutating route records what it did and takes its actor from the session, and every screenshot the manual shows exists |
 | `scripts/reconcile.py` | the three source documents and the payroll register against each other, eleven points |
 | `scripts/drive_everyone.py` | every person, every process they own, and an audit row under their own name for every change |
+| `scripts/drive_contracts.py` | charge codes, assignment, milestones, money in, and the auditor's path |
 | `scripts/drive_access.py` | rank, portfolios, the seal, the password gate |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
