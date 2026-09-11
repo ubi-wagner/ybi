@@ -5,6 +5,10 @@ pydantic==2.10.4
 pydantic-settings==2.7.0
 python-multipart==0.0.20
 openpyxl==3.1.5
+# The 2026 fixed asset schedule is a real .xls — an OLE2 compound document
+# from Crystal Reports, not a renamed xlsx — and openpyxl cannot open one.
+# Pure Python, so the image grows no native library.
+xlrd==2.0.2
 # Invoice regeneration. Pure Python, no system libraries, so the Docker
 # image does not grow a native dependency for one PDF.
 reportlab==4.2.5

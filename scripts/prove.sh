@@ -65,6 +65,12 @@ step "What one change moves, and what it must not"
 # drive_everyone it can do neither, and reports a correct refusal as a fault.
 run "drive_propagation" $PY scripts/drive_propagation.py --base "$BASE"
 
+step "What is still being asked for, and the answer coming back"
+# Before the drives that seal, like the others: it writes assets, space and
+# addresses, none of which the seal covers, but it does classify nothing and
+# leaves the decision set exactly as it found it.
+run "drive_requests" $PY scripts/drive_requests.py --base "$BASE"
+
 step "Two people, one record, the same instant"
 # With drive_propagation, and for the same reason: it seals, and it proves a
 # sealed set refuses a judgment that was already in flight. It leaves the set

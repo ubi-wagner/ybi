@@ -29,7 +29,7 @@ from app.routers import (auth, awards, certify, chart, classify, contracts,
                          dashboard,
                          documents, evidence, export, facilities, health,
                          imports, lanes, rates, reconcile, restate, review,
-                         timesheet, undo, reports)
+                         requests, timesheet, undo, reports)
 from app.settings import settings
 
 log = logging.getLogger("ybi")
@@ -102,7 +102,7 @@ app.add_middleware(
 for r in (health, auth, dashboard, imports, chart, classify, lanes,
           rates, evidence, documents, awards, facilities, certify,
           timesheet, undo, restate, review, contracts, reconcile,
-          export, reports):
+          export, reports, requests):
     app.include_router(r.router, prefix="/api")
 
 

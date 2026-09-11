@@ -714,6 +714,98 @@ The drive runs **before every drive that seals**, because its third step is to
 seal and its fourth is to prove a sealed set refuses a reclassification. Run
 after one, it can do neither and reports the guarantee as a fault.
 
+## Asking for what is missing
+
+Three things are missing from the record and none can be inferred: which
+assets federal money paid for, who uses which square foot, and the email
+address of thirty-seven people who have to sign their own effort. All three
+live in somebody else's filing cabinet and each has a lead time in weeks.
+
+`/requests` is the mechanism. A form definition becomes a workbook, somebody
+fills it in offline in the tool they already use, it comes back, the preview
+says exactly what it will do, and only then is it written.
+
+    POST /requests/{form}/issue    a workbook to send, and a row saying we asked
+    POST /requests/{id}/reply      the filled one comes back
+    GET  /requests/{id}/preview    what it says, and what is wrong with it
+    POST /requests/{id}/accept     write it
+
+**The form is defined once and both directions read it.**
+`domain/request_forms.py` holds the columns; `request_workbook.py` writes and
+`request_intake.py` reads, through the same definition. A workbook cannot ask
+for a column the parser will not accept — the shape that produced two coverage
+figures six-fold apart and a nav stricter than the API.
+
+**Ask only for what only they know.** `2026_YBI_Fixed-Asset-Schedule.xls` and
+`2025_YBI_Lease-Schedule.xlsx` had been on file since the foundation was
+loaded and **nothing had ever read them**. The first is a complete
+asset-level register — 263 assets with description, in-service date, life,
+cost and depreciation. The second is 26 tenancies with the building and the
+rent. So the workbooks go out pre-filled from YBI's own documents and the ask
+collapses to the column neither carries: *funding source* on the register
+(2 CFR 200.313(d)(1) requires it and the register has no such column, which
+is a finding on its own) and *square footage* on the space book.
+
+**Every printed subtotal must equal what sits under it** — the QuickBooks
+rule, applied to the asset schedule, and it earned its keep twice. The first
+parser dropped every asset with no system number, because the report prints
+the number only when it changes: $2.5m gone, including $2,388,438.81 of Tech
+Block phase 2. And two sheets open with an aggregate the detail below
+replaced, which their own totals exclude — attributed the way a reconciling
+item is, by finding the **one** combination of rows that explains the
+difference and refusing to guess when more than one would.
+
+Three rules in the intake:
+
+- **A blank is unanswered, and unanswered is a value.** The intake form of
+  *unclassified cost is never defaulted into a pool*. "There is no federal
+  money in this asset" and "nobody has looked" stay different facts all the
+  way to `asset_funding`, where the first is a row at 0.00 and the second is
+  no row.
+- **Columns are found by their heading.** Somebody will insert a column or
+  fill in last quarter's copy. Reading by position turns either into silently
+  wrong data in every column to the right.
+- **Nothing is coerced into validity, and a bad cell costs one cell.**
+  "2019ish" is reported as `Assets, row 214, "Placed in service": is not a
+  date` and the asset still lands with that field empty. A bad cell in a
+  *required* column holds the row back instead — an asset at a guessed cost
+  is worse than an asset nobody recorded.
+
+**The door is wide and the judgment is not.** Anybody signed in may send a
+reply back, exactly as anybody may send a document in. Accepting takes the
+portfolio that owns the data — `INVENTORY`, `FACILITIES`, the administrator
+for the roster — because writing somebody's answer into the cost record is
+the same judgment as typing it in by hand.
+
+**A reply is evidence.** The workbook is filed through `storage.place()`, so
+"where did this funding source come from" answers with the spreadsheet
+somebody sent, under their name.
+
+Two defects came out of building it, both found by the drive rather than by
+anything failing:
+
+**A spreadsheet renamed the organisation's administrator and locked her out.**
+The roster reply matched on `employee_key`, and Barb Ewing's account is keyed
+`EWING` because she is on the payroll like everybody else. A row naming
+`EWING` rewrote her address and her display name; she could not sign in
+afterwards, and the account that provisions every other account had been
+taken over by a file from outside the organisation. A reply may now only fill
+in an address **nobody has confirmed**, and may never touch `display_name` at
+all — a name is what every audit entry is recorded under, and changing it
+rewrites how the whole trail reads. This is the rule provisioning already
+follows for passwords, for the same reason.
+
+**The facilities carve-out could never have fired.** There were two registers
+of one fact: `space_partition` (009) and `space_unit` (020).
+`v_facility_occupancy` is the only thing the rate model reads for the 200.465
+carve-out, it read `space_partition`, and **nothing in the system has ever
+written `space_partition`** — not a route, not a script, not a migration. So
+`PUT /api/facilities/space` wrote a row, the screen showed it,
+`v_space_unit_control` tied, and the rate carried tenant and vacant space
+into the federal pool regardless. Migration `048` points the view at
+`space_unit`. `space_partition` is dead and six worklist views still test
+`NOT EXISTS` against it; `049` should drop both.
+
 ## Two people at once
 
 Everything above describes one person acting. Tom and Heidi both hold
@@ -813,6 +905,7 @@ are tested at.
 | `scripts/review_system.py` | six dimensions, as all six people, forward and backward |
 | `scripts/drive_state_machine.py` | the lifecycle one action at a time, every invariant re-checked each turn, then walked back |
 | `scripts/drive_propagation.py` | what one reclassification moves, and what it must not |
+| `scripts/drive_requests.py` | the ask, the imperfect answer, and what it writes |
 | `scripts/drive_concurrency.py` | two controllers acting at the same instant, four races |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
