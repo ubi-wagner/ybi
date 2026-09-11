@@ -143,6 +143,18 @@ def main() -> int:
     if not scope:
         raise CannotRun("the ledger is empty — load 2025 first, or every "
                         "check below would pass against nothing.")
+    already = one("""SELECT count(*) AS n FROM audit_log
+                      WHERE reason LIKE 'Drive:%' OR reason LIKE '%Drive:%'""")["n"]
+    if already:
+        raise CannotRun(
+            f"this database already carries {already} entries from a previous "
+            f"drive. The drive walks a year forward — it submits a timesheet, "
+            f"signs a certification, seals a set — and none of that can happen "
+            f"twice. Reset and reload, then run it once:\n"
+            f"    dropdb ybicost && createdb ybicost\n"
+            f"    scripts/seed_actors.py && scripts/load_2025.py && "
+            f"scripts/load_labor.py")
+
     print(f"Driving 2025 against {scope:,} lines in scope\n")
 
     # ── The controller ───────────────────────────────────────────────
@@ -503,6 +515,117 @@ def main() -> int:
             ok("and they are listed as unvalued rather than valued at a guess")
     finally:
         barb.close()
+
+    # ── Buildings, the kit in them, and what it is worth ─────────────
+    print("\nSpace and equipment — five buildings, and the cost-share line")
+    tom = sign_in(args.base, "tom@ybi.org", password)
+    try:
+        # Five buildings. Shapes and rates are illustrative; the point of the
+        # drive is that the arithmetic and the guardrails hold, not the survey.
+        buildings = [
+            ("TECH", "Technology Block", 48000.0, True, "", 14.00),
+            ("INC2", "Incubator II", 31000.0, True, "", 13.50),
+            ("AMFG", "Additive Manufacturing Hall", 26500.0, True, "", 11.00),
+            ("ANNEX", "Federal Street Annex", 12000.0, False, "Youngstown CIC", 16.00),
+            ("YARD", "Yard and Storage", 6500.0, True, "", 6.00),
+        ]
+        for code, name, area, owned, landlord, psf in buildings:
+            call(tom, "PUT", "/api/facilities", 200, f"building {code}", json={
+                "facility_id": code, "code": code, "name": name,
+                "address": f"{name}, Youngstown OH", "owned": owned,
+                "landlord": landlord, "usable_sqft": area,
+                "market_rate_psf": psf,
+                "market_basis": "2025 Youngstown CBD office and flex survey, "
+                                "class B comparables.",
+                "source_document": "Drive: illustrative"})
+        got = call(tom, "GET", "/api/facilities", 200, "reads the buildings")
+        if got.status_code == 200 and len(got.json()["facilities"]) == 5:
+            ok("five buildings on file")
+        else:
+            finding("the five buildings did not land")
+
+        call(tom, "PUT", "/api/facilities", 422,
+             "a leased building without a landlord is refused", json={
+                 "facility_id": "BAD", "name": "Nowhere", "owned": False,
+                 "landlord": "", "usable_sqft": 100})
+
+        # A tenant suite let below market, and a shared lab.
+        call(tom, "PUT", "/api/facilities/space", 200, "a below-market suite",
+             json={"unit_id": "TECH-210", "facility_id": "TECH",
+                   "label": "Suite 210", "usable_sqft": 2400, "use": "TENANT",
+                   "status": "OCCUPIED", "occupant": "Portfolio company",
+                   "actual_annual_charge": 18000, "market_rate_psf": 14.00,
+                   "market_basis": "2025 Youngstown CBD class B comparables.",
+                   "market_source": "Drive: illustrative"})
+        call(tom, "PUT", "/api/facilities/space", 200, "a shared lab", json={
+            "unit_id": "AMFG-LAB1", "facility_id": "AMFG", "label": "Lab 1",
+            "usable_sqft": 5000, "use": "SHARED_LAB", "status": "INTERNAL",
+            "market_rate_psf": 11.00,
+            "market_basis": "2025 Youngstown flex and light industrial survey."})
+
+        call(tom, "PUT", "/api/facilities/space", 422,
+             "a market rate with no basis is refused", json={
+                 "unit_id": "TECH-211", "facility_id": "TECH", "label": "211",
+                 "usable_sqft": 400, "use": "TENANT", "status": "OCCUPIED",
+                 "occupant": "Someone", "market_rate_psf": 14.0,
+                 "market_basis": "hearsay"})
+
+        econ = call(tom, "GET", "/api/facilities/space", 200, "the rent roll")
+        suite = next((u for u in econ.json()["space"]
+                      if u["unit_id"] == "TECH-210"), None)
+        if suite:
+            expect = 2400 * 14.00 - 18000          # 33,600 - 18,000
+            if abs(float(suite["subsidy"]) - expect) < 1:
+                ok(f"the suite's subsidy computes to ${float(suite['subsidy']):,.0f} "
+                   f"— {suite['usable_sqft']} sqft at market, less what was charged")
+            else:
+                finding(f"subsidy is {suite['subsidy']}, expected {expect}")
+
+        # The cost-share line, which is the part that matters.
+        call(tom, "POST", "/api/facilities/in-kind", 422,
+             "YBI's own subsidy cannot be claimed as cost share", json={
+                 "kind": "OWN_SPACE_SUBSIDY",
+                 "description": "Below-market suites across the incubator",
+                 "value": 184000,
+                 "valuation_basis": "Market comparables against the rent roll.",
+                 "claimed_as_cost_share": True})
+        with mutating("the same value, recorded as mission value",
+                      "Tom Metzinger", "IN_KIND"):
+            call(tom, "POST", "/api/facilities/in-kind", 200, "mission value",
+                 json={"kind": "OWN_SPACE_SUBSIDY",
+                       "description": "Below-market suites across the incubator",
+                       "value": 184000, "measured": "illustrative",
+                       "valuation_basis": "Market comparables against the rent roll.",
+                       "claimed_as_cost_share": False})
+        call(tom, "POST", "/api/facilities/in-kind", 422,
+             "unrecovered indirect without an approval is refused", json={
+                 "kind": "UNRECOVERED_INDIRECT",
+                 "description": "Unrecovered indirect on Project 88",
+                 "value": 233543.12,
+                 "valuation_basis": "Difference between de minimis billed and "
+                                    "the computed rate.",
+                 "claimed_as_cost_share": True})
+        with mutating("third-party donated equipment use", "Tom Metzinger",
+                      "IN_KIND"):
+            call(tom, "POST", "/api/facilities/in-kind", 200, "third party",
+                 json={"kind": "THIRD_PARTY_EQUIPMENT",
+                       "description": "Donated use of partner metrology suite",
+                       "value": 12500, "measured": "250 hours",
+                       "valuation_basis": "Partner's published hourly rate card, "
+                                          "2025.",
+                       "claimed_as_cost_share": True})
+
+        summary = call(tom, "GET", "/api/facilities/in-kind", 200, "in-kind summary")
+        rows = summary.json()["summary"]
+        claimable = [r for r in rows if r["claimed_as_cost_share"]]
+        mission = [r for r in rows if not r["claimed_as_cost_share"]]
+        if claimable and mission:
+            ok(f"${float(claimable[0]['value']):,.0f} is cost-share eligible; "
+               f"${float(mission[0]['value']):,.0f} is mission value and says so")
+        else:
+            finding("the in-kind summary does not separate the two")
+    finally:
+        tom.close()
 
     # ── The auditor ──────────────────────────────────────────────────
     print("\nAuditor — reading everything, changing nothing")

@@ -13,6 +13,7 @@ import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
 import Imports from "./pages/Imports.jsx";
 import Evidence from "./pages/Evidence.jsx";
+import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
 import Lanes from "./pages/Lanes.jsx";
 import Rates from "./pages/Rates.jsx";
@@ -35,6 +36,7 @@ const TABS = [
   ["/classify",  "Classify",   "B"],
   ["/evidence",  "Evidence",   "E"],
   ["/timesheet", "Time",       "G"],
+  ["/space",     "Space",      "I"],
   ["/lanes",     "Lanes",      "C"],
   ["/rates",     "Rates",      "D"],
   ["/awards",    "Awards",     "F"],
@@ -136,6 +138,7 @@ export default function App() {
           <Route path="/chart" element={<Chart />} />
           <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
           <Route path="/evidence" element={<Evidence actor={actor} />} />
+          <Route path="/space" element={<Facilities actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />
           <Route path="/awards" element={<Awards />} />

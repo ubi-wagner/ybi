@@ -93,6 +93,17 @@ export const api = {
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
     return res.json();
   },
+  facilities: (period = "2025") => req(`/facilities?period=${period}`),
+  putFacility: (body) => req("/facilities", { method: "PUT", body: JSON.stringify(body) }),
+  spaceUnits: (params) => req("/facilities/space?" + new URLSearchParams(params || {})),
+  putSpaceUnit: (body) =>
+    req("/facilities/space", { method: "PUT", body: JSON.stringify(body) }),
+  equipment: (period = "2025") => req(`/facilities/equipment?period=${period}`),
+  putEquipmentUse: (body) =>
+    req("/facilities/equipment/use", { method: "POST", body: JSON.stringify(body) }),
+  inKind: (period = "2025") => req(`/facilities/in-kind?period=${period}`),
+  putInKind: (body) =>
+    req("/facilities/in-kind", { method: "POST", body: JSON.stringify(body) }),
   awards: () => req("/awards"),
   chartSummary: () => req("/chart/summary"),
   chartAccounts: () => req("/chart/accounts"),

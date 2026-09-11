@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
 from app.routers import (auth, awards, certify, chart, classify, dashboard,
-                         evidence, export, health, imports, lanes, rates,
+                         evidence, export, facilities, health, imports, lanes, rates,
                          timesheet, undo)
 from app.settings import settings
 
@@ -81,7 +81,8 @@ app.add_middleware(
 )
 
 for r in (health, auth, dashboard, imports, chart, classify, lanes,
-          rates, evidence, awards, certify, timesheet, undo, export):
+          rates, evidence, awards, facilities, certify, timesheet, undo,
+          export):
     app.include_router(r.router, prefix="/api")
 
 
@@ -124,6 +125,31 @@ CONSTRAINT_MESSAGES = {
         "graded unsupported.",
     "certification_statement_present":
         "A certification has to carry the words that were signed.",
+    "own_subsidy_is_not_cost_share":
+        "Letting your own space or equipment below market is not cost share. "
+        "2 CFR 200.465 allows a less-than-arm's-length rental only up to what "
+        "ownership would have cost, so forgone rent on your own building is "
+        "not a cost you incurred. Record it as mission value — it is worth "
+        "having, it just does not go on a federal report.",
+    "unrecovered_indirect_needs_approval":
+        "Unrecovered indirect cost can be cost share only with the awarding "
+        "agency's prior written approval (2 CFR 200.306(c)). Record the "
+        "approval reference, or leave it unclaimed until you have one.",
+    "unit_market_needs_basis":
+        "A market rate needs to say where it came from — a comparable, a "
+        "survey, an appraisal. A rate with no basis is a number somebody "
+        "made up.",
+    "asset_market_rate_needs_basis":
+        "An hourly rate for equipment needs to say what it rests on.",
+    "in_kind_basis_present":
+        "An in-kind value has to say how it was arrived at.",
+    "leased_names_a_landlord":
+        "A building YBI does not own has a landlord. Name them.",
+    "unit_occupied_names_occupant":
+        "A space marked occupied has somebody in it. Name them.",
+    "facility_rentable_sane":
+        "Rentable area includes the common area load, so it cannot be less "
+        "than usable area.",
 }
 
 

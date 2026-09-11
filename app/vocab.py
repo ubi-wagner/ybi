@@ -64,6 +64,40 @@ class EmploymentStatus(StrEnum):
     CONTRACT = "CONTRACT"
 
 
+class SpaceUse(StrEnum):
+    TENANT = "TENANT"
+    PROGRAM = "PROGRAM"
+    ADMINISTRATIVE = "ADMINISTRATIVE"
+    SHARED_LAB = "SHARED_LAB"
+    COMMON = "COMMON"
+    VACANT = "VACANT"
+    COMMITTED = "COMMITTED"
+
+
+class OccupancyStatus(StrEnum):
+    OCCUPIED = "OCCUPIED"
+    VACANT = "VACANT"
+    INTERNAL = "INTERNAL"
+    COMMITTED = "COMMITTED"
+    COMMON = "COMMON"
+
+
+class AccessPolicy(StrEnum):
+    FREE = "FREE"
+    SUBSIDIZED = "SUBSIDIZED"
+    CHARGED = "CHARGED"
+    INTERNAL = "INTERNAL"
+
+
+class InKindKind(StrEnum):
+    THIRD_PARTY_SPACE = "THIRD_PARTY_SPACE"
+    THIRD_PARTY_EQUIPMENT = "THIRD_PARTY_EQUIPMENT"
+    THIRD_PARTY_SERVICES = "THIRD_PARTY_SERVICES"
+    OWN_SPACE_SUBSIDY = "OWN_SPACE_SUBSIDY"
+    OWN_EQUIPMENT_SUBSIDY = "OWN_EQUIPMENT_SUBSIDY"
+    UNRECOVERED_INDIRECT = "UNRECOVERED_INDIRECT"
+
+
 class LaneKind(StrEnum):
     BASELINE = "BASELINE"
     CANDIDATE = "CANDIDATE"
@@ -80,4 +114,8 @@ MIRRORS = {
     "time_basis": TimeBasis,
     "employment_status": EmploymentStatus,
     "lane_kind": LaneKind,
+    "space_use": SpaceUse,
+    "occupancy_status": OccupancyStatus,
+    "access_policy": AccessPolicy,
+    "in_kind_kind": InKindKind,
 }

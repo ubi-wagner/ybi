@@ -242,3 +242,59 @@ system will refuse to seal a rate that rests on them.
    the tenant share of each building directly.
 
 Those three narrow the modelled rate range more than everything else combined.
+
+---
+
+## Addendum — space and equipment, September 2026
+
+The system now holds five buildings, a rent roll with a market rate beside
+every actual charge, and an equipment register that records floor area and
+hours of use. What it needs to fill them.
+
+### Per building (five)
+
+| | Why |
+|---|---|
+| Address, owned or leased, and the landlord if leased | A leased building's cost is rent; an owned one's is depreciation, taxes, insurance and maintenance. They allocate differently. |
+| Usable and rentable square feet | Rentable carries the common-area load. The carve-out works in usable. |
+| Year built and, for owned buildings, the depreciation schedule | 2 CFR 200.436 — and the funding source decides allowability, 200.436(b). |
+| Annual lease cost, for leased buildings | 2 CFR 200.465. |
+
+### Per space (the rent roll)
+
+One row per suite, lab, office or common area, summing to the building's
+usable area:
+
+| | Why |
+|---|---|
+| Label, floor, usable square feet | The carve-out driver. |
+| Use — tenant, programme, administrative, shared lab, common, vacant, committed | Tenant and vacant space never reach a federal pool. |
+| Occupant, and months occupied in the year | A suite empty for half the year is half a suite. |
+| What was charged for the year | The actual. |
+| **A market rate per square foot, and where it came from** | The comparison. A rate needs a source — a broker's survey, an appraisal, a comparable lease — and the system refuses one without. |
+
+### Per machine
+
+| | Why |
+|---|---|
+| Description, serial, acquisition cost **gross of any reimbursement**, in-service date | 2 CFR 200.313(d)(1); the gross figure must predate the netting in Finding 2024-001. |
+| Funding source | 200.436(b). Depreciation on federally funded assets is unallowable. |
+| Which building and which space it stands in | So lab floor can be attributed. |
+| **Footprint including clearance** | Programme equipment in a shared lab consumes space the carve-out would otherwise spread over everybody. |
+| Access — free, subsidised, charged, internal | What the incubator gives away. |
+| An hourly rate with a basis, where it is lent | To value it. |
+| Usage log: who, which programme, how many hours, what they were charged | The unit of the subsidy, and a better lab driver than floor area alone. |
+
+### What this does and does not support
+
+The subsidy — market less actual, on space and equipment YBI owns — is
+**mission value, not cost share**. Under 2 CFR 200.465 a less-than-arm's-length
+rental is allowable only up to what ownership would have cost, so forgone rent
+on your own building is not a cost you incurred. It is worth counting for the
+board, the Form 990 narrative, the state, and for arguing a facilities
+component on 2026 proposals. It does not go on a federal cost-share report,
+and the system refuses to record it as one.
+
+What **is** cost-share eligible: space, equipment use or services donated to
+YBI by a third party (200.306(e)–(h)), and unrecovered indirect cost with the
+awarding agency's prior written approval (200.306(c)).
