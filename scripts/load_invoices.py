@@ -78,7 +78,8 @@ AWARDS = [
      "FA8650-20-2-5700", "COOPERATIVE_SUB", 1103594, 0, dt.date(2024, 1, 30),
      dt.date(2026, 1, 4), "DE_MINIMIS_10",
      "§4.3 Total Obligation, Sub-Recipient Agreement made as of "
-     "30 January 2024"),
+     "30 January 2024",
+     "Drive-AM"),
     # §4.3: "The total funds authorized by this agreement shall not exceed
     # $899,500 in federal funding and $513,065 cost share." 27-month period
     # of performance from 24 September 2024.
@@ -86,7 +87,8 @@ AWARDS = [
      "FA8650-20-2-5700", "COOPERATIVE_SUB", 899500, 513065,
      dt.date(2024, 9, 24), dt.date(2026, 12, 31), "DE_MINIMIS_10",
      "§4.3 Total Obligation, Sub-Recipient Agreement executed "
-     "24 September 2024"),
+     "24 September 2024",
+     "Last-Tactical-Mile"),
     # The fourth America Makes award, and the one that had no row at all —
     # SRA-0350 ICAM Digital Engineering, executed 5 February 2024, on file
     # since the first document drop. No award means no ceiling, and a
@@ -110,7 +112,8 @@ AWARDS = [
      "N00174-20-1-0031", "COOPERATIVE_SUB", 1000690, 0,
      dt.date(2024, 2, 5), dt.date(2025, 7, 9), "DE_MINIMIS_10",
      "§9 Contract Value and Contract Funding, Sub-Recipient Agreement "
-     "SRA-0350 executed 5 February 2024"),
+     "SRA-0350 executed 5 February 2024",
+     "SRA-0350"),
 ]
 
 
@@ -118,7 +121,7 @@ def main() -> int:
     open_pool()
 
     for (award_id, objective, sponsor, prime, instrument, ceiling,
-         cost_share, start, end, method, citation) in AWARDS:
+         cost_share, start, end, method, citation, agreement) in AWARDS:
         existing = one("""SELECT ceiling_federal, cost_share_required
                             FROM award WHERE award_id = %s""", (award_id,))
         if existing:
@@ -134,6 +137,15 @@ def main() -> int:
                       f"{(cost_share or 0):,} cost share, from {citation}")
             else:
                 print(f"  exists   {award_id}")
+            # Which document is this award's agreement. Set here as well as
+            # on the insert, because three of these rows are created by this
+            # script and one already exists from a migration — and migration
+            # `058` can only fill a column on rows that were there when it
+            # ran, which on a fresh database is none of them. That is the
+            # same defect `058` was written to fix, one level up.
+            execute("""UPDATE award SET agreement_name = %s
+                        WHERE award_id = %s AND agreement_name IS NULL""",
+                    (agreement, award_id))
             continue
         # ceiling_federal is NOT NULL in the schema; 0 records "not yet
         # known", and the constraint test reads it as no ceiling rather than
@@ -142,10 +154,11 @@ def main() -> int:
                                       prime_agreement, instrument,
                                       ceiling_federal, cost_share_required,
                                       period_start, period_end, rate_method,
-                                      citation)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                                      citation, agreement_name)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 (award_id, objective, sponsor, prime, instrument,
-                 ceiling or 0, cost_share or 0, start, end, method, citation))
+                 ceiling or 0, cost_share or 0, start, end, method, citation,
+                 agreement))
         print(f"  created  {award_id}")
 
     loaded = 0

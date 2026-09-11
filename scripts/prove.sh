@@ -28,6 +28,30 @@ run() {
   fi
 }
 
+# Before anything, because a stale interpreter fails two thousand checks in
+# later and reads like a defect in the system. drive_access ended a clean run
+# with "ModuleNotFoundError: No module named 'pypdf'" printed under
+# **The boundaries**, which is where a reader looks for a broken permission
+# gate — the venv simply predated the dependency.
+if ! $PY - <<'PREFLIGHT' 2>/dev/null
+# `import importlib` alone does not bind `importlib.util` — the first
+# draft of this did exactly that, raised AttributeError, exited non-zero
+# and told every reader their environment was broken. A guard that always
+# fires is worse than no guard.
+import importlib.util
+import sys
+missing = [m for m in ("fastapi", "psycopg", "httpx", "openpyxl", "pypdf",
+                       "reportlab", "pytest")
+           if importlib.util.find_spec(m) is None]
+sys.exit(1 if missing else 0)
+PREFLIGHT
+then
+  printf '\n  %s is missing something it needs.\n' "$PY"
+  printf '  This is the environment, not the system:\n\n'
+  printf '      %s -m pip install -r requirements.txt\n\n' "$PY"
+  exit 2
+fi
+
 step "The engine, and the structure of the code"
 run "unit and domain tests" $PY -m pytest -q
 

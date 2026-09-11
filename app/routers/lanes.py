@@ -374,8 +374,12 @@ def compare(lanes: str, period: str | None = None) -> dict:
     # Every lane read identically for as long as nothing could write an
     # override, and a reader seeing that would reasonably assume the screen
     # was broken.
+    # Compared as a number, not as the string "0.00". Both sides come from
+    # numeric(14,2) so a sub-cent difference cannot arise today — but
+    # `money()` renders one as "-0.00", and a check that depends on how a
+    # figure is spelled is one that breaks the day the figure changes shape.
     identical = [i for i in ids[1:]
-                 if all(c["delta"] == "0.00"
+                 if all(Decimal(c["delta"]) == 0
                         for row in out for c in row["cells"]
                         if c["lane_id"] == i)]
     return {"period": period, "base": base,

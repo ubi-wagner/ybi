@@ -716,6 +716,53 @@ against $275,000, with $655,190 of labour carrying nothing — and only **LTM**
 budgets a real figure, $81,772.76, whose mirror image is $233,543.12 of
 *unrecovered indirect* sitting in YBI's own cost share.
 
+## A lane is a question; the sealed set is the answer
+
+`lane_decision_override`, `lane_override_line` and `lane_assumption` were
+created in the first migrations and **nothing wrote any of them** — no route,
+no script, no migration. So every lane's build-up was the baseline's by
+construction and `GET /lanes/compare` could only ever return zeroes. Building
+the side-by-side screen over that API would have shipped a page that cannot
+say anything, which is the `FACILITY_UNPARTITIONED` mistake: it teaches the
+reader the comparison is broken, and the next real difference they see they
+will dismiss. The Lanes screen had been promising the missing capability the
+whole time — *"Reclassify Portfolio consulting and see what happens."*
+
+**A BASELINE lane takes no overrides.** The baseline is the classifications
+that will be submitted; changing those goes through the queue and the seal,
+in front of the trigger that refuses a rate whose seal does not match. A lane
+override on it would be the one way round the guarantee the whole system is
+built on. Everything else about a lane follows from that: an override lives
+in `lane_decision_override`, covers specific ledger lines, and
+`v_lane_buildup` reads `COALESCE(override.pool, decision.pool)` — the sealed
+decision is never edited, superseded or unsealed by trying something.
+
+**A lane may try a line the queue has not reached** (migration `057`). The
+view started `FROM lane JOIN decision`, so a lane could only re-read what had
+already been judged — which rules out the most valuable question there is:
+*5227 Portfolio consulting, $588,539 across 442 lines, unjudged. What does
+the rate look like if that is G&A?* This is not the rule that unclassified
+cost is never defaulted into a pool: that rule is about the record, and an
+override is the opposite of a default — explicit, with a reason the schema
+refuses to let be empty, a grade, a name, in a sandbox, and counted in the
+disclosure. `from_unjudged` keeps the two apart on the face of the build-up,
+because a lane that pulls cost out of the queue and a lane that moves it
+between pools are different claims and only the first changes how much there
+is left to judge.
+
+**One line carries one reading per lane**, or it is counted twice in that
+lane's own build-up — the supersession defect in a new place. In the schema,
+and `lane_id` on `lane_override_line` is kept honest by a **composite foreign
+key** rather than a trigger: `(override_id, lane_id)` has to exist in the
+parent.
+
+**No rate on the comparison screen, ever.** A lane is not sealed, so it has
+no rate; dividing one out on the way past would put a figure in front of a
+reviewer with nothing behind it. The only arithmetic is the difference
+between two recorded amounts, and the difference is taken in the database.
+`compare` returned `float()` on all three columns — the one thing
+`domain/core.py::money()` exists to stop.
+
 ## A citation names a document
 
 `scripts/load_contract_terms.py` has always opened with the right rule —
@@ -1358,7 +1405,10 @@ In rough order of value:
    no tests at all before, despite what this file used to say here.
 4. ~~**Audit package download.**~~ Done. `domain/package.py` produces the workbook; add a
    route that streams it.
-5. **Lane comparison UI.** The API exists; the side-by-side view does not.
+5. ~~**Lane comparison UI.**~~ Done, and the API did *not* exist in any
+   useful sense — see **A lane is a question** above. Three tables with
+   no writer meant every lane read as the baseline, so the comparison
+   could only ever answer with zeroes.
 6. ~~**Balance sheet import**~~ Done. `parse_balance_sheet` in `domain/qbo.py`,
    accepted through the same reconciling path as the P&L: the sheet must
    balance, every printed subtotal must equal what sits under it, and its net

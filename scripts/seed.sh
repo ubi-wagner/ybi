@@ -87,6 +87,13 @@ run "foundational documents" $PY scripts/seed_documents.py \
     --base "$BASE" --password "$PASSWORD"
 
 step "The books against each other"
+# After the documents, because it points each award at the agreement it was
+# read out of — and the provisions are recorded at step five, before the
+# paper arrives. Without it every citation reports NO DOCUMENT on a fresh
+# deployment and the check that finds a clause which is not there is silent.
+run "agreements and their text" $PY scripts/read_documents.py --write
+run "awards to their agreements" $PY scripts/link_agreements.py
+
 run "eleven control points" $PY scripts/reconcile.py --base "$BASE" --record
 
 if [ "$fail" -eq 0 ]; then

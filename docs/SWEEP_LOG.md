@@ -862,6 +862,59 @@ every time before any of this.
 
 ---
 
+## Proving it from nothing, which is where the last two defects were
+
+Everything above was built against a database that had been alive all day.
+`./scripts/seed.sh` from an empty one found two things nothing else could.
+
+**A migration cannot fill a column on rows that do not exist yet.** `056`
+linked each award to its executed agreement by matching the filename it was
+filed under. Migrations run at startup, before a single document has been
+uploaded — so on a fresh deployment it matched nothing,
+`award_term.evidence_id` stayed NULL through the entire seed, and every
+citation reported `NO DOCUMENT`. Nothing would have been *wrong*: `NO
+DOCUMENT` is not a pass. But the check that finds six provisions citing
+clauses their agreements do not contain would have been **silent on a fresh
+deployment and loud only on mine**, which is the worst possible arrangement.
+
+The ordering is not incidental either. `seed.sh` records the contract
+provisions at step five and files the documents at step six, because the
+provisions hang off the awards and the awards come from the invoice load. The
+terms genuinely are recorded before the paper arrives.
+
+`058` puts the one fact nothing can derive — that `AM-ICAM-DIGENG`'s
+agreement is the file with `SRA-0350` in its name — on the award row, and
+`scripts/link_agreements.py` does the matching after the documents are filed.
+One copy of the knowledge, one place that applies it.
+
+**And then the same defect one level up.** `058`'s own UPDATE set
+`agreement_name` on four awards and, on a fresh database, three of them do
+not exist when it runs: `AM-HYBRID-P2` comes from a migration and the other
+three are created by `scripts/load_invoices.py`. So the first fresh seed
+linked exactly one award, and reported *3 provisions citing an absent clause,
+28 that cannot be checked* against the 6 and 8 the loaded database showed.
+The loader carries the fragment now, next to the rest of each award's facts,
+and the migration keeps its UPDATE for databases where the rows already
+exist — the same division `049` uses.
+
+Seeded from nothing twice more, it reproduces the loaded figures exactly.
+
+### One more thing, and it was the environment
+
+`prove.sh` ended a clean run with **`ModuleNotFoundError: No module named
+'pypdf'`** printed under *The boundaries* — which is where a reader looks for
+a broken permission gate. The venv simply predated the dependency. It checks
+its interpreter before running two thousand checks now, and says plainly that
+this is the environment rather than the system.
+
+The exit code was fine, incidentally: `prove.sh` exits 1 on a failure and the
+0 I saw was my own `| tail` swallowing it. Worth recording only because
+"a proof that reports failure and exits 0" would have been a real defect and
+it was not one — a test that argues against correct code is worse than no
+test, and so is a fix.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the
