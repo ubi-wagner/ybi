@@ -401,7 +401,10 @@ function visible(actor, needs) {
   // prevent, running the other way.
   if (needs === "reader") return Boolean(actor.can_read);
   if (actor.role === "AUDITOR") return true;
-  return (actor.portfolios || []).includes(needs);
+  // Same rule as the nav: CONTROLLER reaches every narrow portfolio, so a
+  // controller gets the chapter for every screen they are offered.
+  const held = actor.portfolios || [];
+  return held.includes(needs) || held.includes("CONTROLLER");
 }
 
 export default function Manual({ actor }) {

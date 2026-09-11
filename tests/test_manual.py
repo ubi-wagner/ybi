@@ -148,3 +148,36 @@ def test_no_two_tabs_carry_the_same_name():
         for b in labels:
             if a is not b and a != b:
                 assert a.lower() != b.lower(), f"{a!r} and {b!r} differ only in case"
+
+
+def test_the_nav_lets_a_controller_everywhere_the_api_does():
+    """`CONTROLLER` reaches everything — CLAUDE.md says so and auth.py means
+    it: every narrow gate is `require_portfolio(X, Portfolio.CONTROLLER)`.
+
+    `tabsFor` did not. It tested `held.has(needs)` alone, so Tom — who holds
+    the portfolio that reaches everything — was offered four screens fewer
+    than he is entitled to and would have had to know the URLs for Evidence,
+    Space, Inventory and Contracts.
+
+    A nav stricter than the API is the same class of defect as one looser
+    than it. Both mean the screen and the server disagree about who you are;
+    one shows a tab that answers 403, the other hides work somebody is
+    supposed to do.
+    """
+    auth = (ROOT / "app" / "auth.py").read_text()
+    narrow = re.findall(r"require_\w+ = require_portfolio\((.*?)\)", auth)
+    admits_controller = [n for n in narrow if "Portfolio.CONTROLLER" in n]
+    assert len(admits_controller) >= 4, (
+        "the narrow portfolio gates no longer admit CONTROLLER; if that is "
+        "deliberate, this test and the nav both need to change with it")
+
+    nav = NAV.read_text()
+    block = nav[nav.index("function tabsFor"):nav.index("export default")]
+    assert 'held.has("CONTROLLER")' in block, (
+        "tabsFor no longer lets a controller into the narrow portfolio "
+        "screens, but every one of those endpoints still admits them")
+
+    manual = MANUAL.read_text()
+    assert 'includes("CONTROLLER")' in manual, (
+        "the manual gates chapters more strictly than the nav offers tabs, "
+        "so a controller gets a screen with no chapter explaining it")

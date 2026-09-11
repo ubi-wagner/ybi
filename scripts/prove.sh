@@ -46,6 +46,13 @@ step "The manual"
 run "screenshots are current" $PY scripts/walk_manuals.py --base "$BASE"
 run "manual tests" $PY -m pytest -q tests/test_manual.py
 
+step "The whole system, as everybody, in six dimensions"
+# Before the drives, for the same reason the manual walk is: the drives seal
+# the decision set, and a sealed set refuses the one classification this
+# makes to measure what a change propagates. It walks that change back
+# afterwards, so it leaves the record as it found it.
+run "system review" $PY scripts/review_system.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import psycopg
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -239,6 +239,30 @@ if WEB_DIST.exists():
 
     @app.get("/{path:path}", include_in_schema=False)
     async def spa(path: str):
+        """Serve the built app, and hand every unknown route to the router.
+
+        Except under /api, which is the JSON surface and must answer as one.
+
+        Without that exception this catch-all swallows every API path that
+        did not match a route and answers 200 with index.html — so a typo, a
+        renamed endpoint, or a route dropped in a deploy all look *healthy*
+        to anything that checks a status code. A caller gets `res.ok` true
+        and HTML where a figure should be, and only finds out when a JSON
+        parser throws somewhere far away from the cause. A monitor pointed
+        at an endpoint that no longer exists reports green for ever.
+
+        A 404 that says so is the whole fix.
+        """
+        if path == "api" or path.startswith("api/"):
+            # 404 rather than 405 even where the path exists under another
+            # method: this catch-all only sees GETs, so it cannot tell "no
+            # such path" from "not a GET". Saying which is more honest than
+            # guessing, and a caller that meant to POST learns as much from
+            # the wording as from a status code.
+            raise HTTPException(
+                404, f"No GET endpoint at /{path}. The API answers JSON; this "
+                     f"path matched no GET route (it may exist under another "
+                     f"method — see /api/docs).")
         candidate = WEB_DIST / path
         if path and candidate.is_file():
             return FileResponse(candidate)

@@ -106,3 +106,53 @@ def test_the_workbooks_say_on_their_first_sheet_what_is_unfinished():
         "Somebody forwards it and quotes a figure out of it.")
     assert "_caveat" in src and src.index("def _caveat") < src.index("def build_rate_buildup"), (
         "the caveat helper must exist and be applied before any figure")
+
+
+def test_coverage_is_defined_once():
+    """"How much of the cost has been classified" had two answers.
+
+    At the same moment, over the same single decision, the classification
+    screen said 13.0% and the auditor's report said 2.2% — the handler
+    scoped to the P&L and the view counted every ledger line including both
+    sides of every transfer. The *classified* dollars differed too, because
+    one measured a group by what it moved and the other by its net position.
+
+    A figure derived twice is one that can disagree with itself, and the
+    workpaper carries the version nobody can reproduce. The definition lives
+    in the view; the handler reads it.
+    """
+    body = _view("v_classification_coverage")
+    assert "l.statement = 'P&L'" in body, (
+        "coverage no longer scopes to the P&L. Balance sheet movements are "
+        "not cost to classify, and counting both sides of a transfer makes "
+        "the measure that gates sealing meaningless.")
+
+    handler = (ROOT / "app" / "routers" / "classify.py").read_text()
+    m = re.search(r"def coverage\(.*?\n(?=\n@router)", handler, re.S)
+    assert m, "the coverage handler is gone"
+    fn = m.group(0)
+    assert "v_classification_coverage" in fn, (
+        "the coverage handler computes its own figure again")
+    assert "FROM ledger_line" not in fn, (
+        "the coverage handler is back to reading the ledger directly, which "
+        "is a second definition of the scope")
+
+
+def test_the_coverage_row_can_be_checked_by_hand():
+    """classified + unclassified = scope, and the percentage comes from them.
+
+    The old view printed net sums beside a percentage taken over absolute
+    sums, so 1,678,057.27 against 12,693,242.03 sat next to a figure of
+    2.2% and a reader checking the arithmetic on one row could not make it
+    come out. Every column is the same measure now.
+    """
+    body = _view("v_classification_coverage")
+    for col in ("scope_dollars", "classified", "unclassified",
+                "pct_dollars_covered"):
+        assert col in body, f"{col} is gone from the coverage view"
+    # All three money columns are absolute over the same population; a net
+    # sum among them is what broke the row before.
+    money = re.findall(r"sum\((abs\()?amount\)?\)", body)
+    assert money and all(m == "abs(" for m in money), (
+        "a coverage column is summing net amounts again; the columns beside "
+        "it are absolute and the row will not add up")

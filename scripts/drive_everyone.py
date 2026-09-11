@@ -724,7 +724,14 @@ def drive_auditor(args, c):
                        ("/api/export/exceptions", "every place the standard bent"),
                        ("/api/classify/queue?limit=3", "the classification queue"),
                        ("/api/evidence", "the document register"),
-                       ("/api/rates", "the rates on file")):
+                       # /api/rates is not a route and never was. This check
+                       # passed for as long as it has existed because the SPA
+                       # catch-all answered every unmatched /api path with
+                       # index.html and a 200, so the drive asserted that an
+                       # auditor could read the rates and received a web page.
+                       # The catch-all answers 404 now, which is what turned a
+                       # green check into a finding.
+                       ("/api/rates/current", "the rates on file")):
         call(c, "GET", path, 200, f"reads {what}")
 
     pkg = call(c, "GET", "/api/export/audit-package", 200,

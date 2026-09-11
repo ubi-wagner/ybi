@@ -21,7 +21,7 @@ import datetime as dt
 import sys
 from decimal import Decimal
 
-from app.db import execute, one, open_pool, transaction
+from app.db import execute, one, open_pool, query, transaction
 
 SOURCE = "YBI_Invoices_1.pdf"
 SERVICE_FROM = dt.date(2026, 4, 1)
@@ -154,6 +154,38 @@ def main() -> int:
         loaded += 1
         print(f"  loaded   invoice {number:6} {objective:10} "
               f"{total:>12,.2f}  indirect {indirect:>10,.2f}")
+
+    # An invoice can arrive before its award is registered — the schema makes
+    # award_id nullable on purpose, because holding evidence out of the system
+    # until the paperwork catches up is the wrong way round. Two of these did:
+    # Drive AM and Last Tactical Mile were loaded before their agreements were
+    # read into the record, and stayed unlinked afterwards.
+    #
+    # An auditor could then walk an invoice to its objective and no further,
+    # which is one link short of the agreement that authorised the money. So
+    # the link is resolved here, after the awards are in, rather than written
+    # into the list above — an award that arrives next year gets picked up on
+    # the next run instead of needing this file edited.
+    #
+    # Only where exactly one award covers the objective. Two is ambiguous and
+    # a guess at which one authorised an invoice is exactly the kind of
+    # inference this system refuses to make elsewhere.
+    linked = query("""UPDATE invoice i SET award_id = a.award_id
+                        FROM award a
+                       WHERE a.objective_id = i.objective_id
+                         AND i.award_id IS NULL
+                         AND (SELECT count(*) FROM award x
+                               WHERE x.objective_id = i.objective_id) = 1
+                   RETURNING i.invoice_number, a.award_id""")
+    for row in linked:
+        print(f"  linked   invoice {row['invoice_number']} -> "
+              f"{row['award_id']}")
+    orphan = query("""SELECT invoice_number, objective_id FROM invoice
+                       WHERE award_id IS NULL ORDER BY invoice_number""")
+    for row in orphan:
+        print(f"  UNLINKED invoice {row['invoice_number']} on "
+              f"{row['objective_id']} — no single award covers that "
+              f"objective, so nothing was assumed")
 
     print(f"\n  {loaded} invoices loaded from {SOURCE}")
     gap = one("""SELECT count(*) AS n,

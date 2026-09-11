@@ -85,7 +85,16 @@ function tabsFor(actor) {
     // An auditor reads the whole record and writes none of it, so the
     // reviewing screens are theirs even with no portfolio.
     if (actor.role === "AUDITOR") return true;
-    return held.has(needs);
+    // CONTROLLER reaches everything. Every narrow gate in auth.py is
+    // `require_portfolio(X, Portfolio.CONTROLLER)`, so the API already lets
+    // a controller into Evidence, Space, Inventory and Contracts — and this
+    // function did not, which left Tom holding the portfolio that reaches
+    // everything and offered four screens fewer than he is entitled to. A
+    // nav stricter than the API is the same defect as one looser than it:
+    // both mean the screen and the server disagree about who you are. The
+    // looser direction shows a tab that answers 403; this direction hides
+    // work somebody has to know a URL to reach.
+    return held.has(needs) || held.has("CONTROLLER");
   });
 }
 

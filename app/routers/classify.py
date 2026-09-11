@@ -102,36 +102,27 @@ class CoverageOut(BaseModel):
 def coverage(period: str = "2025") -> CoverageOut:
     """The only progress metric that matters. Tom stops when dollar coverage
     is high enough to defend, not when the row count reaches zero."""
-    r = one("""
-        WITH d AS (
-          SELECT l.line_id, l.amount, l.account, l.payee,
-                 (dl.decision_id IS NOT NULL) AS decided
-            FROM ledger_line l
-            LEFT JOIN decision_line dl ON dl.line_id = l.line_id
-            LEFT JOIN decision dd ON dd.decision_id = dl.decision_id
-                                 AND dd.reversed_at IS NULL
-           WHERE l.period = %s
-             -- Balance sheet accounts are not cost. Including them makes
-             -- dollar coverage, the measure that gates sealing, meaningless.
-             AND l.statement = 'P&L'
-        )
-        SELECT count(*)                                               AS total_lines,
-               count(*) FILTER (WHERE decided)                        AS decided_lines,
-               coalesce(sum(abs(amount)), 0)                          AS total_dollars,
-               coalesce(sum(abs(amount)) FILTER (WHERE decided), 0)   AS decided_dollars,
-               count(DISTINCT (account, payee))                       AS groups_total,
-               count(DISTINCT (account, payee)) FILTER (WHERE decided) AS groups_decided
-          FROM d
-    """, (period,))
+    # Read, never re-derived. This handler used to carry its own copy of
+    # the scope — the right one, with the reason in a comment — while
+    # v_classification_coverage carried a different one, and the two answered
+    # 13.0% and 2.2% at the same moment over the same decision. The
+    # definition lives in the view now (039); this reads it.
+    r = one("""SELECT total_lines, decided_lines, groups_total, groups_decided,
+                      scope_dollars, classified, pct_dollars_covered
+                 FROM v_classification_coverage WHERE period = %s""",
+            (period,))
     if not r:
         raise HTTPException(404, "No ledger loaded for that period.")
-    total = Decimal(r["total_dollars"] or 0)
-    decided = Decimal(r["decided_dollars"] or 0)
+    total = Decimal(r["scope_dollars"] or 0)
+    decided = Decimal(r["classified"] or 0)
     return CoverageOut(
         period=period,
         total_lines=r["total_lines"], decided_lines=r["decided_lines"],
         total_dollars=total, decided_dollars=decided,
-        pct_dollars=(decided / total * 100).quantize(Decimal("0.1")) if total else Decimal(0),
+        # The percentage comes from the view as well rather than being
+        # computed again here from the same two numbers — which would be a
+        # third implementation of one figure.
+        pct_dollars=Decimal(str(r["pct_dollars_covered"] or 0)),
         groups_total=r["groups_total"], groups_decided=r["groups_decided"],
         groups_remaining=r["groups_total"] - r["groups_decided"],
         dollars_remaining=total - decided,

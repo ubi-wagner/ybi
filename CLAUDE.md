@@ -87,7 +87,14 @@ Two rules that fall out of this and are easy to break:
 
 - **Everybody on the payroll keeps a timesheet, controllers included.** The
   nav is assembled from what an actor holds (`tabsFor` in `App.jsx`), not
-  switched on role. Never show a tab that will answer 403.
+  switched on role. Never show a tab that will answer 403 — **and never hide
+  one the API would allow.** Every narrow gate is
+  `require_portfolio(X, Portfolio.CONTROLLER)`, so `tabsFor` admits
+  `CONTROLLER` everywhere; it did not, and Tom was offered four screens fewer
+  than he is entitled to. A nav stricter than the API is the same defect as
+  one looser: both mean the screen and the server disagree about who you are.
+  The nav is not a security boundary either way — some screens are readable
+  by URL with no tab, because the nav shows what is *yours to do*.
 - **Reading the cost record is a grant, not a side effect of rank.**
   `CONTROLLER`, `AUDITOR` and `ORG_ADMIN` read it by rank. `SYSTEM_ADMIN`
   does not — that account may belong to somebody outside the organisation.
@@ -487,6 +494,86 @@ spent; everything around it stays quiet.
   something every client will encode, and httpx refuses outright. Query
   parameter.
 
+## The foundation
+
+`docs/FOUNDATION.md` is the baseline: every control total, where each figure
+came from, and what is deliberately not loaded. The seed data is final —
+there will not be more — so it is written down to the cent.
+
+```bash
+YBI_SEED_PASSWORD=... BASE=http://127.0.0.1:8000 ./scripts/seed.sh
+```
+
+Twenty-two seconds from an empty database, re-runnable, seven steps in the
+order they have to happen. It exists because those seven steps were being
+remembered rather than written down, and a system review found what that
+costs: **the twenty-six contract provisions read out of the executed
+agreements lived in one developer's database and in no script.** Seeded from
+nothing, the award register carried three contracts and nothing inside them,
+and an auditor walking back from an invoice reached the agreement and then a
+dead end. `scripts/load_contract_terms.py` is the fix.
+
+Set `YBI_DEV_SEED=1` to give every account the same password so the drives
+can sign in; provisioning refuses that outside a development environment.
+
+## Reviewing it
+
+`scripts/review_system.py` drives the whole system as all six people across
+six dimensions and writes `docs/SYSTEM_REVIEW.md`. `docs/REVIEW_FINDINGS.md`
+is what the last pass found — six defects fixed, three matters needing a
+human decision.
+
+| | |
+| --- | --- |
+| CONNECTIVITY | every route answers, as everybody — 79 GETs × 6 people |
+| CAPABILITY | every tab reaches its endpoint, and nothing it should not |
+| FUNCTIONALITY | the screens that should carry data carry data |
+| AUDITABILITY | every change names an account and a session |
+| CONTINUITY | the chain walks forward, and backward by API |
+| PROPORTION | a change moves what it should, and moves nothing else |
+
+Three things about it worth knowing:
+
+- **It runs before the drives**, like the manual walk, because the drives
+  seal — and a sealed set correctly refuses the one classification the
+  proportion check makes.
+- **It walks its own change back** through the real undo route, so it leaves
+  the record as it found it. Before that, coverage climbed 0% to 36.8% across
+  five runs and every figure was a review reading its own writing.
+- **It derives what each screen calls** from `App.jsx`, the page components
+  and `api.js`. A hand-kept map of that was wrong four times in one run and
+  reported three correct 404s and a correct 403 as faults. A test that argues
+  against correct code is worse than no test.
+
+Two faults from that review are worth carrying here because they are easy to
+reintroduce:
+
+**Unknown `/api` paths must 404, not fall through to the SPA.** The catch-all
+answered every unmatched API path with `index.html` and a 200, so a typo, a
+renamed endpoint or a route dropped in a deploy all looked healthy to anything
+checking a status code. It had been hiding a green drive check against
+`/api/rates`, which is not a route and never was.
+
+**Coverage is defined once, in `v_classification_coverage`.** The
+classification screen and the review screens used to compute it separately and
+answered **13.0% and 2.2% at the same moment** over the same decision — one
+scoped to the P&L, the other counted both sides of every transfer. Migration
+`039` put the definition in the schema, scoped to the P&L, in absolute
+dollars, with `classified + unclassified = scope_dollars` so the percentage
+reproduces from the row. `classify.py` reads it.
+
+## Manuals for the team
+
+`docs/manuals/` — one per job, not one per role, because two people here hold
+the same rank and do different work. [everybody](docs/manuals/everybody.md),
+[the controller](docs/manuals/controller.md),
+[the administrator](docs/manuals/administrator.md),
+[the auditor](docs/manuals/auditor.md).
+
+The manual *inside* the application is assembled from what the reader holds,
+so it never describes a screen they cannot open. These are the longer version,
+for reading away from the screen.
+
 ## Proving it
 
 ```bash
@@ -507,6 +594,7 @@ are tested at.
 | `scripts/drive_reverse.py` | the same chain walked backwards, from a receipt to the ledger lines under it |
 | `scripts/drive_access.py` | rank, portfolios, the seal, the password gate, the library, the reports |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
+| `scripts/review_system.py` | six dimensions, as all six people, forward and backward |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
 `drive_everyone` is the one that answers "does each kind of person have a
