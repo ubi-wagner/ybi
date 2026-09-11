@@ -653,7 +653,46 @@ schedule with nothing against it; a category absent was not in the schedule;
 an award with no rows has not been read. `v_invoice_budget_check` reports
 `evaluable = false` for the third case rather than passing — both sides of the
 comparison are empty sets on an unread award, and an empty set matches an
-empty set perfectly. Only Drive AM's schedule is transcribed.
+empty set perfectly.
+
+**All four America Makes schedules are transcribed now**, and the three that
+were missing were each missing for a different reason: Hybrid Phase 2's
+Schedule B is an *image* on page 17, Last Tactical Mile's is plain text on
+page 44 that nobody had been to, and Digital Engineering had **no award row
+at all** despite SRA-0350 being on file since the first document drop.
+
+Two things came out of reading them that `sum(award_budget.federal)` cannot
+tell apart, so `award_budget_schedule` (migration `052`) records the header
+figures a schedule prints for itself and `v_award_budget_check` asks two
+questions:
+
+- **Does the schedule foot?** The QuickBooks rule — *every printed subtotal
+  must equal what sits under it* — applied to an agreement. LTM's does not:
+  its federal categories add to $899,500.76 against a printed $899,500, and
+  its cost share to $513,065.12 against $513,065. That is a fact about the
+  executed agreement, transcribed as printed. A loader that adjusted a
+  category to make the page come out would be inventing a budget.
+- **Does it reach the ceiling?** This one is *allowed* to differ and then has
+  to say why. Hybrid's schedule is $500,043 and its ceiling $512,409, and
+  both are right — the difference is Modification 001. Comparing the two
+  without that would report a $12,366 failure on a document that is simply
+  older than the amendment.
+
+**And a third dead register.** `award_budget_line` was created in `001`,
+written once in `004` with Hybrid's four categories, and **read by nothing** —
+so the award reported `evaluable = false` for the whole engagement while its
+numbers sat in the database from the first migration. `space_partition`,
+`rate.superseded_by`, and now this: a table that looks usable and is filled
+by nothing is an invitation to fill it again. `052` drops it, and the figures
+were read off the page rather than copied across, because a copy of a copy is
+not a transcription.
+
+Read together the four schedules are the restatement's case on the face of
+the agreements: **Drive AM budgets no indirect at all** against $583,594 of
+labour, **Hybrid none** against $449,043, **ICAM 10% of ODCs only** — $27,500
+against $275,000, with $655,190 of labour carrying nothing — and only **LTM**
+budgets a real figure, $81,772.76, whose mirror image is $233,543.12 of
+*unrecovered indirect* sitting in YBI's own cost share.
 
 ## When something does not work
 
@@ -1027,8 +1066,15 @@ not a derived figure — it is read off a clause. Migration `049` brings the row
 into line and adds `v_award_ceiling_check`, which is simply that the register
 says what the clause says. `NO CLAUSE READ` is not a pass, for the same reason
 `NO DATA` is not: an award whose agreement nobody has been through cannot be
-said to tie. Digital Engineering has no award row at all despite its executed
-agreement being on file since the first drop.
+said to tie. **Four awards tie now rather than three.** Digital Engineering
+had no award row at all despite SRA-0350 being on file since the first drop,
+and its obligation is not in a §4.3 like the other three — §9 Contract Value
+and Contract Funding carries it, at $1,000,690, through a different prime
+(Grant N00174-20-1-0031 via Energetics Technology Center and NSWC Indian
+Head, not the America Makes cooperative agreement). Which prime it flows down
+from decides which Single Audit programme its cost lands in, so the citation
+has to say which clause in which agreement rather than assume a house
+style.
 
 **Figures in a document for somebody else get read from the record, not
 recalled.** Three dates in the first draft of the verification list were

@@ -274,6 +274,31 @@ document.
 four awards rather than three, and `v_invoice_budget_check` becoming
 evaluable for all of them.
 
+**Done.** Both. Digital Engineering is `AM-ICAM-DIGENG`, $1,000,690 through
+9 July 2025, cited to §9 rather than §4.3 because that agreement is worded
+differently and through a different prime — Grant N00174-20-1-0031 via
+Energetics Technology Center and NSWC Indian Head, which decides its Single
+Audit programme. Ten provisions read into `award_term`. All four schedules
+transcribed, thirty category rows.
+
+Three things came out of reading them.
+
+`award_budget_line` — created in `001`, written once in `004` with Hybrid's
+four Schedule B categories, **read by nothing**. The award reported
+`evaluable = false` for the whole engagement with its numbers in the
+database since the first migration. Third instance after `space_partition`
+and `rate.superseded_by`; `052` drops it, and the figures were read off the
+page again rather than copied across.
+
+**LTM's Schedule B does not foot to its own printed total** — $899,500.76 of
+federal categories against a printed $899,500, and $513,065.12 of cost share
+against $513,065. Transcribed as printed. And **Hybrid's schedule is
+$500,043 against a $512,409 ceiling**, which is Modification 001 and not an
+error. `award_budget_schedule` (`052`) records what a schedule prints for
+itself so `v_award_budget_check` can ask both questions: does it foot, which
+may not differ, and does it reach the ceiling, which may and then has to say
+why.
+
 **Effort.** Half a day. **Depends on** nothing. **Unblocks the restatement.**
 
 ---
@@ -363,7 +388,7 @@ fixed, and it sits upstream of every other deployment item.
 |---|---|---|
 | 1 | ~~S2~~, ~~S1~~, ~~S3~~ | Wave 1 done |
 | 2 | ~~**S4**~~ | done |
-| 3 | S6 | half a day — unblocks the restatement |
+| 3 | ~~S6~~ | done — the restatement is unblocked |
 | 4 | ~~S5~~, then S10 | S5 done; S10 remains |
 | 5 | S11 | a day |
 | 6 | S7, S8, S9, S9a | two and a half days |

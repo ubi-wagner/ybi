@@ -15,7 +15,7 @@
 #   load_2025         the ledger, the P&L and the balance sheet, each proving
 #                     off its own printed subtotals before anything is promoted
 #   load_labor        the effort distribution, which the fringe base comes from
-#   load_invoices     the three America Makes invoices, and the two awards the
+#   load_invoices     the three America Makes invoices, and the four awards the
 #                     register did not have; links each invoice to its award
 #   load_contract_terms   what the signed agreements actually say, with the
 #                     clause each provision came from

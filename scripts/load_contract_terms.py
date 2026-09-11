@@ -116,6 +116,66 @@ TERMS = [
     ("AM-LTM-PROJ88", "Total obligation",
      "$899,500 federal funding and $513,065 cost share — $1,412,565 project total",
      "§4.3 Total Obligation", ""),
+    # ── AM-ICAM-DIGENG ────────────────────────────────────────
+    #
+    # The fourth America Makes agreement, and the one the register had no row
+    # for at all. It is worded differently from the other three and the
+    # citations have to say so: there is no §4.3 here, and the numbering runs
+    # to plain sections rather than articles.
+    ("AM-ICAM-DIGENG", "Total obligation",
+     "$1,000,690. The clause names no cost share, and Attachment 3 proposes "
+     "none.",
+     "§9 Contract Value and Contract Funding", ""),
+    ("AM-ICAM-DIGENG", "Term",
+     "Date of award through 9 July 2025. Options: none. The agreement is "
+     "effective on NCDMM's signature, dated 5 February 2024; YBI signed on "
+     "2 February 2024.",
+     "§7 Period of Performance; signature block", ""),
+    ("AM-ICAM-DIGENG", "Prime agreement",
+     "Grant N00174-20-1-0031, CFDA 12.300 — NCDMM administers for Energetics "
+     "Technology Center and the Naval Surface Warfare Center Indian Head "
+     "Division. Not the America Makes cooperative agreement the other three "
+     "flow down from, which matters for which Single Audit programme the "
+     "cost lands in.",
+     "Recitals; Attachment 2 Flowdown Clauses", ""),
+    ("AM-ICAM-DIGENG", "Budget as proposed",
+     "Labour 655,190 · travel 35,000 · materials 8,000 · ODCs 275,000 · "
+     "indirects on ODCs at 10% 27,500 = 1,000,690. Subcontract, equipment "
+     "and consultant are named at zero. Cost share is zero in every "
+     "category.",
+     "Attachment 3, Basis of Estimate/Budget", ""),
+    ("AM-ICAM-DIGENG", "Indirect provision",
+     "10% of ODCs only — $27,500 against $275,000. $655,190 of labour "
+     "carries no indirect of any kind. This is the narrowest of the four: "
+     "Drive AM and Hybrid budget no indirect line at all, Last Tactical Mile "
+     "budgets $81,772.76, and this one budgets a rate that reaches a "
+     "quarter of the award's cost base.",
+     "Attachment 3, Basis of Estimate/Budget", ""),
+    ("AM-ICAM-DIGENG", "Contract type",
+     "Cost Reimbursement No Fee.",
+     "§6 Contract Type", ""),
+    ("AM-ICAM-DIGENG", "Invoicing frequency",
+     "Monthly, by the fifth business day of the month following the month "
+     "worked. A cost-type invoice must carry prior, current and cumulative "
+     "cost and hours by named individual, and ODCs by category, signed by "
+     "an authorised official.",
+     "§25 Invoicing", ""),
+    ("AM-ICAM-DIGENG", "Payment terms",
+     "Pay-when-paid: within thirty days of NCDMM receiving payment from the "
+     "Government.",
+     "§26 Payment", ""),
+    ("AM-ICAM-DIGENG", "Allowability",
+     "Governed by 2 CFR 200 as modified by 2 CFR 1103, the DoD interim "
+     "implementation.",
+     "Attachment 2, Flow-Down 1.00 Administrative Requirements", ""),
+    ("AM-ICAM-DIGENG", "Conflicts",
+     "The Agreement and its attachments govern, then the Statement of Work, "
+     "then orders, then Government terms, then representations, then other "
+     "exhibits — resolved by the most reasonable interpretation giving full "
+     "consideration to the parties' intentions. Unlike Drive AM's §11.11 "
+     "this is not a bare precedence rule, so a conflict here is argued "
+     "rather than decided by rank.",
+     "§3 Order of Precedence", ""),
 ]
 
 

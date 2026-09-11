@@ -87,6 +87,30 @@ AWARDS = [
      dt.date(2024, 9, 24), dt.date(2026, 12, 31), "DE_MINIMIS_10",
      "§4.3 Total Obligation, Sub-Recipient Agreement executed "
      "24 September 2024"),
+    # The fourth America Makes award, and the one that had no row at all —
+    # SRA-0350 ICAM Digital Engineering, executed 5 February 2024, on file
+    # since the first document drop. No award means no ceiling, and a
+    # restatement is capped against a ceiling, so nothing could be measured
+    # for it.
+    #
+    # It is worded differently from the other three and the citation has to
+    # say so. There is no §4.3 here: §9 CONTRACT VALUE AND CONTRACT FUNDING
+    # carries it — "This Agreement value is $1,000,690.00. This Agreement
+    # funding is $1,000,690.00 … The total funds authorized by this agreement
+    # shall not exceed $1,000,690.00." No cost share is named anywhere, and
+    # Attachment 3 proposes none.
+    #
+    # §7: "Date of Award through July 9, 2025", options none. The agreement
+    # is effective on NCDMM's signature, dated 5 February 2024.
+    #
+    # The prime is not the America Makes cooperative agreement the other
+    # three flow down from: this one runs through Energetics Technology
+    # Center and NSWC Indian Head under Grant N00174-20-1-0031, CFDA 12.300.
+    ("AM-ICAM-DIGENG", "DIG-ENG", "NCDMM / Energetics Technology Center",
+     "N00174-20-1-0031", "COOPERATIVE_SUB", 1000690, 0,
+     dt.date(2024, 2, 5), dt.date(2025, 7, 9), "DE_MINIMIS_10",
+     "§9 Contract Value and Contract Funding, Sub-Recipient Agreement "
+     "SRA-0350 executed 5 February 2024"),
 ]
 
 
