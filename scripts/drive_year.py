@@ -574,6 +574,119 @@ def main() -> int:
     finally:
         tom.close()
 
+    # ── The three source documents against each other ────────────────
+    #
+    # Before the rate, and before anyone has an interest in the answer. The
+    # gross difference between the ledger and the P&L is small — a few
+    # thousand dollars in a thirteen-million-dollar year — which is exactly
+    # why it would be tempting to write it off. It is not written off: each
+    # difference is attributed to the specific ledger lines behind it.
+    print("\nCross-reference reconciliation — the ledger against both statements")
+    tom = sign_in(args.base, "tom@ybi.org", password)
+    try:
+        reg = call(tom, "GET", "/api/reconcile", 200, "reads the register")
+        controls = reg.json()["controls"] if reg.status_code == 200 else []
+        if len(controls) >= 10:
+            ok(f"{len(controls)} cross-reference points, run before anything "
+               f"is classified")
+        else:
+            finding(f"only {len(controls)} cross-reference points")
+
+        opening = [c["control"] for c in controls if not c["ties"]]
+        if "GL_PL_ACCOUNT" in opening:
+            ok("the ledger and the P&L disagree on some accounts, and the "
+               "register says so rather than netting it away")
+        else:
+            finding("the register reported no account-level difference, "
+                    "against an export that has one")
+
+        for name in ("PL_FOOTING", "BS_FOOTING", "GL_PL_SECTION",
+                     "GL_PROMOTE_COMPLETE", "GL_BS_ACCOUNT"):
+            c = next((x for x in controls if x["control"] == name), None)
+            if c and c["ties"]:
+                ok(f"{name} ties — {c['description'].lower()}")
+            else:
+                finding(f"{name} does not tie")
+
+        bs = call(tom, "GET", "/api/reconcile/gl-bs", 200,
+                  "the balance sheet against the ledger")
+        if bs.status_code == 200:
+            printed = [r for r in bs.json() if r["on_balance_sheet"]]
+            if not printed:
+                ok("every account the sheet prints is proved off the ledger — "
+                   "opening balance plus the year's movement, no exceptions")
+            else:
+                finding(f"{len(printed)} balance sheet account(s) do not tie")
+
+        # A rate cannot be computed while the statements disagree.
+        call(tom, "POST", "/api/rates/compute", 409,
+             "no rate while the statements disagree", json={})
+
+        props = call(tom, "GET", "/api/reconcile/propose", 200,
+                     "asks which lines account for the differences")
+        proposals = props.json()["proposals"] if props.status_code == 200 else []
+        named = [p for p in proposals if p["proposed"]]
+        if named:
+            ok(f"{len(named)} difference(s) attributed to specific ledger "
+               f"lines, each a unique combination")
+        else:
+            finding("nothing could be attributed to lines")
+
+        # A plug — the right amount, the wrong lines — has to be refused.
+        if named:
+            p0 = named[0]
+            call(tom, "POST", "/api/reconcile/items", 409,
+                 "an amount with the wrong lines behind it is refused",
+                 json={"control": "GL_PL_ACCOUNT",
+                       "from_account": p0["from_account"],
+                       "to_account": p0["to_account"],
+                       "amount": str(float(p0["amount"]) + 1),
+                       "kind": "RECLASS_AFTER_EXPORT",
+                       "explanation": ("Drive: deliberately one dollar out, to "
+                                       "prove the item cannot be a plug."),
+                       "line_ids": [l["line_id"] for l in p0["lines"]]})
+
+        for p in named:
+            with mutating(f"named {p['from_account'].split(':')[-1]} -> "
+                          f"{p['to_account'].split(':')[-1]}",
+                          "Tom Metzinger", "RECONCILE_ITEM"):
+                call(tom, "POST", "/api/reconcile/items", 201, "recorded", json={
+                    "control": "GL_PL_ACCOUNT",
+                    "from_account": p["from_account"],
+                    "to_account": p["to_account"],
+                    "amount": p["amount"],
+                    "kind": "RECLASS_AFTER_EXPORT",
+                    "line_ids": [l["line_id"] for l in p["lines"]],
+                    "explanation": (
+                        f"Drive: {len(p['lines'])} line"
+                        f"{'' if len(p['lines']) == 1 else 's'} sitting in "
+                        f"{p['from_account']} in the general ledger and in "
+                        f"{p['to_account']} on the profit and loss. Two "
+                        f"moments in the same books; no effect on the section "
+                        f"total or on net income."),
+                })
+
+        with mutating("the accumulated surplus, under both its names",
+                      "Tom Metzinger", "RECONCILE_ALIAS"):
+            call(tom, "POST", "/api/reconcile/aliases", 201, "alias", json={
+                "gl_account": "Retained Earnings",
+                "statement": "BALANCE_SHEET",
+                "statement_account": "3000 Fund Balance",
+                "reason": ("Drive: the ledger prints Retained Earnings and the "
+                           "sheet prints 3000 Fund Balance. Same account, same "
+                           "balance, two labels."),
+            })
+
+        after = call(tom, "GET", "/api/reconcile", 200, "reads it again")
+        if after.status_code == 200 and after.json()["ties"]:
+            ok("every cross-reference point now ties, and each difference "
+               "carries the lines that explain it")
+        else:
+            still = after.json().get("failing") if after.status_code == 200 else "?"
+            finding(f"the register is still open: {still}")
+    finally:
+        tom.close()
+
     # ── A short year that cannot honestly reach the bar ──────────────
     print("\nA gate that bends — the short year")
     steph = sign_in(args.base, "sgaffney@ybi.org", password)

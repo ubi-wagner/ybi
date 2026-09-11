@@ -145,14 +145,26 @@ class StagedLine:
     customer_job: str = ""          # raw "Customer:Job" string if present
     objective_hint: str = ""        # the segment after the colon
 
+    #: Which occurrence of an otherwise identical line this is. A journal can
+    #: genuinely carry the same date, type, number, name, account, amount and
+    #: memo twice — two $100 ticket sales, two identical splits of one entry —
+    #: and they are different lines. Without this they hash alike, and the
+    #: promote path's ON CONFLICT DO NOTHING silently keeps one of them: 58
+    #: keys collided in the 2025 export, dropping 71 rows and $24,082.67 of
+    #: activity with no error anywhere.
+    occurrence: int = 0
+
     @property
     def natural_key(self) -> str:
         """Stable identity for a QBO line across re-exports. QBO does not
         expose transaction ids in report exports, so identity is composed
-        from the fields that do not drift."""
+        from the fields that do not drift, plus which occurrence of that
+        combination this is. Re-exporting the same period yields the same
+        lines in the same order, so the occurrence is stable too."""
         import hashlib
         parts = "|".join([self.date, self.txn_type, self.num, self.name,
-                          self.account, f"{self.amount:.2f}", self.memo[:80]])
+                          self.account, f"{self.amount:.2f}", self.memo[:80],
+                          str(self.occurrence)])
         return hashlib.sha256(parts.encode()).hexdigest()[:24]
 
 
@@ -167,6 +179,17 @@ class StagedImport:
     #: "Total for <account> with sub-accounts" — subtree rollups, which
     #: reconcile against the account and everything beneath it.
     rollups: dict[str, Decimal] = field(default_factory=dict)
+    #: "Beginning Balance" — the account's balance carried in from the prior
+    #: year, keyed by qualified account path. Not a transaction, so it is not
+    #: a line; but without it the general ledger cannot be tied to the balance
+    #: sheet, because a balance sheet states a position and the ledger states
+    #: a year of movement. Opening plus movement is the position.
+    openings: dict[str, Decimal] = field(default_factory=dict)
+    #: Accounts whose "Total for" row carried no printed figure — an export
+    #: that saved formulas without their cached values. The subtotal control
+    #: cannot be evaluated for these, and a control that cannot be evaluated
+    #: must say so rather than compare against an assumed zero and pass.
+    unprinted_subtotals: set[str] = field(default_factory=set)
     warnings: list[str] = field(default_factory=list)
     skipped: int = 0
 
@@ -188,6 +211,8 @@ class StagedImport:
         parsed = self.account_totals()
         out = []
         for account, printed in self.subtotals.items():
+            if account in self.unprinted_subtotals:
+                continue        # nothing printed to reconcile against
             got = parsed.get(account, Decimal(0))
             out.append((account, printed, got, money(got - printed)))
         return sorted(out, key=lambda r: abs(r[3]), reverse=True)
@@ -284,13 +309,15 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
             label = _TOTAL_ROW.sub("", first).strip()
             is_rollup = bool(_ROLLUP_SUFFIX.search(label))
             account = _ROLLUP_SUFFIX.sub("", label).strip()
-            amt = qbo_amount(cell(row, "amount"))
-            if not amt:
-                for c in reversed(row):
-                    if (c or "").strip():
-                        amt = qbo_amount(c)
-                        if amt:
-                            break
+            raw_amt = cell(row, "amount")
+            amt = qbo_amount(raw_amt)
+            # An export that saved formulas without their cached values leaves
+            # this cell empty. Falling back to the last non-empty cell on the
+            # row picks up the running Balance column — opening plus movement,
+            # not movement — and the subtotal then reconciles against the
+            # wrong figure. Record the absence instead; a control that cannot
+            # be evaluated is not a control that passed.
+            printed = bool(raw_amt.strip())
             if account:
                 if account in stack:
                     depth = len(stack) - 1 - stack[::-1].index(account)
@@ -306,6 +333,28 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
                     staged.rollups[path] = amt
                 else:
                     staged.subtotals[path] = amt
+                if not printed:
+                    staged.unprinted_subtotals.add(path)
+            continue
+
+        # "Beginning Balance" — not a transaction, but not noise either: it is
+        # the position the account was carried in at. QuickBooks prints it
+        # under the account header with the figure in the running Balance
+        # column and nothing in Amount, so it carries no date and would
+        # otherwise be swallowed by the dateless-row guard below.
+        #
+        # It is what makes the ledger tieable to the balance sheet at all: a
+        # balance sheet states a position, a ledger states a year of movement,
+        # and only opening plus movement is a position.
+        # Different exports put the label in different columns — under the
+        # distribution account in one, under the date in another — so the
+        # test is the label plus the absence of an amount. A transaction
+        # always carries an amount; an opening position never does.
+        if (any(_BEGIN_BAL.search(c or "") for c in row)
+                and not cell(row, "amount")
+                and not cell(row, "debit") and not cell(row, "credit")):
+            if stack:
+                staged.openings[":".join(stack)] = qbo_amount(cell(row, "balance"))
             continue
 
         # Section header: something in column 0 and no date on the row
@@ -317,8 +366,6 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
         if not date:
             staged.skipped += 1
             continue
-        if _BEGIN_BAL.search(cell(row, "memo") or "") or _BEGIN_BAL.search(cell(row, "txn_type") or ""):
-            continue  # opening balance rows are not transactions
 
         if profile.debit_credit_columns:
             amount = money(qbo_amount(cell(row, "debit")) - qbo_amount(cell(row, "credit")))
@@ -342,12 +389,29 @@ def parse_general_ledger(path: Path, profile: ImportProfile = QBO_GENERAL_LEDGER
             customer_job=customer_job, objective_hint=hint,
         ))
 
-    dupes = len(staged.lines) - len({l.natural_key for l in staged.lines})
-    if dupes:
+    # Number the repeats so identical lines stay distinct. In file order,
+    # which is the order the same export produces every time.
+    seen: dict[str, int] = {}
+    repeated = 0
+    for l in staged.lines:
+        base = l.natural_key            # occurrence is still 0 here
+        n = seen.get(base, 0)
+        if n:
+            l.occurrence = n
+            repeated += 1
+        seen[base] = n + 1
+    if repeated:
         staged.warnings.append(
-            f"{dupes} line(s) share a natural key — identical date, type, num, "
-            f"name, account, amount and memo. Usually genuine split lines; "
-            f"confirm before accepting.")
+            f"{repeated} line(s) repeat an otherwise identical line — same "
+            f"date, type, num, name, account, amount and memo. Genuine split "
+            f"lines and genuine repeats both look like this, so each is kept "
+            f"as its own row rather than collapsed.")
+
+    collisions = len(staged.lines) - len({l.natural_key for l in staged.lines})
+    if collisions:
+        staged.warnings.append(
+            f"{collisions} line(s) still share a natural key after numbering "
+            f"the repeats. These would be lost on promote; do not accept.")
     return staged
 
 

@@ -84,6 +84,51 @@ rather than a seeded CSV.
 - Control register built from the imported P&L, not from `PL_2025_CONTROL.csv`
 - Existing 21 tests still pass
 
+### Cross-reference reconciliation — done
+
+Ten points where the three source documents have to agree, in
+`v_statement_reconciliation`, read at `/reconcile` and printed as Schedule
+A-1. `scripts/reconcile.py` runs them and exits non-zero when one is open, so
+it can gate a deploy. `POST /api/rates/compute` refuses while any point is
+open: a rate over a ledger that does not agree with its own statements is a
+rate over the wrong numbers.
+
+Measured on the 2025 export, in the order it was found:
+
+| Point | Result |
+| --- | --- |
+| P&L foots to the net income the sheet carries | 4,329.28 both ways |
+| Balance sheet balances | 16,713,219.80 both ways |
+| Every staged line reached the ledger | 15,500 = 15,500 |
+| Printed account totals vs parsed lines | 14,371,299.30, no mismatches |
+| Ledger vs P&L by section | 13,554,753.64 both ways |
+| Ledger vs P&L by account | 5 accounts, 7,469.87 gross, all named |
+| Every P&L account exists on both sides | no orphans either way |
+| Opening + movement vs the balance sheet | 71 accounts, none off |
+| Accounts the sheet omits | 4, each closing at 0.00 |
+| Segmentation | 14,371,299.30 both ways |
+
+Two defects surfaced and were fixed on the way:
+
+- **71 lines, $24,082.67, lost on promote.** A line's natural key hashed date,
+  type, num, name, account, amount and memo — so two genuinely identical
+  lines (two $100 ticket sales, two equal splits of one entry) collided, and
+  `ON CONFLICT DO NOTHING` kept one. 58 keys collided. `StagedLine.occurrence`
+  numbers the repeats, and the accept path now refuses to promote at all if
+  the ledger ends up short.
+- **The balance sheet could not be tied to anything.** The parser discarded
+  the GL's "Beginning Balance" rows as non-transactions, which they are — and
+  which left no way to compare a position to a year of movement. They are kept
+  in `gl_opening`, and every one of the 71 printed balance-sheet accounts is
+  now proved off the ledger rather than trusted.
+
+The five accounts that differ are *not* netted away. Each is a
+`reconciling_item` naming the ledger lines behind it, and a deferred trigger
+refuses one whose lines do not add to the amount claimed. Ten lines in all —
+two conference tickets and an accelerator fee to ESP, Detroit mileage and a
+hotel to travel, a print job to advertising, two subscriptions to staff
+training — reclassified out of Rising Tides Expense between the two exports.
+
 ---
 
 ## Phase 2 — Invoice register (the critical path)

@@ -171,6 +171,12 @@ tfoot td { padding: 10px 14px; font-weight: 700; border-top: 1px solid var(--ink
 tfoot td.l { text-align: left; }
 
 .amt.neg { color: var(--fail); }
+
+/* A note that belongs to the row above it: no top rule, so the pair reads as
+   one entry rather than two. Used on the reconciliation register, where the
+   control and what it is for have to sit together. */
+tbody tr.subrow td { border-top: 0; padding-top: 0; padding-bottom: 12px;
+                     white-space: normal; }
 .amt.strong { font-weight: 600; }
 
 /* ----------------------------------------------------------- tick mark -- */

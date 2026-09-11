@@ -75,7 +75,10 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
                         exceptions: list[dict] | None = None,
                         materiality: list[dict] | None = None,
                         rates: list[dict] | None = None,
-                        allocations: list[dict] | None = None) -> Path:
+                        allocations: list[dict] | None = None,
+                        gl_pl: list[dict] | None = None,
+                        gl_bs: list[dict] | None = None,
+                        reconciling_items: list[dict] | None = None) -> Path:
     wb = Workbook()
 
     # ── Index ────────────────────────────────────────────────────────
@@ -91,6 +94,9 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
 
     rows = [
         ("Controls", "Every derived figure and whether it ties to its source"),
+        ("A-1 Reconciliation",
+         "The general ledger against the profit and loss and the balance "
+         "sheet, and every difference between them by name"),
         ("Decisions", "Each classification, its reasoning and its citation"),
         ("Segments", "Mixed lines split into parts, and what each part is"),
         ("Evidence", "Documents on file and what they support"),
@@ -139,8 +145,80 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
     ws = _sheet(wb, "Controls", "Controls",
                 "A derived figure that cannot be reconciled to its source does "
                 "not ship.")
-    _table(ws, 5, ["Control", "Variance", "Ties"], controls,
-           ["control", "variance", "ties"], [34, 16, 10], {2})
+    _table(ws, 5, ["Control", "What it proves", "Variance or exceptions", "Ties"],
+           controls, ["control", "description", "variance", "ties"],
+           [22, 54, 20, 10], {3})
+
+    # ── A-1 Reconciliation ───────────────────────────────────────────
+    #
+    # Ahead of the decisions, because it is what the decisions rest on. A
+    # reviewer who does not believe the ledger is the books has no reason to
+    # read anything after it.
+    ws = _sheet(wb, "A-1 Reconciliation", "Cross-reference reconciliation",
+                "The three source documents against each other. Run before "
+                "anything was classified, which is the only order in which a "
+                "reconciliation is worth anything.")
+    r = _table(ws, 5,
+               ["Control", "What it proves", "", "Ledger side", "",
+                "Statement side", "Variance or exceptions", "Ties"],
+               controls,
+               ["control", "description", "left_label", "left_value",
+                "right_label", "right_value", "variance", "ties"],
+               # The sheet stacks four tables; these widths have to
+               # suit all of them, because _table rewrites the column
+               # dimensions and the later calls leave them alone.
+               [50, 46, 26, 16, 26, 16, 20, 14, 12], {4, 6, 7})
+
+    if gl_pl:
+        r += 2
+        ws.cell(row=r, column=1, value="Where the ledger and the P&L differ").font = BOLD
+        r += 1
+        ws.cell(row=r, column=1, value=(
+            "Sections tie while these accounts do not, because money moved "
+            "between two expense accounts nets to nothing at the section "
+            "line. Each row is named below or it is unexplained.")).alignment = WRAP
+        r = _table(ws, r + 2,
+                   ["Account", "Section", "Ledger", "Lines", "P&L",
+                    "Named", "Difference", "Unexplained"],
+                   gl_pl,
+                   ["account", "section", "gl_amount", "gl_lines", "pl_amount",
+                    "reconciling", "gross_variance", "unexplained"],
+                   None, {3, 5, 6, 7, 8})
+
+    if reconciling_items:
+        r += 2
+        ws.cell(row=r, column=1, value="Reconciling items").font = BOLD
+        r += 1
+        ws.cell(row=r, column=1, value=(
+            "Each one names the ledger lines it consists of, and the database "
+            "refuses it unless those lines add to the amount claimed. That is "
+            "what separates a reconciling item from a plug.")).alignment = WRAP
+        r = _table(ws, r + 2,
+                   ["Ledger puts it in", "The statement puts it in", "Amount",
+                    "Lines", "Kind", "Recorded by", "Explanation"],
+                   reconciling_items,
+                   ["from_account", "to_account", "amount", "lines", "kind",
+                    "recorded_by", "explanation"],
+                   None, {3})
+
+    if gl_bs:
+        r += 2
+        ws.cell(row=r, column=1,
+                value="Balance sheet accounts the ledger does not simply confirm").font = BOLD
+        r += 1
+        ws.cell(row=r, column=1, value=(
+            "Opening balance plus the year's movement against the sheet as "
+            "printed. An account the sheet omits has to close at zero here, "
+            "which is checked rather than assumed.")).alignment = WRAP
+        _table(ws, r + 2,
+               ["Ledger account", "As the sheet names it", "Opening",
+                "Movement", "Closing", "Balance sheet", "Variance",
+                "Closed at zero", "By alias"],
+               gl_bs,
+               ["account", "bs_leaf", "opening", "activity", "closing",
+                "bs_amount", "variance", "absent_because_zero",
+                "matched_by_alias"],
+               None, {3, 4, 5, 6, 7})
 
     # ── Decisions ────────────────────────────────────────────────────
     ws = _sheet(wb, "Decisions", "Classification decisions",

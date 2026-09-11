@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: "start", label: "Getting started" },
   { id: "dashboard", label: "The dashboard" },
   { id: "import", label: "Importing from QuickBooks" },
+  { id: "reconcile", label: "Making the books agree" },
   { id: "classify", label: "Classifying cost" },
   { id: "segment", label: "Splitting a mixed line" },
   { id: "evidence", label: "Evidence and notes" },
@@ -144,6 +145,60 @@ export default function Help() {
         <p>
           Re-uploading the same file is safe. It is recognised by its content
           and will not create a second copy.
+        </p>
+
+        {/* ─────────────────────────────────────────────── */}
+        <h2 id="reconcile">Making the books agree</h2>
+        <p>
+          Before you classify anything, open <strong>Reconcile</strong>. It runs
+          ten checks across the three reports you imported and shows you what
+          agrees and what does not. Do this first — a reconciliation produced
+          after the rate is one nobody has any reason to believe.
+        </p>
+        <Shot src="/help/05a-reconcile.png"
+              caption="Ten cross-reference points. Each says what it proves, what each side reads, and what is left over." />
+        <p>Four of the ten are worth knowing by name:</p>
+        <ul>
+          <li><strong>The P&amp;L foots to the net income the balance sheet
+            carries.</strong> If these disagree, the two exports were run at
+            different moments and everything downstream is suspect.</li>
+          <li><strong>Every staged line reached the ledger.</strong> Nothing was
+            silently dropped between the file and the database.</li>
+          <li><strong>The ledger agrees with the P&amp;L, account by
+            account.</strong> Section totals can tie while accounts do not —
+            money moved between two expense accounts nets to nothing at the
+            section line.</li>
+          <li><strong>Opening balance plus the year's movement equals the
+            balance sheet.</strong> Every account the sheet prints, proved off
+            the ledger. An account the sheet leaves out has to close at zero,
+            and that is checked, not assumed.</li>
+        </ul>
+        <p>
+          When an account differs, press <strong>Find the lines behind
+          these</strong>. Where exactly one set of ledger lines adds up to the
+          difference, that set is shown — usually a handful of transactions
+          reclassified between the day the ledger was run and the day the P&amp;L
+          was. Read them, and if they are right, record them. Where more than
+          one set of lines would add up, nothing is proposed: an attribution
+          that could equally have been different lines is not evidence, and
+          that one needs an explanation from whoever knows what happened.
+        </p>
+        <Shot src="/help/05b-reconcile-gl-pl.png"
+              caption="Five accounts where the ledger and the P&L disagree — a net of nothing, but not nothing." />
+        <p>
+          A recorded difference is a <strong>reconciling item</strong>. It
+          carries the lines it consists of, and the system refuses it if they do
+          not add to the amount claimed — so it cannot become a plug. Named
+          differences appear on Schedule A-1 in the audit package with the
+          lines attached, which is exactly what a reviewer expects to see.
+        </p>
+        <Shot src="/help/05c-reconcile-items.png"
+              caption="Each named difference carries the ledger lines it consists of. Without them it would be a plug, and the system refuses plugs." />
+        <p>
+          <strong>No rate can be computed while a check is open.</strong> That
+          is deliberate. A rate built on a ledger that does not match its own
+          statements is a rate built on the wrong numbers, however carefully
+          the pools were assembled on top of it.
         </p>
 
         {/* ─────────────────────────────────────────────── */}

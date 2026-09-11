@@ -104,6 +104,14 @@ class LaneKind(StrEnum):
     SANDBOX = "SANDBOX"
 
 
+class ReconcilingKind(StrEnum):
+    RECLASS_AFTER_EXPORT = "RECLASS_AFTER_EXPORT"
+    TIMING = "TIMING"
+    PRESENTATION = "PRESENTATION"
+    ROUNDING = "ROUNDING"
+    SOURCE_DEFECT = "SOURCE_DEFECT"
+
+
 #: enum name in Postgres -> the class that mirrors it. The drift test walks
 #: this, so adding one here is what puts it under test.
 MIRRORS = {
@@ -118,4 +126,5 @@ MIRRORS = {
     "occupancy_status": OccupancyStatus,
     "access_policy": AccessPolicy,
     "in_kind_kind": InKindKind,
+    "reconciling_kind": ReconcilingKind,
 }

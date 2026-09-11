@@ -34,6 +34,19 @@ A related rule: **unclassified cost is never defaulted into a pool.** Anything
 without a signal stays in the queue. This makes the rate read high while work is
 unfinished, which is the honest direction to err.
 
+And one before either: **the books have to agree with themselves before a rate
+is computed.** `v_statement_reconciliation` holds ten points where the general
+ledger, the profit and loss and the balance sheet are required to agree, and
+`POST /api/rates/compute` returns 409 while any of them is open. A rate over a
+ledger that does not match its own statements is a rate over the wrong numbers.
+
+A difference is closed by *naming* it, not by netting it. A `reconciling_item`
+carries the specific ledger lines it consists of, and a deferred trigger
+refuses one whose lines do not add to the amount claimed — which is what
+separates a reconciling item from a plug. `/api/reconcile/propose` will find
+the lines for you when exactly one combination adds up, and proposes nothing
+at all when more than one would.
+
 ## Layout
 
 ```
@@ -44,6 +57,7 @@ app/
   routers/
     classify.py      the queue — the screen that matters
     imports.py       QBO upload -> parse -> preview -> accept
+    reconcile.py     the three source documents against each other
     lanes.py         scenario lanes and build-up views
     rates.py         seal, unseal, current rates
     evidence.py      documents and notes
@@ -51,6 +65,7 @@ app/
   domain/            pure engine, no DB, fully unit-testable
     core.py          value objects, control register, sealed DecisionSet
     qbo.py           QuickBooks report parsers + ImportProfile
+    reconcile.py     attributing a difference to the lines behind it
     pools.py         pool build, rate computation, allocation
     awards.py        contract constraint tests
     package.py       Excel audit package
@@ -70,8 +85,9 @@ convention:
 - **Tick marks, not status dots.** Auditors tick reconciled items. `<Tick
   state="done|open|flagged|failed" />`.
 - **Schedule references in the nav.** Each tab carries the schedule it prints
-  as in the audit package (A Import, B Classify, C Lanes, D Rates, F Awards),
-  so someone who has seen the workpapers knows where they are.
+  as in the audit package (A Import, A-1 Reconcile, B Classify, C Lanes,
+  D Rates, F Awards), so someone who has seen the workpapers knows where they
+  are.
 - **Three card weights, not one.** `card`, `card raised`, `card quiet`. Radius
   and shadow carry hierarchy; do not apply the same treatment to everything.
 - **Tabular numerals everywhere.** `.num` on any figure. Money right-aligned,
@@ -192,6 +208,17 @@ In rough order of value:
 - **The 2026 splits.** `GET/PUT /api/chart/splits`. Each of the 24 accounts
   that divides gets its shares and the driver behind each share; the shares
   must come to one and every part must name its driver.
+- **Cross-reference reconciliation.** Schedule A-1. Ten points where the
+  ledger, the P&L and the balance sheet have to agree, in
+  `v_statement_reconciliation`; `scripts/reconcile.py` runs them and exits
+  non-zero on an open one. Two real defects came out of building it: 71 lines
+  worth $24,082.67 were being dropped on promote by natural keys that
+  collided on genuinely-duplicate lines, and the balance sheet could not be
+  tied to anything at all because the parser discarded the ledger's opening
+  balances. Both fixed; all 71 printed balance-sheet accounts now prove off
+  the ledger. The five accounts where the ledger and the P&L still differ are
+  named, not netted — ten specific lines reclassified between the two
+  exports. See PLAN.md, Phase 1.
 
 ## Current plan
 

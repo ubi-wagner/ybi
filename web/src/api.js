@@ -108,6 +108,16 @@ export const api = {
   chartSummary: () => req("/chart/summary"),
   chartAccounts: () => req("/chart/accounts"),
   chartCrosswalk: (period = "2025") => req(`/chart/crosswalk?period=${period}`),
+  reconcile: (period = "2025") => req(`/reconcile?period=${period}`),
+  reconcileGlPl: (period = "2025") => req(`/reconcile/gl-pl?period=${period}`),
+  reconcileGlBs: (period = "2025") => req(`/reconcile/gl-bs?period=${period}`),
+  reconcileItems: (period = "2025") => req(`/reconcile/items?period=${period}`),
+  reconcileAliases: (period = "2025") => req(`/reconcile/aliases?period=${period}`),
+  reconcilePropose: (period = "2025") => req(`/reconcile/propose?period=${period}`),
+  addReconcilingItem: (body) =>
+    req("/reconcile/items", { method: "POST", body: JSON.stringify(body) }),
+  retractReconcilingItem: (id, reason) =>
+    req(`/reconcile/items/${id}/retract`, { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
 export const money = (n) => {

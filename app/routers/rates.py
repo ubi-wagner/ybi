@@ -219,6 +219,29 @@ def compute(body: ComputeIn, period: str = "2025",
 
     from app.domain.core import AllocationBase, PoolType
 
+    # A rate over a ledger that does not agree with the statements it came
+    # from is a rate over the wrong numbers, however carefully the pools were
+    # built on top of it. The cross-reference register is checked here rather
+    # than left as a report somebody was supposed to read.
+    #
+    # An explained difference is not an open one: a reconciling item with the
+    # ledger lines behind it closes the control. What this refuses is a
+    # difference nobody has accounted for.
+    open_controls = query("""SELECT control, description, note,
+                                    variance::text AS variance,
+                                    exceptions::text AS exceptions
+                               FROM v_statement_reconciliation
+                              WHERE period = %s AND NOT ties ORDER BY seq""",
+                          (period,))
+    if open_controls:
+        raise HTTPException(409, {
+            "error": "STATEMENTS_DO_NOT_RECONCILE",
+            "message": ("The general ledger does not yet agree with the "
+                        "statements it came from. A rate built on it would be "
+                        "built on the wrong numbers. Name the differences on "
+                        "the reconciliation first."),
+            "open": open_controls})
+
     sealed = one("""SELECT set_id, seal_hash FROM decision_set
                      WHERE period = %s AND seal_hash IS NOT NULL
                      ORDER BY sealed_at DESC LIMIT 1""", (period,))

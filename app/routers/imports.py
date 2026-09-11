@@ -190,6 +190,7 @@ def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
     staged = parse_general_ledger(path, QBO_GENERAL_LEDGER, sha256=b["sha256"])
     execute("DELETE FROM staging_line WHERE batch_id=%s", (batch_id,))
     execute("DELETE FROM staging_subtotal WHERE batch_id=%s", (batch_id,))
+    execute("DELETE FROM staging_opening WHERE batch_id=%s", (batch_id,))
 
     for l in staged.lines:
         execute("""INSERT INTO staging_line
@@ -203,15 +204,39 @@ def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
 
     parsed = staged.account_totals()
     for account, printed in staged.subtotals.items():
+        if account in staged.unprinted_subtotals:
+            # The export saved this total as a formula with no cached value.
+            # Storing a zero here would let the accept gate compare against
+            # nothing and pass; the warning below says so out loud instead.
+            continue
         execute("""INSERT INTO staging_subtotal (batch_id,account,printed_total,parsed_total)
                    VALUES (%s,%s,%s,%s)""",
                 (batch_id, account, printed, parsed.get(account, 0)))
 
+    # Opening balances. Not transactions, and so not lines — but the only
+    # thing that makes the balance sheet tieable to the ledger at all.
+    for account, amount in staged.openings.items():
+        execute("""INSERT INTO staging_opening (batch_id,account,amount)
+                   VALUES (%s,%s,%s)
+                   ON CONFLICT (batch_id,account) DO UPDATE SET amount=EXCLUDED.amount""",
+                (batch_id, account, amount))
+
+    warnings = list(staged.warnings)
+    if staged.unprinted_subtotals:
+        warnings.append(
+            f"{len(staged.unprinted_subtotals)} printed account total(s) carry "
+            f"no figure in this export — the subtotal control cannot be "
+            f"evaluated for them: "
+            + ", ".join(sorted(staged.unprinted_subtotals)[:8]))
+
     execute("UPDATE staging_batch SET status='PARSED', parsed_at=now() WHERE batch_id=%s",
             (batch_id,))
     return {"batch_id": batch_id, "lines": len(staged.lines),
-            "total": float(staged.total), "subtotals_checked": len(staged.subtotals),
-            "warnings": staged.warnings, "skipped": staged.skipped}
+            "total": float(staged.total),
+            "subtotals_checked": len(staged.subtotals) - len(staged.unprinted_subtotals),
+            "subtotals_unprinted": len(staged.unprinted_subtotals),
+            "openings": len(staged.openings),
+            "warnings": warnings, "skipped": staged.skipped}
 
 
 @router.get("/{batch_id}/preview")
@@ -314,12 +339,45 @@ def accept(batch_id: str, accepted_by: str = "",
           ON CONFLICT (line_id) DO NOTHING
           RETURNING 1)
         SELECT count(*) AS n FROM ins""", (imp["import_id"], batch_id))
+
+    # ON CONFLICT DO NOTHING makes re-accepting the same file harmless. It
+    # also makes losing a line harmless-looking, which is worse: two staged
+    # lines that hash alike promote as one and the count simply comes back
+    # smaller. Count what actually landed and say so.
+    landed = one("""SELECT count(*) AS n
+                     FROM staging_line s
+                     JOIN ledger_line l ON l.line_id = s.natural_key
+                    WHERE s.batch_id = %s AND s.txn_date IS NOT NULL""", (batch_id,))
+    staged_rows = one("""SELECT count(*) AS n FROM staging_line
+                          WHERE batch_id = %s AND txn_date IS NOT NULL""", (batch_id,))
+    if landed["n"] != staged_rows["n"]:
+        lost = staged_rows["n"] - landed["n"]
+        raise HTTPException(status_code=409, detail={
+            "error": "PROMOTE_INCOMPLETE",
+            "message": (f"{lost} staged line(s) did not reach the ledger. Two "
+                        f"different lines are hashing to the same natural key; "
+                        f"accepting would lose them silently."),
+            "staged": staged_rows["n"], "promoted": landed["n"]})
+
+    # Opening balances travel with the import they came from, so the balance
+    # sheet tie can name its source.
+    execute("""INSERT INTO gl_opening (period, account, import_id, amount)
+               SELECT b.period, o.account, %s, o.amount
+                 FROM staging_opening o JOIN staging_batch b USING (batch_id)
+                WHERE o.batch_id = %s
+               ON CONFLICT (period, account)
+                 DO UPDATE SET amount = EXCLUDED.amount,
+                               import_id = EXCLUDED.import_id""",
+            (imp["import_id"], batch_id))
+
     record(actor, "IMPORT_ACCEPT", "ledger_import", str(imp["import_id"]),
            after={"batch_id": batch_id,
-                  "lines_promoted": n["n"] if n else 0},
+                  "lines_promoted": n["n"] if n else 0,
+                  "lines_in_ledger": landed["n"]},
            reason="accepted after every printed subtotal tied")
     return {"batch_id": batch_id, "import_id": str(imp["import_id"]),
-            "lines_promoted": n["n"] if n else 0}
+            "lines_promoted": n["n"] if n else 0,
+            "lines_in_ledger": landed["n"]}
 
 
 @router.get("")

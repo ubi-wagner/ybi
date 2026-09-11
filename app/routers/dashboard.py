@@ -46,14 +46,20 @@ def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
         pct = round(float(coverage["decided_dollars"]) /
                     float(coverage["dollars"]) * 100, 1)
 
+    # The cross-reference register is the one place the controls live. The
+    # dashboard used to keep its own short list of three, which meant a
+    # control could tie here and be open on the reconciliation, and nobody
+    # would see the second one.
     controls = query("""
-        SELECT 'GL subtotals'      AS control, variance, (variance = 0) AS ties
-          FROM v_staging_reconciliation LIMIT 1""") or []
+        SELECT description AS control,
+               CASE WHEN basis = 'VARIANCE' THEN variance ELSE exceptions END
+                   AS variance,
+               ties
+          FROM v_statement_reconciliation
+         WHERE period = %s ORDER BY seq""", (period,)) or []
     controls += query("""
-        SELECT 'Segmentation' AS control, variance, (variance = 0) AS ties
-          FROM v_segmentation_control WHERE period = %s""", (period,))
-    controls += query("""
-        SELECT 'Asset register' AS control, variance, (variance = 0) AS ties
+        SELECT 'Asset register agrees with the ledger' AS control,
+               variance, (variance = 0) AS ties
           FROM v_asset_control WHERE period = %s""", (period,))
 
     worklist = query("""

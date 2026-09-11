@@ -46,6 +46,52 @@ def exceptions(period: str = None, actor: Actor = Depends(require_reader)) -> di
             "total": len(rows), "unexplained": unexplained}
 
 
+@router.get("/reconciliation")
+def reconciliation(period: str = None, actor: Actor = Depends(require_reader)) -> dict:
+    """Schedule A-1: the three source documents against each other.
+
+    Ahead of classification, not after it. The question a reviewer asks first
+    is not whether the rate is right, it is whether the numbers under it are
+    the numbers in the books — and the answer has to be available before
+    anyone has an interest in what it says.
+    """
+    period = period or settings.period
+    controls = query("""SELECT control, basis, description, left_label, left_value,
+                               right_label, right_value, variance, exceptions,
+                               ties, note
+                          FROM v_statement_reconciliation
+                         WHERE period = %s ORDER BY seq""", (period,))
+    pl = query("""SELECT account, section, gl_amount, gl_lines, pl_amount,
+                         reconciling, gross_variance, unexplained
+                    FROM v_gl_pl_account
+                   WHERE period = %s AND gross_variance <> 0
+                   ORDER BY abs(gross_variance) DESC""", (period,))
+    bs = query("""SELECT account, bs_leaf, matched_by_alias, opening, activity,
+                         closing, bs_amount, on_balance_sheet, variance,
+                         absent_because_zero
+                    FROM v_gl_bs_account
+                   WHERE period = %s
+                     AND (variance <> 0 OR NOT on_balance_sheet)
+                   ORDER BY abs(variance) DESC, account""", (period,))
+    items = query("""SELECT i.item_id, i.control, i.from_account, i.to_account,
+                            i.amount, i.kind, i.explanation, i.recorded_by,
+                            i.recorded_at,
+                            (SELECT count(*) FROM reconciling_item_line rl
+                              WHERE rl.item_id = i.item_id) AS lines
+                       FROM reconciling_item i
+                      WHERE i.period = %s AND i.retracted_at IS NULL
+                      ORDER BY abs(i.amount) DESC""", (period,))
+    failing = [c["control"] for c in controls if not c["ties"]]
+    record(actor, "EXPORT", "reconciliation", period,
+           after={"controls": len(controls), "failing": failing},
+           reason="cross-reference reconciliation read")
+    return {"period": period, "controls": controls,
+            "gl_pl_differences": pl, "gl_bs_differences": bs,
+            "reconciling_items": items,
+            "failing": failing,
+            "ties": not failing}
+
+
 @router.get("/audit-package")
 def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
     """The whole record as one workbook.
@@ -58,16 +104,45 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
 
     rollup = one("SELECT * FROM v_dashboard WHERE period = %s", (period,)) or {}
 
-    controls = (query("""SELECT 'GL subtotals' AS control, variance,
-                                (variance = 0) AS ties
-                           FROM v_staging_reconciliation LIMIT 1""") or [])
-    controls += query("""SELECT 'Segmentation' AS control, variance,
-                                (variance = 0) AS ties
-                           FROM v_segmentation_control WHERE period = %s""",
-                      (period,))
-    controls += query("""SELECT 'Asset register' AS control, variance,
-                                (variance = 0) AS ties
+    # Schedule A-1 is the cross-reference register, and the Controls sheet is
+    # its short form. They come from the same view so the package cannot show
+    # a control tying on one sheet and open on another.
+    controls = (query("""
+        SELECT control, description,
+               left_label, left_value, right_label, right_value,
+               CASE WHEN basis = 'VARIANCE' THEN variance ELSE exceptions END
+                   AS variance,
+               ties, note
+          FROM v_statement_reconciliation
+         WHERE period = %s ORDER BY seq""", (period,)) or [])
+    controls += query("""SELECT 'ASSET_REGISTER' AS control,
+                                'Asset register agrees with the ledger' AS description,
+                                '' AS left_label, 0 AS left_value,
+                                '' AS right_label, 0 AS right_value,
+                                variance, (variance = 0) AS ties,
+                                'The register is the basis for depreciation, so it '
+                                'has to be the same assets the ledger carries.' AS note
                            FROM v_asset_control WHERE period = %s""", (period,))
+
+    gl_pl = query("""SELECT account, section, gl_amount, gl_lines, pl_amount,
+                            reconciling, gross_variance, unexplained
+                       FROM v_gl_pl_account
+                      WHERE period = %s AND gross_variance <> 0
+                      ORDER BY abs(gross_variance) DESC""", (period,))
+    gl_bs = query("""SELECT account, bs_leaf, opening, activity, closing,
+                            bs_amount, on_balance_sheet, variance,
+                            absent_because_zero, matched_by_alias
+                       FROM v_gl_bs_account
+                      WHERE period = %s AND (variance <> 0 OR NOT on_balance_sheet)
+                      ORDER BY abs(variance) DESC, account""", (period,))
+    reconciling_items = query("""
+        SELECT from_account, to_account, amount, kind::text AS kind,
+               explanation, recorded_by, recorded_at,
+               (SELECT count(*) FROM reconciling_item_line rl
+                 WHERE rl.item_id = i.item_id) AS lines
+          FROM reconciling_item i
+         WHERE i.period = %s AND i.retracted_at IS NULL
+         ORDER BY abs(i.amount) DESC""", (period,))
 
     decisions = query("""
         SELECT d.scope, d.pool::text AS pool, d.function_990::text AS function_990,
@@ -150,7 +225,8 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
         segments=segments, evidence=evidence, certifications=certifications,
         activity=activity, worklist=worklist, rollup=rollup,
         exceptions=exceptions, materiality=materiality, rates=rates,
-        allocations=allocations,
+        allocations=allocations, gl_pl=gl_pl, gl_bs=gl_bs,
+        reconciling_items=reconciling_items,
         generated_by=f"{actor.display_name} ({actor.role.value})")
 
     record(actor, "EXPORT", "audit_package", name,

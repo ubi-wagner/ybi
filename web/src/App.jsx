@@ -12,6 +12,7 @@ import Timesheet from "./pages/Timesheet.jsx";
 import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
 import Imports from "./pages/Imports.jsx";
+import Reconcile from "./pages/Reconcile.jsx";
 import Evidence from "./pages/Evidence.jsx";
 import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
@@ -32,6 +33,7 @@ const EMPLOYEE_TABS = [
 const TABS = [
   ["/",          "Dashboard",  "·"],
   ["/imports",   "Import",     "A"],
+  ["/reconcile", "Reconcile",  "A-1"],
   ["/chart",     "Chart",      "H"],
   ["/classify",  "Classify",   "B"],
   ["/evidence",  "Evidence",   "E"],
@@ -135,6 +137,7 @@ export default function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/worklist/:kind" element={<Worklist />} />
           <Route path="/imports" element={<Imports />} />
+          <Route path="/reconcile" element={<Reconcile actor={actor} />} />
           <Route path="/chart" element={<Chart />} />
           <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
           <Route path="/evidence" element={<Evidence actor={actor} />} />
