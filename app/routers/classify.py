@@ -76,7 +76,10 @@ class DecideIn(BaseModel):
     rationale: str = ""
     citation: str | None = None
     evidence_ids: list[str] = []
-    decided_by: str
+    #: Ignored — the decision is recorded as the signed-in actor.
+    #: Kept so an older client is not rejected, optional so a
+    #: newer one need not send a field that means nothing.
+    decided_by: str = ""
     supersedes: str | None = None
 
 
@@ -488,7 +491,8 @@ class PartIn(BaseModel):
 class SegmentIn(BaseModel):
     group_key: str
     parts: list[PartIn]
-    created_by: str
+    #: Ignored, as decided_by is. Identity comes from the session.
+    created_by: str = ""
 
 
 @router.post("/segment")
@@ -557,11 +561,18 @@ def segment(body: SegmentIn, period: str = "2025",
     }
 
 
-@router.post("/segment/{batch_key}/reverse")
+@router.post("/segment/reverse")
 def reverse_segment(batch_key: str, reason: str, reversed_by: str = "",
                     actor: Actor = Depends(require_controller)) -> dict:
+    """Reverse a segmentation. The parent lines become the analytical unit again.
+
+    The batch key is a query parameter rather than a path segment because a
+    group key is an account and a payee joined by a unit separator (0x1f),
+    and a non-printable character in a URL path is not something every client
+    will encode for you — httpx refuses outright. The route was uncallable
+    for any real group until it moved.
+    """
     reversed_by = actor.display_name or reversed_by
-    """Reverse a segmentation. The parent lines become the analytical unit again."""
     if not reason.strip():
         raise HTTPException(422, "A reversal needs a reason.")
     with transaction() as cur:

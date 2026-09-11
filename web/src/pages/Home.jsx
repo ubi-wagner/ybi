@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, money } from "../api.js";
 import { Card, Empty, Meter, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import Manual from "../components/Manual.jsx";
 
 /* Where each person lands.
  *
@@ -112,6 +113,8 @@ export default function Home({ actor }) {
         </p>
         <Link className="btn primary" to="/documents">Send in a document</Link>
       </Card>
+
+      <Manual actor={actor} />
 
       {/* ── Portfolios ───────────────────────────────────────── */}
       {held.length > 0 && (

@@ -46,6 +46,19 @@ def seal(body: SealIn, period: str = "2025",
                   FROM decision d
                  WHERE d.set_id=%s AND d.reversed_at IS NULL) x
     """, (st["set_id"],))
+    # string_agg over no rows is NULL, so sealing a set with nothing in it
+    # produced a null hash and a raw constraint violation — which is exactly
+    # the state a fresh deployment is in on its first morning, and exactly
+    # the wrong first impression. Sealing nothing is meaningless anyway: the
+    # seal is a hash across judgments, and there are none.
+    if not h or not h["seal"]:
+        raise HTTPException(409, {
+            "error": "NOTHING_TO_SEAL",
+            "message": ("There are no classifications to seal yet. The seal "
+                        "is a hash across every judgment in the set, and it "
+                        "is what lets a rate be computed — so it has to come "
+                        "after the work, not before it.")})
+
     sealed_by = actor.display_name or body.sealed_by
     counts = one("""SELECT count(*) AS decisions,
                            count(*) FILTER (WHERE grade IN ('UNSUPPORTED','TEST_ASSUMPTION'))

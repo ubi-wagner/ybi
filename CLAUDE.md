@@ -173,6 +173,32 @@ spent; everything around it stays quiet.
 - **Every derived figure ties to a control.** If a new calculation cannot be
   reconciled to the ledger, it does not ship.
 
+## Proving it
+
+```bash
+YBI_SEED_PASSWORD=... ./scripts/prove.sh
+```
+
+Everything, in the order a reviewer would want it. Unit tests need no
+database; everything after drives the running service as real people against
+real rows, because a permission claim and an audit claim are worth what they
+are tested at.
+
+| | |
+| --- | --- |
+| `pytest` | the engine, and two structural checks: every mutating route records what it did and takes its actor from the session, and every screenshot the manual shows exists |
+| `scripts/reconcile.py` | the three source documents against each other, ten points |
+| `scripts/drive_everyone.py` | every person, every process they own, and an audit row under their own name for every change |
+| `scripts/drive_access.py` | rank, portfolios, the seal, the password gate |
+| `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
+| `scripts/walk_manuals.py` | re-photographs the manual's screens |
+
+`drive_everyone` is the one that answers "does each kind of person have a
+complete, working job". Every write in it runs inside `mutating`, which
+counts audit rows before and after and checks who the new one names — a
+handler that changes the database and records nothing fails there even when
+the change itself was correct.
+
 ## Running it
 
 ```bash
@@ -289,6 +315,16 @@ password an administrator had handed them an hour earlier;
 password screen on the next page load, with every write in between refused by
 an API that knew something the screen did not — login now returns the same
 shape as `/me`, and the access drive asserts they agree.
+
+### The manual
+
+`web/src/components/Manual.jsx`, on the landing page, assembled from what the
+person holds — the same rule the nav follows, so it never describes a screen
+the reader cannot open. It opens itself once on a first visit and stays shut
+after; a panel that reopens every morning is one people learn to click past.
+Screenshots come from `scripts/walk_manuals.py`, signed in as somebody with
+that job against the real ledger, and `tests/test_manual.py` fails if one is
+missing or a chapter is gated on something that does not exist.
 
 ## Current plan
 
