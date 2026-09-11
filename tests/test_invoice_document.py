@@ -179,3 +179,34 @@ def test_every_category_the_register_can_hold_has_a_word_for_it():
         assert value in CATEGORY_LABEL, (
             f"the register can record category {value!r} and the invoice has "
             f"no word to print for it")
+
+
+def test_a_line_at_zero_still_prints():
+    """The zero lines are the contract's allowable categories, not noise.
+
+    Invoice 10018 carries TRAVEL 0.00, MATERIALS 0.00 and CONSULTANT 0.00 in
+    a month when none were spent, because these invoices list what the award
+    *funds* rather than what had activity — Drive AM's Schedule B funds
+    exactly those five categories and the invoice shows exactly those five.
+
+    Dropping an empty row would produce a tidier document that says something
+    different: that the category was unavailable, when it was available and
+    unused. And a renderer willing to filter empty rows is one step from
+    filtering the absence that matters most — this invoice has no indirect
+    line because Schedule B has none.
+    """
+    from pypdf import PdfReader
+    from io import BytesIO
+
+    doc = _doc(DRIVE_AM, total=Decimal("37593.90"), is_original=True)
+    text = PdfReader(BytesIO(render(doc))).pages[0].extract_text()
+
+    for label in ("Travel", "Materials", "Consultant"):
+        assert label in text, (
+            f"the {label} line was dropped because it is zero. It is a "
+            f"category the contract allows with no cost this period, and the "
+            f"invoice lists what the award funds.")
+    assert text.count("0.00") >= 3, "the zero amounts themselves are gone"
+
+    # Every line recorded reaches the paper, whatever it is worth.
+    assert len(doc.lines) == 5

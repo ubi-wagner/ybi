@@ -19,6 +19,8 @@
 #                     register did not have; links each invoice to its award
 #   load_contract_terms   what the signed agreements actually say, with the
 #                     clause each provision came from
+#   load_award_budgets    what each award budgets by category, which is what
+#                     decides the line set on an invoice
 #   seed_documents    the eighteen foundational documents, filed through the
 #                     real upload route as a real person
 #   reconcile --record    the eleven cross-reference points, with every
@@ -78,6 +80,7 @@ step "The awards, and what they say"
 run "invoices and awards" $PY scripts/load_invoices.py
 run "contract provisions" $PY scripts/load_contract_terms.py \
     --base "$BASE" --password "$PASSWORD"
+run "budget schedules" $PY scripts/load_award_budgets.py
 
 step "The documents"
 run "foundational documents" $PY scripts/seed_documents.py \

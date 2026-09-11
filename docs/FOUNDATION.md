@@ -100,6 +100,44 @@ Fifteen lines across three invoices. Two bill no indirect at all on a base of
 twenty-seven months (81,772.76 / 27 = 3,028.62), not a rate applied to
 incurred cost. **That pattern is the whole reason the restatement exists.**
 
+### What the zero lines mean
+
+Invoice 10018 carries `TRAVEL 0.00`, `MATERIALS 0.00` and `CONSULTANT 0.00`
+in a month when none of those were spent. They are not noise: these invoices
+list **the categories the contract allows**, not the categories that had
+activity.
+
+Drive AM's Schedule B settles it. Seven categories are named —
+
+| | |
+| --- | --- |
+| Labor | 583,594 |
+| Travel | 40,000 |
+| Subcontract | **0** |
+| Materials | 5,000 |
+| Equipment | **0** |
+| Consultant | 60,000 |
+| ODC's | 415,000 |
+| | **1,103,594** |
+
+— and the invoice carries exactly the five with a non-zero budget. Subcontract
+and Equipment, named in the schedule with nothing against them, do not appear
+at all. The line set mirrors the budget, and the schedule totals to the
+ceiling §4.3 names.
+
+Which makes the most important thing about that invoice a fact about its
+*format*: **it has no indirect line because Schedule B has no indirect line.**
+Not a biller who forgot, and not a reduced rate or a de minimis election —
+no provision at all, against 583,594 of budgeted labour. The document YBI
+issued is itself the record of what it was never budgeted to claim, which is
+the strongest single piece of evidence the restatement has.
+
+`award_budget` records this (migration `040`), and
+`v_invoice_budget_check` compares each invoice's categories to what its award
+funds. Only Drive AM's schedule has been transcribed; the other three report
+`evaluable = false` rather than passing, because an award nobody has read
+cannot fail the check and must not pass it either.
+
 Each invoice is linked to its award. Two were not, and could be walked to an
 objective but no further — the link is resolved from the objective now, but
 only where exactly one award covers it, because guessing which agreement

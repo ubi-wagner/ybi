@@ -562,6 +562,30 @@ scoped to the P&L, the other counted both sides of every transfer. Migration
 dollars, with `classified + unclassified = scope_dollars` so the percentage
 reproduces from the row. `classify.py` reads it.
 
+## The invoice format is the evidence
+
+**A line at zero is a line, and must never be filtered.** The America Makes
+invoices list *the categories the contract allows*, not the categories that
+had activity. Drive AM's Schedule B funds five of its seven named categories —
+SUBCONTRACT and EQUIPMENT are in the schedule at zero — and invoice 10018
+carries exactly those five, three of them at 0.00.
+
+Dropping an empty row would produce a tidier document that says something
+different: that a category was unavailable, when it was available and unused.
+And a renderer willing to filter empty rows is one step from filtering the
+absence that matters most — **10018 has no indirect line because Schedule B
+has none**, against $583,594 of budgeted labour. That absence is the strongest
+evidence the restatement has, because the document YBI issued is itself the
+record of what it was never budgeted to claim.
+
+`award_budget` (migration `040`) records what each award funds by category, so
+this is checkable rather than remembered. A category at zero was named in the
+schedule with nothing against it; a category absent was not in the schedule;
+an award with no rows has not been read. `v_invoice_budget_check` reports
+`evaluable = false` for the third case rather than passing — both sides of the
+comparison are empty sets on an unread award, and an empty set matches an
+empty set perfectly. Only Drive AM's schedule is transcribed.
+
 ## Manuals for the team
 
 `docs/manuals/` — one per job, not one per role, because two people here hold

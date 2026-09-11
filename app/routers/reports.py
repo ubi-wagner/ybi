@@ -235,10 +235,38 @@ def _invoice_caveats(head: dict, lines: list[dict]) -> list[str]:
                  ("LABOR", "FRINGE", "TRAVEL", "MATERIALS", "CONSULTANT",
                   "SUBAWARD", "ODC"))
     if indirect == 0 and direct > 0:
+        # Where the budget has been read, say whether the missing line is a
+        # month with no indirect or an award that never provided for any.
+        # They read the same on the face of the invoice and they are not the
+        # same thing at all: one is a gap in a month, the other is the whole
+        # subject of the restatement.
+        budget = one("""SELECT budget_on_file, indirect_budgeted,
+                               labour_budgeted
+                          FROM v_award_indirect_provision
+                         WHERE award_id = %s""",
+                     (head.get("award_id"),)) if head.get("award_id") else None
+        if budget and budget["budget_on_file"] and not budget["indirect_budgeted"]:
+            notes.append(
+                "This invoice carries no indirect line because the award's "
+                "budget schedule contains none — not a reduced rate and not "
+                f"a de minimis election, but no provision at all, against "
+                f"{Decimal(str(budget['labour_budgeted'])):,.2f} of budgeted "
+                f"labour. Indirect recovery here is unbilled, not waived.")
+        else:
+            notes.append(
+                "This invoice bills no indirect cost against "
+                f"{direct:,.2f} of direct cost. Indirect recovery on this "
+                "award is unbilled, not waived.")
+    # Said plainly, because a reader who does not know the convention reads a
+    # zero line as an error and may ask for it to be removed.
+    zeros = [str(l["category"]) for l in lines
+             if Decimal(str(l["amount"])) == 0]
+    if zeros:
         notes.append(
-            "This invoice bills no indirect cost against "
-            f"{direct:,.2f} of direct cost. Indirect recovery on this award "
-            "is unbilled, not waived.")
+            "Lines shown at zero are categories the contract allows with no "
+            "cost this period. They appear because this invoice lists what "
+            "the award funds, not what had activity, and are reproduced as "
+            "issued.")
     if all(Decimal(str(l.get("quantity") or 1)) == 1 for l in lines) and lines:
         notes.append(
             "Every line is quantity one at a rate equal to the whole amount, "

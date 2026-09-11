@@ -111,3 +111,50 @@ def test_the_report_reads_views_rather_than_assembling_its_own_figures():
     assert "FROM timesheet_entry" not in body, (
         "the report is reading the entry table directly rather than the view "
         "that decides which entries are live")
+
+
+def test_the_budget_decides_which_categories_may_appear():
+    """An invoice lists the categories its contract funds.
+
+    Drive AM's Schedule B funds five of its seven named categories —
+    SUBCONTRACT and EQUIPMENT are in the schedule at zero — and invoice
+    10018 carries exactly those five. That is a checkable property, so it is
+    checked rather than remembered.
+    """
+    joined = "\n".join(p.read_text() for p in sorted(SQL.glob("*.sql")))
+    assert "CREATE TABLE award_budget" in joined, (
+        "award_budget is gone; nothing records which categories a contract "
+        "funds, so the invoice format cannot be checked against anything")
+    assert "v_invoice_budget_check" in joined
+    assert "award_budget_needs_citation" in joined, (
+        "a budget line with no citation is somebody's recollection of a "
+        "schedule")
+
+
+def test_an_award_with_no_budget_read_neither_passes_nor_fails():
+    """Both sides of the comparison are empty on an award nobody has
+    transcribed, and an empty set matches an empty set perfectly.
+
+    Without the guard, every category on an unread award reads as "billed
+    outside the budget" — a finding the data cannot support, because you
+    cannot say a category is unbudgeted when nobody has read the budget.
+    """
+    body = _view("v_invoice_budget_check")
+    assert "evaluable" in body, (
+        "the budget check no longer says whether it could be evaluated")
+    assert body.count("CASE WHEN EXISTS") >= 2, (
+        "the billed_not_budgeted and budgeted_not_billed lists are no longer "
+        "guarded on a budget existing, so an award nobody has read reports "
+        "every category as a finding")
+
+
+def _view(name: str) -> str:
+    import re as _re
+    for path in sorted(SQL.glob("*.sql"), reverse=True):
+        src = path.read_text()
+        m = _re.search(
+            rf"CREATE (?:OR REPLACE )?VIEW {name} AS(.*?);\s*(?:COMMENT|CREATE|--|$)",
+            src, _re.S)
+        if m:
+            return m.group(1)
+    raise AssertionError(f"{name} is not defined in any migration")

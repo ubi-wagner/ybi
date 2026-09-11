@@ -98,6 +98,20 @@ class DocumentLine:
     originals every line is quantity one at a rate equal to the whole amount,
     which is the shape that hides a burdened labour rate, and reproducing it
     faithfully is the point rather than an oversight to correct here.
+
+    **A line at zero is a line.** Invoice 10018 carries TRAVEL 0.00,
+    MATERIALS 0.00 and CONSULTANT 0.00 in a month when none were spent,
+    because these invoices list *the categories the contract allows* rather
+    than the categories that had activity — Drive AM's Schedule B funds
+    exactly those five and the invoice shows exactly those five. Dropping a
+    zero row would be a tidier document that says something different: that
+    the category was not available, when in fact it was available and unused.
+
+    It also matters in the other direction. This invoice has no indirect
+    line because Schedule B has no indirect line, and that absence is the
+    strongest evidence the restatement has — the document YBI issued is
+    itself the record of what it was never budgeted to claim. A renderer
+    that filtered empty rows would be one step from filtering that one.
     """
     category: str
     amount: Decimal

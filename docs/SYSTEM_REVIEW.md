@@ -10,7 +10,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Gaps | 1 |
 | Notes | 25 |
 | GET routes probed | 79 (× 6 people) |
-| Audit entries | 161 |
+| Audit entries | 183 |
 
 ## Who was driven
 
@@ -153,7 +153,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "3b57ec02-bb5f-43cd-9390-117337677200",
+    "actor_id": "1ca4952d-7807-4d52-be3f-6d132cd162b2",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -287,13 +287,13 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 161,
+  "audit_rows": 183,
   "audit_by_action": {
-    "EXPORT": 42,
+    "EXPORT": 43,
+    "DOCUMENT_LIBRARY_READ": 26,
     "AWARD_TERM": 26,
+    "SIGN_IN": 23,
     "EVIDENCE_UPLOAD": 18,
-    "SIGN_IN": 14,
-    "DOCUMENT_LIBRARY_READ": 14,
     "EVIDENCE_DOWNLOAD": 12,
     "REVIEW_READ": 12,
     "RECONCILE_ITEM": 6,
@@ -309,12 +309,22 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 79
+      "n": 85
     },
     {
       "actor": "Barb Ewing",
       "role": "ORG_ADMIN",
-      "n": 23
+      "n": 26
+    },
+    {
+      "actor": "Engagement Auditor",
+      "role": "AUDITOR",
+      "n": 20
+    },
+    {
+      "actor": "Heidi Ruby",
+      "role": "CONTROLLER",
+      "n": 19
     },
     {
       "actor": "Eric Wagner",
@@ -322,19 +332,9 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
       "n": 17
     },
     {
-      "actor": "Engagement Auditor",
-      "role": "AUDITOR",
-      "n": 14
-    },
-    {
-      "actor": "Heidi Ruby",
-      "role": "CONTROLLER",
-      "n": 14
-    },
-    {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 14
+      "n": 16
     }
   ],
   "forward_chain": {
@@ -392,7 +392,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "proportion_before": {
     "classified_dollars": "0.0",
     "decisions": "0",
-    "audit": "164",
+    "audit": "186",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
@@ -405,7 +405,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "proportion_after": {
     "classified_dollars": "13.0",
     "decisions": "1",
-    "audit": "165",
+    "audit": "187",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
@@ -420,8 +420,8 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
       "1"
     ],
     "audit": [
-      "164",
-      "165"
+      "186",
+      "187"
     ]
   }
 }

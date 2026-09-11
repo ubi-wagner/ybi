@@ -122,7 +122,14 @@ document library with a hash.
   signal. The largest single open judgment in the ledger.
 - **No award budgets meaningful indirect.** Drive AM budgets none at all on
   583,594 of labour; ICAM budgets 10% of ODCs only. That is the recovery the
-  restatement goes after.
+  restatement goes after — and the invoices themselves are the evidence, since
+  a line set that mirrors the budget has no indirect row where the budget has
+  none.
+- **The zero lines on an invoice are deliberate.** They are the categories the
+  contract allows with no cost that period, not errors. If somebody asks for
+  them to be tidied away, the answer is that the invoice lists what the award
+  funds — and that the same tidying would remove the missing indirect line
+  that the restatement rests on.
 - **Drive AM's cost share contradicts itself.** Schedule B proposes zero, §4.3
   names none, Schedule A expects roughly 1:1 with cancellation as a remedy.
   Recorded as a provision marked UNRESOLVED. It needs counsel, not arithmetic.
