@@ -887,6 +887,26 @@ One more thing fell out: **`decide()` is one turn for the whole request**, not
 one per group. A refusal partway through a batch used to leave the groups
 before it recorded while the response said nothing was.
 
+## What the controller still has to settle
+
+`docs/FOR_TOM_TO_VERIFY.md` — eighteen discrepancies the record cannot resolve
+on its own, ordered by how much each moves the rate, each one found by a
+control rather than by somebody reading. Everything on it is answerable from
+what the controller already knows or can reach today; anything needing
+counsel, a sponsor or an outside document is listed at the end as explicitly
+*not* on it.
+
+The Bacon $45,000 is confirmed and stays on the list as the worked example,
+because it shows the shape of the rest: ten of the eleven controls were blind
+to it, the eleventh caught it, it moved the fringe rate 22.45% to 21.90%, and
+it is closed by *naming* it rather than by adjusting anything. It also carries
+the one thing still outstanding — it has not been reposted in QuickBooks, and
+when it is, the reconciling item has to come off with it or the correction
+counts twice.
+
+Keep the figures in it read from the live record rather than recalled. Three
+dates in the first draft were written from memory and were wrong by weeks.
+
 ## Manuals for the team
 
 `docs/manuals/` — one per job, not one per role, because two people here hold
