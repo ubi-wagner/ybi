@@ -45,6 +45,74 @@ def money(v) -> str:
     return f"{Decimal(str(v)):,.2f}"
 
 
+def record_payroll(c: httpx.Client, period: str) -> None:
+    """Name the payroll register's difference, if it is the one we know.
+
+    Unlike the profit-and-loss differences, this one cannot be derived — no
+    amount of arithmetic tells you that a credit in an intern wage account is
+    a donor's pledge rather than a payroll correction. That is a judgment,
+    and the wording below is the controller's rather than the system's. What
+    the system does is find the candidate, and refuse to let the claim be
+    recorded without the ledger line under it.
+    """
+    d = c.get("/api/reconcile/payroll", params={"period": period}).json()
+    r = d["reconciliation"]
+    if float(r["unexplained"]) == 0:
+        return
+    print("Payroll register")
+    print(f"  register {money(r['register_wages'])}   "
+          f"ledger {money(r['ledger_wages'])}   "
+          f"difference {money(r['gross_difference'])}")
+
+    wage_account = None
+    for line in d["unlike_payroll"]:
+        if (line["payee"] or "").lower().startswith("vince and phyllis bacon"):
+            wage_account = line["account"]
+            print(f"      {line['txn_date']}  {line['payee']}  "
+                  f"{money(line['amount'])} — sitting in "
+                  f"{line['account'].split(':')[-1]}")
+            rr = c.post("/api/reconcile/items", json={
+                "control": "PAYROLL_REGISTER", "period": period,
+                "from_account": line["account"],
+                "to_account": "4000 Contributions Income",
+                "amount": str(line["amount"]), "kind": "SOURCE_DEFECT",
+                "line_ids": [line["line_id"]],
+                "explanation": (
+                    "A pledge from Vince and Phyllis Bacon to fund interns, "
+                    "booked as a credit against intern wage expense instead "
+                    "of as contribution income. The same donor's September "
+                    "gift went to 4029 Sponsorships correctly, so this is a "
+                    "misposting rather than a policy. It understates both "
+                    "contributions and wages by $45,000 on the Form 990, and "
+                    "understates the fringe base by 2.5% — which is the whole "
+                    "of the difference between a 21.90% and a 22.45% reading "
+                    "of the fringe rate.")})
+            if rr.status_code not in (201, 409):
+                print(f"      REFUSED: {rr.text[:200]}")
+            break
+
+    after = c.get("/api/reconcile/payroll",
+                  params={"period": period}).json()["reconciliation"]
+    left = float(after["unexplained"])
+    if left and abs(left) <= 1000 and wage_account:
+        rr = c.post("/api/reconcile/items", json={
+            "control": "PAYROLL_REGISTER", "period": period,
+            "from_account": wage_account, "to_account": "register",
+            "amount": str(-left), "kind": "ROUNDING", "line_ids": [],
+            "explanation": (
+                f"{money(left)} on a {money(after['register_wages'])} base — "
+                f"three thousandths of one per cent — with no transaction "
+                f"behind it. The controller's workbook distributes dollars "
+                f"across {after['people']} people and sixteen objectives and "
+                f"rounds each cell; no single line accounts for it, and none "
+                f"can be named.")})
+        if rr.status_code == 201:
+            print(f"      {money(left)} left over, recorded as unattributable")
+        elif rr.status_code != 409:
+            print(f"      REFUSED: {rr.text[:200]}")
+    print()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8000")
@@ -105,6 +173,9 @@ def main() -> int:
                 if r.status_code != 201:
                     print(f"      REFUSED: {r.text[:200]}")
             print()
+
+        if args.record:
+            record_payroll(c, args.period)
 
         reg = c.get("/api/reconcile", params={"period": args.period}).json()
 

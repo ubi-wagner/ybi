@@ -17,7 +17,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.audit import record
 from app.auth import Actor, require_controller, require_reader
@@ -66,6 +66,48 @@ def gl_bs(period: str | None = None, only_differences: bool = True) -> list[dict
                        FROM v_gl_bs_account
                       WHERE period = %s {where}
                       ORDER BY abs(variance) DESC, account""", (period,))
+
+
+@router.get("/payroll")
+def payroll(period: str | None = None) -> dict:
+    """The payroll register against the ledger's wage accounts.
+
+    The fourth source document, and the one the fringe base actually comes
+    from — so the two readings of the fringe rate are returned beside each
+    other. Fifty-five basis points apart on the 2025 data, and the difference
+    is one misposted line.
+    """
+    period = period or settings.period
+    row = one("""SELECT * FROM v_payroll_reconciliation WHERE period = %s""",
+              (period,))
+    if not row:
+        raise HTTPException(404, "No payroll data for that period.")
+    items = query("""SELECT i.item_id, i.from_account, i.to_account, i.amount,
+                            i.kind::text AS kind, i.explanation, i.recorded_by,
+                            i.recorded_at,
+                            (SELECT count(*) FROM reconciling_item_line rl
+                              WHERE rl.item_id = i.item_id) AS lines
+                       FROM reconciling_item i
+                      WHERE i.period = %s AND i.control = 'PAYROLL_REGISTER'
+                        AND i.retracted_at IS NULL
+                      ORDER BY abs(i.amount) DESC""", (period,))
+    # Candidates: anything in a wage account that does not look like payroll.
+    # A reading aid, not an accusation — the controller decides.
+    odd = query("""SELECT line_id, txn_date, account, payee, description,
+                          amount
+                     FROM ledger_line
+                    WHERE period = %s AND statement = 'P&L'
+                      AND account ILIKE '%%Wages%%'
+                      AND description NOT ILIKE 'GROSS%%'
+                      AND description NOT ILIKE '%%accrual%%'
+                      AND description NOT ILIKE '%%- Wages%%'
+                    ORDER BY abs(amount) DESC LIMIT 25""", (period,))
+    return {"period": period, "reconciliation": row,
+            "reconciling_items": items,
+            "unlike_payroll": odd,
+            "note": ("Lines in a wage account whose memo does not look like a "
+                     "payroll run, an accrual or a named correction. A place "
+                     "to look, not a finding.")}
 
 
 @router.get("/items")
@@ -139,8 +181,21 @@ class ItemIn(BaseModel):
     amount: Decimal
     kind: ReconcilingKind
     explanation: str = Field(min_length=30)
-    line_ids: list[str] = Field(min_length=1)
+    #: Required for every kind but ROUNDING, which is the one case where the
+    #: difference has no transaction behind it. The database enforces the
+    #: same rule and the caps that go with it — a rounding item must explain
+    #: at length why attribution was impossible, and may not exceed a
+    #: thousand dollars. This model only declines to contradict it.
+    line_ids: list[str] = []
     period: str | None = None
+
+    @model_validator(mode="after")
+    def lines_unless_rounding(self):
+        if self.kind is not ReconcilingKind.ROUNDING and not self.line_ids:
+            raise ValueError(
+                "A reconciling item names the ledger lines it consists of. "
+                "Only a ROUNDING item may have none, and it has to say why.")
+        return self
 
 
 @router.post("/items", status_code=201)

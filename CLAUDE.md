@@ -35,10 +35,18 @@ without a signal stays in the queue. This makes the rate read high while work is
 unfinished, which is the honest direction to err.
 
 And one before either: **the books have to agree with themselves before a rate
-is computed.** `v_statement_reconciliation` holds ten points where the general
-ledger, the profit and loss and the balance sheet are required to agree, and
+is computed.** `v_statement_reconciliation` holds eleven points where the
+general ledger, the profit and loss, the balance sheet and the payroll
+register are required to agree, and
 `POST /api/rates/compute` returns 409 while any of them is open. A rate over a
 ledger that does not match its own statements is a rate over the wrong numbers.
+
+The eleventh is the payroll register, and it is the one that pays for
+itself. The fringe base comes from the effort distribution, not from the
+ledger's wage accounts, so a difference between them is *two denominators for
+one rate* — not a presentation question. Nothing among the other ten touches
+the register, which is how a $45,000 donor credit sat in an intern wage
+account for a year and made the fringe rate read 22.45% when it was 21.90%.
 
 A difference is closed by *naming* it, not by netting it. A `reconciling_item`
 carries the specific ledger lines it consists of, and a deferred trigger
@@ -46,6 +54,14 @@ refuses one whose lines do not add to the amount claimed — which is what
 separates a reconciling item from a plug. `/api/reconcile/propose` will find
 the lines for you when exactly one combination adds up, and proposes nothing
 at all when more than one would.
+
+There is exactly one relaxation, and it exists because sometimes attribution
+is genuinely impossible: a `ROUNDING` item may carry no lines, provided it
+says in sixty characters or more *why* it cannot be attributed and does not
+exceed a thousand dollars — past which "rounding" is not a description of
+anything. Both fences are in the trigger. Do not widen them; the alternative
+to writing down an unattributable residual is a tolerance that quietly
+swallows it, and that is how a system starts lying.
 
 ## Who may do what
 

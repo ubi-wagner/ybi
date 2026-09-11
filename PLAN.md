@@ -107,6 +107,29 @@ Measured on the 2025 export, in the order it was found:
 | Opening + movement vs the balance sheet | 71 accounts, none off |
 | Accounts the sheet omits | 4, each closing at 0.00 |
 | Segmentation | 14,371,299.30 both ways |
+| **Payroll register vs ledger wages** | **45,053.24 — one misposted line** |
+
+The eleventh point was added later and found the biggest single defect in
+the file:
+
+```
+2025-12-01  5142 Intern Wages         Vince and Phyllis Bacon  -45,000.00
+2025-12-01  1100 Accounts Receivable  Vince and Phyllis Bacon  +45,000.00
+```
+
+A donor's pledge to fund interns, booked as a credit against wage expense
+instead of as contribution income. It understates contributions and wages by
+$45,000 each on the Form 990, and the fringe base by 2.5% — which is the
+whole of the gap between a 21.90% and a 22.45% reading of the fringe rate.
+**21.90% is the correct one**; 22.45% is computed on a wage base a donor
+credit has been netted out of. The same donor's September gift went to
+4029 Sponsorships correctly, so this is a misposting rather than a policy.
+Needs a reclassifying entry in QuickBooks: debit Intern Wages, credit
+Contributions Income.
+
+$53.24 remains — three thousandths of one per cent, no transaction behind
+it — recorded as an unattributable residual in writing rather than swallowed
+by a tolerance.
 
 Two defects surfaced and were fixed on the way:
 

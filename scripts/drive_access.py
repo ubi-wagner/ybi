@@ -295,6 +295,12 @@ def main() -> int:
         # The buildings this drive invents are litter, and the Space screen is
         # one the user manual photographs.
         from app.db import execute
+        # Same reason as the buildings: an account holding a password only
+        # this drive knows is one nobody can sign into, and it is the account
+        # another drive will pick as its plain employee.
+        execute("""UPDATE actor SET is_active = false
+                    WHERE email LIKE 'drive-newcomer-%@ybi.org'
+                       OR email LIKE 'peer%@ybi.org'""")
         execute("""DELETE FROM space_unit
                     WHERE facility_id LIKE 'DRIVE%'""")
         execute("""DELETE FROM space_partition

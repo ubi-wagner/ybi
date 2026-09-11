@@ -88,7 +88,8 @@ def resolve_actors(c: httpx.Client, admin_email: str, password: str) -> dict:
     # standing in the cost record cannot read it — and an executive who keeps
     # a timesheet is not that person.
     plain = [a for a in rows
-             if a["role"] == "EMPLOYEE" and not (a["portfolios"] or [])]
+             if a["role"] == "EMPLOYEE" and not (a["portfolios"] or [])
+             and a["email"] not in SKIP_EMAILS]
     if plain:
         by_role["PLAIN_EMPLOYEE"] = plain[0]
 
@@ -103,6 +104,39 @@ def resolve_actors(c: httpx.Client, admin_email: str, password: str) -> dict:
         if needed not in by_role:
             raise CannotRun(f"no {needed} actor exists; nothing to drive.")
     return by_role
+
+
+#: Accounts other drives create and stand down. They hold passwords only
+#: those drives know, so they cannot be signed in as here.
+SKIP_EMAILS: set[str] = set()
+
+
+def ensure_plain_employee(c: httpx.Client, password: str) -> dict | None:
+    """Make one if the roster has none.
+
+    On a deployment where everybody carries a portfolio — which is every
+    deployment before the payroll is seeded — there is no plain employee to
+    prove the boundary against, and a drive that skips the check proves
+    nothing. So it makes one, uses it, and stands it down afterwards. The
+    boundary is a property of the system, not of who happens to be on the
+    roster this week.
+    """
+    import time
+    stamp = int(time.time())
+    email = f"boundary-probe-{stamp}@ybi.org"
+    r = c.post("/api/auth/actors", json={
+        "email": email, "display_name": "Boundary Probe", "role": "EMPLOYEE",
+        "employee_key": f"PROBE{stamp}", "password": password})
+    if r.status_code != 201:
+        return None
+    return {"actor_id": r.json()["actor_id"], "email": email,
+            "made_for_this_run": True}
+
+
+def stand_down(c: httpx.Client, actor_id: str) -> None:
+    c.post(f"/api/auth/actors/{actor_id}/active", json={
+        "is_active": False,
+        "reason": "Drive: a probe account, finished with."})
 
 
 def sign_in(base: str, email: str, password: str) -> httpx.Client:
@@ -257,6 +291,18 @@ def main() -> int:
     # ---------------------------------------------------- employee
     print("\nEmployee")
     plain = actors.get("PLAIN_EMPLOYEE")
+    made_one = False
+    if not plain:
+        admin = sign_in(args.base, actors["ORG_ADMIN"]["email"], password)
+        try:
+            plain = ensure_plain_employee(admin, password)
+            made_one = bool(plain)
+            if made_one:
+                ok("no plain employee on the roster, so one was made for the "
+                   "boundary — it is a property of the system, not of who "
+                   "happens to be on the roster")
+        finally:
+            admin.close()
     if plain:
         outsider = sign_in(args.base, plain["email"], password)
         try:
@@ -271,9 +317,15 @@ def main() -> int:
                     f"in the ledger")
         finally:
             outsider.close()
+            if made_one:
+                admin = sign_in(args.base, actors["ORG_ADMIN"]["email"], password)
+                try:
+                    stand_down(admin, plain["actor_id"])
+                finally:
+                    admin.close()
     else:
-        finding("no plain employee account exists to prove the boundary with "
-                "— everybody on the roster carries authority of some kind")
+        finding("no plain employee account exists and one could not be made, "
+                "so the boundary was not proved")
 
     employee = sign_in(args.base, actors["STAFF"]["email"], password)
     try:

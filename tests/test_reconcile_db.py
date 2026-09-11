@@ -137,3 +137,89 @@ def test_the_balance_sheet_is_proved_off_the_ledger(cur):
         "an account the sheet omits has to close at zero in the ledger, or be "
         "matched to the name the sheet prints by a recorded alias: "
         + "; ".join(f"{r['account']} closes at {r['closing']}" for r in stray))
+
+
+# ── The payroll register, and the one relaxation in the rule ─────────
+
+WAGE = "5129 Payroll Expenses:5139 Wages:5142 Intern Wages"
+
+
+def insert_rounding(cur, amount, explanation):
+    cur.execute("""INSERT INTO reconciling_item
+                     (period, control, from_account, to_account, amount, kind,
+                      explanation, recorded_by)
+                   VALUES ('2025','PAYROLL_REGISTER',%s,'register',%s,
+                           'ROUNDING',%s,'test@ybi.org')
+                   RETURNING item_id""", (WAGE, amount, explanation))
+    return cur.fetchone()["item_id"]
+
+
+LONG = ("A residual with no transaction behind it: the workbook distributes "
+        "dollars across forty-three people and rounds each cell, so no single "
+        "line accounts for it and none can be named.")
+
+
+def test_a_rounding_item_may_carry_no_lines(cur):
+    """The one case where attribution is genuinely impossible."""
+    insert_rounding(cur, Decimal("-53.24"), LONG)
+    cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
+
+
+def test_a_rounding_item_still_has_to_explain_itself(cur):
+    import psycopg
+    # Long enough to clear the thirty-character CHECK every item carries,
+    # short of the sixty a rounding item needs to earn its missing lines.
+    insert_rounding(cur, Decimal("-53.24"),
+                    "Rounding, near enough, do not worry about it.")
+    with pytest.raises(psycopg.errors.RaiseException) as exc:
+        cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert "why the amount cannot be attributed" in str(exc.value)
+
+
+def test_rounding_is_not_a_word_for_any_amount(cur):
+    """Past a thousand dollars it stops being a description of anything."""
+    import psycopg
+    insert_rounding(cur, Decimal("-5000.00"), LONG)
+    with pytest.raises(psycopg.errors.RaiseException) as exc:
+        cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert "not a description of anything" in str(exc.value)
+
+
+def test_no_other_kind_may_skip_its_lines(cur):
+    """The relaxation is for ROUNDING and nothing else."""
+    import psycopg
+    cur.execute("""INSERT INTO reconciling_item
+                     (period, control, from_account, to_account, amount, kind,
+                      explanation, recorded_by)
+                   VALUES ('2025','PAYROLL_REGISTER',%s,'register',-53.24,
+                           'TIMING',%s,'test@ybi.org')""", (WAGE, LONG))
+    with pytest.raises(psycopg.errors.RaiseException) as exc:
+        cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert "plug" in str(exc.value)
+
+
+def test_the_payroll_control_is_on_the_register(cur):
+    cur.execute("""SELECT control, ties FROM v_statement_reconciliation
+                    WHERE period='2025' AND control='PAYROLL_REGISTER'""")
+    row = cur.fetchone()
+    assert row, "the eleventh cross-reference point is missing"
+    assert row["ties"] is not None
+
+
+def test_the_fringe_base_is_the_register_not_the_ledger(cur):
+    """The reason this control exists.
+
+    _build_model takes direct labour from the effort distribution, so a
+    difference between the register and the ledger's wage accounts is two
+    denominators for one rate rather than a presentation question.
+    """
+    cur.execute("""SELECT register_wages, ledger_wages, fringe_pool
+                     FROM v_payroll_reconciliation WHERE period='2025'""")
+    r = cur.fetchone()
+    if not r or not r["register_wages"]:
+        pytest.skip("no payroll register loaded")
+    on_register = r["fringe_pool"] / r["register_wages"]
+    on_ledger = r["fringe_pool"] / r["ledger_wages"]
+    assert on_register != on_ledger or r["register_wages"] == r["ledger_wages"], (
+        "the two bases give the same rate, so either they agree or the view "
+        "is not reading what it thinks it is")

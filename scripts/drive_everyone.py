@@ -130,6 +130,14 @@ def tidy_up() -> None:
     has come to depend on.
     """
     from app.db import execute
+    # Accounts are never deleted — every judgment points at one — but an
+    # account this drive invented, holding a password only this drive knows,
+    # is an account nobody can sign into. Left active it becomes the "plain
+    # employee" another drive picks, and that drive then cannot sign in.
+    execute("""UPDATE actor SET is_active = false
+                WHERE email LIKE 'drive.%@ybi.org'
+                   OR email LIKE 'drive-%@ybi.org'
+                   OR email LIKE 'corrected.%@ybi.org'""")
     execute("""DELETE FROM asset
                 WHERE unit_id IN (SELECT unit_id FROM space_unit
                                    WHERE facility_id LIKE 'DRIVE-%')""")
@@ -485,6 +493,39 @@ def drive_controller(args, c):
     lanes = call(c, "GET", "/api/lanes", 200, "reads the scenario lanes")
     if lanes.status_code == 200:
         ok(f"{len(lanes.json())} lane(s) on file")
+
+    pay = call(c, "GET", "/api/reconcile/payroll", 200,
+               "reads the payroll register against the ledger")
+    if pay.status_code == 200:
+        r = pay.json()["reconciliation"]
+        ok(f"register {r['register_wages']} against ledger wages "
+           f"{r['ledger_wages']} — {r['unexplained']} unexplained")
+        if r["register_wages"] and r["ledger_wages"]:
+            on_reg = float(r["fringe_pool"]) / float(r["register_wages"]) * 100
+            on_led = float(r["fringe_pool"]) / float(r["ledger_wages"]) * 100
+            ok(f"the fringe rate reads {on_reg:.2f}% on the register and "
+               f"{on_led:.2f}% on the ledger — one rate, two denominators")
+        odd = pay.json()["unlike_payroll"]
+        if odd:
+            ok(f"{len(odd)} line(s) in a wage account that do not look like "
+               f"payroll — a place to look, not a finding")
+
+    # The one relaxation in the reconciling-item rule, and its fences.
+    wage = "5129 Payroll Expenses:5139 Wages:5142 Intern Wages"
+    call(c, "POST", "/api/reconcile/items", 422,
+         "only a ROUNDING item may omit its lines", json={
+             "control": "PAYROLL_REGISTER", "from_account": wage,
+             "to_account": "register", "amount": "-1.00", "kind": "TIMING",
+             "line_ids": [],
+             "explanation": "Drive: any other kind must name its lines."})
+    call(c, "POST", "/api/reconcile/items", 409,
+         "and a rounding item over a thousand dollars is refused", json={
+             "control": "PAYROLL_REGISTER", "from_account": wage,
+             "to_account": "register", "amount": "-5000.00", "kind": "ROUNDING",
+             "line_ids": [],
+             "explanation": ("Drive: five thousand dollars is not rounding by "
+                             "any reading, and this explanation is long enough "
+                             "to pass the length test on its own.")})
 
     recon = call(c, "GET", "/api/reconcile", 200, "reads schedule A-1")
     if recon.status_code == 200 and recon.json()["ties"]:
