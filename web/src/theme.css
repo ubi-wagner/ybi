@@ -798,3 +798,40 @@ tbody tr.total-row td, tbody tr.total-row th {
   padding: 4px 0; }
 /* The actions cell stays on one line whatever it holds. */
 td .btn-row { flex-wrap: nowrap; align-items: center; }
+
+/* Three toast tones, and a failure that does not look like a confirmation.
+   "bad" and "fail" were both in use and only "bad" had a rule, so nine error
+   toasts rendered in the ordinary dark treatment — a failure notification
+   indistinguishable from a success one. */
+.toast.fail { background: var(--fail); }
+.toast.ok   { background: var(--ok, #1F6F4A); }
+.toast.warn { background: var(--warn); color: var(--ink); }
+.toast.warn button { color: var(--ink); border-color: rgba(0,0,0,.3); }
+.toast.fail strong { font-weight: 700; }
+
+/* --------------------------------------------------- what did not work -- */
+/* Absent entirely when there is nothing to say. A permanent status light
+   that is green all day is one nobody looks at on the day it turns red. */
+.failbell { background: var(--warn-wash); border-color: var(--warn);
+  color: var(--warn); font-weight: 600; font-size: 12px; padding: 5px 11px; }
+.failbell.fault { background: var(--fail-wash); border-color: var(--fail);
+  color: var(--fail); }
+.failbell:hover:not(:disabled) { background: var(--warn); color: #fff; }
+.failbell.fault:hover:not(:disabled) { background: var(--fail); color: #fff; }
+
+.failpanel { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 94vw);
+  background: var(--surface); border-left: 1px solid var(--rule); z-index: 70;
+  display: flex; flex-direction: column; box-shadow: -18px 0 40px rgba(0,0,0,.14); }
+.failpanel header, .failpanel footer { display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid var(--rule); }
+.failpanel footer { border-bottom: none; border-top: 1px solid var(--rule); }
+.failpanel .body { overflow: auto; padding: 6px 20px 20px; }
+
+.failrow { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.failhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.failhead code { font-size: 12px; color: var(--graphite); }
+.failcode { font-size: 11.5px; font-weight: 700; color: var(--warn);
+  background: var(--warn-wash); border-radius: 4px; padding: 1px 7px; }
+.failcode.fault { color: var(--fail); background: var(--fail-wash); }
+.failmsg { margin-top: 5px; font-size: 13px; line-height: 1.5; }

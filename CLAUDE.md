@@ -586,6 +586,83 @@ an award with no rows has not been read. `v_invoice_budget_check` reports
 comparison are empty sets on an unread award, and an empty set matches an
 empty set perfectly. Only Drive AM's schedule is transcribed.
 
+## When something does not work
+
+The rule: **a person must never be left believing something happened when it
+did not.** Four ways that was possible, all found by reading rather than by
+anything failing.
+
+**The error handler threw.** `useToast()` returned a bare function; seventeen
+call sites across five screens called `toast.show(...)`. Most were inside
+`catch` blocks, so a failed write made the error handler fail and the person
+was told nothing at all — Barb could have an account creation refused and see
+an unchanged screen. The toast surface is callable *and* carries `.show`,
+`.ok`, `.warn`, `.fail`, because one of those spellings was always going to be
+written by somebody.
+
+**An error looked like a confirmation.** `ToastHost` rendered only
+`tone === "bad"` and nine sites passed `tone: "fail"`. Tones are normalised
+now, an unrecognised one renders as a *failure* rather than as plain, and a
+failure is **sticky** — one that fades in six seconds while somebody is
+looking elsewhere is the same as no notification.
+
+**A failed read showed an empty screen.** Thirty-two places load with
+`.catch(() => {})`, so "nothing yet" and "the request failed" were
+indistinguishable. Fixing thirty-two call sites works until the thirty-third
+is written, so the record is taken underneath them in `req()` itself, and
+`FailureBell` in the shell surfaces what the screens swallowed. It is absent
+entirely when there is nothing to say — a status light that is green all day
+is one nobody looks at on the day it turns red.
+
+**A refusal was on no record at all.** `audit_log` means "this changed", so by
+construction it says nothing when a change does not happen. `refusal`
+(migration `041`) is the other half, written by middleware rather than by each
+handler remembering — a route added next year records its refusals without
+knowing the file exists. It records faults too: an unhandled exception
+propagates out before any status is sent, so the note has to be taken on the
+way past and re-raised.
+
+Three rules for it: only mutating methods, because a refused GET is usually
+somebody opening a screen they do not hold and would bury the writes that
+matter; `anonymous` is honest for a 401 *and* for a body FastAPI rejects
+before any dependency runs; and recording a refusal must never turn a refusal
+into a crash.
+
+## What one change moves
+
+**Reclassifying one expense changes the whole system**, and
+`scripts/drive_propagation.py` makes "the whole system" a list rather than a
+feeling. Twenty-one observations are taken before and after each of four
+changes — classify, reclassify, seal, then be refused by the seal — and every
+one is asserted to move or to hold. **A figure that moves when it should not
+is as much a defect as one that does not move when it should, and only the
+second kind ever gets noticed.**
+
+It found two defects that no screen would have shown.
+
+**A reclassification answered 200 and did nothing.**
+`one_live_decision_per_unit` stops a line carrying two live decisions, and the
+line insert swallowed the conflict with `ON CONFLICT DO NOTHING`. So a second
+judgment on a decided group produced a live decision with *no lines*: the
+handler said `decisions_created: 1`, the pools still read the old pool, two
+live decisions disagreed with each other, and the controller was told it had
+worked. Reclassifying supersedes now — the prior judgment is reversed, which a
+trigger uses to free its lines — and **the handler checks that its lines
+landed** rather than assuming. The response carries `superseded` so a screen
+can say the change replaced something.
+
+**Coverage then counted every reclassified line twice.** Superseding leaves
+the old `decision_line` in place with `live = false`, and
+`v_classification_coverage` joined on `line_id` alone. One reclassification
+took `classified` to exactly double and the *scope* grew — which is the tell,
+because no judgment anybody makes can change how much there is to judge.
+Migration `042` joins `AND dl.live`, which every other view joining from the
+ledger side already had. It was latent for as long as nothing superseded.
+
+The drive runs **before every drive that seals**, because its third step is to
+seal and its fourth is to prove a sealed set refuses a reclassification. Run
+after one, it can do neither and reports the guarantee as a fault.
+
 ## Manuals for the team
 
 `docs/manuals/` — one per job, not one per role, because two people here hold
@@ -619,6 +696,7 @@ are tested at.
 | `scripts/drive_access.py` | rank, portfolios, the seal, the password gate, the library, the reports |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
 | `scripts/review_system.py` | six dimensions, as all six people, forward and backward |
+| `scripts/drive_propagation.py` | what one reclassification moves, and what it must not |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
 `drive_everyone` is the one that answers "does each kind of person have a

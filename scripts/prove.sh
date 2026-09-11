@@ -53,6 +53,12 @@ step "The whole system, as everybody, in six dimensions"
 # afterwards, so it leaves the record as it found it.
 run "system review" $PY scripts/review_system.py --base "$BASE"
 
+step "What one change moves, and what it must not"
+# Before every drive that seals, because its third step is to seal and its
+# fourth is to prove a sealed set refuses a reclassification. Run after
+# drive_everyone it can do neither, and reports a correct refusal as a fault.
+run "drive_propagation" $PY scripts/drive_propagation.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

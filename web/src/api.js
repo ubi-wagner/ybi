@@ -7,22 +7,86 @@ const base = "/api";
 export class Unauthorized extends Error {}
 export class Forbidden extends Error {}
 
+/* Every request that fails, kept where the shell can show it.
+ *
+ * Thirty-two places load data with `.catch(() => {})`, which renders an empty
+ * screen when the truth is that the request failed. "Nothing yet" and "the
+ * server said no" look identical, and the person is left to guess — which is
+ * the whole complaint this exists to answer.
+ *
+ * Fixing thirty-two call sites would work until the thirty-third was written.
+ * This sits under all of them: a failure is recorded here whatever the caller
+ * then does with it, so nothing can be swallowed by forgetting. Toasts still
+ * carry the immediate message at the sites that catch; this is the net under
+ * them. */
+const failures = [];
+const listeners = new Set();
+
+export function onFailure(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+export const recentFailures = () => failures.slice();
+export function clearFailures() {
+  failures.length = 0;
+  listeners.forEach((fn) => fn(failures));
+}
+
+function noteFailure(entry) {
+  // Newest first, and bounded: a server that is down produces one failure per
+  // poll, and an unbounded list would grow until the tab died.
+  failures.unshift({ ...entry, at: new Date() });
+  if (failures.length > 50) failures.length = 50;
+  listeners.forEach((fn) => fn(failures));
+}
+
 async function req(path, opts = {}) {
-  const res = await fetch(base + path, {
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    ...opts,
-  });
+  const method = opts.method || "GET";
+  let res;
+  try {
+    res = await fetch(base + path, {
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      ...opts,
+    });
+  } catch (e) {
+    // The request never arrived. Distinct from any status, and the one case
+    // where the server has no idea anything was attempted.
+    noteFailure({ path, method, status: 0,
+                  message: "The server could not be reached." });
+    throw new Error(`Could not reach the server: ${e.message}`);
+  }
+  /* A 401 is a state to move to, not a failure to report. Recording it would
+     fill the list every time a session expires, and the shell already sends
+     the person to sign in. */
   if (res.status === 401) throw new Unauthorized("Not signed in");
   if (res.status === 403) {
     const body = await res.text();
+    noteFailure({ path, method, status: 403, message: detailOf(body) });
     throw new Forbidden(body);
   }
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`${res.status}: ${body}`);
+    noteFailure({ path, method, status: res.status, message: detailOf(body) });
+    throw new Error(`${res.status}: ${detailOf(body)}`);
   }
   return res.status === 204 ? null : res.json();
+}
+
+/* The sentence the API gave, not the JSON it gave it in. A person reading
+   `{"detail":"..."}` in a toast is reading our plumbing. */
+function detailOf(body) {
+  try {
+    const parsed = JSON.parse(body);
+    const d = parsed?.detail ?? parsed?.message ?? parsed?.error;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d) && d[0]?.msg) {
+      return d.map((x) => `${(x.loc || []).slice(1).join(".")}: ${x.msg}`)
+              .join("; ");
+    }
+    if (d) return JSON.stringify(d);
+  } catch { /* not JSON; the body itself is the message */ }
+  return (body || "").slice(0, 300);
 }
 
 export const api = {

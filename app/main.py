@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from app import storage
 from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
+from app.refusals import RecordRefusals
 from app.routers import (auth, awards, certify, chart, classify, contracts,
                          dashboard,
                          documents, evidence, export, facilities, health,
@@ -83,6 +84,12 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+
+# Outermost of the two, so it sees the status CORS will actually send. A
+# refusal is recorded for every mutating request answered 4xx or 5xx, which
+# is the case audit_log cannot cover: it records changes, and a refusal is
+# the absence of one.
+app.add_middleware(RecordRefusals)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,0 +1,216 @@
+"""What happens when something does not work.
+
+The complaint these answer is precise: Tom presses a button, the system
+declines, and nothing tells him. Three ways that happened, all of them found
+by reading the code rather than by anything failing:
+
+  * `useToast()` returned a bare function and seventeen call sites across
+    five screens called `toast.show(...)`, which throws. Most were inside
+    `catch` blocks, so a failed write made the error handler fail and the
+    person was told nothing at all.
+  * `ToastHost` rendered only `tone === "bad"`, and nine sites passed
+    `tone: "fail"` — so those errors came out in the ordinary treatment,
+    visually identical to a confirmation.
+  * Thirty-two screens load with `.catch(() => {})`, so a failed read renders
+    an empty table and "nothing yet" is indistinguishable from "the request
+    failed".
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+UI = ROOT / "web" / "src" / "components" / "ui.jsx"
+API = ROOT / "web" / "src" / "api.js"
+SRC = ROOT / "web" / "src"
+SQL = ROOT / "app" / "sql"
+
+
+def test_the_toast_surface_supports_every_way_it_is_called():
+    """Both spellings, because both were written.
+
+    A surface that throws on a plausible call is one that will be called that
+    way again. Supporting both is not indecision.
+    """
+    ui = UI.read_text()
+    assert "fn.show = fn" in ui, (
+        "useToast() no longer answers toast.show(...). Seventeen call sites "
+        "use it, most inside catch blocks — they would throw instead of "
+        "reporting the failure they were written to report.")
+
+    used = set()
+    for f in SRC.rglob("*.jsx"):
+        src = f.read_text()
+        if "useToast()" not in src:
+            continue
+        used |= set(re.findall(r"\btoast\.(\w+)\(", src))
+    for call in used:
+        assert f"fn.{call} =" in ui or call == "show", (
+            f"a screen calls toast.{call}(), which the toast surface does "
+            f"not provide")
+
+
+def test_every_tone_in_use_renders_as_something():
+    """"bad" and "fail" were both written and only "bad" had a rule."""
+    ui = UI.read_text()
+    css = (ROOT / "web" / "src" / "theme.css").read_text()
+
+    tones = set()
+    for f in SRC.rglob("*.jsx"):
+        tones |= set(re.findall(r'tone:\s*"(\w+)"', f.read_text()))
+    # Pill and Stat take tones too; only the toast ones need a .toast rule.
+    known = set(re.findall(r"^\s*(\w+):\s*\"(?:ok|warn|fail)\",", ui, re.M))
+    known |= set(re.findall(r"(\w+):\s*\"(?:ok|warn|fail)\"", ui))
+    for tone in tones:
+        assert tone in known or f".{tone}" in css, (
+            f'tone "{tone}" is used and is neither mapped by the toast '
+            f"surface nor styled. An error shown in the ordinary treatment "
+            f"is a failure that looks like a confirmation.")
+
+    for tone in ("fail", "ok", "warn"):
+        assert f".toast.{tone}" in css, f".toast.{tone} has no rule"
+
+
+def test_a_failure_does_not_disappear_on_its_own():
+    """A notification that fades in six seconds while somebody is looking
+    somewhere else is the same as no notification."""
+    ui = UI.read_text()
+    assert 'opts.sticky ?? tone === "fail"' in ui, (
+        "failures no longer stay until dismissed")
+
+
+def test_an_unrecognised_tone_is_treated_as_a_failure():
+    """Getting a red toast for a misspelled tone is a small cost. Showing an
+    error as a confirmation is not."""
+    ui = UI.read_text()
+    m = re.search(r"function toneOf\(raw\) \{(.*?)\n\}", ui, re.S)
+    assert m, "toneOf is gone"
+    assert 'return "fail";' in m.group(1), (
+        "an unknown tone no longer falls back to the failure treatment")
+
+
+def test_no_request_failure_can_be_swallowed_by_a_call_site():
+    """Thirty-two screens catch a failed read and do nothing with it.
+
+    Fixing thirty-two call sites works until the thirty-third is written, so
+    the record is taken underneath them all, in `req` itself, where a caller
+    cannot forget it.
+    """
+    api = API.read_text()
+    assert "function noteFailure(" in api, (
+        "the request layer no longer records failures, so a screen that "
+        "catches and ignores one leaves no trace anywhere in the client")
+    m = re.search(r"async function req\(path, opts = \{\}\) \{(.*?)\n\}",
+                  api, re.S)
+    assert m, "req is gone"
+    body = m.group(1)
+    assert body.count("noteFailure(") >= 3, (
+        "not every failure path in req records: a transport error, a 403 and "
+        "any other bad status are three different failures")
+    # 401 deliberately does not record — it is a state to move to, and
+    # recording it would fill the list every time a session expires.
+    assert "if (res.status === 401) throw new Unauthorized" in body
+
+
+def test_the_shell_surfaces_what_the_screens_swallowed():
+    app = (SRC / "App.jsx").read_text()
+    assert "FailureBell" in app, (
+        "nothing in the shell shows the failures the request layer recorded")
+    bell = (SRC / "components" / "FailureBell.jsx").read_text()
+    assert "if (!items.length) return null;" in bell, (
+        "the failure indicator shows when there is nothing to say. A "
+        "permanent status light that is green all day is one nobody looks at "
+        "on the day it turns red.")
+
+
+def test_a_refused_write_is_on_the_record():
+    """`audit_log` records changes, so by construction it records nothing
+    when a change does not happen — which leaves the most frustrating case
+    documented nowhere."""
+    joined = "\n".join(p.read_text() for p in sorted(SQL.glob("*.sql")))
+    assert "CREATE TABLE refusal" in joined
+    assert "refusal_is_a_refusal" in joined, (
+        "nothing stops a success being written to the refusal table")
+
+    mw = (ROOT / "app" / "refusals.py").read_text()
+    assert "class RecordRefusals" in mw
+    assert "MUTATING" in mw, (
+        "refusals are recorded for reads too; a refused GET is usually "
+        "somebody opening a screen they do not hold, and it would bury the "
+        "writes that matter")
+    # Recording a refusal must never turn a refusal into a crash.
+    assert "except Exception" in mw and "log.exception" in mw, (
+        "a failure to record a failure would become a 500 on a request that "
+        "had already been answered")
+
+
+def test_the_middleware_can_name_the_person():
+    """A refusal recorded as anonymous when the caller was signed in and
+    merely lacked a portfolio says something was refused and not to whom."""
+    auth = (ROOT / "app" / "auth.py").read_text()
+    assert "request.state.actor = actor" in auth, (
+        "current_actor no longer stashes the actor, so middleware that never "
+        "reaches a handler cannot name anybody")
+
+
+def test_a_reclassification_supersedes_rather_than_stacking():
+    """A second judgment on a decided group used to answer 200 and do
+    nothing.
+
+    `one_live_decision_per_unit` stops a line carrying two live decisions, and
+    the line insert swallowed the conflict with ON CONFLICT DO NOTHING. So a
+    reclassification produced a live decision with *no lines*: the handler
+    said "decisions_created: 1", the pools still read the old pool, two live
+    decisions disagreed with each other, and the controller was told it had
+    worked.
+
+    That is the worst shape a defect can take here — not a refusal, which is
+    visible, but a success that does nothing, over the figures a rate is
+    built from.
+    """
+    src = (ROOT / "app" / "routers" / "classify.py").read_text()
+    m = re.search(r"def decide\(.*?\n(?=\n@router)", src, re.S)
+    assert m, "the decide handler is gone"
+    body = m.group(0)
+
+    assert "reversed_at = now()" in body, (
+        "decide() no longer reverses the judgment it replaces, so a "
+        "reclassification will attach to no lines and silently do nothing")
+    assert "superseded" in body, "decide() no longer tracks what it replaced"
+    assert "attached != len(with_lines)" in body, (
+        "decide() no longer checks that its lines landed. ON CONFLICT DO "
+        "NOTHING is how the silent success was possible; the handler has to "
+        "verify rather than assume.")
+
+
+def test_coverage_counts_a_line_once_however_often_it_was_judged():
+    """Reclassifying leaves the superseded `decision_line` in place with
+    `live = false`. A view joining on `line_id` alone then counts the line
+    twice — one reclassification took `classified` from 2,219,105.55 to
+    exactly double, and the *scope* grew, which is the tell: no judgment
+    anybody makes can change how much there is to judge.
+    """
+    joined = "\n".join(p.read_text() for p in sorted(SQL.glob("*.sql")))
+    m = re.findall(
+        r"CREATE OR REPLACE VIEW v_classification_coverage AS(.*?);\s*COMMENT",
+        joined, re.S)
+    assert m, "v_classification_coverage is gone"
+    body = m[-1]                       # the latest definition wins
+    assert "dl.live" in body, (
+        "coverage joins decision_line without filtering dl.live, so every "
+        "reclassified line is counted once per judgment it has ever carried")
+
+
+def test_the_propagation_matrix_asserts_both_directions():
+    """A figure that moves when it should not is as much a defect as one
+    that does not move when it should, and only the second kind ever gets
+    noticed."""
+    drive = (ROOT / "scripts" / "drive_propagation.py").read_text()
+    assert "MUST_HOLD" in drive and "MAY_MOVE" in drive, (
+        "the propagation drive no longer says what must hold, so it can only "
+        "catch half the defects")
+    assert "nothing said it could" in drive, (
+        "the drive no longer reports a figure that moved without being "
+        "listed — which is how the coverage double-count was found")

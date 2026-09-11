@@ -131,6 +131,37 @@ def activity(limit: int = Query(100, le=500), offset: int = 0,
         (entity, entity, entity_id, entity_id, limit, offset))
 
 
+
+@router.get("/refusals")
+def refusals(limit: int = 50, mine: bool = True,
+             actor: Actor = Depends(current_actor)) -> dict:
+    """What the system has refused, and what it said.
+
+    Everybody sees their own without any grant: being told why your own
+    button did nothing is not a privilege. Reading somebody else's needs
+    `require_reader`, because a refusal names a person and what they were
+    trying to do.
+
+    `mine=false` from somebody who may not read the record quietly narrows to
+    their own rather than refusing — a screen that answers 403 when you untick
+    a box is a worse experience than one that shows you what you may see.
+    """
+    limit = max(1, min(limit, 200))
+    everybody = actor.can_read and not mine
+    scope, args = ("1=1", ()) if everybody else ("actor_id = %s",
+                                                 (actor.actor_id,))
+
+    rows = query(f"""SELECT refusal_id, occurred_at, actor, method, path,
+                            status, detail, what_happened, is_a_fault
+                       FROM v_refusals_recent
+                      WHERE {scope}
+                      ORDER BY occurred_at DESC
+                      LIMIT {limit}""", args)
+    faults = sum(1 for r in rows if r["is_a_fault"])
+    return {"refusals": rows, "count": len(rows), "faults": faults,
+            "scope": "mine" if scope != "1=1" else "everybody"}
+
+
 @router.get("/worklist/mine")
 def my_worklist(period: str = None,
                 actor: Actor = Depends(current_actor)) -> dict:

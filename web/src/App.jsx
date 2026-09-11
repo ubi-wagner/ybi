@@ -5,6 +5,7 @@ import { api, Unauthorized } from "./api.js";
 import SignIn from "./pages/SignIn.jsx";
 import PasswordDialog from "./components/PasswordDialog.jsx";
 import UndoTrail from "./components/UndoTrail.jsx";
+import FailureBell from "./components/FailureBell.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
 import Certify from "./pages/Certify.jsx";
@@ -161,6 +162,7 @@ export default function App() {
         <header className="topbar">
           <span className="wordmark">Youngstown Business Incubator</span>
           <span className="period-chip">Cost allocation · 2025</span>
+          <FailureBell />
           <span className="topbar-actor">
             {actor.display_name}
             <span className="role-chip" title={

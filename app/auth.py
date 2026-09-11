@@ -308,7 +308,7 @@ def current_actor(request: Request) -> Actor:
     if not row:
         raise HTTPException(401, "Session is no longer valid.")
 
-    return Actor(
+    actor = Actor(
         actor_id=str(row["actor_id"]),
         email=row["email"],
         display_name=row["display_name"],
@@ -318,6 +318,12 @@ def current_actor(request: Request) -> Actor:
         portfolios=frozenset(Portfolio(p) for p in row["portfolios"]),
         record_access=bool(row["record_access"]),
     )
+    # Stashed so middleware can name the person on a request that never
+    # reaches a handler. A refusal recorded as "anonymous" when the caller was
+    # signed in and merely lacked a portfolio is the least useful kind of
+    # record: it says something was refused and not to whom.
+    request.state.actor = actor
+    return actor
 
 
 def require_role(*roles: Role):

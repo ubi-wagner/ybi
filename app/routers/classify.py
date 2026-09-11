@@ -443,6 +443,7 @@ def decide(body: DecideIn, period: str = "2025",
     set_id = st["set_id"]
 
     created = 0
+    replaced = 0
     for key in body.group_keys:
         account, _, payee = key.partition("\x1f")
         with_lines = query("""SELECT line_id FROM ledger_line
@@ -454,6 +455,43 @@ def decide(body: DecideIn, period: str = "2025",
         # that fires at COMMIT, so the decision and the evidence it cites must
         # land together or an evidenced judgment is refused as unevidenced.
         with transaction() as cur:
+            # Reclassifying supersedes; it does not stack.
+            #
+            # `one_live_decision_per_unit` means a line already carrying a
+            # live decision cannot take a second, and the line insert below
+            # used to swallow that with ON CONFLICT DO NOTHING. So a second
+            # judgment on a decided group produced a live decision with *no
+            # lines*, the handler answered 200 "decisions_created: 1", and
+            # nothing moved: the pools still read the old pool, two live
+            # decisions disagreed with each other, and the controller was
+            # told it had worked.
+            #
+            # That is the worst shape a bug can take here. Not a refusal —
+            # a refusal is visible — but a success that does nothing, over
+            # the figures a rate is built from.
+            cur.execute("""SELECT DISTINCT d.decision_id
+                             FROM decision d
+                             JOIN decision_line dl USING (decision_id)
+                            WHERE dl.live
+                              AND d.reversed_at IS NULL
+                              AND dl.line_id = ANY(%s)""",
+                        ([l["line_id"] for l in with_lines],))
+            superseded = [r["decision_id"] for r in cur.fetchall()]
+            for old_id in superseded:
+                # A trigger flips decision_line.live when reversed_at is set,
+                # which is what frees the lines for the judgment replacing
+                # them. Reversing is the same mechanism undo uses; there is
+                # deliberately not a second one.
+                # `decision` carries reversed_at and reversal_reason; who
+                # did it comes from the audit entry, which names the session.
+                cur.execute("""UPDATE decision
+                                  SET reversed_at = now(),
+                                      reversal_reason = %s
+                                WHERE decision_id = %s
+                                  AND reversed_at IS NULL""",
+                            (f"Superseded by {decided_by}, judging the same "
+                             f"group again: {body.rationale}"[:500], old_id))
+
             cur.execute("""
                 INSERT INTO decision (set_id, scope, pool, function_990, federal,
                                       objective_id, grade, rationale, citation,
@@ -462,23 +500,51 @@ def decide(body: DecideIn, period: str = "2025",
                 RETURNING decision_id
             """, (set_id, f"account={account}|payee={payee}", body.pool,
                   body.function_990, body.federal, body.objective_id, body.grade,
-                  body.rationale, body.citation, decided_by, body.supersedes))
+                  body.rationale, body.citation, decided_by,
+                  # Which judgment this one replaces. Only where exactly one
+                  # did: a group covered by two is a state worth seeing in
+                  # the audit reason rather than half-recorded in a column
+                  # that holds one.
+                  body.supersedes or (str(superseded[0])
+                                      if len(superseded) == 1 else None)))
             did = cur.fetchone()["decision_id"]
             for l in with_lines:
                 cur.execute("""INSERT INTO decision_line (decision_id, line_id)
                                VALUES (%s,%s) ON CONFLICT DO NOTHING""",
                             (did, l["line_id"]))
+            # Prove it landed. ON CONFLICT DO NOTHING is how the silent
+            # failure above was possible, so the handler now checks rather
+            # than assumes — a judgment that did not attach to the cost it
+            # judges is not a judgment, and it must not be reported as one.
+            cur.execute("SELECT count(*) AS n FROM decision_line "
+                        "WHERE decision_id = %s AND live", (did,))
+            attached = cur.fetchone()["n"]
+            if attached != len(with_lines):
+                raise HTTPException(
+                    409,
+                    f"That judgment would have covered {attached} of "
+                    f"{len(with_lines)} lines in {account}. Something else "
+                    f"holds the rest — most likely they are split into "
+                    f"segments judged separately. Nothing was recorded.")
             for ev in body.evidence_ids:
                 cur.execute("""INSERT INTO decision_evidence (decision_id, evidence_id)
                                VALUES (%s,%s) ON CONFLICT DO NOTHING""", (did, ev))
             # Inside the transaction: an audit row that survived a rolled
             # back decision would describe something that never happened.
             record(actor, "CLASSIFY", "decision", str(did),
+                   before=({"superseded": [str(x) for x in superseded]}
+                           if superseded else None),
                    after=body.model_dump(mode="json"), reason=body.rationale,
                    cursor=cur)
         created += 1
+        replaced += len(superseded)
 
-    return {"decisions_created": created, "set_id": str(set_id)}
+    # `superseded` says so plainly, because "decisions_created: 1" read the
+    # same whether a group was judged for the first time or rejudged — and
+    # the screen has no other way to tell a person their change replaced
+    # something.
+    return {"decisions_created": created, "superseded": replaced,
+            "set_id": str(set_id)}
 
 
 @router.post("/defer")
