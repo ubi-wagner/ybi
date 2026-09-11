@@ -82,6 +82,43 @@ DOCUMENTS: dict[str, tuple[str, str, str]] = {
         "grant-reconciliation-workbook", "2025",
         "The controller's own workbook. The source of the 22.45% fringe "
         "rate that the payroll register shows to be 21.90%."),
+    "2024-02-05_NCDMM_SubRecipient_Agreement_SRA-0350_ICAM-Digital-Engineering.pdf": (
+        "subrecipient-agreement", "2024",
+        "ICAM Digital Engineering Workforce, $1,000,690, cost reimbursement "
+        "no fee, under Grant N00174-20-1-0031 (CFDA 12.300). Attachment 3 "
+        "budgets indirect at 10% of ODCs only — $27,500 on $275,000 — with "
+        "no indirect at all on $655,190 of labor."),
+    "2026-01-22_NCDMM_Hybrid_20240061_Modification-001.pdf": (
+        "award-modification", "2026",
+        "Extends Hybrid to 30 June 2026 and raises the obligation by "
+        "$12,366 to $512,409. The $104,000 cost share is carried forward "
+        "unchanged, so the obligation that was never tracked is now live "
+        "in a second year."),
+    "2021-07-13_EDA_CD-450_Award_06-79-06300.pdf": (
+        "grant-agreement", "2021",
+        "The EDA award behind the building assets. A scan with no text "
+        "layer — it needs OCR before anything can be read out of it."),
+    "2025-11-17_EDA_Closeout-Letter_06-79-06300.pdf": (
+        "closeout-letter", "2025",
+        "Closes EDA 06-79-06300. Final project cost $2,376,344, EDA share "
+        "$1,903,179, disbursed $1,712,861, leaving $188,214.54 still to be "
+        "drawn. Records retained three years from this date."),
+    "2022-02-02_JobsOhio_Grant-Agreement_SFPN-2021-493762-VCG.pdf": (
+        "grant-agreement", "2022",
+        "JobsOhio, $475,000 toward $2,428,974 of project investment "
+        "including $2,092,861 of building fixed assets. Not federal, which "
+        "is what makes it the other half of the funding-source question."),
+    "2026_YBI_Fixed-Asset-Schedule.xls": (
+        "asset-register", "2026",
+        "The asset register. $23,419,573.64 of cost against $10,452,995.43 "
+        "of accumulated depreciation. Carries life, method and in-service "
+        "date per asset — and no funding source column, which is the one "
+        "field 200.436(b) turns on."),
+    "2025_YBI_Lease-Schedule.xlsx": (
+        "lease-schedule", "2025",
+        "Twenty-six tenant leases by building with monthly and annual rent. "
+        "The tenant side of the facilities carve-out; square footage is "
+        "still missing."),
 }
 
 

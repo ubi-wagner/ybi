@@ -298,3 +298,159 @@ When the invoices land, check three things: whether non-labor lines were billed
 separately from labor, whether any invoice carries an indirect or loaded-rate
 line, and whether Digital Engineering was invoiced on the same budget-twelfth
 basis as the others.
+
+---
+
+## 8. The 11 September document drop — seven new source documents
+
+Seven documents arrived at once, two of them the ones that had been blocking
+controls. All are filed under `docs/source-documents/` and named in
+`scripts/seed_documents.py`. Two more were duplicates of what was already on
+file (a second copy of Hybrid Phase 2, and the ICAM agreement twice) and were
+not filed twice — the upload route is content-addressed and would have
+deduplicated them anyway.
+
+### 8.1 A third federal award nobody has been costing — ICAM Digital Engineering
+
+`2024-02-05_NCDMM_SubRecipient_Agreement_SRA-0350_ICAM-Digital-Engineering.pdf`
+
+| | |
+|---|---|
+| Prime | Grant **N00174-20-1-0031**, **CFDA 12.300**, NSWC Indian Head via Energetics Technology Center, administered by NCDMM |
+| Type | Cost reimbursement, **no fee** |
+| Value | **$1,000,690.00**, fully funded |
+| Period | Date of award through **9 July 2025** — inside the period under review |
+| Executed | 5 February 2024 (NCDMM), 2 February 2024 (YBI — Stephanie Gaffney) |
+| Basis of estimate | YBI cost proposal *Digital Engineering*, 3 Nov 2023, Attachment 3 |
+
+**The indirect provision is the finding.** Attachment 3 budgets:
+
+| | |
+|---|---|
+| Labor | 655,190 |
+| Travel | 35,000 |
+| Materials | 8,000 |
+| ODCs | 275,000 |
+| **Indirects on ODCs (10%)** | **27,500** |
+| **Total** | **1,000,690** |
+
+Indirect is charged at 10% **of ODCs only**. The $655,190 of labor carries no
+indirect at all. That is not the de minimis rate — 2 CFR 200.414(f) applies
+10% to **MTDC**, which here would be roughly $973,190 and would recover about
+**$97,319**. The award as budgeted recovers **$27,500**, a shortfall of
+roughly **$70,000 on this award alone**, before any fully-burdened rate is
+considered. This is a different and worse position than the Last Tactical
+Mile de minimis question, because it is not a rate dispute — it is a base
+that excludes the largest cost element.
+
+Three consequences to work, in order:
+
+1. **SEFA and Single Audit scope.** CFDA 12.300 is federal. §53 of the
+   agreement flows down the $750,000 single-audit threshold. Whether this
+   award is on the 2025 SEFA needs checking against the objective master —
+   the same question already open on Rising Tides.
+2. **Restatement scope.** §4.4-equivalent modification authority exists here
+   too (§14 Changes, §12 requiring written modification signed by both
+   contractual representatives). Any change of basis needs that instrument,
+   exactly as `POST /api/restate` requires.
+3. **§54** requires that YBI has "settled all years overheads with their
+   cognizant agency" before final fee release, and certifies the accounting
+   system complies with DFARS 252.242.7006. YBI has no NICRA. That sentence
+   is worth a legal read before it becomes a closeout problem.
+
+### 8.2 Hybrid Modification 001 — the $104,000 cost share is now live in 2026
+
+`2026-01-22_NCDMM_Hybrid_20240061_Modification-001.pdf`
+
+Effective 22 January 2026. Extends the period of performance to **30 June
+2026** and raises the total obligation by **$12,366 to $512,409**. NCDMM
+numbers the agreement **20240061**; the amounts it restates ($500,043 federal,
+$104,000 cost share) match §4.2 of the 8 September 2023 agreement exactly, so
+it is a modification of that document rather than a separate award.
+
+**The $104,000 cost share is carried forward unchanged.** The open item
+recorded as "obligated, never tracked" is therefore not a closed historical
+question — it is an obligation live in a second fiscal year, on an award whose
+statement of work expects the ratio of America Makes funding to cost share to
+be "roughly 1:1 at all times throughout the project", with cost share reports
+due monthly by the 10th. Nothing in the ledger tracks it.
+
+### 8.3 The asset register — arrived, and it does not answer 200.436(b)
+
+`2026_YBI_Fixed-Asset-Schedule.xls`
+
+| | |
+|---|---|
+| Cost / other basis | **23,419,573.64** |
+| Accumulated depreciation | **10,452,995.43** |
+| Net book value | **12,966,578.21** |
+
+Per asset it carries system number, description, date in service, method and
+convention, life, cost, beginning accumulated depreciation, current-year
+depreciation and remaining basis. That is enough to rebuild depreciation from
+source and to close the `ASSET_REGISTER` control.
+
+**It carries no funding source column.** The one field 200.436(b) turns on is
+the one field not in the register. It has to be reconstructed by matching
+asset additions to the award documents in §8.4 — real work, not a lookup.
+
+**A second problem, and it is structural.** The register's account numbering
+collides with the 2026 chart. `app/domain/chart.py` reserves **1511/1512** for
+*funded* asset basis, precisely so the depreciation question is answered by
+the account. The register uses 1511/1512 for **Building and Semple Building**
+($8,760,612.01 of cost) and 1501/1502 for **Tech Block Building 5**
+($8,935,270.34). Those are two different meanings for the same account
+numbers. One of them has to give before the 2026 chart goes live, and the
+carve-out that was supposed to be "answered by the account" is not answered
+yet.
+
+### 8.4 Where the building money came from — two awards, one federal
+
+| Document | | |
+|---|---|---|
+| `2021-07-13_EDA_CD-450_Award_06-79-06300.pdf` | EDA, Dept of Commerce | **A scan with no text layer. Needs OCR before anything can be read out of it.** |
+| `2025-11-17_EDA_Closeout-Letter_06-79-06300.pdf` | EDA closeout, signed 17 Nov 2025 | Final project cost **2,376,344**; EDA share **1,903,179**; disbursed **1,712,861**; **188,214.54 still to be drawn** |
+| `2022-02-02_JobsOhio_Grant-Agreement_SFPN-2021-493762-VCG.pdf` | JobsOhio, **not federal** | **475,000** toward **2,428,974** of project investment, including **2,092,861 of building fixed assets**; ~18,000 sq ft renovated at 252 W Boardman |
+
+Together these are the funding-source evidence the register lacks. The EDA
+share is federal, so depreciation on the assets it funded is unallowable under
+200.436(b); the JobsOhio share is not, so depreciation on that basis is
+allowable. Splitting the building additions between them is the remaining
+work.
+
+Two things to check that do not depend on that split:
+
+- **The 188,214.54 receivable.** Is it on the 2025 balance sheet? A closeout
+  letter dated 17 November 2025 naming a balance still to be disbursed is a
+  2025 receivable, and the eleven cross-reference points would not catch its
+  absence.
+- **Records retention runs three years from 17 November 2025**, and GPRA
+  performance reports are due at three, six and nine years from **24 June
+  2021**. Both are calendar items, not accounting ones.
+
+### 8.5 The lease schedule — the tenant side of the carve-out
+
+`2025_YBI_Lease-Schedule.xlsx` — 26 leases across four buildings (ybi, TBB5,
+AM, Taft/Semple) with start, end, monthly and annual rent. Largest: Steelite
+across three spaces (203,116 + 49,527 + 33,966 = **286,608/yr**), Juggerbot 3D
+(62,227), and **NCDMM America Makes — 108,000/yr on the AM building through 30
+September 2025, plus 18,720/yr at ybi from February 2025**.
+
+That last one needs care. YBI is landlord to the organisation that administers
+three of its federal awards. It is not a 200.465 less-than-arm's-length
+problem on its face — that provision is about YBI *paying* rent to a related
+party — but rental income from a funder, on space that may also carry
+federally funded depreciation, is exactly the kind of arrangement a Single
+Audit asks about. It should be documented deliberately rather than discovered.
+
+**Square footage is still missing**, and it is the driver the carve-out
+actually needs. The schedule gives rent, not area. The JobsOhio agreement's
+"approximately 18,000 square feet" is the only area figure in the file and it
+describes a renovation, not an occupancy.
+
+### 8.6 What this drop did not change
+
+The fringe question is untouched: 21.90% remains the defensible figure and
+22.45% remains a rate computed on a wage base a $45,000 donor credit was
+netted out of. Nothing here bears on the Bacon reclassification, which is
+still a QuickBooks entry Tom has to make.

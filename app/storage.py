@@ -70,6 +70,14 @@ EVIDENCE = ROOT / "evidence"
 #: analysis is evidence, and the kind alone cannot tell them apart. A
 #: mapping that guesses would move the second one out of the period it
 #: belongs to, which is the failure that is hard to notice.
+#:
+#: `lease-schedule` *is* here, and the difference is the point: one lease is
+#: a document about one tenant, while the schedule of every lease in the
+#: building is the driver behind the facilities carve-out and is read the
+#: same way in every period it covers. Same for `asset-register` — a single
+#: invoice for a chiller is 2025 evidence; the register that says what the
+#: organisation owns, when it went into service and what has been
+#: depreciated is not a 2025 document that happens to be useful later.
 FOUNDATION_KINDS = {
     "award-agreement": "awards",
     "award-modification": "awards",
@@ -88,6 +96,10 @@ FOUNDATION_KINDS = {
     "procurement-policy": "policies",
     "rate-agreement": "rate-agreements",
     "nicra": "rate-agreements",
+    "grant-agreement": "awards",
+    "closeout-letter": "awards",
+    "asset-register": "asset-register",
+    "lease-schedule": "leases",
 }
 
 #: The folders `foundation/` opens with — exactly the categories above, so
