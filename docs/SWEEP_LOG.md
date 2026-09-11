@@ -674,6 +674,84 @@ AM's cannot be answered by anyone until its pages are read off the images.
 
 ---
 
+## S8, fixed — and two more registers with nothing real in them
+
+### The drive writes nothing onto a real award
+
+`drive_contracts.py` scaffolds an award, an objective and a charge code of
+its own, exercises the same routes and gates against them, and takes the
+scaffolding down — checked against a **census** taken before it started
+rather than asserted. Seven tables counted before and after; a difference is
+a finding.
+
+Three things came out of building that:
+
+- **`invoice` is append-only** (`invoice_no_delete`), so the drive cannot
+  raise an invoice of its own to take down afterwards. The receipt therefore
+  goes against a real invoice and is measured in three readings — before,
+  after, and after removal — which is a check on the arithmetic rather than
+  on the call having answered 201.
+- **A cleanup that stops at the first refusal is worse than none.** The first
+  version did exactly that: it tried to delete its scaffolding invoice, met
+  `invoice_no_delete`, and left the award and objective behind. Every
+  statement is attempted now and a failure is printed rather than raised.
+  The orphan it left had to be removed with the trigger disabled by hand,
+  which is precisely the thing the trigger exists to prevent.
+- **There is still no route that attaches an invoice to a milestone**, and
+  that is not an oversight to fix. `invoice.milestone_id` is for a contract
+  shape YBI does not have. The drive asserts what is true — a milestone with
+  nothing invoiced against it reads zero, and reads zero rather than NULL —
+  rather than arranging what is convenient.
+
+### The backward walk was standing on the forgery
+
+`drive_reverse` opened with *money received → the invoice it settled* and
+exited 2 when there was no receipt, telling the reader to run
+`drive_contracts.py` first, "which records one". What that recorded was
+$12,000 against invoice 10018 that NCDMM never sent.
+
+**No payment is recorded against any invoice.** The receipt register is
+empty, and `invoice.paid_on` and `invoice.paid_amount` are NULL on all three
+and read by nothing anywhere — the seventh and eighth columns in this schema
+that look usable and are filled by nothing. So the drive starts one hop in
+now and names the missing link, because a missing first link is the finding
+rather than a reason to stop.
+
+Its third hop asked *which milestone did that invoice claim against?* and
+reported a gap every run. It is not a gap. All four awards are cost
+reimbursement invoiced monthly, and the hop backwards from such an invoice is
+to the service period and the budget categories. A gap that doing the work
+cannot clear is the `FACILITY_UNPARTITIONED` defect again: it teaches the
+reader the list is wrong, and the next real one they see they will dismiss.
+
+And its fourth hop now turns to the page. It counted provisions "with the
+clause cited" and could not ask whether the clause was there. Against the
+live record it reports that Drive AM's eight provisions cannot be checked at
+all, because the agreement they were read out of has no text in it — which
+is the honest answer and was invisible before.
+
+### What was left on the record, and what was done with it
+
+Removed: three fictional milestones, three receipts, four drive objectives
+and their grants, the milestone link forged onto invoice 10018, and three
+provisions the drive had invented on Drive AM that the loader never carried.
+
+**Not removed: the six on Hybrid and LTM.** Those are in
+`load_contract_terms.py` itself, so they would come back on the next seed,
+and deleting them would be a second unsourced judgment on top of the first.
+They are annotated instead — the loader now carries a note on each saying
+the agreement on file contains no such clause, what the check reports, and
+that the substance may still be right and sourced elsewhere. The record says
+what is wrong with itself rather than either asserting a falsehood or
+quietly dropping the question.
+
+Worth stating as a hypothesis rather than a fact: the loader was written to
+capture provisions that "lived in one developer's database", and this drive
+had been writing exactly these three keys into exactly that database for as
+long as it has existed.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the

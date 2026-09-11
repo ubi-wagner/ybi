@@ -97,23 +97,44 @@ def main() -> int:
     receipt = one("""SELECT r.receipt_id, r.invoice_id, r.received_on, r.amount,
                             r.reference
                        FROM receipt r ORDER BY r.received_on DESC LIMIT 1""")
-    if not receipt:
-        print("\nCOULD NOT RUN — no receipt on file. Run "
-              "scripts/drive_contracts.py first, which records one.",
-              file=sys.stderr)
-        return 2
-    ok(f"receipt {m(receipt['amount'])} on {receipt['received_on']} "
-       f"(ref {receipt['reference'] or 'none'})")
+    if receipt:
+        ok(f"receipt {m(receipt['amount'])} on {receipt['received_on']} "
+           f"(ref {receipt['reference'] or 'none'})")
+    else:
+        # Not "could not run". **No payment has ever been recorded against
+        # any invoice** — the receipt register is empty and `invoice.paid_on`
+        # and `invoice.paid_amount` are NULL on all three and read by nothing.
+        # This drive used to exit 2 here, telling the reader to run
+        # `drive_contracts.py` first "which records one" — and what that
+        # recorded was $12,000 against a real NCDMM invoice that NCDMM never
+        # sent. The backward walk was only ever walkable because a test
+        # script had invented its first hop.
+        gap("no payment is recorded against any invoice — the receipt "
+            "register is empty, so the walk starts one hop in, at the "
+            "invoice. This is the first link and it is missing")
 
     step("2. Which invoice did it settle?")
-    inv = one("""SELECT i.invoice_id, i.invoice_number, i.award_id,
-                        i.milestone_id, i.objective_id, i.invoice_date,
-                        i.direct_claimed, i.indirect_claimed, i.cost_share
-                   FROM invoice i WHERE i.invoice_id = %s""",
-              (receipt["invoice_id"],))
-    if not inv:
-        finding("the receipt points at an invoice that does not exist")
-        return 1
+    if receipt:
+        inv = one("""SELECT i.invoice_id, i.invoice_number, i.award_id,
+                            i.milestone_id, i.objective_id, i.invoice_date,
+                            i.direct_claimed, i.indirect_claimed, i.cost_share
+                       FROM invoice i WHERE i.invoice_id = %s""",
+                  (receipt["invoice_id"],))
+        if not inv:
+            finding("the receipt points at an invoice that does not exist")
+            return 1
+    else:
+        # The largest, because it is the one a reviewer opens first and the
+        # one the restatement is about.
+        inv = one("""SELECT i.invoice_id, i.invoice_number, i.award_id,
+                            i.milestone_id, i.objective_id, i.invoice_date,
+                            i.direct_claimed, i.indirect_claimed, i.cost_share
+                       FROM invoice i ORDER BY i.total DESC NULLS LAST
+                       LIMIT 1""")
+        if not inv:
+            print("\nCOULD NOT RUN — no invoice on file either; "
+                  "run scripts/load_invoices.py.", file=sys.stderr)
+            return 2
     claimed = (Decimal(str(inv["direct_claimed"]))
                + Decimal(str(inv["indirect_claimed"]))
                + Decimal(str(inv["cost_share"])))
@@ -125,8 +146,31 @@ def main() -> int:
 
     step("3. Which milestone did that invoice claim against?")
     if not inv["milestone_id"]:
-        gap("the invoice is attached to no milestone, so a payment cannot be "
-            "traced to a deliverable")
+        # This used to be a flat gap — "a payment cannot be traced to a
+        # deliverable" — reported every run, as though the deliverables were
+        # missing. They are not missing. **All four America Makes awards are
+        # cost reimbursement, invoiced monthly**, ICAM says so in as many
+        # words at §6 CONTRACT TYPE, and not one statement of work carries a
+        # CLIN, a deliverable value or an acceptance date. An invoice under
+        # them claims a month of cost against a budget by category. So the
+        # hop backwards is to the service period and the categories, and a
+        # gap that doing the work cannot clear is worse than no gap: it
+        # teaches the reader the list is wrong, and the next real one they
+        # see they will dismiss.
+        basis = one("""SELECT term_value, citation FROM award_term
+                        WHERE award_id = %s AND term_key = 'Contract type'""",
+                    (inv["award_id"],))
+        if basis and "cost reimbursement" in basis["term_value"].lower():
+            ok(f"none, and none is expected — {inv['award_id']} is "
+               f"{basis['term_value'].rstrip('.')} ({basis['citation']}), "
+               f"invoiced monthly against a budget rather than against a "
+               f"deliverable")
+        else:
+            gap(f"the invoice claims against no milestone, and no clause has "
+                f"been read on {inv['award_id']} saying whether one is "
+                f"expected. Every award whose agreement has been read is "
+                f"cost reimbursement; this one has not been read, and an "
+                f"unread agreement is not a cost-reimbursement agreement")
         ms = None
     else:
         ms = one("""SELECT * FROM v_milestone_status WHERE milestone_id = %s""",
@@ -170,6 +214,27 @@ def main() -> int:
     if terms:
         ok(f"{len(terms)} provision(s) on file, "
            f"{sum(1 for t in terms if t['citation'])} with the clause cited")
+        # And a citation is worth what the document says it is. This is the
+        # hop where a reviewer turns to the page.
+        cite = one("""SELECT count(*) FILTER (WHERE state = 'FOUND') AS found,
+                             count(*) FILTER (WHERE state = 'NOT IN DOCUMENT')
+                               AS absent,
+                             count(*) FILTER (WHERE state IN ('NO DOCUMENT',
+                               'NOT READ','NO TEXT LAYER')) AS unevaluable
+                        FROM v_award_citation_check WHERE award_id = %s""",
+                   (award_id,))
+        if cite["absent"]:
+            finding(f"{cite['absent']} of them cite a clause the agreement "
+                    f"on file does not contain — v_award_citation_check "
+                    f"names which")
+        elif cite["unevaluable"]:
+            gap(f"{cite['unevaluable']} of them cannot be checked against "
+                f"the agreement: it is on file and there is no text in it to "
+                f"read. Unevaluable is not a pass")
+        else:
+            ok(f"{cite['found']} of them cite a clause the agreement on file "
+               f"actually contains — checked against the document, not "
+               f"taken on trust")
     else:
         gap("the contract carries no terms, so what may be charged and when "
             "it is paid is not on the record")
