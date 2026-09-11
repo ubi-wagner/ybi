@@ -195,6 +195,24 @@ on file, hash and all. `scripts/load_2025.py` and `scripts/tom_session.py` are
 development harnesses — they read source workbooks from `docs/`, which are
 deliberately **not** in the image, and they are not part of provisioning.
 
+## Step 6a — Before you trust it, check where uploads landed
+
+```bash
+railway run --service ybi-cost -- ls -R /srv/storage
+```
+
+Send one document in through **Documents** on any account, then look. If it
+is not under the volume mount path, it is on the container filesystem and
+Railway will discard it on the next deploy — while the register goes on
+listing it, so the loss stays silent until somebody asks for the document.
+
+`YBI_STORAGE_DIR` must equal the volume's mount path exactly. All three
+upload paths — Documents, Evidence and Import — derive their location from
+that one variable, and `tests/test_storage_paths.py` fails the build if any
+of them stops doing so. One of them had a hardcoded relative path once; the
+test exists because that mistake is a single line and is invisible anywhere
+there is no volume, which is every laptop and every test run.
+
 ## Step 7 — Verify
 
 ```bash
@@ -202,7 +220,11 @@ curl https://<your-domain>/api/health
 # {"status":"ok","database":"up","period":"2025","env":"prod"}
 ```
 
-`env` must read `prod`. Then sign in as Tom, confirm the dashboard's income
+`env` must read `prod`. The whole boot contract is checked before a deploy:
+the service refuses to start with `YBI_ENV=dev` on Railway, refuses to
+authenticate on a signing secret under 32 bytes, serves the built SPA from
+`web/dist` at `/`, and issues its session cookie `HttpOnly; Secure;
+SameSite=lax`. Then sign in as Tom, confirm the dashboard's income
 and expenses tie to the P&L you imported, and check that **Recent activity**
 shows your own sign-in. That last one proves the audit spine is writing.
 

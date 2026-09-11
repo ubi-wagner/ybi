@@ -32,7 +32,14 @@ from app.settings import settings
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-STORAGE = Path("var/evidence")
+# The same place every other uploader writes, which on Railway is a mounted
+# volume. This was a hardcoded "var/evidence" — a path inside the container
+# filesystem, which Railway discards on every deploy. Everyone in the
+# organisation uploads through this route, so every receipt, invoice and
+# project plan they sent in would have disappeared on the next push while
+# v_evidence_inbox went on listing them. The loss would have been silent
+# until somebody asked for a document.
+STORAGE = Path(settings.storage_dir) / "evidence"
 
 #: A cap that stops a phone photograph library from becoming the ledger's
 #: storage tier, without being so tight that a scanned lease is refused.
