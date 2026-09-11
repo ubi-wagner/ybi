@@ -169,7 +169,7 @@ In rough order of value:
    ledger and every allocable dollar lands on exactly one objective, or it is
    a 409 rather than a rate. `tests/test_pools.py` covers the engine — it had
    no tests at all before, despite what this file used to say here.
-4. **Audit package download.** `domain/package.py` produces the workbook; add a
+4. ~~**Audit package download.**~~ Done. `domain/package.py` produces the workbook; add a
    route that streams it.
 5. **Lane comparison UI.** The API exists; the side-by-side view does not.
 6. ~~**Balance sheet import**~~ Done. `parse_balance_sheet` in `domain/qbo.py`,
@@ -181,6 +181,17 @@ In rough order of value:
    depreciable cost. The funding source still has to come from the asset
    register, and `v_depreciation_basis` states that gap rather than implying
    it.
+
+### Done since this list was written
+
+- **Restatement.** `POST /api/restate` measures every invoice on an objective
+  against the sealed rate and records the difference in the direction it runs,
+  per invoice. A restatement carries the seal of the rate it used, is PROPOSED
+  until a sponsor says otherwise in writing, and cannot be accepted without
+  naming the §4.4 modification that authorised the change of basis.
+- **The 2026 splits.** `GET/PUT /api/chart/splits`. Each of the 24 accounts
+  that divides gets its shares and the driver behind each share; the shares
+  must come to one and every part must name its driver.
 
 ## Current plan
 

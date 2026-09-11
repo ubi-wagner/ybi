@@ -285,10 +285,31 @@ def accept(batch_id: str, accepted_by: str = "",
                  coalesce(p.section, ''), s.natural_key, s.objective_hint
             FROM staging_line s
             JOIN staging_batch b USING (batch_id)
-            LEFT JOIN pl_account p
-                   ON p.period = b.period
-                  AND p.leaf = split_part(s.account, ':',
-                        array_length(string_to_array(s.account, ':'), 1))
+            -- Match the qualified path first, and fall back to the leaf
+            -- only where that leaf is unambiguous.
+            --
+            -- Matching on the leaf alone was wrong in a way that did not
+            -- show: four leaves exist under both an income and an expense
+            -- parent — Drive AM, Digital Engineering, DLA Grant, Youth
+            -- Entrepreneurship — so 138 lines worth $1,570,174.17 took
+            -- whichever section the join happened to reach first, and
+            -- "Grant Expenses:Drive AM" was being read as revenue. The
+            -- LEFT JOIN also matched twice per line; only ON CONFLICT kept
+            -- the row count right.
+            LEFT JOIN LATERAL (
+              SELECT p2.section
+                FROM pl_account p2
+               WHERE p2.period = b.period
+                 AND (p2.account = s.account
+                      OR (p2.leaf = split_part(s.account, ':',
+                            array_length(string_to_array(s.account, ':'), 1))
+                          AND NOT EXISTS (
+                            SELECT 1 FROM pl_account p3
+                             WHERE p3.period = p2.period AND p3.leaf = p2.leaf
+                               AND p3.account <> p2.account)))
+               -- An exact path beats a leaf, always.
+               ORDER BY (p2.account = s.account) DESC
+               LIMIT 1) p ON true
            WHERE s.batch_id=%s
           ON CONFLICT (line_id) DO NOTHING
           RETURNING 1)

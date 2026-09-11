@@ -821,6 +821,135 @@ def main() -> int:
     finally:
         tom.close()
 
+    # ── The restatement, and the 2026 splits ─────────────────────────
+    print("\nRestating the America Makes invoices")
+    tom = sign_in(args.base, "tom@ybi.org", password)
+    try:
+        loaded = one("SELECT count(*) AS n FROM invoice WHERE period='2025'")["n"]
+        if not loaded:
+            raise CannotRun("no invoices on file; run scripts/load_invoices.py")
+
+        cand = call(tom, "GET", "/api/restate/candidates", 200,
+                    "what can be restated")
+        if cand.status_code == 200 and cand.json()["objectives"]:
+            ok(f"{len(cand.json()['objectives'])} objectives carry invoices")
+
+        results = {}
+        for objective in ("DRIVE-AM", "LTM", "HYBRID-II"):
+            with mutating(f"restate {objective}", "Tom Metzinger", "RESTATE"):
+                r = call(tom, "POST", "/api/restate", 200, f"restate {objective}",
+                         json={"objective_id": objective,
+                               "basis": "Drive: restating the April 2026 "
+                                        "invoice on the computed indirect "
+                                        "rate from the sealed set."})
+            if r.status_code == 200:
+                results[objective] = r.json()
+
+        for objective, d in results.items():
+            ok(f"{objective}: ${float(d['indirect_billed']):,.2f} billed against "
+               f"${float(d['indirect_supported']):,.2f} supported at "
+               f"{float(d['rate']['rate'])*100:.2f}% — "
+               f"${float(d['under_recovered']):,.2f} under, "
+               f"${float(d['over_collected']):,.2f} over")
+
+        # Two of the three bill no indirect at all. That is the finding the
+        # whole exercise exists to put a number on.
+        none_billed = [o for o, d in results.items()
+                       if float(d["indirect_billed"]) == 0]
+        if len(none_billed) == 2:
+            ok(f"{len(none_billed)} of 3 billed no indirect at all "
+               f"({', '.join(none_billed)}) — recovery forgone on the face")
+        else:
+            finding(f"expected two invoices with no indirect, found "
+                    f"{len(none_billed)}")
+
+        hybrid = results.get("HYBRID-II", {})
+        if hybrid.get("ceiling_headroom"):
+            ok(f"Hybrid's ceiling leaves ${float(hybrid['ceiling_headroom']):,.0f} "
+               f"of headroom, so the claim is not capped by it")
+        else:
+            finding("the Hybrid award's ceiling was not applied")
+
+        # A restatement carries the seal of the rate it used.
+        sealed = one("""SELECT count(*) AS n FROM restatement r
+                          JOIN rate rt USING (rate_id)
+                         WHERE r.seal_hash = rt.seal_hash""")["n"]
+        if sealed == len(results):
+            ok("every restatement carries the seal of the rate it used")
+        else:
+            finding("a restatement does not carry its rate's seal")
+
+        rid = next(iter(results.values()))["restatement_id"]
+        call(tom, "POST", f"/api/restate/{rid}/status", 422,
+             "accepting without naming the modification is refused",
+             json={"status": "ACCEPTED"})
+        with mutating("submitted to the sponsor", "Tom Metzinger",
+                      "RESTATE_STATUS"):
+            call(tom, "POST", f"/api/restate/{rid}/status", 200, "submit",
+                 json={"status": "SUBMITTED",
+                       "note": "Drive: put to NCDMM with the workpapers."})
+        with mutating("accepted, with the modification named", "Tom Metzinger",
+                      "RESTATE_STATUS"):
+            call(tom, "POST", f"/api/restate/{rid}/status", 200, "accept",
+                 json={"status": "ACCEPTED",
+                       "modification_ref": "Drive: Mod 03 under §4.4",
+                       "note": "Drive: accepted in writing."})
+
+        # ── the 2026 chart ───────────────────────────────────────────
+        print("\nThe 2026 chart — 24 splits that are judgments")
+        sp = call(tom, "GET", "/api/chart/splits", 200, "the splits")
+        if sp.status_code == 200:
+            d = sp.json()
+            ok(f"{d['total']} splits, {d['documented']} documented, "
+               f"${d['amount_undocumented']:,.0f} not yet divided deliberately")
+            drive_am = next((r for r in d["splits"]
+                             if r["source_account"] == "Drive AM"), None)
+            if drive_am and abs(drive_am["amount_2025"]) < 200_000:
+                ok(f"Drive AM reads ${abs(drive_am['amount_2025']):,.0f} of cost, "
+                   f"not the $761,122 a leaf-name match would give it")
+            elif drive_am:
+                finding(f"Drive AM reads {drive_am['amount_2025']}, which is "
+                        f"the income side counted with the expense side")
+
+        with mutating("a split with its driver", "Tom Metzinger", "CHART_SPLIT"):
+            call(tom, "PUT", "/api/chart/splits", 200, "split", json={
+                "source_account": "5035 Maintenance",
+                "parts": [
+                    {"target_account": "7100", "share": 0.52,
+                     "driver": "Drive: programme and administrative square "
+                               "footage as a share of usable area, from the "
+                               "2025 space partition.",
+                     "citation": "2 CFR 200.465"},
+                    {"target_account": "9310", "share": 0.48,
+                     "driver": "Drive: tenant and vacant square footage; "
+                               "recovered through rent, never a federal cost.",
+                     "citation": "2 CFR 200.465"}]})
+
+        call(tom, "PUT", "/api/chart/splits", 422,
+             "a split that does not come to one is refused", json={
+                 "source_account": "5070 Water",
+                 "parts": [{"target_account": "7220", "share": 0.5,
+                            "driver": "Drive: programme square footage from "
+                                      "the 2025 partition."},
+                           {"target_account": "9320", "share": 0.3,
+                            "driver": "Drive: tenant square footage from the "
+                                      "2025 partition."}]})
+        call(tom, "PUT", "/api/chart/splits", 422,
+             "and a driver too thin to be one is refused", json={
+                 "source_account": "5070 Water",
+                 "parts": [{"target_account": "7220", "share": 0.6,
+                            "driver": "sqft"},
+                           {"target_account": "9320", "share": 0.4,
+                            "driver": "sqft"}]})
+
+        after = call(tom, "GET", "/api/chart/splits", 200, "the splits again")
+        if after.status_code == 200 and after.json()["documented"] == 1:
+            ok("the documented split is counted, and only the documented one")
+        else:
+            finding("recording a split driver did not change the count")
+    finally:
+        tom.close()
+
     # ── The auditor ──────────────────────────────────────────────────
     print("\nAuditor — reading everything, changing nothing")
     auditor = sign_in(args.base, "auditor@ybi.org", password)

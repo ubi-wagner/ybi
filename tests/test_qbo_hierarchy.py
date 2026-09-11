@@ -238,3 +238,45 @@ def test_pl_total_rows_are_never_accounts():
     assert "4000 Contributions Income:4029 Sponsorships" in pl.rollups
     assert pl.rollups["4000 Contributions Income:4029 Sponsorships"][1] == \
         Decimal("270209.00")
+
+
+# --------------------------------------------------------------- collisions
+
+def test_leaf_names_collide_across_sections_in_the_real_chart():
+    """Four 2025 accounts exist under both an income and an expense parent:
+    Drive AM, Digital Engineering, DLA Grant and Youth Entrepreneurship.
+
+    Anything that identifies a P&L account by its leaf name alone will read
+    one as the other. The general ledger parser learned this when four
+    accounts merged and forty subtotals failed; the section join on the
+    promote path learned it again, labelling $1,570,174.17 of expense lines
+    as income. This pins the shape of the problem so the next thing to reach
+    for a leaf name has a test to fail.
+    """
+    from pathlib import Path
+
+    from app.domain.qbo import parse_profit_loss
+
+    source = Path("docs/source-documents/accounting-records/"
+                  "2025_Profit-and-Loss_QuickBooks.xlsx")
+    if not source.exists():
+        import pytest
+        pytest.skip("the 2025 P&L is not on file")
+
+    pl = parse_profit_loss(source)
+    by_leaf: dict[str, set[str]] = {}
+    for path, (section, _) in pl.accounts.items():
+        by_leaf.setdefault(path.split(":")[-1], set()).add(section)
+
+    ambiguous = {leaf: sections for leaf, sections in by_leaf.items()
+                 if len(sections) > 1}
+    assert "Drive AM" in ambiguous
+    assert ambiguous["Drive AM"] == {"Income", "Expense"}
+    assert set(ambiguous) == {"Drive AM", "Digital Engineering", "DLA Grant",
+                              "Youth Entrepreneurship"}
+
+    # And the qualified paths do distinguish them, which is why the fix is to
+    # match on the path and fall back to the leaf only when it is unique.
+    drive = [p for p in pl.accounts if p.endswith(":Drive AM")]
+    assert len(drive) == 2
+    assert len({pl.accounts[p][0] for p in drive}) == 2
