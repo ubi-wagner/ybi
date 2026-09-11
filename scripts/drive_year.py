@@ -71,13 +71,23 @@ def mutating(label: str, expect_actor: str, expect_action: str = ""):
     after — because a subtler one could be satisfied by the handler writing
     the entry it was asked to write rather than the entry the change deserved.
     """
+    failures_at_entry = 0
+
     class Guard:
         def __enter__(self):
+            nonlocal failures_at_entry
             self.before = audit_count()
+            failures_at_entry = len(FINDINGS)
             return self
 
         def __exit__(self, exc_type, exc, tb):
             if exc_type:
+                return False
+            if failures_at_entry != len(FINDINGS):
+                # The wrapped call already reported why it did not do what it
+                # was asked. Refused requests write nothing, correctly, and a
+                # second finding saying the database changed is both wrong
+                # and the one a reader chases first.
                 return False
             after = audit_count()
             if after <= self.before:
@@ -677,6 +687,57 @@ def main() -> int:
                            "balance, two labels."),
             })
 
+        # The eleventh point. It was added after this drive was written, and
+        # the drive went on sealing and asking for a rate without it —
+        # getting a correct 409 from the reconciliation gate and reporting it
+        # as a failure. Unlike the profit-and-loss differences this one
+        # cannot be derived: no arithmetic tells you that a credit in an
+        # intern wage account is a donor's pledge. The system finds the
+        # candidate line; naming what it is stays a judgment.
+        pay = call(tom, "GET", "/api/reconcile/payroll", 200,
+                   "reads the payroll register against the ledger")
+        if pay.status_code == 200 and float(pay.json()["reconciliation"]["unexplained"]):
+            d = pay.json()
+            wage_account = None
+            for line in d["unlike_payroll"]:
+                if (line["payee"] or "").lower().startswith("vince and phyllis bacon"):
+                    wage_account = line["account"]
+                    with mutating("named the donor credit in the wage account",
+                                  "Tom Metzinger", "RECONCILE_ITEM"):
+                        call(tom, "POST", "/api/reconcile/items", 201,
+                             "recorded the misposting", json={
+                                 "control": "PAYROLL_REGISTER",
+                                 "from_account": line["account"],
+                                 "to_account": "4000 Contributions Income",
+                                 "amount": str(line["amount"]),
+                                 "kind": "SOURCE_DEFECT",
+                                 "line_ids": [line["line_id"]],
+                                 "explanation": (
+                                     "Drive: a pledge to fund interns booked as a "
+                                     "credit against intern wage expense instead of "
+                                     "as contribution income. It understates wages "
+                                     "and contributions by the same amount, and the "
+                                     "fringe base with them.")})
+                    break
+            left = float(call(tom, "GET", "/api/reconcile/payroll", 200,
+                              "reads what is left")
+                         .json()["reconciliation"]["unexplained"])
+            if left and abs(left) <= 1000 and wage_account:
+                with mutating("wrote down the unattributable residual",
+                              "Tom Metzinger", "RECONCILE_ITEM"):
+                    call(tom, "POST", "/api/reconcile/items", 201,
+                         "recorded as rounding", json={
+                             "control": "PAYROLL_REGISTER",
+                             "from_account": wage_account, "to_account": "register",
+                             "amount": str(-left), "kind": "ROUNDING",
+                             "line_ids": [],
+                             "explanation": (
+                                 "Drive: a residual of a few dollars on a base of "
+                                 "1.8 million, with no transaction behind it. The "
+                                 "workbook distributes dollars across 43 people and "
+                                 "sixteen objectives and rounds each cell; no single "
+                                 "line accounts for it, and none can be named.")})
+
         after = call(tom, "GET", "/api/reconcile", 200, "reads it again")
         if after.status_code == 200 and after.json()["ties"]:
             ok("every cross-reference point now ties, and each difference "
@@ -764,6 +825,44 @@ def main() -> int:
         # The rate. Everything upstream exists to produce this.
         call(tom, "POST", "/api/rates/compute", 409,
              "no rate before the seal", json={})
+        # The register side of the payroll control is not a constant. It comes
+        # from v_labor_effective, which prefers a submitted timesheet over the
+        # reconstruction — so every certification that lands moves it, by a
+        # cent or by thousands. A residual named in March can be a cent wrong
+        # in December through nobody's fault.
+        #
+        # The answer is not a tolerance. A tolerance that swallows a cent is
+        # the same machinery that would swallow a thousand, and the fences on
+        # ROUNDING exist precisely to stop that. The answer is that the books
+        # are reconciled immediately before they are sealed, which is the
+        # order the engagement runs in anyway: reconcile, seal, then rate.
+        again = call(tom, "GET", "/api/reconcile/payroll", 200,
+                     "re-reads the register before sealing")
+        if again.status_code == 200:
+            moved = float(again.json()["reconciliation"]["unexplained"])
+            if moved:
+                ok(f"the register moved by {moved} while the year was being "
+                   f"certified — timesheets replaced reconstructions, and the "
+                   f"base moved with them")
+                r = again.json()["reconciliation"]
+                with mutating("named what the certifications moved",
+                              "Tom Metzinger", "RECONCILE_ITEM"):
+                    call(tom, "POST", "/api/reconcile/items", 201,
+                         "named the movement", json={
+                             "control": "PAYROLL_REGISTER",
+                             "from_account": "5129 Payroll Expenses:5139 Wages",
+                             "to_account": "register", "amount": str(-moved),
+                             "kind": "ROUNDING", "line_ids": [],
+                             "explanation": (
+                                 "Drive: the effort distribution moved while the "
+                                 "year was being certified, because a submitted "
+                                 "timesheet supersedes the reconstruction it "
+                                 "replaces and the two round differently at the "
+                                 "cent. No transaction stands behind the "
+                                 "difference and none can be named.")})
+            else:
+                ok("the register still ties after a year of certification")
+
         call(tom, "POST", "/api/rates/seal", 200, "seal",
              json={"note": "Drive: sealing what has been decided."})
         with mutating("compute the rates", "Tom Metzinger", "RATE_COMPUTE"):

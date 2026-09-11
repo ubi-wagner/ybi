@@ -145,9 +145,18 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
     ws = _sheet(wb, "Controls", "Controls",
                 "A derived figure that cannot be reconciled to its source does "
                 "not ship.")
-    _table(ws, 5, ["Control", "What it proves", "Variance or exceptions", "Ties"],
-           controls, ["control", "description", "variance", "ties"],
-           [22, 54, 20, 10], {3})
+    # State, not just Ties. A control that could not be evaluated reads as a
+    # variance without it: with no asset register on file, ASSET_REGISTER
+    # showed -850,382.89 and Ties=False, which a reviewer reads as "the
+    # register disagrees with the ledger by the whole of its depreciation"
+    # rather than "there is no register". Those are different findings and
+    # only one of them is true. The register already carries the distinction;
+    # the workpaper dropped it, which is the only place it matters.
+    _table(ws, 5,
+           ["Control", "What it proves", "Variance or exceptions", "State",
+            "Ties"],
+           controls, ["control", "description", "variance", "state", "ties"],
+           [22, 54, 20, 12, 10], {3})
 
     # ── A-1 Reconciliation ───────────────────────────────────────────
     #
@@ -160,14 +169,14 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
                 "reconciliation is worth anything.")
     r = _table(ws, 5,
                ["Control", "What it proves", "", "Ledger side", "",
-                "Statement side", "Variance or exceptions", "Ties"],
+                "Statement side", "Variance or exceptions", "State", "Ties"],
                controls,
                ["control", "description", "left_label", "left_value",
-                "right_label", "right_value", "variance", "ties"],
+                "right_label", "right_value", "variance", "state", "ties"],
                # The sheet stacks four tables; these widths have to
                # suit all of them, because _table rewrites the column
                # dimensions and the later calls leave them alone.
-               [50, 46, 26, 16, 26, 16, 20, 14, 12], {4, 6, 7})
+               [50, 46, 26, 16, 26, 16, 20, 12, 14, 12], {4, 6, 7})
 
     if gl_pl:
         r += 2

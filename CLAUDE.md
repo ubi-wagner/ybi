@@ -266,7 +266,7 @@ are tested at.
 | | |
 | --- | --- |
 | `pytest` | the engine, and two structural checks: every mutating route records what it did and takes its actor from the session, and every screenshot the manual shows exists |
-| `scripts/reconcile.py` | the three source documents against each other, ten points |
+| `scripts/reconcile.py` | the three source documents and the payroll register against each other, eleven points |
 | `scripts/drive_everyone.py` | every person, every process they own, and an audit row under their own name for every change |
 | `scripts/drive_access.py` | rank, portfolios, the seal, the password gate |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
@@ -360,8 +360,8 @@ In rough order of value:
 - **The 2026 splits.** `GET/PUT /api/chart/splits`. Each of the 24 accounts
   that divides gets its shares and the driver behind each share; the shares
   must come to one and every part must name its driver.
-- **Cross-reference reconciliation.** Schedule A-1. Ten points where the
-  ledger, the P&L and the balance sheet have to agree, in
+- **Cross-reference reconciliation.** Schedule A-1. Eleven points where the
+  ledger, the P&L, the balance sheet and the payroll register have to agree, in
   `v_statement_reconciliation`; `scripts/reconcile.py` runs them and exits
   non-zero on an open one. Two real defects came out of building it: 71 lines
   worth $24,082.67 were being dropped on promote by natural keys that

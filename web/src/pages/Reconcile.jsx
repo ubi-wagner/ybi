@@ -86,9 +86,10 @@ export default function Reconcile({ actor }) {
       <div className="page-head">
         <h2>Reconciliation</h2>
         <p className="lede">
-          Ten points at which the general ledger, the profit and loss and the balance
-          sheet are required to agree. Run before anything is classified, because a
-          reconciliation produced after the rate is one nobody can believe.
+          Eleven points at which the general ledger, the profit and loss, the balance
+          sheet and the payroll register are required to agree. Run before anything is
+          classified, because a reconciliation produced after the rate is one nobody
+          can believe.
         </p>
       </div>
 

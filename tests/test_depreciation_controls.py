@@ -54,3 +54,25 @@ def test_the_asset_control_says_no_data_rather_than_a_variance():
     assert "needs" in body, (
         "v_asset_control does not say what it needs. 'No data' on its own "
         "sends somebody looking for which document was forgotten.")
+
+
+def test_the_audit_package_carries_the_control_state():
+    """The distinction has to survive into the workpaper, or it is decorative.
+
+    v_statement_reconciliation and v_asset_control both compute `state`, but
+    the Controls sheet emitted only the variance and a boolean. With no
+    register on file ASSET_REGISTER printed -850,382.89 and Ties=False, which
+    a reviewer reads as "the register disagrees with the ledger by the whole
+    of its depreciation" rather than "there is no register" — the exact
+    misreading migration 029 exists to prevent, in the one artefact that
+    leaves the building.
+    """
+    src = (Path(__file__).resolve().parent.parent
+           / "app" / "domain" / "audit_package.py").read_text()
+    controls = src[src.index('_sheet(wb, "Controls"'):
+                   src.index('_sheet(wb, "A-1 Reconciliation"')]
+    assert '"state"' in controls, (
+        "the Controls sheet does not emit `state`, so a control that could "
+        "not be evaluated is indistinguishable from one that disagrees.")
+    a1 = src[src.index('_sheet(wb, "A-1 Reconciliation"'):]
+    assert '"state"' in a1[:1200], "schedule A-1 does not emit `state` either"
