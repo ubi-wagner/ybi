@@ -1,0 +1,306 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Cost allocation — status</title>
+<style>
+  @page { size: letter; margin: 16mm 15mm 14mm; }
+  :root { --ink:#1a1a1a; --mute:#5f6b6b; --rule:#d8ddda; --accent:#1f4e4a;
+          --warm:#7a5b00; --fail:#a8321e; }
+  * { box-sizing: border-box; }
+  body { font: 9.6pt/1.42 Georgia, "Times New Roman", serif; color: var(--ink); margin: 0; }
+  h1 { font-size: 17pt; margin: 0 0 1pt; letter-spacing: -.2pt; }
+  h2 { font-size: 11pt; margin: 13pt 0 4pt; color: var(--accent);
+       border-bottom: 1px solid var(--rule); padding-bottom: 2pt;
+       break-after: avoid; }
+  h3 { font-size: 9.6pt; margin: 8pt 0 2pt; break-after: avoid; }
+  p  { margin: 0 0 5pt; }
+  .sub { color: var(--mute); font-size: 9pt; margin: 0 0 9pt; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 7pt;
+          font-size: 8.8pt; break-inside: avoid; }
+  th { text-align: left; font-weight: normal; color: var(--mute);
+       border-bottom: 1px solid var(--rule); padding: 2pt 6pt 2pt 0;
+       font-size: 7.8pt; text-transform: uppercase; letter-spacing: .4pt; }
+  td { padding: 2.5pt 6pt 2.5pt 0; border-bottom: 1px solid #eef1ef; vertical-align: top; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums;
+               white-space: nowrap; padding-right: 0; }
+  tr.total td { border-top: 1.4px solid var(--ink); border-bottom: none;
+                font-weight: bold; padding-top: 4pt; }
+  figure { margin: 7pt 0 9pt; break-inside: avoid; }
+  figure img { width: 92%; display: block; margin: 0 auto;
+               border: 1px solid var(--rule); }
+  figcaption { font-size: 8pt; color: var(--mute); margin: 3pt auto 0;
+               width: 92%; font-style: italic; }
+  .note { background:#fbf7ea; border-left:3px solid var(--warm);
+          padding: 5pt 9pt; margin: 6pt 0 8pt; font-size: 9pt;
+          break-inside: avoid; }
+  .flag { background:#fdf0ec; border-left-color: var(--fail); }
+  .note p { margin: 0; }
+  ul { margin: 0 0 6pt; padding-left: 14pt; }
+  li { margin-bottom: 2pt; }
+  .two { display: flex; gap: 20pt; }
+  .two > table { flex: 1; }
+  footer { margin-top: 12pt; padding-top: 4pt; border-top: 1px solid var(--rule);
+           font-size: 8pt; color: var(--mute); }
+</style>
+
+<h1>Cost allocation — where we are</h1>
+<p class="sub">Prepared for Barb Ewing · 12 September 2026 · Youngstown Business Incubator</p>
+
+<p>The system is built and proven, and the books now agree with themselves at
+every point we can test. What remains is judgment work: Tom classifying the
+year, three documents we have asked YBI for, and eighteen specific questions
+only he can answer. None of it is software. All of it sits on one path that
+ends with the Single Audit and the Form 990.</p>
+
+<h2>1 · The system</h2>
+
+<div class="two">
+<table>
+  <tr><th>Built and proved</th><th class="n"></th></tr>
+  <tr><td>Ledger lines loaded, proved to their own subtotals</td><td class="n">15,500</td></tr>
+  <tr><td>Cross-reference control points tying</td><td class="n">11 of 11</td></tr>
+  <tr><td>Differences left unexplained</td><td class="n">0.00</td></tr>
+  <tr><td>Contracts, with every clause read in</td><td class="n">3 · 26</td></tr>
+  <tr><td>Automated tests · permission boundaries</td><td class="n">581 · 68</td></tr>
+</table>
+<table>
+  <tr><th>Still to come</th><th class="n"></th></tr>
+  <tr><td>Expense classified</td><td class="n">0.0%</td></tr>
+  <tr><td>Decisions to make (top 200 carry 94.7%)</td><td class="n">999</td></tr>
+  <tr><td>People who can certify their own effort</td><td class="n">6 of 43</td></tr>
+  <tr><td>Assets with a funding source recorded</td><td class="n">0 of 263</td></tr>
+  <tr><td>Buildings with square footage on file</td><td class="n">none</td></tr>
+</table>
+</div>
+
+<p><strong>The idea the whole thing rests on:</strong> no rate can be computed
+until the classifications are sealed. An auditor will ask whether the rate was
+reached honestly or worked backwards from a number somebody wanted, and the
+answer has to be documentary rather than a promise — so the software physically
+refuses to produce one until every judgment is locked and hashed, and refuses
+again if the books do not first agree with themselves.</p>
+
+<figure>
+  <img src="shots/reconcile.png" alt="The reconciliation register">
+  <figcaption>Schedule A-1. Eleven points where the general ledger, the profit
+  and loss, the balance sheet and the payroll register must agree. All eleven
+  tie and nothing is netted away. The eleventh is the one that found the
+  $45,000 donor credit.</figcaption>
+</figure>
+
+<h2>2 · What Tom has to verify</h2>
+
+<p>Eighteen discrepancies, every one found by a control rather than by somebody
+reading, and every one answerable from what Tom already knows. Full detail in
+<em>docs/FOR_TOM_TO_VERIFY.md</em>.</p>
+
+<div class="note">
+<p><strong>The example, now confirmed.</strong> A pledge from Vince and Phyllis
+Bacon to fund interns was booked as a <em>credit against intern wage
+expense</em> rather than as contributions income. Ten of the eleven controls
+were blind to it — the entry is perfectly consistent with the ledger, the P&amp;L
+and the balance sheet. Only the payroll register could see it. It made the
+fringe rate read <strong>22.45%</strong> when the defensible figure is
+<strong>21.90%</strong>. It is closed by naming it, not by adjusting anything.
+Still outstanding: the entry has not been reposted in QuickBooks.</p>
+</div>
+
+<table>
+  <tr><th>Group</th><th>What is at stake</th><th class="n">Items</th></tr>
+  <tr><td>Depreciation</td>
+      <td>About three points of the indirect rate. Includes $157,739 of grant
+          reimbursements netted against the cost of Tech Block Building 5 — if
+          confirmed, the recorded cost understates the real basis and the
+          federal share cannot be derived from the books at all.</td><td class="n">6</td></tr>
+  <tr><td>The books</td>
+      <td>Whether Rising Tides is federally funded — $1,386,356 of expense, and
+          it changes the scope of the Single Audit, not just a rate. Plus
+          $451,170 the P&amp;L calls Innovation Hub and the revenue ledger calls
+          America Makes.</td><td class="n">4</td></tr>
+  <tr><td>Space</td><td>Four buildings named once each in the lease book, one
+          tenant across two of them, eight tenancies with no start date.</td><td class="n">4</td></tr>
+  <tr><td>People</td><td>The payroll register identifies people by surname
+          alone. Any two sharing one have had their hours joined together.</td><td class="n">1</td></tr>
+  <tr><td>Invoices</td><td>The real dates on the three America Makes invoices,
+          and whether any of the $57,961 issued has been paid — no cash is
+          recorded against them.</td><td class="n">3</td></tr>
+</table>
+
+<h3>Three things we have asked YBI for</h3>
+<p>Each is a workbook with the answer half filled in already, built from
+documents YBI had already sent and nothing had ever read.</p>
+<table>
+  <tr><th>Workbook</th><th>Already filled in</th><th>The ask</th></tr>
+  <tr><td>Fixed asset register</td><td>263 assets with cost, dates, depreciation</td>
+      <td>which of them federal money paid for</td></tr>
+  <tr><td>Floor space</td><td>26 tenancies with building and rent</td>
+      <td>square feet per suite</td></tr>
+  <tr><td>Employee roster</td><td>all 43 people from the payroll register</td>
+      <td>a working email address, and the hours each was employed to work</td></tr>
+</table>
+
+<div class="note flag">
+<p><strong>The roster has the longest lead time and should start now.</strong>
+Thirty-seven of forty-three people cannot sign anything, because federal rules
+require the person whose effort it was to certify it themselves — a manager may
+not sign on their behalf. Collecting thirty-seven confirmed addresses takes
+weeks, and nothing else on this list can compress it.</p>
+</div>
+
+<h2>3 · Classification, evidence and certification</h2>
+
+<p><strong>Classification.</strong> Every expense is grouped by account and
+vendor, largest first; the top 200 groups carry 94.7% of the dollars. For each,
+Tom records four things — which cost pool, which column of the Form 990,
+whether it is allowable federally, and if direct, which contract. The system
+proposes an answer where it has a real signal (about two-thirds of the dollars)
+and proposes <em>nothing</em> where it does not, rather than guessing. Anything
+unjudged stays out of the calculation, so the rate reads high while work is
+unfinished — the honest direction to be wrong.</p>
+
+<p><strong>Evidence.</strong> Each judgment carries a stated quality of support,
+from <em>verified against a document on file</em> down to <em>management
+reconstruction</em>. A judgment claiming the highest grade is refused unless a
+document is actually attached. The audit package prints the grade beside every
+figure, so a reviewer sees what is proven and what is asserted without asking.</p>
+
+<p><strong>Certification.</strong> Where a salary is charged across several
+contracts, 2 CFR 200.430(i) requires that person to certify their own effort.
+Every employee therefore gets a timesheet and a certification screen, managers
+get a list of who has not yet signed, and the system <strong>will not let anyone
+sign on somebody else's behalf</strong>. YBI's 2025 labour distribution is
+currently a careful reconstruction from calendars and project records — which is
+defensible, and is not a certification. Turning it into one needs the roster
+above; until then the audit package says so on its first page, above the
+figures.</p>
+
+<figure>
+  <img src="shots/classify.png" alt="The classification queue">
+  <figcaption>The queue today: nothing classified, 999 groups, $17.06m to
+  judge. Proposals appear where the system has a signal and "needs a judgment"
+  where it does not. Accepting one is a single keystroke.</figcaption>
+</figure>
+
+<h2>4 · The rate, and what it does to a salary</h2>
+
+<p>The rates below are modelled from the analysis phase. <strong>They are not
+yet the system's numbers</strong> — it will not produce a rate until
+classification is sealed, which is the point of it. Treat them as the best
+estimate of where we land, with the range underneath.</p>
+
+<table>
+  <tr><th>Building up a $100,000 salary</th><th class="n">Rate</th><th class="n">Amount</th></tr>
+  <tr><td>Salary</td><td class="n">—</td><td class="n">100,000.00</td></tr>
+  <tr><td>Fringe — payroll taxes, insurance, retirement, paid leave</td>
+      <td class="n">21.90%</td><td class="n">21,900.00</td></tr>
+  <tr><td><em>Burdened labour</em></td><td class="n"></td><td class="n">121,900.00</td></tr>
+  <tr><td>Indirect — facilities 12.89% plus general and administrative 18.89%</td>
+      <td class="n">31.78%</td><td class="n">38,739.82</td></tr>
+  <tr class="total"><td>Fully burdened cost</td><td class="n"></td><td class="n">160,639.82</td></tr>
+  <tr><td style="padding-top:7pt">Recovered today, at the 10% anyone may claim
+      without a negotiated rate</td><td class="n" style="padding-top:7pt">10.00%</td>
+      <td class="n" style="padding-top:7pt">134,090.00</td></tr>
+  <tr class="total"><td>Left on the table, per $100,000 of salary, every year</td>
+      <td class="n">+19.8%</td><td class="n">26,549.82</td></tr>
+</table>
+
+<p>That uplift applies to every labour dollar in every 2026 proposal YBI writes.
+<strong>The recurring rate is the prize; the one-off 2025 recovery is
+secondary.</strong></p>
+
+<table>
+  <tr><th>What could move it</th><th class="n">Indirect</th><th class="n">$100k employee</th></tr>
+  <tr><td>Recommended — propose this, expect to settle 28–30%</td><td class="n">31.78%</td><td class="n">160,640</td></tr>
+  <tr><td>If one account — <em>5227 Portfolio consulting</em>, $588,539 — is judged direct</td><td class="n">28.09%</td><td class="n">156,142</td></tr>
+  <tr><td>If that same account is judged general and administrative</td><td class="n">44.90%</td><td class="n">176,633</td></tr>
+</table>
+<p>One account swings the rate seventeen points and needs no outside document —
+only Tom's judgment. Sequence it first, ahead of everything waiting on YBI's
+filing cabinets.</p>
+
+<h2>5 · America Makes — applying the rate to 2025</h2>
+
+<p>YBI billed America Makes by dividing the approved budget by twelve. That
+method cannot see what was actually spent, and it produced errors in both
+directions — some awards over-billed, some substantially under-billed.</p>
+
+<p><strong>The central fact is an absence.</strong> The approved budget for
+Drive AM funds seven cost categories against $583,594 of labour and contains
+<em>no indirect line at all</em>. The invoice YBI issued carries exactly the
+five categories the budget funded — three of them at zero — and no indirect
+line, because there was none to carry. That document is itself the record of
+what YBI was never budgeted to claim, and it is the strongest evidence the
+restatement has.</p>
+
+<table>
+  <tr><th>Modelled 2025 position, five NCDMM objectives</th><th class="n">Amount</th></tr>
+  <tr><td>Direct cost base</td><td class="n">946,527</td></tr>
+  <tr><td>Indirect at the recommended rate</td><td class="n">300,806</td></tr>
+  <tr class="total"><td>Claimable</td><td class="n">1,247,334</td></tr>
+</table>
+
+<p>America Makes has indicated it will accept restated rates applied to prior
+invoices, provided the restated total stays within the contracted ceiling. That
+turns this from an argument into arithmetic: per award, restate at the
+defensible rate, cap at the ceiling, and the sign of the difference decides
+between an amended invoice and a credit. Hybrid, over-billed, produces a credit;
+the others produce claims. The system does this invoice by invoice and records
+the arithmetic beside each. A restatement carries the seal of the rate it used,
+stays a proposal until the sponsor agrees in writing, and cannot be finalised
+without naming the clause that authorised changing the basis.</p>
+
+<div class="note">
+<p><strong>Two things still block the numbers.</strong> The ceilings for Drive
+AM, Digital Engineering and Last Tactical Mile are not on file — only Hybrid's
+$500,043 is known, and the ceiling caps each claim. And two different "amounts
+billed" exist in YBI's own records, $1.58m apart, depending on whether you read
+the grant tabs or recognised revenue. Both have to be settled before anything
+is sent.</p>
+</div>
+
+<h2>6 · Audit close-out and the Form 990</h2>
+
+<p>Both come out of the same sealed record, and neither is produced by hand. The
+<strong>audit package</strong> is a workbook of numbered schedules — import,
+reconciliation, classifications, rate build-up, awards — each figure traceable
+to the ledger line and the document behind it, each stating what is unfinished
+on its first sheet, because a workbook travels and the caveat must travel with
+it. <strong>Form 990 Part IX</strong> is assembled from the same
+classifications: every expense lands in programme services, management and
+general, or fundraising because somebody judged it so and said why.</p>
+
+<p><strong>The return prints NOT FILEABLE while any expense is unjudged</strong>,
+and cost nobody has classified appears in its own column rather than being
+spread across the three the return prints — the totals are deliberately short by
+that amount until the queue is empty. Nobody can file an incomplete return from
+this system by accident.</p>
+
+<p>The order is fixed and each step is refused until the one before it is
+complete: classify → seal → compute the rate → allocate to contracts → restate
+the America Makes invoices → produce the package and the return.</p>
+
+<h2>7 · Summary</h2>
+
+<table>
+  <tr><th>Where it stands</th><th>What it needs</th><th>From whom</th></tr>
+  <tr><td>System, controls, audit trail</td><td>Nothing — built and proved</td><td>—</td></tr>
+  <tr><td>The books reconcile</td><td>Eighteen questions answered</td><td>Tom, this week</td></tr>
+  <tr><td>Classification</td><td>About 200 real decisions; Portfolio consulting first</td><td>Tom</td></tr>
+  <tr><td>Depreciation</td><td>Funding source per asset</td><td>YBI — workbook ready</td></tr>
+  <tr><td>Occupancy</td><td>Square feet per suite</td><td>YBI — workbook ready</td></tr>
+  <tr><td>Labour certification</td><td>37 addresses and employment terms</td><td>YBI — start now</td></tr>
+  <tr><td>America Makes restatement</td><td>Three ceilings; one billing figure</td><td>Tom / NCDMM</td></tr>
+  <tr><td>Audit package and 990</td><td>Everything above, in order</td><td>—</td></tr>
+</table>
+
+<p>Two things to take away. <strong>The recurring value is the rate, not the
+2025 recovery</strong> — $26,550 per $100,000 of salary, on every proposal from
+here on. And <strong>the only item with a lead time measured in weeks is
+thirty-seven email addresses</strong>, which is why it is the one to start
+today.</p>
+
+<footer>
+Figures read from the live record on 12 September 2026. Rates are modelled
+estimates from the analysis phase; the system will not produce a rate until the
+classifications are sealed. Detail in <em>docs/FOR_TOM_TO_VERIFY.md</em>,
+<em>docs/FOUNDATION.md</em> and <em>PROJECT_CONTEXT.md</em>.
+</footer>
