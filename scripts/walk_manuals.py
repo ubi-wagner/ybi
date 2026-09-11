@@ -40,7 +40,10 @@ SHOTS = [
     # Portfolios
     ("hruby@ybi.org",   "/space",      "m-space",         "Buildings and the rent roll", None),
     ("hruby@ybi.org",   "/inventory",  "m-inventory",     "The equipment register", None),
-    ("hruby@ybi.org",   "/evidence",   "m-evidence",      "The document library", None),
+    ("hruby@ybi.org",   "/evidence",   "m-evidence",      "Filing what people send in", None),
+    # The shelf, as the person who arrives wanting to read something rather
+    # than to file anything — which is the auditor, who holds no portfolio.
+    ("auditor@ybi.org", "/library",    "m-library",       "The document library", None),
     ("sgaffney@ybi.org", "/contracts", "m-contracts",     "Contracts and what each earns", None),
     ("sgaffney@ybi.org", "/contracts/codes", "m-charge-codes", "Charge codes and who may charge them", None),
     ("sgaffney@ybi.org", "/chart",     "m-chart",         "The 2026 chart", None),

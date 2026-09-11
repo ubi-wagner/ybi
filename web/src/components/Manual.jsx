@@ -286,9 +286,35 @@ const CHAPTERS = [
                              "charged to it."],
   },
   {
+    id: "library",
+    needs: "reader",
+    title: "The document library",
+    lede: "Reading the papers behind the numbers.",
+    steps: [
+      ["Everything anybody has sent in is here.",
+       "Filed or not. The inbox is a queue of work; this is the whole shelf, " +
+       "and it is where you go when you want to read a particular document " +
+       "rather than deal with a backlog."],
+      ["Open one to read it, or take a copy.",
+       "A PDF, a photograph or a plain file opens in the page, which is what " +
+       "you want when you are checking eleven attachments against eleven " +
+       "figures. Download the one that is going into a workpaper."],
+      ["A spreadsheet says so rather than doing nothing.",
+       "Anything the page cannot show is marked no preview and downloads. " +
+       "That is not a fault — it opens in the application it belongs to."],
+      ["Search the way you remember it.",
+       "The name, the vendor, who sent it, what they said it related to, or " +
+       "the EV- identifier from a workpaper."],
+      ["Every open and every copy is recorded against your name.",
+       "Which is what makes it safe for this screen to show the whole shelf " +
+       "rather than only what you filed yourself."],
+    ],
+    shot: ["m-library", "Everything on file, with what it is and who sent it."],
+  },
+  {
     id: "evidence",
     needs: "OFFICE",
-    title: "The document library",
+    title: "Filing what people send in",
     lede: "Turning what people sent in into evidence.",
     steps: [
       ["The inbox is what nobody has filed yet.",
@@ -336,6 +362,12 @@ function visible(actor, needs) {
   if (!needs) return true;
   if (needs === "staff") return Boolean(actor.employee_key);
   if (needs === "admin") return Boolean(actor.is_admin);
+  // The same rule the nav follows. Without it "reader" falls through to the
+  // portfolio test and is false for everybody but the auditor — so the
+  // organisation's administrator would be given the Library tab and no
+  // chapter explaining it, which is the mismatch this function exists to
+  // prevent, running the other way.
+  if (needs === "reader") return Boolean(actor.can_read);
   if (actor.role === "AUDITOR") return true;
   return (actor.portfolios || []).includes(needs);
 }

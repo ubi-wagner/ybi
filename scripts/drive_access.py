@@ -191,6 +191,59 @@ def main() -> int:
         check(heidi, "GET", "/api/documents/inbox", 200,
               "Heidi does — she holds OFFICE")
 
+        # ── The library, and what a browser may do with a document ──
+        print("\nThe shelf is open to whoever may read the record")
+        # The library is the cost record in document form, so it takes the
+        # same gate the review screens take — not a portfolio, and not rank.
+        for who, client in (("the auditor", auditor), ("Tom", tom),
+                            ("Heidi", heidi),
+                            ("the organisation administrator", barb),
+                            ("the system administrator, on his grant", eric)):
+            check(client, "GET", "/api/documents/library", 200,
+                  f"{who} opens the library")
+
+        anon = httpx.Client(base_url=args.base, timeout=60)
+        try:
+            check(anon, "GET", "/api/documents/library", 401,
+                  "nobody signed in gets nothing")
+        finally:
+            anon.close()
+
+        # Somebody uploads, then reads their own back. The uploader is not a
+        # reader of the record and must not become one by having sent a file
+        # in — nor be locked out of the thing they sent.
+        r = tom.get("/api/documents/library?q=Drive-AM")
+        rows = r.json().get("documents", []) if r.status_code == 200 else []
+        pdf = next((d for d in rows if d["inline_safe"]), None)
+        if not pdf:
+            bad("no previewable document on file — the library cannot be "
+                "proved against real rows")
+        else:
+            eid = pdf["evidence_id"]
+            head = auditor.get(f"/api/documents/{eid}/file?inline=1")
+            disp = head.headers.get("content-disposition", "")
+            (ok if disp.startswith("inline") else bad)(
+                f"a PDF is offered to read in the page — {disp[:40]}")
+            (ok if head.headers.get("x-content-type-options") == "nosniff"
+             else bad)("and the browser is told not to sniff past the type")
+            (ok if "sandbox" in head.headers.get("content-security-policy", "")
+             else bad)("and to treat it as its own origin")
+
+            plain = auditor.get(f"/api/documents/{eid}/file")
+            (ok if plain.headers.get("content-disposition", "").startswith(
+                "attachment") else bad)(
+                "and asked for plainly, it comes back as a copy to keep")
+
+        # A type not on the allowlist downloads however it is asked for.
+        sheet = next((d for d in tom.get("/api/documents/library?limit=500")
+                      .json()["documents"] if not d["inline_safe"]), None)
+        if sheet:
+            r = auditor.get(f"/api/documents/{sheet['evidence_id']}/file?inline=1")
+            (ok if r.headers.get("content-disposition", "").startswith(
+                "attachment") else bad)(
+                f"a {sheet['mime_type'].rsplit('.', 1)[-1][:24]} is refused "
+                f"the page even when the page asks for it")
+
         # ── Reading the books is granted, not assumed ────────────────
         print("\nReading the books is granted by whoever owns them")
         eric_id = roster["eric.c.wagner@gmail.com"]["actor_id"]
@@ -301,6 +354,14 @@ def main() -> int:
         execute("""UPDATE actor SET is_active = false
                     WHERE email LIKE 'drive-newcomer-%@ybi.org'
                        OR email LIKE 'peer%@ybi.org'""")
+        # The documents this drive sends in are litter too, and since the
+        # library shows every document to every reader they are litter on a
+        # screen the manual photographs. They were invisible until there was
+        # a screen that listed the whole shelf.
+        execute("""DELETE FROM attachment
+                    WHERE evidence_id IN (SELECT evidence_id FROM evidence
+                                           WHERE filename LIKE 'drive-%')""")
+        execute("DELETE FROM evidence WHERE filename LIKE 'drive-%'")
         execute("""DELETE FROM space_unit
                     WHERE facility_id LIKE 'DRIVE%'""")
         execute("""DELETE FROM space_partition

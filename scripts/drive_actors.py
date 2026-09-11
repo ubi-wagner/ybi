@@ -306,8 +306,13 @@ def main() -> int:
     if plain:
         outsider = sign_in(args.base, plain["email"], password)
         try:
+            # The library belongs on this list rather than only on the
+            # access drive: it is the cost record in document form, and
+            # somebody with a timesheet and nothing else has no more standing
+            # in the papers than in the ledger they support.
             for path in ("/api/classify/queue", "/api/classify/coverage",
-                         "/api/export/audit-package"):
+                         "/api/export/audit-package",
+                         "/api/documents/library"):
                 r = outsider.get(path)
                 (ok if r.status_code == 403 else finding)(
                     f"a plain employee is refused {path} — {r.status_code}"

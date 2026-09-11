@@ -106,7 +106,7 @@ document *supports* is a judgment and needs `OFFICE`. That split is why the
 upload door can be open this wide.
 
 `scripts/provision.py` walks the whole ladder through the real API and prints
-a password sheet; `scripts/drive_access.py` proves all 39 boundaries against
+a password sheet; `scripts/drive_access.py` proves all 57 boundaries against
 live rows.
 
 ## Layout
@@ -180,9 +180,69 @@ periods apart on disk, which helps a backup and a retention rule. It enforces
 nothing: `require_reader`, the portfolio gates and `require_own_writes` are
 what decide who sees a document, and they are unchanged by where it sits.
 
-`scripts/seed_documents.py` files the ten foundational documents through the
-real upload route, signed in as a real person, so the trail shows who filed
-them. It is content-addressed, so running it twice files nothing twice.
+`scripts/seed_documents.py` files the eighteen foundational documents through
+the real upload route, signed in as a real person, so the trail shows who
+filed them. It is content-addressed, so running it twice files nothing twice.
+
+**What a document is, is read from the bytes.** `storage.sniff_type()` decides
+the content type from the leading bytes at upload and the type the client sent
+is discarded. A content type on the way in is a *claim the uploader makes*,
+and the library decides from that column whether to show a document in the
+page — so trusting the claim would mean the uploader decides whether their own
+file gets rendered. It is also simply unreliable: `seed_documents.py` sends
+`application/octet-stream` for everything, so every one of the eighteen
+foundational documents was filed as anonymous bytes and twelve PDFs could not
+be opened. A file the sniffer cannot identify is `application/octet-stream`
+and downloads, which is the right answer for an unrecognised file.
+`scripts/retype_documents.py` repairs rows written before this, and is the
+last thing in the system permitted to read a stored path backwards.
+
+## The library
+
+`GET /api/documents/library` and `/library` in the SPA. Every document in the
+record, for the people entitled to read it. `/mine` answers "what did I send
+in" and the inbox answers "what has nobody filed yet"; neither answers the
+question an auditor actually arrives with, which is "show me the lease".
+
+Gated on **`require_reader`** — the same gate as the review screens, not a new
+one. Reading the cost record is one permission and a document is part of the
+cost record, so the controller, the people holding CONTROLLER rank alongside
+them for this engagement, the auditor, the organisation's administrator and
+anyone carrying a `record_access` grant all get it, and a person with a
+timesheet and nothing else does not. `require_office` would be wrong in both
+directions: it admits somebody who may file a receipt but may not read the
+ledger, and refuses the auditor, who may read everything and holds no
+portfolio.
+
+A document opens **in the page**, because somebody checking eleven attachments
+against eleven figures should not end the afternoon with eleven files in
+~/Downloads. Two rules make that safe, and they are independent:
+
+- **The inline allowlist.** PDF, PNG, JPEG, GIF, WebP, plain text and CSV, and
+  nothing else — held in `INLINE_SAFE` and in `v_document_library.inline_safe`,
+  which `tests/test_document_access.py` fails if they ever disagree. Anything
+  else downloads however it is asked for. `text/html` and `image/svg+xml` are
+  not on it and must never be: everybody signed in may upload, so an inline
+  render of either is a script running as the controller.
+- **The response says so.** `nosniff`, because a content type is a claim; and
+  a `Content-Security-Policy` carrying `sandbox`, which puts the document in
+  an opaque origin and travels with the file even when it is opened outside
+  the panel.
+
+**The preview frame carries no `sandbox` attribute, and must not grow one.**
+It reads like a safety measure and is not one: Chromium refuses to run its PDF
+viewer inside a sandboxed frame at *every* value of the attribute,
+`allow-scripts` included, and renders "This page has been blocked by
+Chromium" where the lease should be. Twelve of the eighteen foundational
+documents are PDFs, so the attribute does not harden the panel, it switches it
+off. This was measured in a browser against all six combinations, not reasoned
+about — the CSP on the response does the same job and Chromium still renders a
+PDF under it. `tests/test_document_access.py` fails a frame that re-grows one.
+
+Reading a document and taking a copy of it are recorded as different acts —
+`EVIDENCE_VIEW` and `EVIDENCE_DOWNLOAD`. An auditor who opened nine leases in
+a panel and downloaded one has done one thing worth asking about, and the
+register should say which.
 
 ## Whose job is it
 
@@ -389,7 +449,7 @@ are tested at.
 | `scripts/drive_everyone.py` | every person, every process they own, and an audit row under their own name for every change |
 | `scripts/drive_contracts.py` | charge codes, assignment, milestones, money in, and the auditor's path |
 | `scripts/drive_reverse.py` | the same chain walked backwards, from a receipt to the ledger lines under it |
-| `scripts/drive_access.py` | rank, portfolios, the seal, the password gate |
+| `scripts/drive_access.py` | rank, portfolios, the seal, the password gate, the library |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
@@ -473,6 +533,16 @@ In rough order of value:
 
 ### Done since this list was written
 
+- **The document library.** Migration `037`. Every document in the record,
+  readable in the page by anybody who may read the record — see **The
+  library** above. Two real defects came out of building it, both invisible
+  until there was a screen listing every document: no upload route recorded
+  the *name* the file arrived under, so the only copy of it was inside the
+  stored path and a screen wanting to print it would have had to read a path
+  backwards; and both routes kept the content type the client sent, which for
+  `seed_documents.py` is `application/octet-stream` for everything, so all
+  eighteen foundational documents were filed as anonymous bytes and twelve
+  PDFs could not be opened. The type is now read from the bytes.
 - **Restatement.** `POST /api/restate` measures every invoice on an objective
   against the sealed rate and records the difference in the direction it runs,
   per invoice. A restatement carries the seal of the rate it used, is PROPOSED

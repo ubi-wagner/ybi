@@ -25,6 +25,7 @@ import Rates from "./pages/Rates.jsx";
 import Review from "./pages/Review.jsx";
 import Contracts from "./pages/Contracts.jsx";
 import Awards from "./pages/Awards.jsx";
+import Library from "./pages/Library.jsx";
 
 /* Navigation carries the schedule each step eventually prints as in the audit
    package. Someone who has seen the workpapers already knows where they are.
@@ -46,7 +47,14 @@ const ALL_TABS = [
   ["/",          "Home",       "·",   null],
   ["/timesheet", "My time",    "G",   "staff"],
   ["/certify",   "My effort",  "G",   "staff"],
-  ["/documents", "Documents",  "E",   null],
+  /* Three tabs live on Schedule E and they are easy to confuse, so each one
+     is named for what you do there rather than for what it holds. "My
+     documents" is where you send yours in; the "Library" is the whole shelf,
+     to read; "Evidence" is where somebody says what a document proves. The
+     first of those was called "Documents", which is the generic word for all
+     three and matched neither its own heading nor its job. */
+  ["/documents", "My documents", "E", null],
+  ["/library",   "Library",    "E",   "reader"],
   ["/people",    "People",     "·",   "admin"],
   ["/imports",   "Import",     "A",   "CONTROLLER"],
   ["/reconcile", "Reconcile",  "A-1", "CONTROLLER"],
@@ -185,6 +193,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home actor={actor} />} />
           <Route path="/documents" element={<MyDocuments actor={actor} />} />
+          <Route path="/library" element={<Library />} />
           <Route path="/people" element={<People actor={actor} />} />
           <Route path="/inventory" element={<Facilities actor={actor} tab="equipment" />} />
           <Route path="/timesheet" element={<Timesheet actor={actor} />} />

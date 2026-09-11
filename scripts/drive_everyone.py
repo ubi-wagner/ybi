@@ -120,11 +120,13 @@ def sign_in(base: str, email: str, password: str) -> httpx.Client:
 def tidy_up() -> None:
     """Remove the fixtures this drive invented.
 
-    Not the record — a classification, a timesheet entry or a document is a
-    judgment somebody made and stays. But a building called "Drive Test
-    Building" is litter: it sits on the Space screen where a real one should
-    be, and it ends up photographed into the user manual, where a new person
-    reads it as an example of how YBI keeps its estate.
+    Not the record — a classification or a timesheet entry is a judgment
+    somebody made and stays. But a building called "Drive Test Building" is
+    litter: it sits on the Space screen where a real one should be, and it
+    ends up photographed into the user manual, where a new person reads it
+    as an example of how YBI keeps its estate. A file called
+    drive-receipt-2026-09-11.txt is the same thing on the library shelf —
+    which was invisible until there was a screen listing every document.
 
     Only rows whose id this drive generated, and only the ones nothing else
     has come to depend on.
@@ -138,6 +140,16 @@ def tidy_up() -> None:
                 WHERE email LIKE 'drive.%@ybi.org'
                    OR email LIKE 'drive-%@ybi.org'
                    OR email LIKE 'corrected.%@ybi.org'""")
+    # A document this drive invented is litter by the same argument as the
+    # building, and the docstring above only exempted documents because when
+    # it was written nothing listed them. The library lists all of them, to
+    # every reader, and photographs the list into the manual — so a file
+    # called drive-receipt-2026-09-11.txt now sits at the top of the shelf
+    # where the lease should be.
+    execute("""DELETE FROM attachment
+                WHERE evidence_id IN (SELECT evidence_id FROM evidence
+                                       WHERE filename LIKE 'drive-%')""")
+    execute("DELETE FROM evidence WHERE filename LIKE 'drive-%'")
     execute("""DELETE FROM asset
                 WHERE unit_id IN (SELECT unit_id FROM space_unit
                                    WHERE facility_id LIKE 'DRIVE-%')""")
