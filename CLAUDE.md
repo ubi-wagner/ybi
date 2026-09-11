@@ -172,8 +172,15 @@ In rough order of value:
 4. **Audit package download.** `domain/package.py` produces the workbook; add a
    route that streams it.
 5. **Lane comparison UI.** The API exists; the side-by-side view does not.
-6. **Balance sheet import** for asset basis and funding source — this is what
-   resolves the depreciation carve-out.
+6. ~~**Balance sheet import**~~ Done. `parse_balance_sheet` in `domain/qbo.py`,
+   accepted through the same reconciling path as the P&L: the sheet must
+   balance, every printed subtotal must equal what sits under it, and its net
+   income must equal the P&L's — the first control in the system that spans
+   two reports. `v_fixed_asset_basis` gives cost against accumulated
+   depreciation by class, with land and construction in progress excluded from
+   depreciable cost. The funding source still has to come from the asset
+   register, and `v_depreciation_basis` states that gap rather than implying
+   it.
 
 ## Current plan
 

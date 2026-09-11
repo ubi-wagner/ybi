@@ -17,10 +17,10 @@ from fastapi import Depends, APIRouter, File, HTTPException, UploadFile
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.auth import Actor
-from app.db import execute, one, query
+from app.db import execute, one, query, transaction
 from app.domain.qbo import (QBO_GENERAL_LEDGER, QBO_TIME_ACTIVITY,
                             parse_general_ledger, parse_profit_loss,
-                            parse_time_activity)
+                            parse_time_activity, parse_balance_sheet)
 from app.settings import settings
 
 router = APIRouter(prefix="/imports", tags=["imports"],
@@ -98,6 +98,89 @@ def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
                 "accounts": len(pl.accounts),
                 "sections": {k: str(v) for k, v in pl.section_totals.items()},
                 "net_income": str(pl.net_income), "variance": str(variance)}
+
+    if b["report"] == "BALANCE_SHEET":
+        bs = parse_balance_sheet(path, sha256=b["sha256"])
+        balance = bs.check_balance()
+        if abs(balance) > Decimal("0.01"):
+            raise HTTPException(409, {
+                "error": "SHEET_DOES_NOT_BALANCE",
+                "message": f"Assets less liabilities and equity is {balance}. "
+                           f"A balance sheet that does not balance is not an "
+                           f"import problem, it is an export taken mid-post.",
+            })
+        failing = bs.failing_subtotals()
+        if failing:
+            raise HTTPException(409, {
+                "error": "BS_SUBTOTALS_DO_NOT_FOOT",
+                "message": f"{len(failing)} printed subtotal(s) disagree with "
+                           f"the accounts beneath them.",
+                "first": [{"account": f[0], "printed": str(f[1]),
+                           "derived": str(f[2]), "variance": str(f[3])}
+                          for f in failing[:5]],
+            })
+
+        # The cross-statement tie. It can only run once the P&L is in, which
+        # is the right order anyway — the P&L defines cost scope.
+        pl_net = one("""SELECT COALESCE(sum(amount) FILTER (WHERE section='Income'), 0)
+                             - COALESCE(sum(amount) FILTER (WHERE section='Expense'), 0)
+                             - COALESCE(sum(amount) FILTER (WHERE section='COGS'), 0)
+                             + COALESCE(sum(amount) FILTER (WHERE section='Other Income'), 0)
+                               AS net
+                          FROM pl_account WHERE period = %s""", (b["period"],))
+        net_variance = None
+        if pl_net and pl_net["net"]:
+            net_variance = bs.check_net_income(Decimal(str(pl_net["net"])))
+            if abs(net_variance) > Decimal("0.01"):
+                raise HTTPException(409, {
+                    "error": "NET_INCOME_DISAGREES",
+                    "message": f"The balance sheet carries net income of "
+                               f"{bs.net_income} and the profit and loss "
+                               f"derives {pl_net['net']}. Two exports that "
+                               f"disagree are two different moments in the "
+                               f"same books; take both again from the same "
+                               f"point.",
+                    "variance": str(net_variance),
+                })
+
+        with transaction() as cur:
+            cur.execute("DELETE FROM bs_account WHERE period=%s", (b["period"],))
+            for account, (side, amount) in bs.accounts.items():
+                cur.execute("""INSERT INTO bs_account
+                                 (period, account, leaf, side, amount,
+                                  is_rollup, depth)
+                               VALUES (%s,%s,%s,%s,%s,false,%s)""",
+                            (b["period"], account, account.split(":")[-1],
+                             side or "ASSET", amount, account.count(":")))
+            for account, (side, amount) in bs.rollups.items():
+                cur.execute("""INSERT INTO bs_account
+                                 (period, account, leaf, side, amount,
+                                  is_rollup, depth)
+                               VALUES (%s,%s,%s,%s,%s,true,%s)""",
+                            (b["period"], account, account.split(":")[-1],
+                             side or "ASSET", amount, account.count(":")))
+            cur.execute("""UPDATE staging_batch
+                              SET status='ACCEPTED', parsed_at=now(),
+                                  accepted_at=now(), accepted_by=%s
+                            WHERE batch_id=%s""",
+                        (actor.display_name, batch_id))
+            record(actor, "IMPORT_ACCEPT", "staging_batch", batch_id,
+                   after={"report": "BALANCE_SHEET",
+                          "accounts": len(bs.accounts),
+                          "assets": str(bs.assets),
+                          "net_income": str(bs.net_income)},
+                   reason=f"balance sheet accepted — balances to "
+                          f"{balance}, net income ties", cursor=cur)
+
+        return {"batch_id": batch_id, "kind": "BALANCE_SHEET",
+                "accounts": len(bs.accounts), "rollups": len(bs.rollups),
+                "assets": str(bs.assets), "liabilities": str(bs.liabilities),
+                "equity": str(bs.equity), "balance_variance": str(balance),
+                "net_income": str(bs.net_income),
+                "net_income_variance": (str(net_variance)
+                                        if net_variance is not None else None),
+                "fixed_assets": str(bs.fixed_assets),
+                "warnings": bs.warnings}
 
     if b["report"] == "TIME_ACTIVITY":
         rows = parse_time_activity(path, QBO_TIME_ACTIVITY)

@@ -522,6 +522,58 @@ def main() -> int:
     finally:
         barb.close()
 
+    # ── The balance sheet, and the basis it carries ──────────────────
+    print("\nBalance sheet — the basis behind the depreciation question")
+    tom = sign_in(args.base, "tom@ybi.org", password)
+    try:
+        ctl = one("SELECT * FROM v_balance_sheet_control WHERE period='2025'")
+        if not ctl:
+            raise CannotRun("no balance sheet loaded; run scripts/load_2025.py")
+        if ctl["ties"]:
+            ok(f"the sheet balances — ${float(ctl['assets']):,.0f} against "
+               f"${float(ctl['liabilities']):,.0f} and "
+               f"${float(ctl['equity']):,.0f}")
+        else:
+            finding(f"the balance sheet is out by {ctl['variance']}")
+        if float(ctl["bs_net_income"]) == float(ctl["pl_net_income"]):
+            ok(f"and its net income is the P&L's — ${float(ctl['bs_net_income']):,.2f} "
+               f"on both, the first control that spans two reports")
+        else:
+            finding(f"net income disagrees: balance sheet "
+                    f"{ctl['bs_net_income']}, P&L {ctl['pl_net_income']}")
+
+        basis = query("""SELECT asset_class, gross_cost, depreciable_cost,
+                                accumulated_depreciation
+                           FROM v_fixed_asset_basis WHERE period='2025'
+                          ORDER BY gross_cost DESC NULLS LAST""")
+        depreciable = sum(float(b["depreciable_cost"] or 0) for b in basis)
+        if depreciable > 0:
+            ok(f"${depreciable:,.0f} of depreciable cost across "
+               f"{len(basis)} classes, land and construction in progress "
+               f"excluded")
+        else:
+            finding("no depreciable basis derived from the balance sheet")
+
+        nondep = next((b for b in basis
+                       if float(b["depreciable_cost"] or 0) == 0), None)
+        if nondep:
+            ok(f"{nondep['asset_class']} carries "
+               f"${float(nondep['gross_cost']):,.0f} of cost and no "
+               f"depreciable basis, which is correct — neither land nor "
+               f"construction in progress is depreciated")
+        else:
+            finding("land and construction in progress were treated as "
+                    "depreciable")
+
+        gap = one("""SELECT DISTINCT assets_without_funding, depreciation_expensed
+                       FROM v_depreciation_basis WHERE period='2025'""")
+        if gap:
+            ok(f"${float(gap['depreciation_expensed']):,.0f} of depreciation "
+               f"expensed in 2025; the basis is now known and the funding "
+               f"source is not — which is the 200.436(b) gap, stated")
+    finally:
+        tom.close()
+
     # ── A short year that cannot honestly reach the bar ──────────────
     print("\nA gate that bends — the short year")
     steph = sign_in(args.base, "sgaffney@ybi.org", password)

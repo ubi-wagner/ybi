@@ -561,3 +561,227 @@ def parse_profit_loss(path: Path, sha256: str = "") -> ProfitLoss:
             stack.append(label)
 
     return pl
+
+
+# ---------------------------------------------------------------------------
+# Balance sheet
+# ---------------------------------------------------------------------------
+
+#: The rows that switch which side of the sheet we are on. Everything else
+#: that carries no amount is a group header, and QuickBooks gives every group
+#: a matching "Total for" row.
+_BS_SIDES = {
+    "assets": "ASSET",
+    "liabilities": "LIABILITY",
+    "equity": "EQUITY",
+}
+
+
+@dataclass
+class BalanceSheet:
+    """A parsed QuickBooks Balance Sheet.
+
+    Two controls matter and both are printed on the face of the report, which
+    is what makes them worth checking rather than trusting: the sheet has to
+    balance, and the net income it carries has to be the net income on the
+    Profit and Loss. A balance sheet that disagrees with the P&L means one of
+    the two exports is from a different moment, and everything built on either
+    is suspect.
+    """
+
+    source_name: str
+    sha256: str = ""
+    #: qualified path -> (side, amount)
+    accounts: dict[str, tuple[str, Decimal]] = field(default_factory=dict)
+    rollups: dict[str, tuple[str, Decimal]] = field(default_factory=dict)
+    net_income: Decimal = Decimal(0)
+    warnings: list[str] = field(default_factory=list)
+
+    def _rollup(self, *names: str) -> Decimal:
+        """A named total, by its leaf name, wherever it sits in the tree."""
+        for path, (_, amount) in self.rollups.items():
+            if path.split(":")[-1].lower() in {n.lower() for n in names}:
+                return amount
+        return Decimal(0)
+
+    @property
+    def assets(self) -> Decimal:
+        return self._rollup("Assets")
+
+    @property
+    def liabilities(self) -> Decimal:
+        return self._rollup("Liabilities")
+
+    @property
+    def equity(self) -> Decimal:
+        return self._rollup("Equity")
+
+    @property
+    def fixed_assets(self) -> Decimal:
+        return self._rollup("Fixed Assets")
+
+    def subtotal_checks(self) -> list[tuple[str, Decimal, Decimal, Decimal]]:
+        """Every printed total against the sum of what sits directly under it.
+
+        The general ledger parser learned this the expensive way: a tree
+        rebuilt from header/total pairs can look entirely reasonable while an
+        account hangs off the wrong parent. An arithmetic check on every
+        subtotal is what makes the shape provable rather than plausible.
+
+        Returns (path, printed, derived, variance) per rollup.
+        """
+        out = []
+        for path, (_, printed) in self.rollups.items():
+            prefix = path + ":"
+            depth = path.count(":") + 1
+            # A parent may carry its own balance as well as children — the
+            # credit-card accounts do, with the card itself holding a balance
+            # and each cardholder a sub-account. That own balance sits at the
+            # parent's own path and belongs inside the parent's total.
+            derived = self.accounts.get(path, ("", Decimal(0)))[1]
+            for p, (_, amt) in self.accounts.items():
+                # An account that has a total of its own is represented by
+                # that total, not by its own balance; counting both is how the
+                # same $298.51 of card balances appeared twice.
+                if (p.startswith(prefix) and p.count(":") == depth
+                        and p not in self.rollups):
+                    derived += amt
+            for p, (_, amt) in self.rollups.items():
+                if p.startswith(prefix) and p.count(":") == depth:
+                    derived += amt
+            out.append((path, money(printed), money(derived),
+                        money(derived - printed)))
+        return out
+
+    def failing_subtotals(self) -> list[tuple[str, Decimal, Decimal, Decimal]]:
+        return [c for c in self.subtotal_checks() if c[3] != 0]
+
+    def check_balance(self) -> Decimal:
+        """Assets less liabilities and equity. Zero, or the export is wrong."""
+        return money(self.assets - self.liabilities - self.equity)
+
+    def check_net_income(self, pl_net_income: Decimal) -> Decimal:
+        """The cross-statement tie. The two reports have to be the same
+        moment in the same books."""
+        return money(self.net_income - pl_net_income)
+
+
+def parse_balance_sheet(path: Path, sha256: str = "") -> BalanceSheet:
+    """Parse a QBO Balance Sheet export.
+
+    The same header/total shape as the other reports, with three wrinkles this
+    sheet actually contains:
+
+    * A parent may carry its own amount inline and still have children —
+      ``2100 Payroll Liabilities  $0.00`` followed by six tax accounts.
+    * A parent may have no total row at all. ``1530 Computer Equipment``
+      exists only to hold ``1560 Equipment (Parent)``; treating it as an
+      account would invent a line, and failing to push it would flatten its
+      children into the wrong parent.
+    * Contra accounts are negative and belong with what they offset:
+      accumulated depreciation sits beside the cost it reduces, which is what
+      makes the fixed-asset section answer the 200.436(b) question at all.
+    """
+    rows = _read_rows(path)
+    bs = BalanceSheet(source_name=path.name, sha256=sha256)
+
+    # Every name that gets a "Total for" row. A header without one is a label
+    # QuickBooks printed and never closed — "1530 Computer Equipment" is there
+    # to introduce "1560 Equipment (Parent)" and is never totalled. Pushing it
+    # as a parent means nothing ever pops it, and the next sibling falls
+    # inside: 1570 TBB5, an $8.9M building, filed under computer equipment.
+    # The subtotal control below is what catches this if it ever returns.
+    totalled = {
+        _ROLLUP_SUFFIX.sub("", _TOTAL_ROW.sub("", (r[0] or "").strip())).strip()
+        for r in rows
+        if r and (r[0] or "").strip()
+        and _TOTAL_ROW.match((r[0] or "").strip())
+    }
+
+    def amount_of(row: list[str]) -> Decimal | None:
+        for c in reversed(row[1:]):
+            if (c or "").strip():
+                return qbo_amount(c)
+        return None
+
+    side = ""
+    started = False
+    stack: list[str] = []
+    for row in rows:
+        if not row or not any((c or "").strip() for c in row):
+            continue
+        label = (row[0] or "").strip()
+        if not label:
+            continue
+        low = label.lower()
+
+        # Report furniture. The sheet proper starts at "Assets"; everything
+        # above it is the company name, the report name and the as-of date.
+        if not started:
+            if low == "assets":
+                started = True
+            else:
+                continue
+        if low.startswith(("accrual basis", "cash basis", "balance sheet",
+                           "as of")) or low == "total":
+            continue
+
+        if _TOTAL_ROW.match(label):
+            name = _ROLLUP_SUFFIX.sub(
+                "", _TOTAL_ROW.sub("", label).strip()).strip()
+            amt = amount_of(row) or Decimal(0)
+            if name in stack:
+                depth = len(stack) - 1 - stack[::-1].index(name)
+                qualified = ":".join(stack[:depth + 1])
+                del stack[depth:]
+            else:
+                qualified = ":".join(stack + [name])
+            bs.rollups[qualified] = (side, amt)
+            continue
+
+        if low.startswith("net income"):
+            bs.net_income = amount_of(row) or Decimal(0)
+            # Also an equity account in its own right: leaving it out of the
+            # tree makes Equity fail to foot by exactly the year's result,
+            # which looks like a parser bug and is one.
+            bs.accounts[":".join(stack + [label])] = (side, bs.net_income)
+            continue
+
+        amt = amount_of(row)
+
+        # A group header. No amount of its own, so it can only be a parent.
+        if amt is None:
+            if low == "liabilities and equity":
+                # The root the other two sit inside. Without it, "Total for
+                # Liabilities and Equity" has nothing beneath it to derive
+                # from and the sheet's own footing check cannot be proved.
+                stack = [label]
+                continue
+            if low in _BS_SIDES:
+                side = _BS_SIDES[low]
+                stack = ([stack[0], label] if stack and
+                         stack[0].lower() == "liabilities and equity"
+                         else [label])
+                continue
+            if label in totalled:
+                stack.append(label)
+            else:
+                bs.warnings.append(
+                    f"group header {label!r} has no total row; treated as a "
+                    f"label rather than a parent")
+            continue
+
+        # A leaf, or a parent carrying its own balance. Either way the amount
+        # is this account's own; a parent's subtree arrives as its "Total for".
+        qualified = ":".join(stack + [label])
+        if qualified in bs.accounts:
+            bs.warnings.append(f"duplicate account path {qualified}")
+        bs.accounts[qualified] = (side, amt)
+
+        # QuickBooks prints a parent's own balance before its children, so a
+        # parent with an inline amount still has to go on the stack. It is a
+        # parent exactly when a "Total for" bearing its name follows.
+        if label in totalled:
+            stack.append(label)
+
+    return bs

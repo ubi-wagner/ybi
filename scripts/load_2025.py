@@ -28,6 +28,7 @@ import httpx
 SOURCE = Path("docs/source-documents/accounting-records")
 PL_FILE = SOURCE / "2025_Profit-and-Loss_QuickBooks.xlsx"
 GL_FILE = SOURCE / "2025_General-Ledger_QuickBooks.xlsx"
+BS_FILE = SOURCE / "2025_Balance-Sheet_QuickBooks.xlsx"
 
 EXPECTED_PL = {
     "Income": Decimal("6662593.00"),
@@ -95,6 +96,23 @@ def main() -> int:
         check("net income", Decimal(pl["net_income"]), EXPECTED_NET)
         check("section variance", Decimal(pl["variance"]), Decimal("0.00"))
         print(f"        {pl['accounts']} P&L accounts define cost scope")
+
+        print("\nBalance sheet")
+        bs_batch = upload(c, BS_FILE, "BALANCE_SHEET", args.who)
+        bs = c.post(f"/api/imports/{bs_batch}/parse")
+        bs.raise_for_status()
+        bs = bs.json()
+        check("assets", Decimal(bs["assets"]), Decimal("16713219.80"))
+        check("liabilities + equity",
+              Decimal(bs["liabilities"]) + Decimal(bs["equity"]),
+              Decimal("16713219.80"))
+        check("balance variance", Decimal(bs["balance_variance"]), Decimal("0.00"))
+        # The first control that spans two reports.
+        check("net income vs P&L", Decimal(bs["net_income_variance"]),
+              Decimal("0.00"))
+        check("fixed assets", Decimal(bs["fixed_assets"]), Decimal("14154574.40"))
+        print(f"        {bs['accounts']} balance sheet accounts, "
+              f"{len(bs['warnings'])} header(s) without a total row")
 
         print("\nGeneral ledger")
         gl_batch = upload(c, GL_FILE, "GENERAL_LEDGER", args.who)
