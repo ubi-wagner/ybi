@@ -907,6 +907,20 @@ counts twice.
 Keep the figures in it read from the live record rather than recalled. Three
 dates in the first draft were written from memory and were wrong by weeks.
 
+`scripts/verification_sheet.py` turns the same eighteen into the two shapes
+somebody settles them in: a workbook with a status dropdown and a box to type
+in, and a printable worksheet with a tick box and ruled lines. The narrative
+has to be prose and the worksheet has to be structured, so neither can be
+derived from the other — which leaves `tests/test_verification_sheet.py`
+checking that the references in the two agree, and that the document's opening
+count is the count it actually has. Two copies of one list is the shape that
+produced 13.0% and 2.2% at the same moment.
+
+The status column is a dropdown and deliberately not a yes/no: *I have checked
+and the record is right* and *I have corrected it* lead to different work at
+our end, and *somebody else has to answer this* is a real outcome that
+otherwise looks like silence.
+
 ## Manuals for the team
 
 `docs/manuals/` — one per job, not one per role, because two people here hold
