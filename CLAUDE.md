@@ -716,6 +716,91 @@ against $275,000, with $655,190 of labour carrying nothing — and only **LTM**
 budgets a real figure, $81,772.76, whose mirror image is $233,543.12 of
 *unrecovered indirect* sitting in YBI's own cost share.
 
+## A citation names a document
+
+`scripts/load_contract_terms.py` has always opened with the right rule —
+*a provision with no citation is somebody's recollection of a contract,
+which is worth nothing in a dispute and worse than nothing in a file.* A
+citation with **no document behind it** is still somebody's recollection,
+and `award_term.evidence_id` was NULL on all thirty-nine rows.
+
+Worse, `evidence.extracted_text` and `page_count` were NULL on all
+forty-three documents, so nothing could ask a document whether it contains
+what was cited. It is the same shape as `rate.superseded_by`,
+`space_partition`, `award_budget_line` and the three `evidence` fact columns
+— and the most expensive instance of it, because of what it was hiding:
+
+**Hybrid Phase 2 and Last Tactical Mile each carry three provisions cited to
+§25 Invoicing, §26 Payment and Attachment 3. Neither agreement contains any
+of them.** Both are ARTICLE-numbered instruments with no numbered clause
+heading anywhere, and neither contains the phrase "Net 30" or "fifth business
+day". Those are ICAM's clauses; ICAM is the numbered NCDMM Subrecipient
+Agreement template and its own ten provisions all check out against it. The
+indirect one is the one that moves: Schedule B says Hybrid budgets **no
+indirect at all** against $449,043 of labour and LTM budgets **$81,772.76**,
+while the register asserts ICAM's "10% of ODCs only" on both — the
+restatement's central claim resting, in two places, on a sentence copied from
+the one agreement it was true of.
+
+`storage.read_text()` reads a document as it arrives and all four writers of
+`evidence` go through it. **Three answers, kept apart:** NULL is nobody has
+read it, `''` is read and there is nothing extractable in it, text is read.
+Drive AM's agreement is thirty-six pages and seventy characters, and that is
+a *fact about the document* — the one that explains why no clause of it has
+ever been checked. Collapsing those two would turn "this cannot be checked"
+into "this checks out". `scripts/read_documents.py` backfills what was filed
+before, the way `retype_documents.py` did for content types.
+
+`v_award_citation_check` (migration `056`) then asks each document whether
+the cited clause is in it. **Only `FOUND` is a pass.** `NO TEXT LAYER` and
+`NOT READ` are unevaluable the way `NO CLAUSE READ` is on
+`v_award_ceiling_check`, and `UNTESTABLE` says the citation is prose a regex
+cannot check — "Proposal cover table, Duration" is a perfectly good citation
+for a person and a poor one for a pattern. Reporting that as a failure would
+teach the reader the list is wrong, and the next real one they see they will
+dismiss.
+
+None of it is corrected here. What Hybrid's and LTM's provisions actually
+say is `FOR_TOM_TO_VERIFY.md` 6.1, and whether a readable Drive AM agreement
+exists is 6.2. The loader carries a note on each contradicted term rather
+than dropping it, because the substance may be right and sourced elsewhere,
+and that is a different answer from the citation being a copy.
+
+## A drive that writes fiction is worse than no drive
+
+`drive_contracts.py` recorded three provisions onto whichever real award it
+picked — upserting on `(award, key)`, so it **replaced** what had been read
+out of the executed agreement — opened a milestone named from a random tag
+and left it, attached that milestone to **invoice 10018** (a real $37,593.90
+invoice YBI issued to NCDMM) with a raw `UPDATE` against a column no route
+writes so there was no audit row at all, and booked $12,000 of receipts
+against it every run. `drive_reverse`'s third step passed *because of* that
+forgery. This is the defect `review_system` was fixed for: a review reading
+its own writing.
+
+Three rules came out of it:
+
+- **A drive scaffolds its own award and takes it down**, checked against a
+  census of seven tables taken before it started. "Leaves the record as it
+  found it" is a claim, and a claim in a drive is something to check.
+- **A cleanup that stops at the first refusal is worse than none.** The first
+  version met `invoice_no_delete` — `invoice` is append-only — and left its
+  award and objective behind. Every statement is attempted now and a failure
+  is printed rather than raised.
+- **`invoice.milestone_id` has no writer and must not grow one casually.**
+  All four America Makes awards are cost reimbursement invoiced monthly
+  (ICAM §6 CONTRACT TYPE), and no statement of work carries a CLIN, a
+  deliverable value or an acceptance date. The column is for a contract shape
+  YBI does not have, so the backward hop from an invoice is the service
+  period and the budget categories — not a deliverable. A gap that doing the
+  work cannot clear is the `FACILITY_UNPARTITIONED` defect again.
+
+And a related emptiness: **no payment is recorded against any invoice.** The
+`receipt` register is empty and `invoice.paid_on` and `paid_amount` are NULL
+on all three and read by nothing. `drive_reverse` starts one hop in and names
+the missing link rather than exiting 2 and telling the reader to run the
+drive that used to invent one.
+
 ## When something does not work
 
 The rule: **a person must never be left believing something happened when it
