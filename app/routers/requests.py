@@ -418,16 +418,18 @@ async def reply(request_id: int, file: UploadFile = File(...),
         dest = storage.place(
             storage.evidence_path(r["period"], "information-request", sha, safe),
             raw)
+        text, pages = storage.read_text(raw, XLSX)
         execute("""INSERT INTO evidence (evidence_id, period, kind, uri, sha256,
                                          received_from, byte_size, mime_type,
                                          ingest_channel, uploaded_by, note,
-                                         filename)
+                                         filename, extracted_text, page_count)
                    VALUES (%s,%s,'information-request',%s,%s,%s,%s,%s,'UPLOAD',
-                           %s,%s,%s)""",
+                           %s,%s,%s,%s,%s)""",
                 (eid, r["period"], str(dest), sha,
                  received_from.strip() or actor.display_name, len(raw), XLSX,
                  actor.actor_id,
-                 f"Reply to request {request_id} — {form.title}", safe))
+                 f"Reply to request {request_id} — {form.title}", safe,
+                 text, pages))
     else:
         eid = existing["evidence_id"]
 

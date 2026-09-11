@@ -333,18 +333,20 @@ def file_invoice(invoice_id: str, actor: Actor = Depends(require_controller)):
     dest = storage.place(
         storage.evidence_path(period, "invoice", sha, filename), raw)
     eid = f"EV-{sha[:12]}"
+    text, pages = storage.read_text(raw, "application/pdf")
     execute("""INSERT INTO evidence (evidence_id, period, kind, uri, sha256,
                                      received_from, byte_size, mime_type,
                                      ingest_channel, uploaded_by, note,
-                                     suggested_for, filename)
+                                     suggested_for, filename,
+                                     extracted_text, page_count)
                VALUES (%s,%s,'invoice',%s,%s,%s,%s,'application/pdf',
-                       'GENERATED',%s,%s,%s,%s)""",
+                       'GENERATED',%s,%s,%s,%s,%s,%s)""",
             (eid, period, str(dest), sha, actor.display_name, len(raw),
              actor.actor_id,
              "Rendered from the invoice register, not the document as issued."
              if not doc.is_original else
              "Issued from the invoice register.",
-             f"Invoice {doc.number}", filename))
+             f"Invoice {doc.number}", filename, text, pages))
     execute("UPDATE invoice SET evidence_id = COALESCE(evidence_id, %s) "
             "WHERE invoice_id = %s", (eid, head["invoice_id"]))
 

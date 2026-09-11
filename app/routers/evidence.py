@@ -60,12 +60,14 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
         dest = storage.place(
             storage.evidence_path(period, kind, sha, safe), raw)
         eid = f"EV-{sha[:12]}"
+        text, pages = storage.read_text(raw, mime)
         execute("""INSERT INTO evidence (evidence_id,period,kind,uri,sha256,
                                          received_from,byte_size,mime_type,
-                                         ingest_channel,uploaded_by,filename)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s)""",
+                                         ingest_channel,uploaded_by,filename,
+                                         extracted_text,page_count)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s)""",
                 (eid, period, kind, str(dest), sha, uploaded_by,
-                 len(raw), mime, actor.actor_id, safe))
+                 len(raw), mime, actor.actor_id, safe, text, pages))
 
     attached = 0
     if target_type and target_id:

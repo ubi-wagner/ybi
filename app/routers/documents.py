@@ -134,15 +134,22 @@ async def upload(file: UploadFile = File(...),
         storage.evidence_path(period, kind, sha, safe), raw)
     eid = f"EV-{sha[:12]}"
     amount, when, vendor = _facts(doc_amount, doc_date, vendor_name)
+    # What it says, read now rather than never. NULL is "nobody has read it"
+    # and an empty string is "read, and there is nothing in it to read" —
+    # which for a scanned agreement is the fact that explains why no clause
+    # of it has ever been cited.
+    text, pages = storage.read_text(raw, mime)
     execute("""INSERT INTO evidence (evidence_id, period, kind, uri, sha256,
                                      received_from, byte_size, mime_type,
                                      ingest_channel, uploaded_by, note,
                                      suggested_for, filename,
-                                     doc_amount, doc_date, vendor_name)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s,%s,%s,%s)""",
+                                     doc_amount, doc_date, vendor_name,
+                                     extracted_text, page_count)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s,%s,%s,%s,
+                       %s,%s)""",
             (eid, period, kind, str(dest), sha, actor.display_name, len(raw),
              mime, actor.actor_id, note, suggested_for, safe,
-             amount, when, vendor))
+             amount, when, vendor, text, pages))
     record(actor, "DOCUMENT_UPLOAD", "evidence", eid,
            after={"kind": kind, "filename": safe, "bytes": len(raw),
                   "suggested_for": suggested_for,
