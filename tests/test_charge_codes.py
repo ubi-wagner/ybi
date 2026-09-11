@@ -113,3 +113,50 @@ def test_the_employee_view_says_whether_anybody_authorised_the_charge():
         "v_employee_charging does not report whether a grant existed. The "
         "auditor's first question about an hour is who said it could be "
         "charged, and an answer of silence reads as yes.")
+
+
+# ── the 2026 crosswalk as a proposal source ───────────────────────────
+
+
+def test_the_crosswalk_proposes_but_never_decides():
+    """A mapping somebody already built and reviewed is a real signal.
+
+    Sixty-one of the eighty-five 2025 accounts map one-to-one to a 2026
+    account number, and pool_for() reads the pool off that number. That took
+    proposal coverage from 36% of dollars to 65%. It is still a proposal: the
+    grade, the citation and the source are on it and a human confirms.
+    """
+    src = (ROOT / "app" / "routers" / "classify.py").read_text()
+    assert '"source": "crosswalk"' in src, (
+        "the 2026 crosswalk is not offered as a proposal source, so 275 "
+        "groups sit in the queue with no suggestion against a mapping that "
+        "already exists.")
+    assert '"citation": "2026 chart crosswalk"' in src, (
+        "a crosswalk proposal carries no citation, so somebody accepting it "
+        "cannot say where the suggestion came from.")
+
+
+def test_the_crosswalk_refuses_to_guess_a_split():
+    """Twenty-four accounts divide and need a documented driver.
+
+    Depreciation splits by square footage, wages by timesheet. Proposing one
+    side of a split would be inventing the driver, which is the judgment the
+    split exists to force somebody to make.
+    """
+    src = (ROOT / "app" / "routers" / "classify.py").read_text()
+    assert '"/" not in mapped[0]' in src, (
+        "a split account is being proposed as if it mapped one-to-one.")
+
+
+def test_a_crosswalk_proposal_leaves_the_990_function_and_federal_open():
+    """An account number does not know either.
+
+    Proposing a function would put cost in a column of the return nobody
+    chose; proposing ALLOWABLE would assert a federal treatment off a chart.
+    """
+    src = (ROOT / "app" / "routers" / "classify.py").read_text()
+    block = src[src.index('"source": "crosswalk"') - 1400:
+                src.index('"source": "crosswalk"')]
+    assert '"federal": "PENDING"' in block, (
+        "a crosswalk proposal asserts a federal treatment that the account "
+        "number cannot know.")

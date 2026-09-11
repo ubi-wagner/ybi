@@ -184,6 +184,47 @@ what decide who sees a document, and they are unchanged by where it sits.
 real upload route, signed in as a real person, so the trail shows who filed
 them. It is content-addressed, so running it twice files nothing twice.
 
+## Whose job is it
+
+`v_worklist` has always known what is outstanding and never whose job it is,
+so every screen showed everybody the same list. `v_worklist_owned` adds the
+portfolio that can act on each kind and the screen it is dealt with on, and
+`GET /api/dashboard/worklist/mine` filters it by what the caller holds.
+
+A `CONTROLLER` sees everything — that is what the portfolio means, not a
+special case — and an item whose portfolio nobody in the organisation holds
+still reaches the controller rather than falling off the end. Every kind is
+routed and every kind has a destination; `tests/test_worklist_ownership.py`
+fails a new kind that lands on the `ELSE` by accident.
+
+`v_certification_chase` is the project manager's version of the certification
+question. **A manager cannot sign on somebody's behalf** — 200.430(i) wants
+the person whose effort it was — so it is a list to go and ask, never an
+action. "Their projects" is read from the assignments they made, which is a
+fact already on the record rather than a new field to maintain.
+
+Three worklist kinds were added with it: `SPACE_UNMEASURED` (no building has
+square footage, which is what the facilities carve-out is sized by),
+`SPACE_UNATTRIBUTED` (measured, but no partition saying who uses it) and
+`CHARGE_CODE_UNASSIGNED` (hours booked to a code nobody was assigned to).
+
+## Suggesting a classification
+
+`propose()` is ordered by strength of signal and the 2026 crosswalk is now
+part of it. Sixty-one of the eighty-five 2025 accounts map one-to-one to a
+2026 account number and `pool_for()` reads the pool off that number — a
+mapping somebody already built and reviewed. It took proposal coverage from
+36.2% of dollars to **65.5%**.
+
+The other twenty-four accounts are splits — depreciation by square footage,
+wages by timesheet — and propose nothing. A split needs a documented driver,
+which is a judgment with a person's name on it, and proposing one side would
+be inventing the driver.
+
+A crosswalk proposal leaves the 990 function and the federal treatment open
+(`PENDING`), because an account number knows neither. Proposing a function
+would put cost in a column of the return nobody chose.
+
 ## The income side
 
 Everything else here reads a year already spent: the ledger arrives, the
@@ -347,6 +388,7 @@ are tested at.
 | `scripts/reconcile.py` | the three source documents and the payroll register against each other, eleven points |
 | `scripts/drive_everyone.py` | every person, every process they own, and an audit row under their own name for every change |
 | `scripts/drive_contracts.py` | charge codes, assignment, milestones, money in, and the auditor's path |
+| `scripts/drive_reverse.py` | the same chain walked backwards, from a receipt to the ledger lines under it |
 | `scripts/drive_access.py` | rank, portfolios, the seal, the password gate |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |

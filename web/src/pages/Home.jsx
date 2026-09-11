@@ -67,6 +67,8 @@ export default function Home({ actor }) {
         {describe(actor)}
       </PageHead>
 
+      <MyWork actor={actor} />
+
       {/* ── Mine ─────────────────────────────────────────────── */}
       {actor.employee_key && (
         <Card variant="raised" title="Yours to do">
@@ -245,4 +247,116 @@ function describe(actor) {
   if (held.length === 1 && held[0] === "CONTROLLER")
     return "Classification, the seal, and the rate that follows from it — in that order, which is the order the audit file rests on.";
   return `Your own time and documents, plus ${held.length} portfolios: ${held.join(", ")}.`;
+}
+
+
+/* What this person owes, rather than what is outstanding in general.
+ *
+ * The worklist has always known what is undone and never whose job it is, so
+ * every screen showed everybody the same list. That is a dashboard, not a
+ * morning. Heidi should open the application and see that the buildings have
+ * no square footage against them; Stephanie should see which of the people on
+ * her projects have not signed for their own effort.
+ *
+ * A CONTROLLER holds every portfolio, so they see everything. That is what
+ * the portfolio means rather than a special case — and it is why the card
+ * says whose work each row is, even to somebody who holds all of them. */
+
+const KIND_LABEL = {
+  UNCLASSIFIED: ["Cost to classify", "In scope, with no live decision"],
+  BLOCKS_SEAL: ["Judgments that block the seal", "Graded unsupported"],
+  STALE_DECISION: ["Stale decisions", "The line moved underneath the judgment"],
+  NEEDS_EVIDENCE: ["Judgments with no document", "Federally chargeable, nothing cited"],
+  NEEDS_CERTIFICATION: ["Effort not yet certified", "Only the person whose effort it was can sign"],
+  EMPLOYMENT_UNKNOWN: ["Employment terms missing", "No weekly hours to measure a timesheet against"],
+  SPACE_UNMEASURED: ["Square footage not on file", "The facilities carve-out is sized by area"],
+  SPACE_UNATTRIBUTED: ["Space with nobody in it", "Measured, but no partition saying who uses it"],
+  FACILITY_UNPARTITIONED: ["Buildings not partitioned", "No space schedule, no carve-out"],
+  ASSET_FUNDING_UNKNOWN: ["Assets with no funding source", "Depreciation reads as fully allowable"],
+  INVOICE_NO_INDIRECT: ["Invoices billing no indirect", "Recovery forgone on the face of it"],
+  INVOICE_NO_AWARD: ["Invoices with no award", "No ceiling to test against"],
+  CHARGE_CODE_UNASSIGNED: ["Codes with nobody assigned", "Hours booked that nobody authorised"],
+};
+
+const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
+
+function MyWork({ actor }) {
+  const [d, setD] = useState(null);
+  useEffect(() => { api.myWorklist().then(setD).catch(() => {}); }, []);
+  if (!d || (!d.groups.length && !d.certification_chase.length)) return null;
+
+  const everything = (actor.portfolios || []).includes("CONTROLLER");
+
+  return (
+    <Card variant="raised" title="What is waiting on you"
+          aside={everything
+            ? "You hold CONTROLLER, so this is everything — each row says whose work it is"
+            : `Routed to ${d.portfolios.join(", ")}`}>
+      <Table columns={[
+        { label: "", align: "left", width: "28px" },
+        { label: "What", align: "left" },
+        { label: "Items" }, { label: "Amount" },
+        { label: "Whose", align: "left" },
+        { label: "", align: "left", width: "110px" },
+      ]}>
+        {d.groups.map((g) => {
+          const [label, note] = KIND_LABEL[g.kind] || [g.kind, ""];
+          return (
+            <tr key={g.kind}>
+              <td className="l">
+                <Tick state={g.severity === "BLOCKING" ? "failed"
+                             : g.severity === "HIGH" ? "flagged" : "open"} />
+              </td>
+              <td className="l">
+                <strong>{label}</strong>
+                <div className="rowsub">{note}</div>
+              </td>
+              <td className="amt">{g.items}</td>
+              <td className="amt">
+                {Number(g.amount || 0) ? money(g.amount)
+                                       : <span className="rowsub">—</span>}
+              </td>
+              <td className="l"><Pill>{g.owner_portfolio}</Pill></td>
+              <td className="l">
+                <Link className="btn sm" to={g.goes_to}>Open</Link>
+              </td>
+            </tr>
+          );
+        })}
+      </Table>
+
+      {d.certification_chase.length > 0 && (
+        <>
+          <div className="card-title" style={{ margin: "18px 0 4px" }}>
+            People to chase
+          </div>
+          <div className="rowsub" style={{ marginBottom: 10 }}>
+            You cannot sign these — 2 CFR 200.430(i) wants the signature of
+            the person whose effort it was. What you can do is go and ask,
+            and this is who, on which work.
+          </div>
+          <Table columns={[
+            { label: "Work", align: "left" }, { label: "Contract", align: "left" },
+            { label: "People" }, { label: "Wages" }, { label: "Stale" },
+          ]}>
+            {d.certification_chase.map((c) => (
+              <tr key={c.objective_id}>
+                <td className="l">
+                  <strong>{c.objective_id}</strong>
+                  <div className="rowsub">{c.objective_label}</div>
+                </td>
+                <td className="l rowsub">{c.award_id || "—"}</td>
+                <td className="amt">{c.people}</td>
+                <td className="amt">{money(c.wages)}</td>
+                <td className="amt">
+                  {c.stale ? <span className="warnish">{c.stale}</span>
+                           : <span className="rowsub">—</span>}
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </>
+      )}
+    </Card>
+  );
 }

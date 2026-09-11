@@ -52,6 +52,9 @@ run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 step "The income side — charge codes, contracts, milestones, money in"
 run "drive_contracts" $PY scripts/drive_contracts.py --base "$BASE"
 
+step "The same chain, walked backwards"
+run "drive_reverse" $PY scripts/drive_reverse.py --base "$BASE"
+
 step "The boundaries"
 run "drive_access" $PY scripts/drive_access.py --base "$BASE"
 run "drive_actors" $PY scripts/drive_actors.py --base "$BASE"

@@ -60,6 +60,9 @@ export const api = {
   certificationFor: (key) => req(`/certify/${encodeURIComponent(key)}`),
   auditPackageUrl: (period = "2025") => `/api/export/audit-package?period=${period}`,
 
+  // What this person owes, rather than what is outstanding in general.
+  myWorklist: (period = "2025") => req(`/dashboard/worklist/mine?period=${period}`),
+
   // Contracts and charge codes — the income side.
   contracts: (period = "2025") => req(`/contracts?period=${period}`),
   contract: (id, period = "2025") => req(`/contracts/${encodeURIComponent(id)}?period=${period}`),

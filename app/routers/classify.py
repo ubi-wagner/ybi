@@ -34,6 +34,8 @@ from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
 from app.auth import Actor
 from app.db import execute, one, query, transaction
 from app.domain.advice import GroupFacts, advise
+from app.domain.chart import pool_for
+from app.domain.crosswalk import CROSSWALK
 from app.domain.segment import Part, SegmentError, plan_segments
 
 router = APIRouter(prefix="/classify", tags=["classify"],
@@ -258,6 +260,40 @@ def propose(g: GroupOut) -> dict | None:
         return {**prior, "grade": "CORROBORATED", "citation": None,
                 "rationale": f"Consistent with the prior-year treatment of {g.account}",
                 "source": "prior_year", "confidence": "medium"}
+
+    # The 2026 crosswalk, which is a mapping somebody already built and
+    # reviewed: every one of the 85 accounts in the 2025 chart against the
+    # account number it becomes, and `pool_for()` reads the pool off that
+    # number. Sixty-one map one-to-one and are a real signal.
+    #
+    # The other twenty-four are splits — depreciation by square footage,
+    # wages by timesheet — and those return nothing. A split needs a
+    # documented driver, which is a judgment with a person's name on it, and
+    # proposing one side of it would be inventing the driver.
+    leaf = (g.account or "").rsplit(":", 1)[-1].strip()
+    mapped = CROSSWALK.get(leaf)
+    if mapped and "/" not in mapped[0]:
+        try:
+            pool = pool_for(mapped[0]).value
+        except Exception:                          # noqa: BLE001
+            pool = None
+        if pool:
+            return {
+                "pool": pool,
+                # The 990 function and the federal treatment do not fall out
+                # of an account number, so they stay at the safe reading and
+                # the person confirming sets them. A proposal that guesses
+                # the function would put cost in a column of the return
+                # nobody chose.
+                "function_990": "PROGRAM" if pool in ("DIRECT", "OVERHEAD")
+                                else "NOT_APPLICABLE",
+                "federal": "PENDING",
+                "objective_id": None,
+                "grade": "CORROBORATED",
+                "citation": "2026 chart crosswalk",
+                "rationale": (f"The 2026 crosswalk maps {leaf} to account "
+                              f"{mapped[0]}, which is a {pool} account"),
+                "source": "crosswalk", "confidence": "medium"}
 
     return None
 
