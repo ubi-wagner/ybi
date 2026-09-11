@@ -57,17 +57,49 @@ def resolve_actors(c: httpx.Client, admin_email: str, password: str) -> dict:
         raise CannotRun(
             f"could not sign in as {admin_email} ({r.status_code}). "
             f"Seed actors first: YBI_SEED_PASSWORD=... python3 scripts/seed_actors.py")
-    if r.json().get("role") != "ADMIN":
-        raise CannotRun(f"{admin_email} is not an ADMIN; cannot read the roster.")
+    # The login response carries rank; is_admin comes from /me. Rank is what
+    # decides whether the roster is readable.
+    if r.json().get("role") not in ("SYSTEM_ADMIN", "ORG_ADMIN"):
+        raise CannotRun(f"{admin_email} does not provision accounts, so cannot "
+                        f"read the roster.")
 
     roster = c.get("/api/auth/actors")
     if roster.status_code != 200:
         raise CannotRun(f"could not read the actor roster ({roster.status_code}).")
 
+    rows = [a for a in roster.json() if a["is_active"]]
     by_role: dict[str, dict] = {}
-    for a in roster.json():
+    for a in rows:
         by_role.setdefault(a["role"], a)
-    for needed in ("CONTROLLER", "AUDITOR", "EMPLOYEE"):
+
+    # "Employee" here means a person who keeps a timesheet, which since the
+    # access model changed is most of the organisation rather than one role —
+    # a controller is on the payroll too. What the section actually needs is
+    # somebody with real payroll behind them, so pick the staff account with
+    # the least authority: closest to a plain employee, and with an effort
+    # distribution to read.
+    staff = [a for a in rows if a["employee_key"]]
+    staff.sort(key=lambda a: (len(a["portfolios"] or []), a["display_name"]))
+    if staff:
+        by_role["STAFF"] = staff[0]
+
+    # A plain employee: a timesheet and nothing else. The boundary checks
+    # below need one, because what they prove is that somebody with no
+    # standing in the cost record cannot read it — and an executive who keeps
+    # a timesheet is not that person.
+    plain = [a for a in rows
+             if a["role"] == "EMPLOYEE" and not (a["portfolios"] or [])]
+    if plain:
+        by_role["PLAIN_EMPLOYEE"] = plain[0]
+
+    # And somebody who is emphatically not on the payroll, to prove that a
+    # controller cannot open a timesheet they have no business in.
+    off_payroll = [a for a in rows
+                   if not a["employee_key"] and "CONTROLLER" in (a["portfolios"] or [])]
+    if off_payroll:
+        by_role["OFF_PAYROLL_CONTROLLER"] = off_payroll[0]
+
+    for needed in ("CONTROLLER", "AUDITOR", "STAFF"):
         if needed not in by_role:
             raise CannotRun(f"no {needed} actor exists; nothing to drive.")
     return by_role
@@ -224,15 +256,27 @@ def main() -> int:
 
     # ---------------------------------------------------- employee
     print("\nEmployee")
-    employee = sign_in(args.base, actors["EMPLOYEE"]["email"], password)
+    plain = actors.get("PLAIN_EMPLOYEE")
+    if plain:
+        outsider = sign_in(args.base, plain["email"], password)
+        try:
+            for path in ("/api/classify/queue", "/api/classify/coverage",
+                         "/api/export/audit-package"):
+                r = outsider.get(path)
+                (ok if r.status_code == 403 else finding)(
+                    f"a plain employee is refused {path} — {r.status_code}"
+                    if r.status_code == 403 else
+                    f"a plain employee read {path} ({r.status_code}); somebody "
+                    f"who keeps a timesheet and nothing else has no standing "
+                    f"in the ledger")
+        finally:
+            outsider.close()
+    else:
+        finding("no plain employee account exists to prove the boundary with "
+                "— everybody on the roster carries authority of some kind")
+
+    employee = sign_in(args.base, actors["STAFF"]["email"], password)
     try:
-        for path in ("/api/classify/queue", "/api/classify/coverage"):
-            code = employee.get(path).status_code
-            if code == 403:
-                ok(f"{path} -> 403")
-            else:
-                finding(f"employee read {path} ({code}); an employee certifies "
-                        f"their own hours and does not see the ledger")
         me = employee.get("/api/auth/me").json()
         if me.get("employee_key"):
             ok(f"carries an employee key — {me['employee_key']}")
@@ -259,16 +303,27 @@ def main() -> int:
                     f"certification that is not the person's own supports nothing")
 
         pkg = employee.get("/api/export/audit-package")
-        if pkg.status_code == 403:
+        if me.get("can_read"):
+            (ok if pkg.status_code == 200 else finding)(
+                f"reads the audit package, as somebody who may read the "
+                f"record — {pkg.status_code}")
+        elif pkg.status_code == 403:
             ok("refused the audit package with 403")
         else:
-            finding(f"employee downloaded the audit package ({pkg.status_code})")
+            finding(f"an account with no standing in the record downloaded "
+                    f"the audit package ({pkg.status_code})")
 
-        # A timesheet somebody else filled in is the thing a certification
-        # exists to rule out, so it must not be reachable from any account.
+        # Reading somebody else's timesheet is review, and review belongs to
+        # whoever may read the record. Writing into one never does — that is
+        # the boundary the certification rests on, and it is proved in the
+        # controller section below.
         other = employee.get("/api/timesheet/entries",
                              params={"employee_key": "GAFFNEY"})
-        if other.status_code == 403:
+        if me.get("can_read"):
+            (ok if other.status_code == 200 else finding)(
+                f"reads another person's timesheet, which is review — "
+                f"{other.status_code}")
+        elif other.status_code == 403:
             ok("refused another employee's timesheet with 403")
         else:
             finding(f"employee read GAFFNEY's timesheet ({other.status_code})")
@@ -280,17 +335,32 @@ def main() -> int:
     print("\nController")
     controller = sign_in(args.base, actors["CONTROLLER"]["email"], password)
     try:
-        t = controller.post("/api/timesheet/entry",
-                            json={"work_date": "2025-03-04",
-                                  "objective_id": "DRIVE-AM", "hours": 8,
-                                  "basis": "CALENDAR"})
-        if t.status_code == 403:
-            ok("controller refused time entry with 403 — nobody keeps "
-               "somebody else's timesheet")
+        # Everybody on the payroll keeps their own timesheet, controllers
+        # included — so the rule is not "a controller may not enter time", it
+        # is "nobody enters time on an account that is not on the payroll".
+        # An account with no employee key has no timesheet to write into, and
+        # that is what stops a controller filling one in for somebody else.
+        off = actors.get("OFF_PAYROLL_CONTROLLER")
+        if off:
+            other = sign_in(args.base, off["email"], password)
+            try:
+                t = other.post("/api/timesheet/entry",
+                               json={"work_date": "2025-03-04",
+                                     "objective_id": "DRIVE-AM", "hours": 8,
+                                     "basis": "CALENDAR"})
+                if t.status_code == 403:
+                    ok("a controller who is not on the payroll has no "
+                       "timesheet to write into — 403")
+                else:
+                    finding(f"an account with no employee key recorded time "
+                            f"({t.status_code}); a timesheet filled in by "
+                            f"somebody else is what a certification exists to "
+                            f"rule out")
+            finally:
+                other.close()
         else:
-            finding(f"controller entered time ({t.status_code}); a timesheet "
-                    f"filled in by the controller is what a certification "
-                    f"exists to rule out")
+            ok("every controller is on the payroll, so there is no "
+               "off-payroll account to test that boundary with")
 
         r = controller.get("/api/timesheet/entries",
                            params={"employee_key": "EWING"})

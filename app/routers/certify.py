@@ -21,7 +21,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.audit import record
-from app.auth import Actor, Role, current_actor, require_reader
+from app.auth import (Actor, Portfolio, current_actor, require_own_writes,
+                      require_reader)
 from app.db import one, query, transaction
 from app.settings import settings
 
@@ -94,7 +95,7 @@ def mine(period: str = None, actor: Actor = Depends(current_actor)) -> dict:
 
 @router.post("/sign")
 def sign(body: SignIn_, request: Request,
-         actor: Actor = Depends(current_actor)) -> dict:
+         actor: Actor = Depends(require_own_writes)) -> dict:
     """Sign an effort distribution.
 
     An EMPLOYEE may sign only their own. A SUPERVISOR signature is a separate
@@ -104,8 +105,16 @@ def sign(body: SignIn_, request: Request,
     period = body.period or settings.period
 
     if body.as_supervisor:
-        if actor.role is not Role.CONTROLLER:
-            raise HTTPException(403, "Only a supervisor may certify on that basis.")
+        # Certifying somebody else's effort is a judgment about work you
+        # have firsthand knowledge of, so it follows the portfolio rather
+        # than rank: a project manager knows who worked on their project,
+        # and an administrator who provisions accounts does not.
+        if not actor.holds(Portfolio.CONTROLLER, Portfolio.PROJECT):
+            raise HTTPException(
+                403, "Certifying on somebody else's behalf needs the "
+                     "CONTROLLER or PROJECT portfolio — 2 CFR 200.430(i) "
+                     "wants a signature from someone with firsthand "
+                     "knowledge of the work.")
         role = "SUPERVISOR"
         statement = SUPERVISOR_STATEMENT
     else:

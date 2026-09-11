@@ -14,7 +14,7 @@ from fastapi import Depends, APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from app.auth import require_controller, require_reader
+from app.auth import require_office, require_reader
 from app.audit import record
 from app.auth import Actor
 from app.db import execute, one, query
@@ -39,7 +39,7 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                  target_type: str | None = Form(None),
                  target_id: str | None = Form(None),
                  relevance: str = Form(""),
-                 actor: Actor = Depends(require_controller)) -> dict:
+                 actor: Actor = Depends(require_office)) -> dict:
     # Identity comes from the session, not the form. uploaded_by is kept for
     # the case where a document is received on someone else's behalf, but it
     # is a label, not a claim about who did this.
@@ -56,10 +56,12 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
         dest.write_bytes(raw)
         eid = f"EV-{sha[:12]}"
         execute("""INSERT INTO evidence (evidence_id,period,kind,uri,sha256,
-                                         received_from,byte_size,mime_type,ingest_channel)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD')""",
+                                         received_from,byte_size,mime_type,
+                                         ingest_channel,uploaded_by)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s)""",
                 (eid, period, kind, str(dest), sha, uploaded_by,
-                 len(raw), file.content_type or "application/octet-stream"))
+                 len(raw), file.content_type or "application/octet-stream",
+                 actor.actor_id))
 
     attached = 0
     if target_type and target_id:
@@ -197,7 +199,7 @@ def for_target(target_type: str, target_id: str) -> dict:
 
 @router.post("/note")
 def add_note(body: NoteIn,
-             actor: Actor = Depends(require_controller)) -> dict:
+             actor: Actor = Depends(require_office)) -> dict:
     r = one("""INSERT INTO note (target_type,target_id,body,author,is_workpaper)
                VALUES (%s,%s,%s,%s,%s) RETURNING note_id""",
             (body.target_type, body.target_id, body.body,

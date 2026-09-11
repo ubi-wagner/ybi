@@ -23,7 +23,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.audit import record
-from app.auth import Actor, Role, current_actor, require_controller
+from app.auth import (Actor, Role, current_actor, require_controller,
+                      require_own_writes)
 from app.db import one, query, transaction
 from app.settings import settings
 from app.vocab import EmploymentStatus, TimeBasis
@@ -100,7 +101,7 @@ def _employee(actor: Actor, employee_key: str | None) -> str:
     is always the employee's own.
     """
     if employee_key and employee_key != actor.employee_key:
-        if actor.role in (Role.CONTROLLER, Role.AUDITOR, Role.ADMIN):
+        if actor.can_read:
             return employee_key
         raise HTTPException(403, "You may only see your own timesheet.")
     if not actor.employee_key:
@@ -175,7 +176,7 @@ def entries(period: str = None, employee_key: str = None,
 
 @router.post("/entry")
 def put_entry(body: EntryIn, period: str = None,
-              actor: Actor = Depends(current_actor)) -> dict:
+              actor: Actor = Depends(require_own_writes)) -> dict:
     """Record time against one day and one objective.
 
     Correcting an entry supersedes it rather than editing it, the same way a
@@ -306,7 +307,7 @@ def put_entry(body: EntryIn, period: str = None,
 
 @router.post("/entry/remove")
 def remove_entry(body: RemoveIn, period: str = None,
-                 actor: Actor = Depends(current_actor)) -> dict:
+                 actor: Actor = Depends(require_own_writes)) -> dict:
     """Take an entry off the timesheet.
 
     It is superseded, not deleted. A timesheet where hours can vanish without
@@ -368,7 +369,7 @@ def coverage(period: str = None, employee_key: str = None,
 
 @router.post("/submit")
 def submit(body: SubmitIn, period: str = None,
-           actor: Actor = Depends(current_actor)) -> dict:
+           actor: Actor = Depends(require_own_writes)) -> dict:
     """Call the timesheet finished for the period.
 
     Until this happens the sheet is a work in progress and the controller's
@@ -469,7 +470,7 @@ def submit(body: SubmitIn, period: str = None,
 
 @router.post("/withdraw")
 def withdraw(body: WithdrawIn, period: str = None,
-             actor: Actor = Depends(current_actor)) -> dict:
+             actor: Actor = Depends(require_own_writes)) -> dict:
     """Take a submission back, with a reason.
 
     The submission stays on the record marked withdrawn. The distribution
@@ -567,7 +568,7 @@ def roster(period: str = None,
     never is.
     """
     period = period or settings.period
-    if actor.role not in (Role.CONTROLLER, Role.AUDITOR, Role.ADMIN):
+    if not actor.can_read:
         raise HTTPException(403, "The roster is for whoever reviews the record.")
     return query("""
         SELECT a.employee_key,

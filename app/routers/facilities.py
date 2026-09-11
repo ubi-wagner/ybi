@@ -23,7 +23,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.audit import record
-from app.auth import Actor, require_controller, require_reader
+from app.auth import (Actor, require_facilities, require_inventory,
+                      require_reader)
 from app.db import execute, one, query
 from app.settings import settings
 from app.vocab import AccessPolicy, InKindKind, OccupancyStatus, SpaceUse
@@ -106,7 +107,7 @@ def facilities(period: str = None) -> dict:
 
 @router.put("")
 def put_facility(body: FacilityIn, period: str = None,
-                 actor: Actor = Depends(require_controller)) -> dict:
+                 actor: Actor = Depends(require_facilities)) -> dict:
     period = period or settings.period
     execute("""INSERT INTO facility
                  (facility_id, period, name, code, address, owned, landlord,
@@ -161,7 +162,7 @@ def space(period: str = None, facility_id: str = None) -> dict:
 
 @router.put("/space")
 def put_unit(body: UnitIn, period: str = None,
-             actor: Actor = Depends(require_controller)) -> dict:
+             actor: Actor = Depends(require_facilities)) -> dict:
     period = period or settings.period
     if not one("SELECT 1 FROM facility WHERE facility_id = %s AND period = %s",
                (body.facility_id, period)):
@@ -218,7 +219,7 @@ def equipment(period: str = None) -> dict:
 
 @router.post("/equipment/use")
 def put_equipment_use(body: EquipmentUseIn, period: str = None,
-                      actor: Actor = Depends(require_controller)) -> dict:
+                      actor: Actor = Depends(require_inventory)) -> dict:
     """Record that somebody used a machine, and what they were charged.
 
     The unit of the equipment subsidy, and a better driver for lab cost than
@@ -265,7 +266,7 @@ def in_kind(period: str = None) -> dict:
 
 @router.post("/in-kind")
 def put_in_kind(body: InKindIn, period: str = None,
-                actor: Actor = Depends(require_controller)) -> dict:
+                actor: Actor = Depends(require_inventory)) -> dict:
     """Record an in-kind item.
 
     The schema refuses to mark YBI's own subsidy as cost share, and refuses

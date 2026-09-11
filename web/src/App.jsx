@@ -13,6 +13,10 @@ import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
 import Imports from "./pages/Imports.jsx";
 import Reconcile from "./pages/Reconcile.jsx";
+import MyDocuments from "./pages/MyDocuments.jsx";
+import People from "./pages/People.jsx";
+import Home from "./pages/Home.jsx";
+import FirstPassword from "./components/FirstPassword.jsx";
 import Evidence from "./pages/Evidence.jsx";
 import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
@@ -24,26 +28,49 @@ import Awards from "./pages/Awards.jsx";
    package. Someone who has seen the workpapers already knows where they are.
    The dashboard has no schedule letter because it prints as nothing — it is
    where the work is picked up, not part of the package. */
-const EMPLOYEE_TABS = [
-  ["/timesheet", "My time",    "·"],
-  ["/certify",   "My effort",  "·"],
-  ["/help",      "Help",       "?"],
+/* The nav is assembled rather than switched. Everybody in the organisation
+   keeps a timesheet and has somewhere to put documents, controllers
+   included — so those tabs are not an employee's consolation prize, they are
+   the part of the system that belongs to the person rather than to a
+   portfolio. What gets added on top is whatever they actually hold.
+
+   Showing a tab that answers 403 is worse than not showing it: it reads as a
+   system that does not know who you are. */
+
+//: [path, label, schedule, needs]
+//: needs — null for everyone, "staff" for anyone on the payroll,
+//: "admin" for a provisioner, otherwise a portfolio name.
+const ALL_TABS = [
+  ["/",          "Home",       "·",   null],
+  ["/timesheet", "My time",    "G",   "staff"],
+  ["/certify",   "My effort",  "G",   "staff"],
+  ["/documents", "Documents",  "E",   null],
+  ["/people",    "People",     "·",   "admin"],
+  ["/imports",   "Import",     "A",   "CONTROLLER"],
+  ["/reconcile", "Reconcile",  "A-1", "CONTROLLER"],
+  ["/chart",     "Chart",      "H",   "CONTROLLER"],
+  ["/classify",  "Classify",   "B",   "CONTROLLER"],
+  ["/evidence",  "Evidence",   "E",   "OFFICE"],
+  ["/space",     "Space",      "I",   "FACILITIES"],
+  ["/inventory", "Inventory",  "I",   "INVENTORY"],
+  ["/awards",    "Awards",     "F",   "PROJECT"],
+  ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
+  ["/rates",     "Rates",      "D",   "CONTROLLER"],
+  ["/help",      "Help",       "?",   null],
 ];
 
-const TABS = [
-  ["/",          "Dashboard",  "·"],
-  ["/imports",   "Import",     "A"],
-  ["/reconcile", "Reconcile",  "A-1"],
-  ["/chart",     "Chart",      "H"],
-  ["/classify",  "Classify",   "B"],
-  ["/evidence",  "Evidence",   "E"],
-  ["/timesheet", "Time",       "G"],
-  ["/space",     "Space",      "I"],
-  ["/lanes",     "Lanes",      "C"],
-  ["/rates",     "Rates",      "D"],
-  ["/awards",    "Awards",     "F"],
-  ["/help",      "Help",       "?"],
-];
+function tabsFor(actor) {
+  const held = new Set(actor.portfolios || []);
+  return ALL_TABS.filter(([, , , needs]) => {
+    if (!needs) return true;
+    if (needs === "staff") return Boolean(actor.employee_key);
+    if (needs === "admin") return Boolean(actor.is_admin);
+    // An auditor reads the whole record and writes none of it, so the
+    // reviewing screens are theirs even with no portfolio.
+    if (actor.role === "AUDITOR") return true;
+    return held.has(needs);
+  });
+}
 
 export default function App() {
   /* undefined = still asking, null = signed out, object = signed in. The three
@@ -79,10 +106,23 @@ export default function App() {
   if (actor === undefined) return null;
   if (actor === null) return <SignIn onSignedIn={setActor} />;
 
-  /* An employee account exists to certify one person's effort and sees
-     nothing else. Giving it the controller's tabs would show a wall of 403s
-     and imply the ledger was theirs to look at. */
-  const isEmployee = actor.role === "EMPLOYEE";
+  /* Before anything else. An account still on a password somebody else
+     chose cannot record anything — the API refuses it — so putting the rest
+     of the application in front of that would be showing somebody a set of
+     screens they cannot use. This is the first thing a new person sees, and
+     it is over in one step. */
+  if (actor.must_set_password) {
+    return (
+      <ToastHost>
+        <FirstPassword actor={actor} onDone={check} onSignOut={async () => {
+          try { await api.logout(); } catch { /* going either way */ }
+          setActor(null);
+        }} />
+      </ToastHost>
+    );
+  }
+
+  const tabs = tabsFor(actor);
 
   async function signOut() {
     try { await api.logout(); } catch { /* the cookie is going either way */ }
@@ -97,7 +137,12 @@ export default function App() {
           <span className="period-chip">Cost allocation · 2025</span>
           <span className="topbar-actor">
             {actor.display_name}
-            <span className="role-chip">{actor.role}</span>
+            <span className="role-chip" title={
+              (actor.portfolios || []).length
+                ? `Portfolios: ${actor.portfolios.join(", ")}`
+                : "No portfolio — this account judges nothing"}>
+              {actor.role.replace("_", " ")}
+            </span>
             <button className="btn quiet" onClick={() => setShowTrail(true)}>
               Undo
             </button>
@@ -117,7 +162,7 @@ export default function App() {
         )}
 
         <nav className="tabs">
-          {(isEmployee ? EMPLOYEE_TABS : TABS).map(([to, label, sched]) => (
+          {tabs.map(([to, label, sched]) => (
             <NavLink
               key={to}
               to={to}
@@ -131,7 +176,10 @@ export default function App() {
         </nav>
 
         <Routes>
-          <Route path="/" element={isEmployee ? <Timesheet actor={actor} /> : <Dashboard />} />
+          <Route path="/" element={<Home actor={actor} />} />
+          <Route path="/documents" element={<MyDocuments actor={actor} />} />
+          <Route path="/people" element={<People actor={actor} />} />
+          <Route path="/inventory" element={<Facilities actor={actor} tab="equipment" />} />
           <Route path="/timesheet" element={<Timesheet actor={actor} />} />
           <Route path="/certify" element={<Certify />} />
           <Route path="/help" element={<Help />} />

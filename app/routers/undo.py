@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.audit import record
-from app.auth import Actor, Role, current_actor
+from app.auth import Actor, Role, current_actor, require_own_writes
 from app.db import one, query, transaction
 
 router = APIRouter(prefix="/undo", tags=["undo"])
@@ -58,7 +58,7 @@ def _may_undo(actor: Actor, row: dict) -> str | None:
     if row["action"] in PERSONAL:
         return (f"{row['label'].lower()} belongs to {row['actor']} — a record "
                 f"somebody else made is not yours to withdraw")
-    if row["action"] in CONTROLLER_SCOPE and actor.role is Role.CONTROLLER:
+    if row["action"] in CONTROLLER_SCOPE and actor.may_seal:
         return None
     return "only the person who did this, or the controller, may walk it back"
 
@@ -75,7 +75,7 @@ def recent(limit: int = Query(20, ge=1, le=100), mine: bool = True,
         rows = query("""SELECT * FROM v_undoable WHERE actor_id = %s
                          ORDER BY occurred_at DESC LIMIT %s""",
                      (actor.actor_id, limit))
-    elif actor.role in (Role.CONTROLLER, Role.ADMIN, Role.AUDITOR):
+    elif actor.can_read:
         rows = query("""SELECT * FROM v_undoable
                          ORDER BY occurred_at DESC LIMIT %s""", (limit,))
     else:
@@ -265,7 +265,7 @@ def _undo_time(cur, actor: Actor, row: dict, reason: str) -> str:
 
 
 @router.post("")
-def undo(body: UndoIn, actor: Actor = Depends(current_actor)) -> dict:
+def undo(body: UndoIn, actor: Actor = Depends(require_own_writes)) -> dict:
     """Walk back specific entries, or the last N of your own actions.
 
     Newest first, always: undoing out of order would put a value back that a

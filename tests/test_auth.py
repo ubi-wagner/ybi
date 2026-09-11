@@ -18,7 +18,7 @@ os.environ.setdefault(
     "YBI_JWT_SECRET",
     "test-secret-not-for-deployment-padded-to-the-minimum-length")
 
-from app.auth import (READERS, WRITERS, Actor, AuthNotConfigured, Role,
+from app.auth import (ADMINS, READERS, Actor, AuthNotConfigured, Portfolio, Role,
                       hash_password, issue_token, jwt_secret, read_token,
                       verify_password)
 
@@ -106,7 +106,8 @@ def test_short_secret_fails_closed(monkeypatch):
 
 
 def test_only_the_controller_writes():
-    assert WRITERS == {Role.CONTROLLER}
+    assert Actor('a', 'e', 'n', Role.CONTROLLER, 's',
+                 portfolios=frozenset({Portfolio.CONTROLLER})).can_write
 
 
 def test_the_auditor_reads_but_never_writes():
@@ -117,7 +118,7 @@ def test_the_auditor_reads_but_never_writes():
 
 def test_administering_people_is_not_making_cost_judgments():
     """ADMIN provisions actors and does not thereby acquire the write role."""
-    admin = Actor("a", "e", "n", Role.ADMIN, "s")
+    admin = Actor("a", "e", "n", Role.SYSTEM_ADMIN, "s")
     assert not admin.can_write
 
 
@@ -128,7 +129,9 @@ def test_an_employee_is_not_a_reader_of_the_whole_ledger():
 
 
 def test_readers_cover_exactly_the_roles_that_may_look():
-    assert READERS == {Role.CONTROLLER, Role.AUDITOR, Role.ADMIN}
+    assert READERS == {Role.CONTROLLER, Role.AUDITOR, Role.ORG_ADMIN}
+    # Standing the software up is not a reason to read the cost record.
+    assert Role.SYSTEM_ADMIN not in READERS
 
 
 # ----------------------------------------------------- certification scope

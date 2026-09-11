@@ -114,6 +114,39 @@ export const api = {
   reconcileItems: (period = "2025") => req(`/reconcile/items?period=${period}`),
   reconcileAliases: (period = "2025") => req(`/reconcile/aliases?period=${period}`),
   reconcilePropose: (period = "2025") => req(`/reconcile/propose?period=${period}`),
+  // People and access
+  actors: () => req("/auth/actors"),
+  rosterGaps: () => req("/auth/roster-gaps"),
+  createActor: (body) =>
+    req("/auth/actors", { method: "POST", body: JSON.stringify(body) }),
+  grantPortfolio: (id, portfolio, reason) =>
+    req(`/auth/actors/${id}/portfolios`,
+        { method: "POST", body: JSON.stringify({ portfolio, reason }) }),
+  revokePortfolio: (id, portfolio, reason) =>
+    req(`/auth/actors/${id}/portfolios/revoke`,
+        { method: "POST", body: JSON.stringify({ portfolio, reason }) }),
+  setActorActive: (id, is_active, reason) =>
+    req(`/auth/actors/${id}/active`,
+        { method: "POST", body: JSON.stringify({ is_active, reason }) }),
+  resetActorPassword: (id, new_password) =>
+    req(`/auth/actors/${id}/password`,
+        { method: "POST", body: JSON.stringify({ new_password }) }),
+
+  // My documents — the module everybody gets
+  myDocuments: () => req("/documents/mine"),
+  uploadDocument: async (form) => {
+    const res = await fetch("/api/documents/upload",
+                            { method: "POST", credentials: "same-origin", body: form });
+    if (res.status === 401) throw new Unauthorized("Not signed in");
+    if (res.status === 403) throw new Forbidden(await res.text());
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+  documentInbox: (period = "2025") =>
+    req(`/documents/inbox?period=${period}`),
+  attachDocument: (body) =>
+    req("/documents/attach", { method: "POST", body: JSON.stringify(body) }),
+
   addReconcilingItem: (body) =>
     req("/reconcile/items", { method: "POST", body: JSON.stringify(body) }),
   retractReconcilingItem: (id, reason) =>

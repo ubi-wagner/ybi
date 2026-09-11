@@ -12,6 +12,10 @@ web/dist/
 # Raw client uploads — never commit. Route PII to the bucket.
 /intake/
 
+# Uploaded documents. Receipts, invoices and payroll records belong in the
+# bucket, not in an image that gets copied around.
+/var/
+
 # Local tooling
 .venv/
 .hypothesis/

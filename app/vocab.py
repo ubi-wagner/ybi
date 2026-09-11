@@ -104,6 +104,22 @@ class LaneKind(StrEnum):
     SANDBOX = "SANDBOX"
 
 
+class OrgRole(StrEnum):
+    SYSTEM_ADMIN = "SYSTEM_ADMIN"
+    ORG_ADMIN = "ORG_ADMIN"
+    CONTROLLER = "CONTROLLER"
+    EMPLOYEE = "EMPLOYEE"
+    AUDITOR = "AUDITOR"
+
+
+class PortfolioVocab(StrEnum):
+    CONTROLLER = "CONTROLLER"
+    INVENTORY = "INVENTORY"
+    PROJECT = "PROJECT"
+    FACILITIES = "FACILITIES"
+    OFFICE = "OFFICE"
+
+
 class ReconcilingKind(StrEnum):
     RECLASS_AFTER_EXPORT = "RECLASS_AFTER_EXPORT"
     TIMING = "TIMING"
@@ -127,4 +143,6 @@ MIRRORS = {
     "access_policy": AccessPolicy,
     "in_kind_kind": InKindKind,
     "reconciling_kind": ReconcilingKind,
+    "org_role": OrgRole,
+    "portfolio": PortfolioVocab,
 }

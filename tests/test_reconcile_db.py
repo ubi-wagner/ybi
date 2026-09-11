@@ -128,8 +128,12 @@ def test_the_balance_sheet_is_proved_off_the_ledger(cur):
     cur.execute("""SELECT count(*) AS n FROM v_gl_bs_account
                     WHERE period='2025' AND on_balance_sheet AND variance <> 0""")
     assert cur.fetchone()["n"] == 0
-    cur.execute("""SELECT count(*) AS n FROM v_gl_bs_account
+    cur.execute("""SELECT account, closing FROM v_gl_bs_account
                     WHERE period='2025' AND NOT on_balance_sheet
-                      AND NOT absent_because_zero""")
-    assert cur.fetchone()["n"] == 0, (
-        "an account the sheet omits has to close at zero in the ledger")
+                      AND NOT absent_because_zero
+                    ORDER BY abs(closing) DESC""")
+    stray = cur.fetchall()
+    assert not stray, (
+        "an account the sheet omits has to close at zero in the ledger, or be "
+        "matched to the name the sheet prints by a recorded alias: "
+        + "; ".join(f"{r['account']} closes at {r['closing']}" for r in stray))

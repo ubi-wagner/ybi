@@ -2,7 +2,7 @@
 
 from fastapi import Depends, APIRouter
 
-from app.auth import require_controller, require_reader
+from app.auth import require_project, require_reader
 from app.db import query
 
 router = APIRouter(prefix="/awards", tags=["awards"],

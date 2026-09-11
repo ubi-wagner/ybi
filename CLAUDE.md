@@ -47,6 +47,45 @@ separates a reconciling item from a plug. `/api/reconcile/propose` will find
 the lines for you when exactly one combination adds up, and proposes nothing
 at all when more than one would.
 
+## Who may do what
+
+Two axes, and keeping them apart is the point.
+
+**Rank** (`actor.role`) is the provisioning ladder and only runs downward:
+`SYSTEM_ADMIN` sets up the organisation's administrator, `ORG_ADMIN` sets up
+controllers and employees, and nobody provisions a peer or a superior. A
+database trigger enforces the same rule, so it holds when a handler is wrong.
+Rank says who creates accounts and nothing else — `SYSTEM_ADMIN` is
+deliberately *not* in `READERS`, because standing the software up is not a
+reason to read every employee's timesheet.
+
+**Portfolio** (`actor_portfolio`) is authority over part of the cost record,
+held as a set: `CONTROLLER`, `INVENTORY`, `PROJECT`, `FACILITIES`, `OFFICE`.
+A person holds the union of what they are granted. `CONTROLLER` is the main
+one and reaches everything; the narrow ones reach only their own area and
+**never add up to `CONTROLLER`** — only `CONTROLLER` may seal, unseal,
+compute a rate or restate. Nobody grants themselves a portfolio; the table
+refuses it and so does the handler.
+
+Two rules that fall out of this and are easy to break:
+
+- **Everybody on the payroll keeps a timesheet, controllers included.** The
+  nav is assembled from what an actor holds (`tabsFor` in `App.jsx`), not
+  switched on role. Never show a tab that will answer 403.
+- **An account on a password somebody else chose cannot write anything** —
+  not a classification, not a timesheet, not a certification, not a document.
+  `refuse_issued_password` covers the portfolio gates, the admin gate and
+  `require_own_writes`. The one exit is changing your own password. Adding a
+  write endpoint on bare `current_actor` reopens the hole.
+
+Everybody signed in can send a document in (`/api/documents`). Saying what a
+document *supports* is a judgment and needs `OFFICE`. That split is why the
+upload door can be open this wide.
+
+`scripts/provision.py` walks the whole ladder through the real API and prints
+a password sheet; `scripts/drive_access.py` proves all 39 boundaries against
+live rows.
+
 ## Layout
 
 ```
@@ -57,6 +96,7 @@ app/
   routers/
     classify.py      the queue — the screen that matters
     imports.py       QBO upload -> parse -> preview -> accept
+    documents.py     the document inbox everybody in the org gets
     reconcile.py     the three source documents against each other
     lanes.py         scenario lanes and build-up views
     rates.py         seal, unseal, current rates
@@ -219,6 +259,20 @@ In rough order of value:
   the ledger. The five accounts where the ledger and the P&L still differ are
   named, not netted — ten specific lines reclassified between the two
   exports. See PLAN.md, Phase 1.
+
+### Accounts and landing pages — done
+
+Migration `026`. `SYSTEM_ADMIN`/`ORG_ADMIN` rank, the five portfolios,
+`v_actor_access`, and `evidence.uploaded_by` with `v_evidence_inbox`. The SPA
+gained `Home.jsx` (one landing assembled from what you hold), `People.jsx`
+(the roster, provisioning, and the 40 payroll people with no account yet),
+`MyDocuments.jsx`, and `FirstPassword.jsx` in front of everything.
+
+One real bug came out of building the drive: the password gate covered
+portfolio and admin writes and left the three screens everybody actually uses
+wide open, so a newcomer could sign a 2 CFR 200.430(i) certification on the
+password an administrator had handed them an hour earlier.
+`require_own_writes` closes it.
 
 ## Current plan
 
