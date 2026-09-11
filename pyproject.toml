@@ -1,0 +1,14 @@
+# Not a packaging manifest — this repo is deployed as a container, not
+# installed as a distribution. It exists so that `pytest` finds `app` on the
+# import path without anyone having to remember `PYTHONPATH=.` first.
+#
+# Without it, `pytest -q` collects nothing but ModuleNotFoundError: the tests
+# live in tests/, pytest puts *that* directory on sys.path, and the repo root
+# — where `app` actually is — never gets there. It worked locally only
+# because scripts/prove.sh exports PYTHONPATH before running. CI ran bare
+# `pytest -q`, as CLAUDE.md tells a contributor to, and all eleven modules
+# failed to import.
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -207,10 +208,36 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
+#: A bcrypt hash is exactly 60 characters: "$2b$", a two-digit cost, "$",
+#: and 53 characters of salt and digest. Nothing shorter is a hash.
+_BCRYPT_HASH = re.compile(r"^\$2[aby]\$\d{2}\$.{53}$")
+
+
 def verify_password(password: str, password_hash: str) -> bool:
+    """False for a wrong password and false for a hash that is not one.
+
+    The shape is checked before bcrypt sees it. bcrypt 4.2.1's Rust backend
+    does not raise on a truncated hash — it panics, and a pyo3
+    PanicException descends from BaseException, so the `except (ValueError,
+    TypeError)` that used to stand here did not catch it. A corrupt or
+    truncated `actor.password_hash` therefore took /api/auth/login out with
+    a 500 instead of denying, which is both an outage and a disclosure: a
+    500 on one account and a clean 401 on every other one tells an
+    anonymous caller which row is damaged.
+
+    The guard below is the belt to this brace, and it deliberately does not
+    swallow KeyboardInterrupt or SystemExit.
+    """
+    if not _BCRYPT_HASH.match(password_hash or ""):
+        return False
     try:
         return bcrypt.checkpw(password.encode(), password_hash.encode())
     except (ValueError, TypeError):
+        return False
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException:                     # a panic out of the backend
+        log.exception("bcrypt refused a hash it should have rejected cleanly")
         return False
 
 

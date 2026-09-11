@@ -13,11 +13,25 @@ jobs:
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
         ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ybi_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
+
+      # The schema is the design document, so the tests that read it need it
+      # applied. test_vocab.py and test_reconcile_db.py skip themselves when
+      # DATABASE_URL is unset — which would be a quiet pass over the
+      # constraints and triggers that carry most of the invariants — so CI
+      # gives them a real database rather than letting them opt out.
+      - name: apply migrations
+        run: |
+          python -c "
+          from app.db import open_pool, run_migrations
+          open_pool()
+          print('applied:', ', '.join(run_migrations()))
+          "
+
       - run: pytest -q
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ybi_test
