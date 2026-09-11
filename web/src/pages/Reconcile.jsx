@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, money } from "../api.js";
-import { Card, Empty, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Empty, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* Schedule A-1 — the three source documents against each other.
  *
@@ -83,15 +83,12 @@ export default function Reconcile({ actor }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Reconciliation</h2>
-        <p className="lede">
-          Eleven points at which the general ledger, the profit and loss, the balance
+      <PageHead title="Reconciliation" schedule="A-1">
+        Eleven points at which the general ledger, the profit and loss, the balance
           sheet and the payroll register are required to agree. Run before anything is
           classified, because a reconciliation produced after the rate is one nobody
           can believe.
-        </p>
-      </div>
+      </PageHead>
 
       <div className="grid three">
         <Stat label="Cross-reference points" value={reg.controls.length} size="lg" />

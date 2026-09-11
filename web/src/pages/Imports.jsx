@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, money } from "../api.js";
-import { Card, Empty, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 const REPORTS = [
   ["GENERAL_LEDGER", "General Ledger", "The spine. Accrual, all accounts, full year."],
@@ -47,14 +47,11 @@ export default function Imports() {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Import from QuickBooks</h2>
-        <p className="lede">
-          Export as CSV where QuickBooks offers it — the Excel path merges cells and inserts
+      <PageHead title="Import from QuickBooks" schedule="A">
+        Export as CSV where QuickBooks offers it — the Excel path merges cells and inserts
           formatting rows. Nothing reaches the ledger until every account subtotal ties to
           QuickBooks' own printed totals.
-        </p>
-      </div>
+      </PageHead>
 
       <div className="grid two">
         {REPORTS.map(([key, label, why]) => (

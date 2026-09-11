@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { Card, Table, Empty, Pill, Stat, Field, useToast } from "../components/ui.jsx";
+import { Card, Empty, Field, PageHead, Pill, Stat, Table, useToast } from "../components/ui.jsx";
 
 const money = (v) =>
   v === null || v === undefined ? "—"
@@ -76,14 +76,9 @@ export default function Evidence({ actor }) {
 
   return (
     <div className="dash">
-      <div className="dash-head">
-        <div>
-          <h1>Evidence</h1>
-          <p className="quiet">
-            Schedule E · every document received for 2025, and what it supports
-          </p>
-        </div>
-      </div>
+      <PageHead title="Evidence" schedule="E">
+        Every document received for 2025, and what it supports.
+      </PageHead>
 
       {canWrite && (
       <Card title="Add a document" variant="raised">

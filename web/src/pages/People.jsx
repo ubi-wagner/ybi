@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, money } from "../api.js";
-import { Card, Drawer, Empty, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* The roster, and the two things an administrator actually does with it.
  *
@@ -56,14 +56,11 @@ export default function People({ actor }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>People</h2>
-        <p className="lede">
-          Who can sign in, what they may judge, and who let them in. An account
+      <PageHead title="People">
+        Who can sign in, what they may judge, and who let them in. An account
           is set up by somebody above it and never by a peer — and nobody,
           including you, grants themselves authority over the cost record.
-        </p>
-      </div>
+      </PageHead>
 
       <div className="grid four">
         <Stat label="Accounts" value={roster.length} size="lg"
@@ -109,7 +106,7 @@ export default function People({ actor }) {
             { label: "Rank", align: "left" },
             { label: "May judge", align: "left" },
             { label: "May read", align: "left" },
-            { label: "Account", align: "left" },
+            { label: "Account", align: "left", width: "320px" },
             { label: "", align: "left", width: "92px" },
           ]}>
             {roster.map((r) => {
@@ -152,7 +149,7 @@ export default function People({ actor }) {
                       </div>
                     )}
                   </td>
-                  <td className="l rowsub">
+                  <td className="l rowsub wrap">
                     {!r.email_confirmed && (
                       <div><strong>address unchecked</strong></div>
                     )}
@@ -163,9 +160,9 @@ export default function People({ actor }) {
                       ? <>timesheet {r.employee_key}</>
                       : <>no timesheet</>}
                     <div>
-                      let in by {r.provisioned_by_name || "seeding"} ·{" "}
+                      by {r.provisioned_by_name || "seeding"} ·{" "}
                       {r.last_login_at
-                        ? `last seen ${String(r.last_login_at).slice(0, 10)}`
+                        ? String(r.last_login_at).slice(0, 10)
                         : "never signed in"}
                     </div>
                   </td>

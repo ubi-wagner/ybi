@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
-import { Card, Table, Empty, Pill, Stat } from "../components/ui.jsx";
+import { Card, Empty, PageHead, Pill, Stat, Table } from "../components/ui.jsx";
 
 const money = (v) =>
   v === null || v === undefined ? "—"
@@ -48,23 +48,22 @@ export default function Certify() {
 
   return (
     <div className="dash">
-      <div className="dash-head">
-        <div>
-          <h1>Certify your effort</h1>
-          <p className="quiet">
-            Period {data.period} · {data.employee_key}
-          </p>
-        </div>
-        <div>
-          {status.certified && !status.stale && (
-            <Pill tone="good">Signed {when(status.signed_at)}</Pill>
-          )}
-          {status.certified && status.stale && (
-            <Pill tone="fail">Signature is stale</Pill>
-          )}
-          {!status.certified && <Pill tone="fail">Not yet signed</Pill>}
-        </div>
-      </div>
+      <PageHead
+        title="Certify your effort"
+        aside={
+          <>
+            {status.certified && !status.stale && (
+              <Pill tone="good">Signed {when(status.signed_at)}</Pill>
+            )}
+            {status.certified && status.stale && (
+              <Pill tone="fail">Signature is stale</Pill>
+            )}
+            {!status.certified && <Pill tone="fail">Not yet signed</Pill>}
+          </>
+        }>
+        Period {data.period} · {data.employee_key}. The signature only you can
+        give — 2 CFR 200.430(i) asks for the person whose effort it was.
+      </PageHead>
 
       {status.stale && (
         <Card variant="raised">

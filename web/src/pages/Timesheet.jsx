@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import { Card, Empty, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
+import { Card, Empty, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
 import TimeRoster from "./TimeRoster.jsx";
 
 /*
@@ -166,25 +166,23 @@ function Sheet({ actor, viewing, onBack }) {
 
   return (
     <div className="dash">
-      <div className="dash-head">
-        <div>
-          <h1>{viewing ? `${viewing}'s timesheet` : "Timesheet"}</h1>
-          <p className="quiet">
-            {data.employee_key} · {data.period} ·{" "}
-            {editable
-              ? "your own record of your own time"
-              : "read only — a timesheet is only ever kept by the person whose time it is"}
-            {viewing && (
-              <>{" · "}<button className="linkish" onClick={onBack}>back to the roster</button></>
-            )}
-          </p>
-        </div>
-        <div className="dash-seal">
-          {status.certified && !status.stale && <Pill tone="good">Certified</Pill>}
-          {status.certified && status.stale && <Pill tone="fail">Signature stale</Pill>}
-          {!status.certified && <Pill>Not yet certified</Pill>}
-        </div>
-      </div>
+      <PageHead
+        title={viewing ? `${viewing}'s timesheet` : "Timesheet"}
+        aside={
+          <>
+            {status.certified && !status.stale && <Pill tone="good">Certified</Pill>}
+            {status.certified && status.stale && <Pill tone="fail">Signature stale</Pill>}
+            {!status.certified && <Pill>Not yet certified</Pill>}
+          </>
+        }>
+        {data.employee_key} · {data.period} ·{" "}
+        {editable
+          ? "your own record of your own time"
+          : "read only — a timesheet is only ever kept by the person whose time it is"}
+        {viewing && (
+          <>{" · "}<button className="linkish" onClick={onBack}>back to the roster</button></>
+        )}
+      </PageHead>
 
       <Card variant="raised">
         <div className="stat-row">

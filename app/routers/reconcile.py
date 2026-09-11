@@ -35,6 +35,9 @@ def register(period: str | None = None) -> dict:
     """Every point the three documents are required to agree, and what is
     left at each."""
     period = period or settings.period
+    # `note` already carries what a NO DATA control is waiting on — the view
+    # folds it in as "Nothing to compare yet — this needs X." — so there is
+    # nothing extra to select. The column itself is internal to the view.
     controls = query("""SELECT control, basis, description, left_label, left_value,
                                right_label, right_value, variance, exceptions,
                                ties, evaluable, state, note

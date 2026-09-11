@@ -1,15 +1,18 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { Card, Empty, Meter, Pill, Stat, Table, useToast } from "../components/ui.jsx";
+import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 export default function Rates() {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [cov, setCov] = useState(null);
+  const [recon, setRecon] = useState(null);
 
   const load = useCallback(() => {
     api.rates().then(setData).catch(() => {});
     api.coverage().then(setCov).catch(() => {});
+    api.reconcile().then(setRecon).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -24,21 +27,27 @@ export default function Rates() {
   const pct = Number(cov?.pct_dollars || 0);
   const rates = data?.rates || [];
 
+  /* Two gates stand in front of a rate and only one of them is coverage.
+     The books have to agree with themselves first — POST /api/rates/compute
+     answers 409 while any cross-reference point is open — and this screen
+     used to say coverage was the only gate that mattered. It is the softer
+     of the two: sealing below 80% is a judgment, while an open control is a
+     refusal. Somebody could seal, ask for a rate, and meet a 409 explaining
+     a condition no screen had mentioned. */
+  const open = (recon?.controls || []).filter((c) => !c.ties);
+
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Rates</h2>
-        <p className="lede">
-          Sealing hashes every live classification and freezes the set. Only then can a rate
+      <PageHead title="Rates" schedule="D">
+        Sealing hashes every live classification and freezes the set. Only then can a rate
           be computed, and the rate carries the seal — so it can be shown to be a consequence
           of the judgments rather than a target they were fitted to.
-        </p>
-      </div>
+      </PageHead>
 
       <Card variant="raised">
         <div className="card-head">
           <div className="card-title">Before sealing</div>
-          <span className="rowsub">Coverage is the only gate that matters here</span>
+          <span className="rowsub">Two gates: the books must agree, and the queue should be finished</span>
         </div>
         <div className="stat-row" style={{ marginBottom: 14 }}>
           <Stat label="Dollar coverage" size="xl" value={`${pct.toFixed(1)}%`}
@@ -51,6 +60,39 @@ export default function Rates() {
             ? "The base is complete enough to seal."
             : "Sealing below 80% is allowed — an unfinished build should overstate rather than flatter — but finish the queue first if you can."}
         </div>
+
+        {recon && (
+          open.length === 0 ? (
+            <div className="rowsub gate ok" style={{ marginBottom: 14 }}>
+              <Tick state="done" /> The books agree with themselves — all{" "}
+              {(recon.controls || []).length} cross-reference points tie.
+            </div>
+          ) : (
+            <div className="gate bad" style={{ marginBottom: 14 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                <Tick state="failed" /> No rate can be computed yet
+              </div>
+              <div className="rowsub">
+                {open.length === 1 ? "One cross-reference point is" : `${open.length} cross-reference points are`}{" "}
+                not settled. A rate over a ledger that does not agree with its
+                own statements is a rate over the wrong numbers, so the
+                computation refuses rather than producing one.
+              </div>
+              <ul className="gate-list">
+                {open.map((c) => (
+                  <li key={c.control}>
+                    <strong>{c.control}</strong>
+                    <span className="rowsub">
+                      {" — "}{c.state === "NO DATA" ? c.note : c.description}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Link className="btn sm" to="/reconcile">Open Schedule A-1</Link>
+            </div>
+          )
+        )}
+
         <button className="primary" onClick={seal}>Seal decision set</button>
       </Card>
 

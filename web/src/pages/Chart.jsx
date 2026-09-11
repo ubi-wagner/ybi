@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api, money } from "../api.js";
-import { Card, Empty, Pill, Search, Segmented, Stat, Table, Tick } from "../components/ui.jsx";
+import { Card, Empty, PageHead, Pill, Search, Segmented, Stat, Table, Tick } from "../components/ui.jsx";
 
 const POOL_TONE = {
   DIRECT: "accent", FRINGE: "", OVERHEAD: "", "G&A": "",
@@ -26,15 +26,12 @@ export default function Chart() {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Chart of accounts</h2>
-        <p className="lede">
-          The 2025 chart bakes program identity into account names — Drive AM, LTM Grant,
+      <PageHead title="Chart of accounts" schedule="H">
+        The 2025 chart bakes program identity into account names — Drive AM, LTM Grant,
           Rising Tides Expense. Eighty-five expense accounts, a new one for every award, and
           a single account mixing consulting, travel and materials. The 2026 chart moves
           program identity to Customer:Job and lets the account number carry the cost pool.
-        </p>
-      </div>
+      </PageHead>
 
       <Card variant="raised" title="Four dimensions, straight off the transaction">
         <div className="grid form">

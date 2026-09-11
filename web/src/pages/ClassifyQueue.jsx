@@ -214,14 +214,12 @@ export default function ClassifyQueue({ actor }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Classification{!canWrite && <> <Pill>read only</Pill></>}</h2>
-        <p className="lede">
-          {canWrite
+      <PageHead title="Classification" schedule="B"
+                aside={!canWrite ? <Pill>read only</Pill> : null}>
+        {canWrite
             ? "Largest groups first. Accept a proposal with one key, or open a group when it needs real thought. Progress is measured in dollars — the rate is computed only once this set is sealed."
             : "Every group, every decision and the reasoning behind it. Nothing on this screen can be changed from your account — classification is the controller's, and the record shows whose it was."}
-        </p>
-      </div>
+      </PageHead>
 
       {cov && (
         <Card variant="raised">

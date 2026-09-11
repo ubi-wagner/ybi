@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { Card, Empty, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* The module everybody gets.
  *
@@ -78,16 +78,13 @@ export default function MyDocuments({ actor }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>My documents</h2>
-        <p className="lede">
-          Anything that shows what a cost was for — a receipt, an invoice, a
+      <PageHead title="My documents" schedule="E">
+        Anything that shows what a cost was for — a receipt, an invoice, a
           project plan, a photograph of a machine's nameplate, a lease you were
           quoted. You do not have to know where it belongs in the books. Say
           what it relates to in your own words and somebody with the right
           portfolio will file it against the right cost.
-        </p>
-      </div>
+      </PageHead>
 
       <div className="grid three">
         <Stat label="Sent in" value={data?.uploaded ?? "—"} size="lg" />

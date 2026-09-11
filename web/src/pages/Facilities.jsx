@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../api.js";
-import { Card, Empty, Field, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /*
   Five buildings, the space in them, and what it is all worth.
@@ -51,15 +51,10 @@ export default function Facilities({ actor }) {
 
   return (
     <div className="dash">
-      <div className="dash-head">
-        <div>
-          <h1>Facilities and equipment</h1>
-          <p className="quiet">
-            Schedule E · {f.length} building{f.length === 1 ? "" : "s"} ·
-            what the space is used for, and what it is worth
-          </p>
-        </div>
-      </div>
+      <PageHead title="Facilities and equipment" schedule="E">
+        {f.length} building{f.length === 1 ? "" : "s"} — what the space is used
+        for, and what it is worth.
+      </PageHead>
 
       <Card variant="raised">
         <div className="stat-row">

@@ -3,6 +3,32 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 /* Shared primitives. Deliberately small: the pages should read as content,
    not as a wiring diagram. */
 
+/* One page heading, used by every screen.
+
+   There were two: `.page-head` with an h2 and a lede on ten pages, and
+   `.dash-head` with an h1 and a `.quiet` line on four. Same job, two heading
+   levels, two type sizes and two colours — which reads as carelessness on a
+   screen somebody opens every morning, and gives a screen reader a document
+   outline that changes shape depending on which tab is open.
+
+   `schedule` is the letter the tab prints as in the audit package. Somebody
+   who has seen the workpapers knows where they are from it, so it belongs
+   next to the title rather than buried in the sentence underneath. */
+export function PageHead({ title, schedule, children, aside }) {
+  return (
+    <div className="page-head">
+      <div className="page-head-row">
+        <h1>
+          {title}
+          {schedule && <span className="page-sched">{schedule}</span>}
+        </h1>
+        {aside && <div className="page-head-aside">{aside}</div>}
+      </div>
+      {children && <p className="lede">{children}</p>}
+    </div>
+  );
+}
+
 export function Card({ title, aside, children, variant = "", className = "", ...rest }) {
   return (
     <section className={`card ${variant} ${className}`} {...rest}>

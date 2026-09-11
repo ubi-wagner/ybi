@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, money } from "../api.js";
-import { Card, Drawer, Empty, Field, Pill, Table, useToast } from "../components/ui.jsx";
+import { Card, Drawer, Empty, Field, PageHead, Pill, Table, useToast } from "../components/ui.jsx";
 
 export default function Lanes() {
   const toast = useToast();
@@ -22,14 +22,11 @@ export default function Lanes() {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Testing lanes</h2>
-        <p className="lede">
-          Fork a lane to test alternative classifications without touching the baseline.
+      <PageHead title="Testing lanes" schedule="C">
+        Fork a lane to test alternative classifications without touching the baseline.
           Changing an assumption is free. Changing a classification carries a reason and
           appears in the audit package, so exploration stays visible rather than quiet.
-        </p>
-      </div>
+      </PageHead>
 
       <Card variant="quiet" title="Two different things that look alike">
         <div className="grid two">

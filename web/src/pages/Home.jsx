@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, money } from "../api.js";
-import { Card, Empty, Meter, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
 import Manual from "../components/Manual.jsx";
 
 /* Where each person lands.
@@ -63,10 +63,9 @@ export default function Home({ actor }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h2>Good to see you, {actor.display_name}</h2>
-        <p className="lede">{describe(actor)}</p>
-      </div>
+      <PageHead title={`Good to see you, ${actor.display_name}`}>
+        {describe(actor)}
+      </PageHead>
 
       {/* ── Mine ─────────────────────────────────────────────── */}
       {actor.employee_key && (
