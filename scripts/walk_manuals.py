@@ -44,6 +44,7 @@ SHOTS = [
     # The shelf, as the person who arrives wanting to read something rather
     # than to file anything — which is the auditor, who holds no portfolio.
     ("auditor@ybi.org", "/library",    "m-library",       "The document library", None),
+    ("auditor@ybi.org", "/reports",    "m-reports",       "Reports and invoices", None),
     ("sgaffney@ybi.org", "/contracts", "m-contracts",     "Contracts and what each earns", None),
     ("sgaffney@ybi.org", "/contracts/codes", "m-charge-codes", "Charge codes and who may charge them", None),
     ("sgaffney@ybi.org", "/chart",     "m-chart",         "The 2026 chart", None),

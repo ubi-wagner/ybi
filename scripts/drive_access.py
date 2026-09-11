@@ -244,6 +244,62 @@ def main() -> int:
                 f"a {sheet['mime_type'].rsplit('.', 1)[-1][:24]} is refused "
                 f"the page even when the page asks for it")
 
+        # ── Two documents, and who may make one ─────────────────────
+        print("\nA report is a read; filing one is not")
+        for who, client in (("the auditor", auditor), ("Tom", tom),
+                            ("the organisation administrator", barb)):
+            check(client, "GET", "/api/reports/timesheet", 200,
+                  f"{who} takes the timesheet report")
+
+        r = tom.get("/api/reports/invoices")
+        rows = r.json().get("invoices", []) if r.status_code == 200 else []
+        if not rows:
+            bad("no invoices on the register — regeneration cannot be proved "
+                "against real rows")
+        else:
+            number = rows[0]["invoice_number"]
+            pdf = check(auditor, "GET", f"/api/reports/invoice/{number}", 200,
+                        f"the auditor renders invoice {number}")
+            (ok if pdf.content[:5] == b"%PDF-" else bad)(
+                "and what comes back is a PDF")
+            # The whole point of the provenance band: an invoice already
+            # issued must not come back as something that could pass for the
+            # document the sponsor holds.
+            #
+            # Read through pypdf rather than searched for in the raw bytes.
+            # PDF text is compressed, so a byte search for a phrase that is
+            # plainly on the page finds nothing and the drive reports a
+            # failure against working code — which is what the first version
+            # of this check did.
+            from io import BytesIO
+            from pypdf import PdfReader
+            issued = (rows[0].get("status") or "").upper() == "ISSUED"
+            face = "".join(pg.extract_text()
+                           for pg in PdfReader(BytesIO(pdf.content)).pages)
+            marked = "NOT THE DOCUMENT OF RECORD" in face
+            if issued:
+                (ok if marked else bad)(
+                    "an issued invoice renders as a reproduction and says so")
+
+            # Filing is a write into the evidence volume. Reading the record
+            # is not enough; this is the controller's to do.
+            check(auditor, "POST", f"/api/reports/invoice/{number}/file", 403,
+                  "the auditor may read it and may not file it")
+            filed = check(tom, "POST", f"/api/reports/invoice/{number}/file",
+                          201, "Tom files the rendering")
+            if filed.status_code == 201:
+                eid = filed.json().get("evidence_id")
+                again = tom.post(f"/api/reports/invoice/{number}/file")
+                (ok if again.json().get("deduplicated") else bad)(
+                    "filing the same rendering twice files one document")
+                lib = tom.get(f"/api/documents/library?q={eid}")
+                row = next((d for d in lib.json().get("documents", [])
+                            if d["evidence_id"] == eid), None)
+                (ok if row else bad)("and it reaches the library")
+                if row:
+                    (ok if row.get("is_generated") else bad)(
+                        "marked as made from the record rather than sent in")
+
         # ── Reading the books is granted, not assumed ────────────────
         print("\nReading the books is granted by whoever owns them")
         eric_id = roster["eric.c.wagner@gmail.com"]["actor_id"]

@@ -208,6 +208,22 @@ export const api = {
     const s = q.toString();
     return req(`/documents/library${s ? `?${s}` : ""}`);
   },
+  /* Reports — the two documents the reconciliation needs on paper.
+     Both are URLs the browser goes to itself so the bytes never pass
+     through JavaScript, same as the library. */
+  invoicesToRender: (period = "") =>
+    req(`/reports/invoices${period ? `?period=${period}` : ""}`),
+  invoicePdfUrl: (id) => `/api/reports/invoice/${encodeURIComponent(id)}`,
+  fileInvoice: (id) =>
+    req(`/reports/invoice/${encodeURIComponent(id)}/file`, { method: "POST" }),
+  timesheetReportUrl: (period = "", employeeKey = "") => {
+    const q = new URLSearchParams();
+    if (period) q.set("period", period);
+    if (employeeKey) q.set("employee_key", employeeKey);
+    const s = q.toString();
+    return `/api/reports/timesheet${s ? `?${s}` : ""}`;
+  },
+
   documentViewUrl: (id) =>
     `/api/documents/${encodeURIComponent(id)}/file?inline=1`,
   documentDownloadUrl: (id) =>

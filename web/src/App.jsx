@@ -26,6 +26,7 @@ import Review from "./pages/Review.jsx";
 import Contracts from "./pages/Contracts.jsx";
 import Awards from "./pages/Awards.jsx";
 import Library from "./pages/Library.jsx";
+import Reports from "./pages/Reports.jsx";
 
 /* Navigation carries the schedule each step eventually prints as in the audit
    package. Someone who has seen the workpapers already knows where they are.
@@ -66,6 +67,7 @@ const ALL_TABS = [
   ["/contracts", "Contracts",  "F",   "PROJECT"],
   ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
   ["/rates",     "Rates",      "D",   "CONTROLLER"],
+  ["/reports",   "Reports",    "G",   "reader"],
   ["/review",    "Review",     "A-1", "reader"],
   ["/help",      "Help",       "?",   null],
 ];
@@ -194,6 +196,7 @@ export default function App() {
           <Route path="/" element={<Home actor={actor} />} />
           <Route path="/documents" element={<MyDocuments actor={actor} />} />
           <Route path="/library" element={<Library />} />
+          <Route path="/reports" element={<Reports actor={actor} />} />
           <Route path="/people" element={<People actor={actor} />} />
           <Route path="/inventory" element={<Facilities actor={actor} tab="equipment" />} />
           <Route path="/timesheet" element={<Timesheet actor={actor} />} />

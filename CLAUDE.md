@@ -106,7 +106,7 @@ document *supports* is a judgment and needs `OFFICE`. That split is why the
 upload door can be open this wide.
 
 `scripts/provision.py` walks the whole ladder through the real API and prints
-a password sheet; `scripts/drive_access.py` proves all 57 boundaries against
+a password sheet; `scripts/drive_access.py` proves all 68 boundaries against
 live rows.
 
 ## Layout
@@ -124,6 +124,7 @@ app/
     review.py        the three deliverables: rate, auditor's report, 990
     imports.py       QBO upload -> parse -> preview -> accept
     documents.py     the document inbox everybody in the org gets
+    reports.py       the timesheet report, and invoices rendered off the register
     reconcile.py     the three source documents against each other
     lanes.py         scenario lanes and build-up views
     rates.py         seal, unseal, current rates
@@ -136,6 +137,8 @@ app/
     pools.py         pool build, rate computation, allocation
     awards.py        contract constraint tests
     package.py       Excel audit package
+    invoice_document.py  an invoice on the face it was issued on
+    timesheet_report.py  Schedule G, as a workbook
     ingest.py        CSV ledger loading
   sql/               migrations, applied in filename order at startup
 web/                 Vite + React SPA
@@ -243,6 +246,59 @@ Reading a document and taking a copy of it are recorded as different acts —
 `EVIDENCE_VIEW` and `EVIDENCE_DOWNLOAD`. An auditor who opened nine leases in
 a panel and downloaded one has done one thing worth asking about, and the
 register should say which.
+
+## Two documents on paper
+
+`app/routers/reports.py`, `/reports` in the SPA, Schedule G. Both are reads
+and take `require_reader`; filing a generated invoice is not a read and takes
+`CONTROLLER`.
+
+**The timesheet report** is the labour evidence behind the fringe base. The
+eleventh control compares the payroll register to the ledger's wage accounts,
+and a reviewer who sees a difference then wants to know *which people* — which
+is a workbook, not a table with a scrollbar. Four sheets: coverage, the
+distribution, certification, and every live entry with what it was
+reconstructed from. It reads `v_timesheet_coverage`, `v_labor_effective`,
+`v_certification_status` and `v_payroll_reconciliation` and computes nothing;
+a report that summed `timesheet_entry` itself would be a second
+implementation of the distribution, and the two would eventually disagree.
+The caveats go on the first sheet above the figures — who has not certified,
+how much is reconstructed rather than contemporaneous, any difference nobody
+has named.
+
+**Invoice regeneration** renders the register onto the face the three America
+Makes invoices already use, because a restatement has to be issued on
+something NCDMM's payables recognises. `app/domain/invoice_document.py` is
+pure and has no database. The masthead, the BILL TO block and the total are
+fixed; **the table is the part that expands**, paginating with repeated
+column headers, a "continued" marker, and a page count that needed a second
+render pass to know itself. The header total is passed in rather than
+re-derived from the lines, so an invoice that does not foot can print both
+figures and say so instead of agreeing with itself by construction.
+
+Three rules worth keeping:
+
+- **A reproduction says it is one.** An invoice already issued has a document
+  of record and it is the one the sponsor holds; rendering the same face
+  without a band saying so would put a second artefact into circulation that
+  a reader cannot tell from the first. Only `DRAFT`, `RESTATED` and `CREDIT`
+  — things YBI is issuing now — render as originals.
+- **`ingest_channel = 'GENERATED'`** (migration `038`). Every other channel
+  means the document came from outside. A rendering of the register
+  corroborates nothing the register does not already say, so filing it as
+  `UPLOAD` would shelve it beside the invoice the sponsor actually received,
+  indistinguishable. `v_document_library.is_generated` carries it to the
+  screen — the band is on the paper, this is the same statement in the index.
+- **Rendering is deterministic** (`invariant=1`). The filing route
+  content-addresses what it renders, so the same invoice files once however
+  often the button is pressed, and a *changed* invoice files alongside the
+  first rather than over it. Without it every press files another copy
+  differing only in a timestamp reportlab stamped inside.
+
+`reportlab` and `pypdf` are the two new dependencies — both pure Python, so
+the image grows no native library. `pypdf` is how the tests and the drives
+read a rendered invoice back: PDF text is compressed, and searching the raw
+bytes for a phrase plainly on the page finds nothing.
 
 ## Whose job is it
 
@@ -449,7 +505,7 @@ are tested at.
 | `scripts/drive_everyone.py` | every person, every process they own, and an audit row under their own name for every change |
 | `scripts/drive_contracts.py` | charge codes, assignment, milestones, money in, and the auditor's path |
 | `scripts/drive_reverse.py` | the same chain walked backwards, from a receipt to the ledger lines under it |
-| `scripts/drive_access.py` | rank, portfolios, the seal, the password gate, the library |
+| `scripts/drive_access.py` | rank, portfolios, the seal, the password gate, the library, the reports |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
@@ -533,6 +589,15 @@ In rough order of value:
 
 ### Done since this list was written
 
+- **The timesheet report and invoice regeneration.** Migration `038`. See
+  **Two documents on paper** above. Three things came out of building them:
+  Excel refuses a timezone-aware datetime outright, so every timestamp is
+  converted to UTC and the column says so — a lag computed against a
+  local-time column would be wrong by the offset, silently, and lag is what
+  separates a record made as the work was done from one made eleven months
+  later. `ingest_channel` had no value meaning "this system made it". And a
+  drive that searched a PDF's raw bytes for a phrase plainly on its page
+  reported a failure against working code, because PDF text is compressed.
 - **The document library.** Migration `037`. Every document in the record,
   readable in the page by anybody who may read the record — see **The
   library** above. Two real defects came out of building it, both invisible

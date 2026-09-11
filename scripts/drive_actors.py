@@ -312,7 +312,8 @@ def main() -> int:
             # in the papers than in the ledger they support.
             for path in ("/api/classify/queue", "/api/classify/coverage",
                          "/api/export/audit-package",
-                         "/api/documents/library"):
+                         "/api/documents/library",
+                         "/api/reports/timesheet"):
                 r = outsider.get(path)
                 (ok if r.status_code == 403 else finding)(
                     f"a plain employee is refused {path} — {r.status_code}"

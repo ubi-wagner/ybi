@@ -286,6 +286,38 @@ const CHAPTERS = [
                              "charged to it."],
   },
   {
+    id: "reports",
+    needs: "reader",
+    title: "Reports and invoices",
+    lede: "The two things the reconciliation needs on paper.",
+    steps: [
+      ["The timesheet report is the labour evidence.",
+       "Coverage, the distribution, who has certified, and every entry with " +
+       "what it was reconstructed from. The eleventh control is on the first " +
+       "sheet — the payroll register against the ledger's wage accounts — " +
+       "because the fringe base comes from the distribution and a difference " +
+       "there is two denominators for one rate."],
+      ["It says what is unfinished before it says anything else.",
+       "Who has not certified, how much of the distribution is reconstructed " +
+       "rather than contemporaneous, and any difference nobody has named. A " +
+       "workbook travels, so the caveat travels with it."],
+      ["An invoice renders onto the face it was issued on.",
+       "The America Makes invoices are the template. The header and the " +
+       "total are fixed; the middle expands to however many lines the " +
+       "invoice has, and paginates when it has to."],
+      ["A reproduction says it is one.",
+       "An invoice already issued has a document of record and it is the one " +
+       "the sponsor holds. That renders with a band saying so. Only a draft " +
+       "or a restatement — something YBI is issuing now — renders as an " +
+       "original."],
+      ["Filing one puts it in the library with a hash.",
+       "Where an auditor finds it without asking anybody. The same invoice " +
+       "filed twice is one document; a changed one files alongside the " +
+       "first rather than over it."],
+    ],
+    shot: ["m-reports", "The invoice register, and the timesheet report."],
+  },
+  {
     id: "library",
     needs: "reader",
     title: "The document library",

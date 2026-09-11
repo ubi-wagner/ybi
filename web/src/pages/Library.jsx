@@ -218,6 +218,14 @@ export default function Library() {
                 <td className="l rowsub">
                   {d.uploaded_by_name || d.received_from ||
                     <span className="rowsub">—</span>}
+                  {/* Paper somebody sent in, or this system's own arithmetic
+                      in a nice font. A generated document corroborates
+                      nothing the record does not already say, and a reader
+                      going through a shelf should not have to open one to
+                      find that out. */}
+                  {d.is_generated && (
+                    <div><Pill>generated from the record</Pill></div>
+                  )}
                 </td>
                 <td className="l rowsub">{String(d.received_at).slice(0, 10)}</td>
                 <td className="num">{size(d.byte_size)}</td>
