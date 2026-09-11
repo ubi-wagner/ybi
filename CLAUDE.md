@@ -116,6 +116,8 @@ app/
   main.py            FastAPI app, migrations on startup, serves web/dist
   db.py              psycopg pool, tiny migration runner. No ORM, on purpose.
   settings.py        env config; Railway injects DATABASE_URL
+  storage.py         where a file goes on the volume — the only place a path
+                     is decided. The kind decides the tree.
   routers/
     classify.py      the queue — the screen that matters
     imports.py       QBO upload -> parse -> preview -> accept
@@ -136,6 +138,49 @@ app/
   sql/               migrations, applied in filename order at startup
 web/                 Vite + React SPA
 ```
+
+## The volume
+
+`app/storage.py` owns the layout. Three routes write documents — the importer,
+the evidence route and the inbox everybody has — and all three go through
+`storage.place()`. Nothing else writes bytes; `tests/test_storage_paths.py`
+fails the build if a router starts to.
+
+```
+<YBI_STORAGE_DIR>/            the mounted volume; /srv/storage on Railway
+  README.txt                  written at boot
+  source/<period>/<report>/   the QuickBooks and payroll exports as received
+  foundation/<category>/      what governs the engagement across periods
+  evidence/<period>/<kind>/   everything supporting a figure in the record
+```
+
+**The database is the index; the tree is for people.** A path is derived from
+the row and never parsed back into one. Nothing reads a directory to decide
+what a document is, which is what keeps the tree a convenience rather than a
+second source of truth that can disagree with the first.
+
+**The kind decides the tree.** `FOUNDATION_KINDS` maps a kind to its folder,
+so no uploader chooses a path — they say what a document *is*, which they
+know. A kind that is not in that map is period evidence, which is the safe
+default: mis-filing an agreement costs a few seconds of browsing, while
+mis-filing an invoice out of its period hides it from the year it belongs to.
+`lease` is deliberately not foundational — the building lease is, a
+comparable lease supporting a market-rate analysis is not, and the kind alone
+cannot tell them apart.
+
+There is no inbox directory. An unattached document is a queue, and that queue
+is `v_evidence_inbox`. Giving it a folder would mean moving a file whenever
+somebody made a judgment, which is a second index and a way for the two to
+drift.
+
+**The tree is not an access boundary.** It is easier to browse and it keeps
+periods apart on disk, which helps a backup and a retention rule. It enforces
+nothing: `require_reader`, the portfolio gates and `require_own_writes` are
+what decide who sees a document, and they are unchanged by where it sits.
+
+`scripts/seed_documents.py` files the ten foundational documents through the
+real upload route, signed in as a real person, so the trail shows who filed
+them. It is content-addressed, so running it twice files nothing twice.
 
 ## Design system
 

@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app import storage
 from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
 from app.routers import (auth, awards, certify, chart, classify, dashboard,
@@ -59,6 +60,15 @@ async def lifespan(app: FastAPI):
     applied = run_migrations()
     if applied:
         log.info("applied migrations: %s", ", ".join(applied))
+
+    # The volume's shape, created before anybody looks at it. Somebody who
+    # opens the volume on the first day should see what it is for and be
+    # able to tell a correctly-mounted volume from a broken one; an empty
+    # directory tells them neither.
+    made = storage.ensure_skeleton()
+    log.info("storage at %s%s", storage.ROOT,
+             f" — created {len(made)} directories" if made else "")
+
     log.info("ready — period %s, env %s", settings.period, settings.env)
     yield
     close_pool()

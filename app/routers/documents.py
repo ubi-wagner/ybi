@@ -27,19 +27,12 @@ from pydantic import BaseModel, Field
 from app.audit import record
 from app.auth import (Actor, Portfolio, current_actor, require_office,
                       require_own_writes)
+from app import storage
 from app.db import execute, one, query
 from app.settings import settings
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-# The same place every other uploader writes, which on Railway is a mounted
-# volume. This was a hardcoded "var/evidence" — a path inside the container
-# filesystem, which Railway discards on every deploy. Everyone in the
-# organisation uploads through this route, so every receipt, invoice and
-# project plan they sent in would have disappeared on the next push while
-# v_evidence_inbox went on listing them. The loss would have been silent
-# until somebody asked for a document.
-STORAGE = Path(settings.storage_dir) / "evidence"
 
 #: A cap that stops a phone photograph library from becoming the ledger's
 #: storage tier, without being so tight that a scanned lease is refused.
@@ -88,10 +81,9 @@ async def upload(file: UploadFile = File(...),
                             + (f", sent in by {existing['display_name']}."
                                if existing["display_name"] else "."))}
 
-    STORAGE.mkdir(parents=True, exist_ok=True)
     safe = Path(file.filename or "document").name
-    dest = STORAGE / f"{sha[:16]}_{safe}"
-    dest.write_bytes(raw)
+    dest = storage.place(
+        storage.evidence_path(period, kind, sha, safe), raw)
     eid = f"EV-{sha[:12]}"
     execute("""INSERT INTO evidence (evidence_id, period, kind, uri, sha256,
                                      received_from, byte_size, mime_type,

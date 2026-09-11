@@ -17,12 +17,12 @@ from pydantic import BaseModel
 from app.auth import require_office, require_reader
 from app.audit import record
 from app.auth import Actor
+from app import storage
 from app.db import execute, one, query
 from app.settings import settings
 
 router = APIRouter(prefix="/evidence", tags=["evidence"],
                    dependencies=[Depends(require_reader)])
-STORAGE = Path(settings.storage_dir) / "evidence"
 
 
 class NoteIn(BaseModel):
@@ -51,9 +51,8 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
     if existing:
         eid = existing["evidence_id"]
     else:
-        STORAGE.mkdir(parents=True, exist_ok=True)
-        dest = STORAGE / f"{sha[:16]}_{file.filename}"
-        dest.write_bytes(raw)
+        dest = storage.place(
+            storage.evidence_path(period, kind, sha, file.filename), raw)
         eid = f"EV-{sha[:12]}"
         execute("""INSERT INTO evidence (evidence_id,period,kind,uri,sha256,
                                          received_from,byte_size,mime_type,

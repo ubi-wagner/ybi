@@ -53,6 +53,36 @@ Rename the service to `ybi-cost`.
 | Mount path | `/srv/storage` |
 | Size | 5 GB to start |
 
+The application creates the tree inside it on boot and writes a README
+saying what it is, so a volume that is mounted looks different from one that
+is not:
+
+```
+/srv/storage/
+  README.txt
+  source/<period>/<report>/   the QuickBooks and payroll exports as received
+  foundation/<category>/      awards, audited statements, 990s, policy
+  evidence/<period>/<kind>/   everything supporting a figure in the record
+```
+
+The database is the index — `evidence` and `staging_batch` carry the SHA-256,
+the period, the kind and who sent each document in. The tree exists so a
+person can find a document without querying for it, and nothing reads it back.
+
+Once the service is up and somebody has changed their issued password, file
+the foundational documents:
+
+```bash
+railway run --service ybi -- python scripts/seed_documents.py \
+  --base https://<your-domain> --as tom@ybi.org
+```
+
+Ten documents: the two NCDMM subrecipient agreements, the 2023 and 2024
+audited statements and Forms 990, and the four QuickBooks exports. They go in
+through the real upload route signed in as a real person, so the audit trail
+shows who filed them, and the route is content-addressed, so running it twice
+files nothing twice. `--dry-run` prints the manifest and writes nothing.
+
 This one is not optional and it is not recoverable after the fact. Evidence
 uploads are written to `YBI_STORAGE_DIR` on the container filesystem, which
 Railway discards on every deploy. Without the volume, every invoice, lease and

@@ -17,6 +17,7 @@ from fastapi import Depends, APIRouter, File, HTTPException, UploadFile
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.auth import Actor
+from app import storage
 from app.db import execute, one, query, transaction
 from app.domain.qbo import (QBO_GENERAL_LEDGER, QBO_TIME_ACTIVITY,
                             parse_general_ledger, parse_profit_loss,
@@ -25,7 +26,6 @@ from app.settings import settings
 
 router = APIRouter(prefix="/imports", tags=["imports"],
                    dependencies=[Depends(require_reader)])
-STORAGE = Path(settings.storage_dir)
 
 
 @router.post("/upload")
@@ -47,9 +47,8 @@ async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
         return {"batch_id": str(dup["batch_id"]), "status": dup["status"],
                 "note": "This exact file has already been uploaded."}
 
-    STORAGE.mkdir(parents=True, exist_ok=True)
-    dest = STORAGE / f"{sha[:16]}_{file.filename}"
-    dest.write_bytes(raw)
+    dest = storage.place(
+        storage.source_path(period, report, sha, file.filename), raw)
 
     row = one("""INSERT INTO staging_batch
                    (period, report, profile_id, original_name, storage_uri,
