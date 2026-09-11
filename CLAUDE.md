@@ -551,5 +551,14 @@ These are unresolved in the real engagement, not bugs:
   **$513,065 on Last Tactical Mile** (§4.3), of which YBI's own share is
   $213,037 and the balance is partner cost share it must evidence.
   $617,065 in total — the largest untracked obligation in the file.
+- **Drive AM's cost share contradicts itself.** Schedule B proposes zero and
+  §4.3 names none, while Schedule A expects a roughly 1:1 ratio at all times
+  with cancellation as a stated remedy. §11.11 gives the Agreement precedence
+  over a Schedule, but §4.3 is silent rather than contradictory and silence
+  may not be a conflict. If the 1:1 reading binds it is another ~$1.1m.
+  Recorded as a term marked UNRESOLVED; needs counsel, not arithmetic.
+- **No America Makes award budgets meaningful indirect.** Drive AM has no
+  indirect line at all on $583,594 of labour; ICAM budgets 10% of ODCs only.
+  That is the recovery the restatement exists to go after.
 - `5227 Portfolio consulting`, $588,539 across 442 lines, no objective signal.
   The largest single open judgment in the ledger.

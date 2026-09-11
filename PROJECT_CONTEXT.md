@@ -503,3 +503,83 @@ inference.
 **This is now the largest untracked obligation in the engagement**, ahead of
 the 5227 Portfolio consulting judgment. It has been recorded on the contract
 with its clause, so the next person to ask reads it off the screen.
+
+---
+
+## 10. Drive AM — the agreement arrived, and it is the worst of the four
+
+The executed Drive AM sub-recipient agreement, made as of 30 January 2024 and
+signed 5 February 2024. A scan with no text layer; the figures below were
+read off the image by OCR and should be re-read against the paper before
+anything is filed on them.
+
+| | |
+|---|---:|
+| §4.3 Total obligation | **1,103,594** |
+| §10.1 Term | 30 Jan 2024 to **4 Jan 2026** |
+| Cost share named in §4.3 | **none** |
+
+The award had been carrying a ceiling of zero, a start of 1 January 2024 and
+an end of 31 December 2026. All three were wrong.
+
+### There is no indirect line at all
+
+Schedule B, in full:
+
+| | |
+|---|---:|
+| Labour | 583,594 |
+| Travel | 40,000 |
+| Subcontract | 0 |
+| Materials | 5,000 |
+| Equipment | 0 |
+| Consultant | 60,000 |
+| ODCs | 415,000 |
+| **Total federal** | **1,103,594** |
+| Total proposed cost share | **0** |
+
+Not a reduced rate. Not a de minimis line. **No indirect line exists**, so any
+indirect YBI recovers has to displace direct cost inside the ceiling rather
+than sit on top of it. On 583,594 of labour that is the largest single
+recovery forgone in the file.
+
+The pattern across the four agreements now on file is the finding, not any
+one of them:
+
+| Award | Federal | Indirect as budgeted |
+|---|---:|---|
+| Drive AM | 1,103,594 | **none at all** |
+| ICAM Digital Engineering | 1,000,690 | 10% of ODCs only — 27,500, nothing on 655,190 of labour |
+| Last Tactical Mile | 899,500 | 10% de minimis |
+| Hybrid Phase 2 | 512,409 | — |
+
+### The cost share on Drive AM is contradictory, and it is not mine to resolve
+
+Three documents inside one agreement say three things:
+
+- **Schedule B** proposes **zero** cost share, every line.
+- **§4.3** names no cost share.
+- **Schedule A**, Project Reporting: *"The ratio of America Makes funding vs.
+  cost share funding is expected to be roughly 1:1 at all times throughout
+  the project… If either or both of these financial goals are not met, the
+  sub-recipient will be required to submit a corrective action plan. Failure
+  to correct financial shortcomings may be grounds for contract
+  cancellation."*
+- **Statement of Objectives** (16 August 2023): cost share **TBD**.
+
+§11.11 says that where the Agreement conflicts with a Schedule, the Agreement
+governs. That is an argument for the zero reading and not an answer: §4.3 is
+*silent* on cost share rather than contradicting Schedule A, and silence may
+not be a conflict at all.
+
+**The exposure if the 1:1 language binds is roughly 1,103,594 on this award
+alone**, against 617,065 recorded across Hybrid and Last Tactical Mile. It
+would take the untracked cost-share obligation to about **1.72 million**, with
+cancellation named as a remedy for missing it. If Schedule B binds, it is
+zero.
+
+This needs a contracting officer's or counsel's read against the signed
+paper. All eight provisions are on the contract with their clauses, the
+conflict is recorded under its own term as **UNRESOLVED**, and the award
+carries a cost share of zero — which is what the operative clause says, with
+the disagreement recorded beside it rather than averaged into it.

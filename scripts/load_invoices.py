@@ -68,13 +68,17 @@ INVOICES = [
 #: the record — which is the shape of mistake this system exists to catch, so
 #: it is written down here rather than quietly corrected.
 AWARDS = [
-    # No agreement on file for Drive AM. PROJECT_CONTEXT carries what was
-    # *invoiced* against it, which is not a ceiling — billing tells you what
-    # was claimed, never what the contract would bear.
+    # §4.3: "The total funds authorized by this agreement shall not exceed
+    # $1,103,594." The clause names no cost share and Schedule B proposes
+    # none — while Schedule A expects a 1:1 ratio. That conflict is recorded
+    # as a term rather than resolved here; §11.11 says the Agreement governs
+    # over a Schedule, which is an argument and not an answer.
+    # Made as of 30 January 2024; §10.1 runs the term to 4 January 2026.
     ("AM-DRIVE-AM", "DRIVE-AM", "NCDMM / America Makes",
-     "FA8650-20-2-5700", "COOPERATIVE_SUB", None, None, dt.date(2024, 1, 1),
-     dt.date(2026, 12, 31), "DE_MINIMIS_10",
-     "No executed agreement on file; ceiling and cost share unknown."),
+     "FA8650-20-2-5700", "COOPERATIVE_SUB", 1103594, 0, dt.date(2024, 1, 30),
+     dt.date(2026, 1, 4), "DE_MINIMIS_10",
+     "§4.3 Total Obligation, Sub-Recipient Agreement made as of "
+     "30 January 2024"),
     # §4.3: "The total funds authorized by this agreement shall not exceed
     # $899,500 in federal funding and $513,065 cost share." 27-month period
     # of performance from 24 September 2024.

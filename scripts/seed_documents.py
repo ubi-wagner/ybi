@@ -82,6 +82,12 @@ DOCUMENTS: dict[str, tuple[str, str, str]] = {
         "grant-reconciliation-workbook", "2025",
         "The controller's own workbook. The source of the 22.45% fringe "
         "rate that the payroll register shows to be 21.90%."),
+    "2024-01-30_NCDMM_SubRecipient_Agreement_Drive-AM.pdf": (
+        "subrecipient-agreement", "2024",
+        "Drive AM. $1,103,594, no cost share named in §4.3 and none in the "
+        "budget — while the statement of work expects a 1:1 ratio. A scan: "
+        "the text here came from OCR and the figures were read off the "
+        "image."),
     "2024-02-05_NCDMM_SubRecipient_Agreement_SRA-0350_ICAM-Digital-Engineering.pdf": (
         "subrecipient-agreement", "2024",
         "ICAM Digital Engineering Workforce, $1,000,690, cost reimbursement "
