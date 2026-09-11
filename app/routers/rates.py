@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.auth import Actor
-from app.db import execute, one, query
+from app.db import execute, one, query, transaction
 
 router = APIRouter(prefix="/rates", tags=["rates"],
                    dependencies=[Depends(require_reader)])
@@ -77,6 +77,264 @@ def unseal(reason: str, period: str = "2025",
             (st["set_id"],))
     record(actor, "UNSEAL", "decision_set", str(st["set_id"]), reason=reason)
     return {"set_id": str(st["set_id"]), "status": "unsealed"}
+
+
+class ComputeIn(BaseModel):
+    #: Fringe is recovered on a salary base, not on MTDC. Left to the caller
+    #: because the base is a policy choice the controller makes and defends,
+    #: not something to infer.
+    fringe_base: str = "SALARIES_WAGES"
+    combined: bool = True
+    note: str = ""
+
+
+def _build_model(period: str):
+    """Assemble the domain model from what is on file.
+
+    The engine is pure and knows nothing about Postgres; this is the seam.
+    Everything it is given comes from live rows — live decisions, live
+    segments, the effective labour distribution — so a rate cannot be computed
+    from anything superseded.
+    """
+    from decimal import Decimal
+
+    from app.domain.core import (Decision, DecisionSet, EvidenceGrade,
+                                 FederalTreatment, Function990, PoolType)
+    from app.domain.ingest import Ledger, LedgerLine
+    from app.domain.pools import CarveOut, PoolModel
+
+    rows = query("""SELECT line_id::text AS line_id, period,
+                           txn_date::text AS date, account,
+                           COALESCE(payee, '') AS payee,
+                           COALESCE(description, '') AS description,
+                           amount, statement AS pl_scope,
+                           COALESCE(section, '') AS pl_section,
+                           COALESCE(source_key, line_id::text) AS source_key
+                      FROM ledger_line
+                     WHERE period = %s AND statement = 'P&L'""", (period,))
+    ledger = Ledger(period, [LedgerLine(**r) for r in rows])
+
+    decisions = query("""
+        SELECT d.decision_id::text AS decision_id, d.scope, d.pool::text AS pool,
+               d.function_990::text AS function_990, d.federal::text AS federal,
+               d.objective_id, d.grade::text AS grade, d.rationale,
+               d.citation, d.decided_by,
+               array_agg(DISTINCT dl.line_id::text) AS line_ids,
+               -- The documents cited on the judgment. Without these a
+               -- VERIFIED grade arrives looking unsupported and the domain
+               -- layer rejects the whole set, which is exactly what it should
+               -- do — the omission was here, not there.
+               COALESCE((SELECT array_agg(de.evidence_id)
+                           FROM decision_evidence de
+                          WHERE de.decision_id = d.decision_id), '{}') AS refs
+          FROM decision d
+          JOIN decision_line dl ON dl.decision_id = d.decision_id AND dl.live
+         WHERE d.reversed_at IS NULL
+         GROUP BY d.decision_id, d.scope, d.pool, d.function_990, d.federal,
+                  d.objective_id, d.grade, d.rationale, d.citation, d.decided_by""")
+
+    ds = DecisionSet(period)
+    for r in decisions:
+        ds.record(Decision(
+            decision_id=r["decision_id"], scope=r["scope"],
+            line_ids=tuple(r["line_ids"]),
+            pool=PoolType(r["pool"]),
+            function_990=Function990(r["function_990"]),
+            federal=FederalTreatment(r["federal"]),
+            objective_id=r["objective_id"],
+            evidence=EvidenceGrade(r["grade"]),
+            rationale=r["rationale"] or "", citation=r["citation"],
+            evidence_refs=tuple(r["refs"] or ()),
+            decided_by=r["decided_by"] or ""))
+
+    model = PoolModel(ledger, ds, period)
+    model.build()
+
+    # Labour, from whichever record speaks for each employee — a submitted
+    # timesheet where there is one, the controller's reconstruction otherwise.
+    # backed is the part resting on the employee's own record, which is what
+    # the evidence ratio reports.
+    labour = query("""
+        SELECT objective_id,
+               sum(distributed_wages)                                AS wages,
+               sum(distributed_wages) FILTER (WHERE source = 'TIMESHEET')
+                                                                     AS backed
+          FROM v_labor_effective WHERE period = %s
+         GROUP BY objective_id""", (period,))
+    federal = {r["objective_id"] for r in
+               query("SELECT objective_id FROM cost_objective WHERE is_federal")}
+    fringe_rate = Decimal("0")
+    fr = one("""SELECT rate FROM rate WHERE period = %s AND kind = 'FRINGE'
+                  AND status <> 'SUPERSEDED'
+                 ORDER BY computed_at DESC LIMIT 1""", (period,))
+    if fr:
+        fringe_rate = Decimal(str(fr["rate"]))
+    model.add_labor({r["objective_id"]: {"wages": r["wages"] or Decimal(0),
+                                         "backed": r["backed"] or Decimal(0)}
+                     for r in labour},
+                    fringe_rate=fringe_rate,
+                    objective_map={}, federal=federal)
+
+    # Carve-outs from the facilities work: tenant, vacant and committed space
+    # is the rental operation's cost and never reaches a federal pool.
+    occupancy = query("""SELECT name, tenant_sqft, vacant_sqft, committed_sqft,
+                                usable_sqft
+                           FROM v_facility_occupancy WHERE period = %s""",
+                      (period,))
+    overhead_gross = model.pools[PoolType.OVERHEAD].gross
+    for f in occupancy:
+        usable = Decimal(str(f["usable_sqft"] or 0))
+        if usable <= 0 or overhead_gross <= 0:
+            continue
+        excluded = (Decimal(str(f["tenant_sqft"] or 0))
+                    + Decimal(str(f["vacant_sqft"] or 0))
+                    + Decimal(str(f["committed_sqft"] or 0)))
+        if excluded <= 0:
+            continue
+        share = (excluded / usable).quantize(Decimal("0.000001"))
+        model.add_carve_out(PoolType.OVERHEAD, CarveOut(
+            name=f"Rental and vacant space — {f['name']}",
+            citation="2 CFR 200.465",
+            amount=(overhead_gross * share).quantize(Decimal("0.01")),
+            driver=f"{excluded:,.0f} of {usable:,.0f} usable square feet",
+            evidence=EvidenceGrade.MANAGEMENT_RECONSTRUCTION))
+    return model
+
+
+@router.post("/compute")
+def compute(body: ComputeIn, period: str = "2025",
+            actor: Actor = Depends(require_controller)) -> dict:
+    """Compute the rates from the sealed set, and persist them.
+
+    The sequence is one-directional and the database enforces the first step
+    of it: ``rate_requires_seal`` refuses a rate whose seal does not match a
+    sealed decision set, so this cannot produce a number from judgments that
+    are still moving — in this handler or in any future one.
+
+    Both proofs run before anything is written. A pool that does not tie to
+    the ledger, or an allocation that does not land every allocable dollar on
+    exactly one objective, is a finding rather than a rate.
+    """
+    from decimal import Decimal
+
+    from app.domain.core import AllocationBase, PoolType
+
+    sealed = one("""SELECT set_id, seal_hash FROM decision_set
+                     WHERE period = %s AND seal_hash IS NOT NULL
+                     ORDER BY sealed_at DESC LIMIT 1""", (period,))
+    if not sealed:
+        raise HTTPException(
+            409, "No sealed decision set for this period. Seal the "
+                 "classifications first — the rate has to be a consequence of "
+                 "the judgments, not an input to them.")
+
+    model = _build_model(period)
+    model.decisions._sealed_hash = sealed["seal_hash"]   # the seal on file
+
+    try:
+        base_type = AllocationBase(body.fringe_base)
+    except ValueError:
+        raise HTTPException(422, f"Unknown base {body.fringe_base!r}.")
+    fringe_base = model.base_amount(base_type)
+
+    rates = model.compute_rates(fringe_base=fringe_base)
+    model.allocate(use_combined=body.combined)
+
+    ledger_total = one("""SELECT COALESCE(sum(amount), 0) AS t FROM ledger_line
+                           WHERE period = %s AND statement = 'P&L'""",
+                       (period,))["t"]
+    recon = model.reconciliation(Decimal(str(ledger_total)))
+    proof = model.allocation_proof()
+    if proof["variance"] != Decimal("0.00"):
+        raise HTTPException(409, {
+            "error": "ALLOCATION_DOES_NOT_TIE",
+            "message": f"The allocation distributes {proof['distributed']} "
+                       f"against {proof['allocable']} allocable. An allocation "
+                       f"that does not tie is a finding, not a rate.",
+            "variance": str(proof["variance"])})
+
+    base_for = {
+        "FRINGE": (fringe_base, base_type),
+        "OVERHEAD": (model.base_amount(model.pools[PoolType.OVERHEAD].base_type),
+                     model.pools[PoolType.OVERHEAD].base_type),
+        "G&A": (model.base_amount(model.pools[PoolType.GA].base_type),
+                model.pools[PoolType.GA].base_type),
+        "INDIRECT_COMBINED": (model.base_amount(model.pools[PoolType.GA].base_type),
+                              model.pools[PoolType.GA].base_type),
+    }
+    pool_for = {
+        "FRINGE": model.pools[PoolType.FRINGE].allocable,
+        "OVERHEAD": model.pools[PoolType.OVERHEAD].allocable,
+        "G&A": model.pools[PoolType.GA].allocable,
+        "INDIRECT_COMBINED": (model.pools[PoolType.OVERHEAD].allocable
+                              + model.pools[PoolType.GA].allocable),
+    }
+
+    written = []
+    with transaction() as cur:
+        # A recomputation supersedes what it replaces rather than sitting
+        # beside it. Anything already accepted is left alone: an accepted rate
+        # is a position taken with a sponsor and is not ours to overwrite.
+        cur.execute("""UPDATE rate SET status = 'SUPERSEDED'
+                        WHERE period = %s AND status = 'PROPOSED'""", (period,))
+        for kind, value in rates.items():
+            base_amount, bt = base_for[kind]
+            if base_amount <= 0:
+                continue          # a rate on no base is not a rate
+            cur.execute("""INSERT INTO rate
+                             (period, set_id, seal_hash, kind, pool_amount,
+                              base_type, base_amount, rate, computed_by)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                           RETURNING rate_id""",
+                        (period, sealed["set_id"], sealed["seal_hash"], kind,
+                         pool_for[kind], bt.value, base_amount, value,
+                         actor.display_name))
+            rate_id = cur.fetchone()["rate_id"]
+            written.append({"kind": kind, "rate": str(value),
+                            "pool": str(pool_for[kind]),
+                            "base": str(base_amount),
+                            "base_type": bt.value, "rate_id": str(rate_id)})
+
+            if kind == ("INDIRECT_COMBINED" if body.combined else "G&A"):
+                for o in model.objectives.values():
+                    allocated = o.indirect
+                    if not allocated:
+                        continue
+                    cur.execute("""INSERT INTO allocation
+                                     (rate_id, objective_id, base_amount,
+                                      allocated)
+                                   VALUES (%s,%s,%s,%s)
+                                   ON CONFLICT (rate_id, objective_id)
+                                     DO UPDATE SET allocated = EXCLUDED.allocated""",
+                                (rate_id, o.objective_id, o.mtdc, allocated))
+
+        record(actor, "RATE_COMPUTE", "decision_set", str(sealed["set_id"]),
+               after={"seal_hash": sealed["seal_hash"],
+                      "rates": {k: str(v) for k, v in rates.items()},
+                      "objectives": len(model.objectives),
+                      "unclassified": str(model.unclassified)},
+               reason=body.note.strip() or "rates computed from the sealed set",
+               cursor=cur)
+
+    return {
+        "period": period, "seal_hash": sealed["seal_hash"], "rates": written,
+        "allocation": [{"objective_id": o.objective_id,
+                        "mtdc": str(o.mtdc),
+                        "direct": str(o.total_direct),
+                        "indirect": str(o.indirect),
+                        "fully_burdened": str(o.fully_burdened),
+                        "evidence_ratio": (str(o.evidence_ratio)
+                                           if o.evidence_ratio is not None else None)}
+                       for o in sorted(model.objectives.values(),
+                                       key=lambda x: -x.mtdc)],
+        "proofs": {"reconciliation": {k: str(v) for k, v in recon.items()},
+                   "allocation": {k: str(v) for k, v in proof.items()},
+                   "rounding_residual": str(model.rounding_residual)},
+        "carve_outs": [{"name": c.name, "citation": c.citation,
+                        "amount": str(c.amount), "driver": c.driver}
+                       for p in model.pools.values() for c in p.carve_outs],
+        "unclassified": str(model.unclassified),
+    }
 
 
 @router.get("/current")

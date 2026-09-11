@@ -71,7 +71,11 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
                         decisions: list[dict], segments: list[dict],
                         evidence: list[dict], certifications: list[dict],
                         activity: list[dict], worklist: list[dict],
-                        rollup: dict, generated_by: str) -> Path:
+                        rollup: dict, generated_by: str,
+                        exceptions: list[dict] | None = None,
+                        materiality: list[dict] | None = None,
+                        rates: list[dict] | None = None,
+                        allocations: list[dict] | None = None) -> Path:
     wb = Workbook()
 
     # ── Index ────────────────────────────────────────────────────────
@@ -185,6 +189,58 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
            ["employee_key", "certifier_role", "signed_by", "signed_at",
             "objectives", "statement", "distribution", "superseded_at"],
            [16, 13, 20, 20, 12, 70, 70, 20])
+
+    # ── Rates ────────────────────────────────────────────────────────
+    if rates:
+        ws = _sheet(wb, "Rates", "Rates and allocation",
+                    "Each rate carries the seal of the decision set it came "
+                    "from. A rate whose seal does not match a sealed set is "
+                    "refused by the database, not by a handler.")
+        r = _table(ws, 5, ["Kind", "Pool", "Base type", "Base", "Rate",
+                           "Status", "Seal", "Computed by", "When"],
+                   rates,
+                   ["kind", "pool_amount", "base_type", "base_amount", "rate",
+                    "status", "seal_hash", "computed_by", "computed_at"],
+                   [20, 16, 18, 16, 12, 14, 20, 22, 20], {2, 4})
+        if allocations:
+            r += 2
+            ws.cell(row=r, column=1, value="Allocation").font = BOLD
+            _table(ws, r + 1,
+                   ["Rate", "Objective", "Base", "Allocated"], allocations,
+                   ["kind", "objective_id", "base_amount", "allocated"],
+                   [20, 26, 16, 16], {3, 4})
+
+    # ── Exceptions ───────────────────────────────────────────────────
+    #
+    # The first schedule a reviewer asks for, and the one that decides whether
+    # the rest of the file reads as candid or as managed. A defensible record
+    # is not one with no exceptions; it is one where every exception is
+    # stated, reasoned, and findable without reading the log.
+    if exceptions is not None:
+        ws = _sheet(wb, "Exceptions", "Exceptions",
+                    "Every place the standard was bent, who bent it and why. "
+                    "An exception without a reason is the finding.")
+        _table(ws, 5,
+               ["When", "Kind", "Who", "Subject", "What", "Why", "Amount"],
+               exceptions,
+               ["occurred_at", "kind", "actor", "subject", "detail", "reason",
+                "amount"],
+               [20, 26, 22, 34, 40, 56, 16], {7})
+
+    # ── Materiality ──────────────────────────────────────────────────
+    if materiality is not None:
+        ws = _sheet(wb, "Materiality", "Evidence against materiality",
+                    "The standard each judgment has to meet is a written "
+                    "policy applied to its size and its federal exposure, so "
+                    "that less work on small items is a position rather than "
+                    "an omission.")
+        _table(ws, 5,
+               ["Scope", "Pool", "Amount", "Grade", "Required", "Meets",
+                "Federal", "Decided by"],
+               materiality,
+               ["scope", "pool", "amount", "grade", "required_grade",
+                "meets_standard", "federal", "decided_by"],
+               [44, 14, 16, 26, 26, 10, 14, 22], {3})
 
     # ── Activity ─────────────────────────────────────────────────────
     ws = _sheet(wb, "Activity", "Everything that happened",

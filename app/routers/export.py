@@ -23,6 +23,29 @@ router = APIRouter(prefix="/export", tags=["export"],
                    dependencies=[Depends(require_reader)])
 
 
+@router.get("/exceptions")
+def exceptions(period: str = None, actor: Actor = Depends(require_reader)) -> dict:
+    """Every place the standard was bent, who bent it and why.
+
+    The first schedule a reviewer asks for. Making them reconstruct it from a
+    five-thousand-row activity feed is how a candid file reads as managed.
+    """
+    period = period or settings.period
+    rows = query("""SELECT period, kind, occurred_at, actor, subject, detail,
+                           reason, amount
+                      FROM v_exceptions
+                     WHERE period = %s
+                     ORDER BY occurred_at DESC NULLS LAST""", (period,))
+    by_kind: dict[str, int] = {}
+    unexplained = 0
+    for r in rows:
+        by_kind[r["kind"]] = by_kind.get(r["kind"], 0) + 1
+        if not (r["reason"] or "").strip():
+            unexplained += 1
+    return {"period": period, "exceptions": rows, "by_kind": by_kind,
+            "total": len(rows), "unexplained": unexplained}
+
+
 @router.get("/audit-package")
 def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
     """The whole record as one workbook.
@@ -95,6 +118,30 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
                   COALESCE(abs(amount), 0) DESC
          LIMIT 5000""", (period,))
 
+    exceptions = query("""
+        SELECT kind, occurred_at, actor, subject, detail, reason, amount
+          FROM v_exceptions WHERE period = %s
+         ORDER BY occurred_at DESC NULLS LAST LIMIT 5000""", (period,))
+
+    materiality = query("""
+        SELECT scope, pool, amount, grade::text AS grade,
+               required_grade::text AS required_grade, meets_standard,
+               federal::text AS federal, decided_by
+          FROM v_materiality_compliance WHERE period = %s
+         ORDER BY meets_standard, amount DESC LIMIT 5000""", (period,))
+
+    rates = query("""
+        SELECT kind, pool_amount, base_type::text AS base_type, base_amount,
+               rate, status, seal_hash, computed_by, computed_at
+          FROM rate WHERE period = %s ORDER BY computed_at DESC, kind""",
+        (period,))
+
+    allocations = query("""
+        SELECT r.kind, a.objective_id, a.base_amount, a.allocated
+          FROM allocation a JOIN rate r USING (rate_id)
+         WHERE r.period = %s AND r.status <> 'SUPERSEDED'
+         ORDER BY a.allocated DESC""", (period,))
+
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
     name = f"YBI-{period}-cost-record-{stamp}.xlsx"
     out = Path(tempfile.gettempdir()) / name
@@ -102,6 +149,8 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
         period=period, out_path=out, controls=controls, decisions=decisions,
         segments=segments, evidence=evidence, certifications=certifications,
         activity=activity, worklist=worklist, rollup=rollup,
+        exceptions=exceptions, materiality=materiality, rates=rates,
+        allocations=allocations,
         generated_by=f"{actor.display_name} ({actor.role.value})")
 
     record(actor, "EXPORT", "audit_package", name,

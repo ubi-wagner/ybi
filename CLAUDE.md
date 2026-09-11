@@ -163,8 +163,12 @@ In rough order of value:
    second saved compounds.
 2. **Evidence drag-and-drop and bulk match.** Drop a folder of invoices, match on
    amount, date proximity and vendor similarity, confirm in bulk.
-3. **Rate computation endpoint.** `domain/pools.py` already does the arithmetic and
-   is tested; it needs wiring to persist `rate` and `allocation` rows.
+3. ~~**Rate computation endpoint.**~~ Done. `POST /api/rates/compute` builds the
+   domain model from live rows, computes, and persists `rate` and `allocation`.
+   Both proofs run before anything is written: the pool reconciles to the
+   ledger and every allocable dollar lands on exactly one objective, or it is
+   a 409 rather than a rate. `tests/test_pools.py` covers the engine — it had
+   no tests at all before, despite what this file used to say here.
 4. **Audit package download.** `domain/package.py` produces the workbook; add a
    route that streams it.
 5. **Lane comparison UI.** The API exists; the side-by-side view does not.

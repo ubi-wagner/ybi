@@ -306,9 +306,15 @@ def main() -> int:
         else:
             finding("a correction overwrote the entry instead of superseding it")
 
+        short = barb.post("/api/timesheet/submit", json={"acknowledged": True})
+        if short.status_code == 409 and "SHORT_COVERAGE" in short.text:
+            ok("a part-filled sheet is questioned, not refused — "
+               f"{short.json()['detail']['coverage']:.0%} of the period")
+        else:
+            finding(f"a part-filled sheet answered {short.status_code}")
         call(barb, "POST", "/api/timesheet/submit", 422,
-             "a part-filled sheet cannot stand for the year",
-             json={"acknowledged": True})
+             "and a one-word excuse is not a reason",
+             json={"acknowledged": True, "below_coverage_reason": "busy"})
 
         # Now fill the year the way somebody rebuilding it would: week by week.
         print("  … entering the year", flush=True)
@@ -515,6 +521,142 @@ def main() -> int:
             ok("and they are listed as unvalued rather than valued at a guess")
     finally:
         barb.close()
+
+    # ── A short year that cannot honestly reach the bar ──────────────
+    print("\nA gate that bends — the short year")
+    steph = sign_in(args.base, "sgaffney@ybi.org", password)
+    try:
+        for day, obj, hrs in (("2025-07-07", "HUB", 8), ("2025-07-08", "HUB", 8),
+                              ("2025-07-09", "ESP", 8), ("2025-07-10", "ESP", 8),
+                              ("2025-07-11", "YBI-GA", 8)):
+            steph.post("/api/timesheet/entry", json={
+                "work_date": day, "objective_id": obj, "hours": hrs,
+                "basis": "PROJECT_RECORD",
+                "note": "Drive: rebuilt from project records."})
+        blocked = steph.post("/api/timesheet/submit", json={"acknowledged": True})
+        if blocked.status_code == 409:
+            ok(f"40 hours against a half-year's terms is "
+               f"{blocked.json()['detail']['coverage']:.0%} — questioned")
+        else:
+            finding(f"a 40-hour year answered {blocked.status_code}")
+
+        with mutating("submitted short, with the gap explained",
+                      "Stephanie Gaffney", "TIME_SUBMIT"):
+            r = call(steph, "POST", "/api/timesheet/submit", 200,
+                     "short submission", json={
+                         "acknowledged": True,
+                         "below_coverage_reason":
+                             "Drive: on medical leave from August and the "
+                             "earlier calendar was on a laptop that was "
+                             "returned. These five days are what project "
+                             "records support; the rest is genuinely gone."})
+        if r.status_code == 200 and r.json().get("below_minimum"):
+            ok("the submission records that it is below the standard")
+        else:
+            finding("a short submission did not record itself as short")
+
+        row = one("""SELECT below_coverage_reason, minimum_coverage, coverage
+                       FROM timesheet_submission
+                      WHERE employee_key = 'GAFFNEY' AND withdrawn_at IS NULL""")
+        if row and row["below_coverage_reason"]:
+            ok("the reason is on the submission, where the exception schedule "
+               "will find it")
+        else:
+            finding("a short submission was accepted without its reason")
+    finally:
+        steph.close()
+
+    # ── Materiality, rates, and the exceptions schedule ──────────────
+    print("\nMateriality, the rate, and the exceptions schedule")
+    tom = sign_in(args.base, "tom@ybi.org", password)
+    try:
+        call(tom, "PUT", "/api/classify/materiality", 422,
+             "a policy where a bigger cost needs weaker evidence is refused",
+             json={"verified_above": 1000, "corroborated_above": 50000,
+                   "federal_corroborated_above": 5000,
+                   "basis": "Drive: deliberately inverted thresholds."})
+
+        with mutating("a written materiality policy", "Tom Metzinger",
+                      "MATERIALITY"):
+            call(tom, "PUT", "/api/classify/materiality", 200, "policy", json={
+                "verified_above": 100000, "corroborated_above": 25000,
+                "federal_corroborated_above": 10000,
+                "basis": "Drive: set against 2025 planning materiality of "
+                         "$135,000 (2% of expense) and the Single Audit Type A "
+                         "threshold. Federal exposure lowers the bar "
+                         "independently of size."})
+
+        m = call(tom, "GET", "/api/classify/materiality", 200,
+                 "reads who is short")
+        if m.status_code == 200 and m.json()["short"]:
+            n = len(m.json()["short"])
+            ok(f"{n} judgment(s) carry less evidence than their size requires, "
+               f"${m.json()['short_amount']:,.0f} in all")
+        else:
+            finding("the materiality report found nothing, against a ledger "
+                    "with test assumptions in it")
+
+        # The rate. Everything upstream exists to produce this.
+        call(tom, "POST", "/api/rates/compute", 409,
+             "no rate before the seal", json={})
+        call(tom, "POST", "/api/rates/seal", 200, "seal",
+             json={"note": "Drive: sealing what has been decided."})
+        with mutating("compute the rates", "Tom Metzinger", "RATE_COMPUTE"):
+            rc = call(tom, "POST", "/api/rates/compute", 200, "compute",
+                      json={"note": "Drive: first computation."})
+        if rc.status_code == 200:
+            d = rc.json()
+            recon = float(d["proofs"]["reconciliation"]["variance"])
+            alloc = float(d["proofs"]["allocation"]["variance"])
+            if recon == 0 and alloc == 0:
+                ok("both proofs tie to the cent — the pool reconciles to the "
+                   "ledger and every allocable dollar lands once")
+            else:
+                finding(f"proofs do not tie: recon {recon}, alloc {alloc}")
+            persisted = one("""SELECT count(*) AS n FROM rate
+                                WHERE period='2025' AND status='PROPOSED'""")["n"]
+            allocated = one("SELECT count(*) AS n FROM allocation")["n"]
+            if persisted and allocated:
+                ok(f"{persisted} rates and {allocated} allocations written down")
+            else:
+                finding("the computation returned numbers and persisted none")
+            seal_on_rate = one("""SELECT count(*) AS n FROM rate r
+                                   JOIN decision_set ds USING (set_id)
+                                  WHERE r.seal_hash = ds.seal_hash""")["n"]
+            if seal_on_rate == persisted:
+                ok("every rate carries the seal of the set it came from")
+            else:
+                finding("a rate does not carry its set's seal")
+
+        # Recomputing supersedes rather than accumulating.
+        call(tom, "POST", "/api/rates/compute", 200, "recompute", json={})
+        live = one("""SELECT count(*) AS n FROM rate WHERE period='2025'
+                       AND status='PROPOSED'""")["n"]
+        superseded = one("""SELECT count(*) AS n FROM rate WHERE period='2025'
+                             AND status='SUPERSEDED'""")["n"]
+        if superseded >= live:
+            ok(f"recomputing superseded the previous {superseded} rather than "
+               f"sitting beside them")
+        else:
+            finding("recomputation accumulated rates instead of superseding")
+
+        ex = call(tom, "GET", "/api/export/exceptions", 200,
+                  "the exceptions schedule")
+        if ex.status_code == 200:
+            e = ex.json()
+            kinds = ", ".join(sorted(e["by_kind"]))
+            ok(f"{e['total']} exceptions across {len(e['by_kind'])} kinds: {kinds}")
+            if e["unexplained"] == 0:
+                ok("and every one of them carries a reason")
+            else:
+                finding(f"{e['unexplained']} exceptions have no reason given")
+            if "SHORT_COVERAGE" in e["by_kind"]:
+                ok("the short year appears on the schedule, as it must")
+            else:
+                finding("a sub-coverage submission is not on the exceptions "
+                        "schedule")
+    finally:
+        tom.close()
 
     # ── Buildings, the kit in them, and what it is worth ─────────────
     print("\nSpace and equipment — five buildings, and the cost-share line")

@@ -259,6 +259,68 @@ def propose(g: GroupOut) -> dict | None:
     return None
 
 
+class MaterialityIn(BaseModel):
+    verified_above: float = Field(ge=0)
+    corroborated_above: float = Field(ge=0)
+    federal_corroborated_above: float = Field(ge=0)
+    basis: str
+
+
+@router.get("/materiality")
+def materiality(period: str = "2025") -> dict:
+    """The evidence standard each size of cost has to meet, and who is short.
+
+    Without a written policy, a $600 group and a $600,000 group are held to
+    the same standard — which means either the small ones are over-worked or
+    the large ones are under-worked, and nothing says which. With one, doing
+    less on small items is a stated position rather than an omission.
+    """
+    policy = one("""SELECT policy_id, verified_above, corroborated_above,
+                           federal_corroborated_above, basis, set_by_name, set_at
+                      FROM materiality_policy
+                     WHERE period = %s AND superseded_at IS NULL""", (period,))
+    rows = query("""SELECT scope, pool, amount, grade::text AS grade,
+                           required_grade::text AS required_grade,
+                           meets_standard, federal::text AS federal, decided_by
+                      FROM v_materiality_compliance
+                     WHERE period = %s ORDER BY meets_standard, amount DESC""",
+                 (period,))
+    return {"period": period, "policy": policy,
+            "judgments": len(rows),
+            "short": [r for r in rows if not r["meets_standard"]],
+            "short_amount": sum(float(r["amount"]) for r in rows
+                                if not r["meets_standard"])}
+
+
+@router.put("/materiality")
+def put_materiality(body: MaterialityIn, period: str = "2025",
+                    actor: Actor = Depends(require_controller)) -> dict:
+    """Set the policy. Superseded, never edited — the standard in force when a
+    judgment was made is part of that judgment's defence."""
+    if body.verified_above < body.corroborated_above:
+        raise HTTPException(
+            422, "The verified threshold cannot be below the corroborated "
+                 "one — a larger cost cannot need weaker evidence.")
+    with transaction() as cur:
+        cur.execute("""UPDATE materiality_policy SET superseded_at = now()
+                        WHERE period = %s AND superseded_at IS NULL""", (period,))
+        cur.execute("""INSERT INTO materiality_policy
+                         (period, verified_above, corroborated_above,
+                          federal_corroborated_above, basis, set_by, set_by_name)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING policy_id""",
+                    (period, body.verified_above, body.corroborated_above,
+                     body.federal_corroborated_above, body.basis.strip(),
+                     actor.actor_id, actor.display_name))
+        pid = cur.fetchone()["policy_id"]
+        record(actor, "MATERIALITY", "materiality_policy", str(pid),
+               after={"verified_above": body.verified_above,
+                      "corroborated_above": body.corroborated_above,
+                      "federal_corroborated_above":
+                          body.federal_corroborated_above},
+               reason=body.basis.strip()[:400], cursor=cur)
+    return {"policy_id": pid}
+
+
 @router.get("/advice")
 def advice(group_key: str, period: str = "2025") -> dict:
     """What is worth thinking about before this group is classified.

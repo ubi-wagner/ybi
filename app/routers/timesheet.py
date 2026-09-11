@@ -65,6 +65,11 @@ class EntryIn(BaseModel):
 class SubmitIn(BaseModel):
     weekly_hours: float = Field(gt=0, le=80, default=40)
     acknowledged: bool = False
+    #: Supplied on a second attempt when the sheet covers less of the period
+    #: than the policy asks for. A short year, records genuinely lost, a person
+    #: who left in August — all real, and none of them a reason to refuse the
+    #: submission outright.
+    below_coverage_reason: str = ""
 
 
 class EmploymentIn(BaseModel):
@@ -412,24 +417,41 @@ def submit(body: SubmitIn, period: str = None,
 
     cover = round(entered / expected, 4) if expected else 0
 
-    if cover < MIN_COVERAGE:
+    short = cover < MIN_COVERAGE
+    if short and not body.below_coverage_reason.strip():
+        # Refusing outright was the first design, and it was wrong. Somebody
+        # on medical leave, somebody who left in August, somebody whose 2025
+        # calendar is genuinely gone — none of them could submit honestly, so
+        # the only way past was to invent hours until the number went green.
+        # A gate that cannot be passed honestly gets passed dishonestly.
+        raise HTTPException(409, {
+            "error": "SHORT_COVERAGE",
+            "message":
+                f"The sheet holds {entered:,.1f} hours against the "
+                f"{expected:,.0f} your terms imply ({basis}), which is "
+                f"{cover:.0%}. That is below the {MIN_COVERAGE:.0%} a complete "
+                f"period normally reaches. If the rest is genuinely missing — "
+                f"a short year, records you no longer have — say so and submit "
+                f"it. Do not pad the sheet to reach a number.",
+            "coverage": float(cover), "minimum": MIN_COVERAGE,
+            "entered_hours": entered, "expected_hours": expected})
+    if short and len(body.below_coverage_reason.strip()) <= 20:
         raise HTTPException(
-            422,
-            f"The sheet holds {entered:,.1f} hours against the {expected:,.0f} "
-            f"your terms imply ({basis}), which is {cover:.0%}. A part-filled "
-            f"sheet cannot stand for the period — it would say the objectives "
-            f"you have reached so far were all of it. Fill in the rest, or "
-            f"record the time you were not working as paid leave.")
+            422, "That reason is too short to stand as the evidence for a "
+                 "gap in a year's record. Say what is missing and why.")
 
     with transaction() as cur:
         cur.execute("""INSERT INTO timesheet_submission
                          (period, employee_key, weekly_hours, entered_hours,
-                          expected_hours, coverage, submitted_by, submitted_name)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                          expected_hours, coverage, submitted_by,
+                          submitted_name, minimum_coverage,
+                          below_coverage_reason)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                        ON CONFLICT DO NOTHING
                        RETURNING submission_id""",
                     (period, key, weekly, entered, expected, cover,
-                     actor.actor_id, actor.display_name))
+                     actor.actor_id, actor.display_name, MIN_COVERAGE,
+                     body.below_coverage_reason.strip() or None))
         got = cur.fetchone()
         if not got:
             raise HTTPException(409, "This timesheet is already submitted.")
@@ -437,10 +459,12 @@ def submit(body: SubmitIn, period: str = None,
                str(got["submission_id"]),
                after={"period": period, "entered_hours": entered,
                       "expected_hours": expected, "coverage": cover},
-               reason=f"{cover:.0%} of {expected:,.0f} hours — {basis}",
+               reason=(f"{cover:.0%} of {expected:,.0f} hours — {basis}"
+                       + (f" · short: {body.below_coverage_reason.strip()}"
+                          if short else "")),
                cursor=cur)
     return {"submitted": True, "coverage": cover, "entered_hours": entered,
-            "expected_hours": expected}
+            "expected_hours": expected, "below_minimum": short}
 
 
 @router.post("/withdraw")
