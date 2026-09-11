@@ -22,15 +22,19 @@ DASH = (ROOT / "app" / "routers" / "dashboard.py").read_text()
 KINDS = ["UNCLASSIFIED", "BLOCKS_SEAL", "STALE_DECISION", "NEEDS_EVIDENCE",
          "NEEDS_CERTIFICATION", "EMPLOYMENT_UNKNOWN", "FACILITY_UNPARTITIONED",
          "SPACE_UNMEASURED", "SPACE_UNATTRIBUTED", "ASSET_FUNDING_UNKNOWN",
-         "INVOICE_NO_INDIRECT", "INVOICE_NO_AWARD", "CHARGE_CODE_UNASSIGNED"]
+         "INVOICE_NO_INDIRECT", "INVOICE_NO_AWARD", "CHARGE_CODE_UNASSIGNED",
+         "AWARD_NO_CEILING"]
 
 PORTFOLIOS = {"CONTROLLER", "INVENTORY", "PROJECT", "FACILITIES", "OFFICE"}
 
 
 def _view(name: str) -> str:
+    """The definition that actually runs — the last migration to define it."""
     for path in sorted(SQL.glob("*.sql"), reverse=True):
         src = path.read_text()
-        i = src.find(f"CREATE VIEW {name} AS")
+        i = src.find(f"CREATE OR REPLACE VIEW {name} AS")
+        if i == -1:
+            i = src.find(f"CREATE VIEW {name} AS")
         if i == -1:
             continue
         # To the next CREATE or COMMENT at column zero, so a semicolon inside
@@ -89,3 +93,22 @@ def test_a_manager_cannot_sign_a_certification_for_somebody():
         assert banned not in DASH, (
             f"the worklist endpoint {banned} — a manager cannot sign for "
             f"somebody else.")
+
+
+def test_an_award_with_no_ceiling_is_on_somebody_list():
+    """Last Tactical Mile carried a ceiling of zero for the whole engagement.
+
+    The citation said "Ceiling not yet transcribed from the agreement" — an
+    honest placeholder that went quiet. The executed agreement had been on
+    file since September and §4.3, $899,500 federal and $513,065 cost share,
+    had never been read into the record. It surfaced because somebody looked
+    at a screen and asked, which is not a control.
+
+    A ceiling is what a restatement is capped against. An award without one
+    cannot be tested against anything, so it belongs on a list.
+    """
+    extra = _view("v_worklist_extra")
+    assert "AWARD_NO_CEILING" in extra, (
+        "nothing asks about an award with no ceiling, so a placeholder can "
+        "sit there for a whole engagement.")
+    assert "a.ceiling_federal = 0" in extra

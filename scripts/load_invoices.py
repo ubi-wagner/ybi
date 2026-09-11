@@ -56,17 +56,33 @@ INVOICES = [
     ]),
 ]
 
-#: The two awards the register did not have. Ceilings are from the
-#: agreements; where a figure is not yet known it is left null rather than
-#: guessed, because a ceiling invented for convenience is the number a
-#: restatement would later be capped against.
+#: The two awards the register did not have.
+#:
+#: A ceiling is read off the executed agreement or it is left at zero, which
+#: the constraint test reads as "no ceiling on file" rather than as a ceiling
+#: of nothing. A ceiling invented for convenience is the number a restatement
+#: would later be capped against, so the two states are kept apart.
+#:
+#: Last Tactical Mile sat at zero for longer than it should have. The
+#: executed agreement was on file the whole time and nobody had read §4.3 into
+#: the record — which is the shape of mistake this system exists to catch, so
+#: it is written down here rather than quietly corrected.
 AWARDS = [
+    # No agreement on file for Drive AM. PROJECT_CONTEXT carries what was
+    # *invoiced* against it, which is not a ceiling — billing tells you what
+    # was claimed, never what the contract would bear.
     ("AM-DRIVE-AM", "DRIVE-AM", "NCDMM / America Makes",
-     "FA8650-20-2-5700", "COOPERATIVE_SUB", None, dt.date(2024, 1, 1),
-     dt.date(2026, 12, 31), "DE_MINIMIS_10"),
+     "FA8650-20-2-5700", "COOPERATIVE_SUB", None, None, dt.date(2024, 1, 1),
+     dt.date(2026, 12, 31), "DE_MINIMIS_10",
+     "No executed agreement on file; ceiling and cost share unknown."),
+    # §4.3: "The total funds authorized by this agreement shall not exceed
+    # $899,500 in federal funding and $513,065 cost share." 27-month period
+    # of performance from 24 September 2024.
     ("AM-LTM-PROJ88", "LTM", "NCDMM / America Makes",
-     "FA8650-20-2-5700", "COOPERATIVE_SUB", None, dt.date(2024, 9, 24),
-     dt.date(2026, 12, 31), "DE_MINIMIS_10"),
+     "FA8650-20-2-5700", "COOPERATIVE_SUB", 899500, 513065,
+     dt.date(2024, 9, 24), dt.date(2026, 12, 31), "DE_MINIMIS_10",
+     "§4.3 Total Obligation, Sub-Recipient Agreement executed "
+     "24 September 2024"),
 ]
 
 
@@ -74,21 +90,34 @@ def main() -> int:
     open_pool()
 
     for (award_id, objective, sponsor, prime, instrument, ceiling,
-         start, end, method) in AWARDS:
-        if one("SELECT 1 FROM award WHERE award_id = %s", (award_id,)):
-            print(f"  exists   {award_id}")
+         cost_share, start, end, method, citation) in AWARDS:
+        existing = one("""SELECT ceiling_federal, cost_share_required
+                            FROM award WHERE award_id = %s""", (award_id,))
+        if existing:
+            # A ceiling that has since been read off the agreement is written
+            # in. Leaving it at zero because the row already exists is how a
+            # placeholder becomes permanent.
+            if ceiling and not existing["ceiling_federal"]:
+                execute("""UPDATE award SET ceiling_federal = %s,
+                                  cost_share_required = %s, citation = %s
+                            WHERE award_id = %s""",
+                        (ceiling, cost_share or 0, citation, award_id))
+                print(f"  ceiling  {award_id} — {ceiling:,} federal, "
+                      f"{(cost_share or 0):,} cost share, from {citation}")
+            else:
+                print(f"  exists   {award_id}")
             continue
         # ceiling_federal is NOT NULL in the schema; 0 records "not yet
         # known", and the constraint test reads it as no ceiling rather than
         # as a ceiling of nothing.
         execute("""INSERT INTO award (award_id, objective_id, sponsor,
                                       prime_agreement, instrument,
-                                      ceiling_federal, period_start,
-                                      period_end, rate_method, citation)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                                      ceiling_federal, cost_share_required,
+                                      period_start, period_end, rate_method,
+                                      citation)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 (award_id, objective, sponsor, prime, instrument,
-                 ceiling or 0, start, end, method,
-                 "Ceiling not yet transcribed from the agreement."))
+                 ceiling or 0, cost_share or 0, start, end, method, citation))
         print(f"  created  {award_id}")
 
     loaded = 0

@@ -454,3 +454,52 @@ The fringe question is untouched: 21.90% remains the defensible figure and
 22.45% remains a rate computed on a wage base a $45,000 donor credit was
 netted out of. Nothing here bears on the Bacon reclassification, which is
 still a QuickBooks entry Tom has to make.
+
+---
+
+## 9. The Last Tactical Mile ceiling, and what it does to the cost share
+
+Asked why two contracts carried no ceiling. One answer was right and one was
+not.
+
+**Last Tactical Mile was wrong.** The executed agreement has been on file
+since the September drop and nobody had read §4.3 into the record:
+
+> The total funds authorized by this agreement shall not exceed **$899,500 in
+> federal funding and $513,065 cost share**.
+
+Project total $1,412,565 over a 27-month period of performance from
+24 September 2024. The award row had carried a ceiling of zero with the
+citation "Ceiling not yet transcribed from the agreement" — honest about
+being a placeholder, and a placeholder that had gone quiet.
+
+**Drive AM is right.** There is no executed agreement on file for it. What
+`PROJECT_CONTEXT` carries — 448,335 — is what was *invoiced* against it, and
+billing tells you what was claimed, never what the contract would bear. It
+stays at "not on file" until somebody produces the agreement, and that is the
+correct state rather than a gap to fill with the billing figure.
+
+### The cost share exposure is six times what was recorded
+
+| Award | Cost share obligated | Tracked |
+|---|---:|---|
+| Hybrid Phase 2 | 104,000 | never |
+| Last Tactical Mile | **513,065** | never |
+| **Total** | **617,065** | |
+
+Of the LTM 513,065, the proposal's cover tables put **YBI's own share at
+213,037**; the balance is pledged by the University of Northern Iowa and the
+industry partners named in the proposal. YBI does not incur the partner
+portion but is obliged to evidence it, which is its own kind of exposure — a
+cost share nobody collected evidence for is a cost share the sponsor can
+disallow, and the shortfall lands on the prime.
+
+The partner figures I could extract total roughly 279,069 against a stated
+513,065 less YBI's 213,037, leaving about 21,000 unaccounted between the
+cover table and the partner detail. That is a transcription question for the
+controller against the signed document, not something to reconcile by
+inference.
+
+**This is now the largest untracked obligation in the engagement**, ahead of
+the 5227 Portfolio consulting judgment. It has been recorded on the contract
+with its clause, so the next person to ask reads it off the screen.

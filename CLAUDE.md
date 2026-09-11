@@ -547,6 +547,9 @@ These are unresolved in the real engagement, not bugs:
   is unallowable under 200.436(b).
 - Whether Rising Tides is federally funded. The controller's workbook says yes;
   the objective master says no. It changes the SEFA and the Single Audit scope.
-- Cost share of $104,000 on the Hybrid award: obligated, never tracked.
+- Cost share obligated and never tracked: $104,000 on Hybrid and
+  **$513,065 on Last Tactical Mile** (§4.3), of which YBI's own share is
+  $213,037 and the balance is partner cost share it must evidence.
+  $617,065 in total — the largest untracked obligation in the file.
 - `5227 Portfolio consulting`, $588,539 across 442 lines, no objective signal.
   The largest single open judgment in the ledger.

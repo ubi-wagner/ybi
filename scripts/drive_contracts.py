@@ -214,7 +214,14 @@ def main() -> int:
         finding("the revoked grant is not on the record")
 
     step("The contract, and its terms")
-    award = one("SELECT award_id FROM award ORDER BY ceiling_federal DESC LIMIT 1")
+    # An award that actually carries an invoice, because the milestone and
+    # the receipt later hang off one. Picking the largest ceiling was
+    # brittle: reading Last Tactical Mile's $899,500 off §4.3 made it the
+    # biggest award in the file and it has no invoice, so the drive stopped.
+    award = one("""SELECT a.award_id FROM award a
+                    WHERE EXISTS (SELECT 1 FROM invoice i
+                                   WHERE i.award_id = a.award_id)
+                    ORDER BY a.ceiling_federal DESC LIMIT 1""")
     if not award:
         print("\nCOULD NOT RUN — no award on file.", file=sys.stderr)
         return 2
