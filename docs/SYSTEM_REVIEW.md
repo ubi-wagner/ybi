@@ -10,7 +10,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Gaps | 1 |
 | Notes | 25 |
 | GET routes probed | 82 (× 6 people) |
-| Audit entries | 355 |
+| Audit entries | 707 |
 
 ## Who was driven
 
@@ -152,7 +152,7 @@ The decision set is sealed, so no change could be made to measure. That is the c
 ```json
 {
   "samples": {
-    "evidence_id": "EV-908010a6cb4f",
+    "evidence_id": "EV-aacc26a5ba6f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
     "actor_id": "cffcff27-6248-402d-9b92-44ea84061104",
@@ -282,105 +282,110 @@ The decision set is sealed, so no change could be made to measure. That is the c
   "counts": {
     "/api/classify/queue": 50,
     "/api/reconcile": 11,
-    "/api/documents/library": 28,
+    "/api/documents/library": 43,
     "/api/contracts": 3,
     "/api/reports/invoices": 3,
     "/api/chart/accounts": 103,
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 355,
+  "audit_rows": 707,
   "audit_by_action": {
-    "SIGN_IN": 72,
-    "DOCUMENT_LIBRARY_READ": 53,
-    "EXPORT": 51,
+    "SIGN_IN": 161,
+    "DOCUMENT_LIBRARY_READ": 146,
+    "EXPORT": 102,
+    "EVIDENCE_DOWNLOAD": 30,
     "AWARD_TERM": 29,
+    "REQUEST_ISSUE": 25,
+    "REVIEW_READ": 24,
+    "REQUEST_REPLY": 24,
+    "REQUEST_ACCEPT": 24,
     "EVIDENCE_UPLOAD": 18,
-    "EVIDENCE_DOWNLOAD": 15,
-    "REVIEW_READ": 12,
-    "REQUEST_ISSUE": 10,
-    "REQUEST_ACCEPT": 9,
-    "ACTOR_CREATE": 9,
-    "REQUEST_REPLY": 9,
-    "TIME_ENTRY": 8,
+    "TIME_ENTRY": 16,
+    "ACTOR_CREATE": 14,
+    "DOCUMENT_UPLOAD": 8,
     "RECONCILE_ITEM": 6,
-    "DOCUMENT_UPLOAD": 4,
-    "PASSWORD_CHANGE": 4,
-    "FACILITY": 3,
-    "IMPORT_UPLOAD": 3,
+    "PASSWORD_CHANGE": 6,
+    "FACILITY": 6,
+    "SEAL": 4,
+    "PORTFOLIO_GRANT": 4,
+    "PORTFOLIO_REVOKE": 4,
+    "UNSEAL": 3,
     "IMPORT_PARSE": 3,
-    "ACTOR_ACTIVE": 2,
-    "SEAL": 2,
-    "MILESTONE_STATE": 2,
-    "PORTFOLIO_GRANT": 2,
-    "PORTFOLIO_REVOKE": 2,
+    "IMPORT_UPLOAD": 3,
+    "ACTOR_ACTIVE": 3,
+    "IN_KIND": 2,
+    "CHART_SPLIT": 2,
+    "ACTOR_AMEND": 2,
+    "EVIDENCE_ATTACH": 2,
+    "MATERIALITY": 2,
+    "TIME_REMOVE": 2,
     "IMPORT_ACCEPT": 2,
-    "CHARGE_REVOKE": 1,
-    "SPACE_UNIT": 1,
-    "MATERIALITY": 1,
-    "EQUIPMENT_USE": 1,
-    "TIME_REMOVE": 1,
-    "CHARGE_CODE_OPEN": 1,
-    "NOTE": 1,
-    "SEGMENT": 1,
-    "IN_KIND": 1,
-    "DEFER": 1,
-    "CHART_SPLIT": 1,
+    "DEFER": 2,
+    "RATE_COMPUTE": 2,
+    "SEGMENT": 2,
+    "CLASSIFY": 2,
+    "NOTE": 2,
+    "EVIDENCE_VIEW": 2,
+    "EQUIPMENT_USE": 2,
+    "SPACE_UNIT": 2,
+    "MILESTONE_STATE": 2,
+    "SEGMENT_REVERSE": 2,
+    "PASSWORD_RESET": 2,
     "EVIDENCE_GENERATED": 1,
-    "CLASSIFY": 1,
     "RECONCILE_ALIAS": 1,
     "RECEIPT": 1,
+    "CHARGE_CODE_OPEN": 1,
+    "CHARGE_REVOKE": 1,
     "CHARGE_AUTHORISE": 1,
-    "EVIDENCE_VIEW": 1,
-    "SEGMENT_REVERSE": 1,
     "MILESTONE_OPEN": 1,
-    "PASSWORD_RESET": 1,
-    "RATE_COMPUTE": 1,
-    "ACTOR_AMEND": 1,
-    "UNSEAL": 1,
-    "RECORD_ACCESS": 1,
-    "EVIDENCE_ATTACH": 1
+    "RECORD_ACCESS": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 132
-    },
-    {
-      "actor": "Barb Ewing",
-      "role": "ORG_ADMIN",
-      "n": 61
+      "n": 218
     },
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 57
+      "n": 143
     },
     {
       "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 50
+      "n": 121
+    },
+    {
+      "actor": "Barb Ewing",
+      "role": "ORG_ADMIN",
+      "n": 121
     },
     {
       "actor": "Stephanie Gaffney",
       "role": "CONTROLLER",
-      "n": 27
+      "n": 51
     },
     {
       "actor": "Eric Wagner",
       "role": "SYSTEM_ADMIN",
-      "n": 21
-    },
-    {
-      "actor": "Drive Newcomer",
-      "role": "EMPLOYEE",
-      "n": 3
+      "n": 38
     },
     {
       "actor": "First Day",
       "role": "EMPLOYEE",
-      "n": 3
+      "n": 6
+    },
+    {
+      "actor": "Drive Newcomer",
+      "role": "EMPLOYEE",
+      "n": 6
+    },
+    {
+      "actor": "New Starter",
+      "role": "EMPLOYEE",
+      "n": 2
     },
     {
       "actor": "Boundary Probe",
@@ -390,11 +395,11 @@ The decision set is sealed, so no change could be made to measure. That is the c
   ],
   "forward_chain": {
     "ledger lines": 15500,
-    "groups still unclassified": 2478,
-    "decisions recorded": 1,
+    "groups still unclassified": 2477,
+    "decisions recorded": 2,
     "sealed sets": 1,
     "rates": 0,
-    "allocations": 16,
+    "allocations": 32,
     "invoices": 3,
     "restatements": 0
   },
@@ -441,17 +446,17 @@ The decision set is sealed, so no change could be made to measure. That is the c
     ]
   ],
   "proportion_before": {
-    "classified_dollars": "13.0",
-    "decisions": "1",
-    "audit": "358",
+    "classified_dollars": "20.1",
+    "decisions": "2",
+    "audit": "710",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
   },
   "proportion_group": {
-    "account": "4015 Program Fees:4010 State Funding-ODSA-ESP",
-    "amount": "1211515.20",
-    "lines": 13
+    "account": "5010 Depreciation Expense",
+    "amount": "850382.89",
+    "lines": 12
   }
 }
 ```

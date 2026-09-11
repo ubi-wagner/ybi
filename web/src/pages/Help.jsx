@@ -93,7 +93,7 @@ export default function Help() {
           left to do, and what has happened recently.
         </p>
         <Shot src="/help/02-dashboard.png"
-              caption="The dashboard. Income, expenses and net tie to the P&L you imported." />
+              caption="The dashboard. Income, expenses and net tie to the P&L you imported, and the activity feed below names a person and a time for every entry." />
         <p>
           <strong>Where the finances stand</strong> comes from the imported
           Profit and Loss, not from a separate calculation, so if it disagrees
@@ -120,8 +120,6 @@ export default function Help() {
           splits, documents, notes, certifications, seals, sign-ins, downloads —
           each with the person who did it and when.
         </p>
-        <Shot src="/help/04-activity.png"
-              caption="The activity feed. Every entry names a person and a time." />
 
         {/* ─────────────────────────────────────────────── */}
         <h2 id="import">Importing from QuickBooks</h2>
@@ -151,13 +149,14 @@ export default function Help() {
         <h2 id="reconcile">Making the books agree</h2>
         <p>
           Before you classify anything, open <strong>Reconcile</strong>. It runs
-          ten checks across the three reports you imported and shows you what
-          agrees and what does not. Do this first — a reconciliation produced
-          after the rate is one nobody has any reason to believe.
+          eleven checks across the three reports you imported and the payroll
+          register, and shows you what agrees and what does not. Do this
+          first — a reconciliation produced after the rate is one nobody has
+          any reason to believe.
         </p>
         <Shot src="/help/05a-reconcile.png"
-              caption="Ten cross-reference points. Each says what it proves, what each side reads, and what is left over." />
-        <p>Four of the ten are worth knowing by name:</p>
+              caption="Eleven cross-reference points. Each says what it proves, what each side reads, and what is left over." />
+        <p>Five of the eleven are worth knowing by name:</p>
         <ul>
           <li><strong>The P&amp;L foots to the net income the balance sheet
             carries.</strong> If these disagree, the two exports were run at
@@ -172,6 +171,14 @@ export default function Help() {
             balance sheet.</strong> Every account the sheet prints, proved off
             the ledger. An account the sheet leaves out has to close at zero,
             and that is checked, not assumed.</li>
+          <li><strong>The payroll register agrees with the ledger's wage
+            accounts.</strong> The eleventh, and the one that pays for
+            itself. The fringe base comes from the effort distribution rather
+            than from the ledger, so a difference between the two is not a
+            presentation question — it is two denominators for one rate.
+            Nothing among the other ten touches the register, which is how a
+            $45,000 donor credit sat in an intern wage account for a year and
+            made the fringe rate read 22.45% when it was 21.90%.</li>
         </ul>
         <p>
           When an account differs, press <strong>Find the lines behind
@@ -273,7 +280,7 @@ export default function Help() {
           per cent before the button will let you record anything.
         </p>
         <Shot src="/help/12-split.png"
-              caption="Splitting $100,000 of portfolio consulting into a direct part and a general part." />
+              caption="A split being composed. Each part carries its own share and its own reasoning; the whole is refused unless every line reconciles to the cent." />
         <p>
           Every line reconciles to the cent — not the group in aggregate, each
           line — and a split into a single part is refused, because dividing
@@ -281,8 +288,6 @@ export default function Help() {
           judgment. The source ledger is untouched: the parts sit beside it and
           become the unit you classify.
         </p>
-        <Shot src="/help/13-split-recorded.png"
-              caption="Recorded: two parts across eight lines, eight segments, reconciled." />
         <p>
           A segmentation can be reversed with a reason. The parts stay on the
           record marked reversed; they are never deleted.
@@ -299,16 +304,12 @@ export default function Help() {
           will.
         </p>
         <Shot src="/help/08-note.png"
-              caption="A note being written against the group it explains." />
-        <Shot src="/help/09-note-recorded.png"
-              caption="Recorded against your name and the time. Notes are never edited in place." />
+              caption="A note already on the record — under a name and a time, never edited in place — and the box for the next one." />
         <p>
           Attach the document that supports a judgment from the same panel, and
           say what it shows. One upload fans out to every line in the group, so
           the document supports the dollars rather than the screen.
         </p>
-        <Shot src="/help/10-attached.png"
-              caption="One upload, attached to all eight lines of the group." />
         <p>
           Documents are stored by their content, so the same lease attached to
           forty lines is stored once, and the file produced two years from now
@@ -334,7 +335,7 @@ export default function Help() {
           seeing what is still blank; click any day to see what is on it.
         </p>
         <Shot src="/help/22-timesheet-week.png"
-              caption="The week grid. One basis for the week, because that is how a person works back through a calendar." />
+              caption="The week grid, and under it what the sheet adds up to against the reconstruction built for you. One basis for the week, because that is how a person works back through a calendar." />
         <p>
           Before you enter a week, say <strong>what you are working from</strong>
           — your calendar, project records, a dated deliverable, or memory. It
@@ -374,8 +375,6 @@ export default function Help() {
           withdraw a submission with a reason; it stays on the record marked
           withdrawn.
         </p>
-        <Shot src="/help/25-timesheet-summary.png"
-              caption="What the sheet adds up to, and where it differs from the reconstruction built for you." />
         <p>
           The <strong>difference table</strong> is not a scolding. The 2025
           distribution was rebuilt from payroll and hours logs before anyone
@@ -394,15 +393,13 @@ export default function Help() {
           knowledge of it.
         </p>
         <Shot src="/help/17-certify.png"
-              caption="An employee sees their whole year, not just the federally funded part." />
+              caption="An employee sees their whole year, not just the federally funded part. Signing records the name, the time and the distribution as it stood, together." />
         <p>
           The screen shows the <strong>whole</strong> distribution — every
           activity, federal or not. Certifying only the federally charged slice
           proves nothing about the denominator, which is what makes the
           percentages mean anything.
         </p>
-        <Shot src="/help/18-certified.png"
-              caption="Signed. The name, the time and the distribution as it stood are recorded together." />
         <p>
           If the distribution changes after you sign, your signature is marked{" "}
           <strong>stale</strong> rather than quietly carried over. It attested to

@@ -116,6 +116,39 @@ screenshot older than the commit that last touched the screen it shows.
 the manual references is one the walk produces — the same derive-don't-keep
 rule that fixed the review script's hand-kept endpoint map.
 
+**Done.** The walk takes all 34 shots — the in-application manual's and the
+Help page's — and writes `web/public/help/taken.json` saying what it
+produced, so the test can ask whether a picture is one anything will ever
+retake rather than only whether the file is there. A shot may carry `steps`
+(a tab, a key, a panel, a field filled but never submitted), which is how
+focus mode, the editor and a *composed* split are photographed without the
+walk writing anything.
+
+Four shots showed a state only a write could produce — a note recorded, a
+document attached, a split applied, a certification signed. The note one
+turned out to be free: the record already carries notes, so one shot shows a
+note under its author's name *and* the empty box below it, which is what the
+two pictures said together. The other three are gone; the prose already
+describes the outcome. `role-06-first-password` is the exception worth the
+write: no account on the record is on an issued password, and that is the
+point, so the walk provisions one through the real route as Barb, photographs
+it, and stands the account down — recorded acts under her name rather than a
+screenshot from nowhere.
+
+Twenty-three orphaned images were deleted, shipped to every visitor and
+referenced by none of them, and six shots the walk took that no chapter shows
+came out of `SHOTS`. Two gaps that leaves, neither a defect: no chapter
+covers the 2026 chart, and none shows the landing page.
+
+**"Ten cross-reference points" was in four places and wrong in all of them** —
+the Help prose, its caption, its "four of the ten are worth knowing by name",
+and the in-application manual's caption. The eleventh is the payroll register,
+the one CLAUDE.md calls the one that pays for itself, and the chapter telling
+the controller to reconcile before classifying anything did not mention it.
+`test_the_manual_counts_the_controls_the_schema_defines` reads the count out
+of the register's own evaluability CASE, so the prose cannot drift from the
+schema again.
+
 **Effort.** An hour. **Depends on** nothing.
 
 ---
@@ -286,7 +319,7 @@ fixed, and it sits upstream of every other deployment item.
 
 | | | |
 |---|---|---|
-| 1 | ~~S2~~, ~~S1~~, S3 | S2 and S1 done; S3 remains |
+| 1 | ~~S2~~, ~~S1~~, ~~S3~~ | Wave 1 done |
 | 2 | **S4** | two to three days — its value decays the moment Tom starts |
 | 3 | S6 | half a day — unblocks the restatement |
 | 4 | S5, then S10 | a day and a half |

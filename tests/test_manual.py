@@ -17,10 +17,14 @@ from pathlib import Path
 
 import pytest
 
+import json
+
 ROOT = Path(__file__).resolve().parent.parent
 MANUAL = ROOT / "web" / "src" / "components" / "Manual.jsx"
+HELP = ROOT / "web" / "src" / "pages" / "Help.jsx"
 NAV = ROOT / "web" / "src" / "App.jsx"
 SHOTS = ROOT / "web" / "public" / "help"
+MANIFEST = SHOTS / "taken.json"
 
 #: The portfolios themselves.
 PORTFOLIOS = {"CONTROLLER", "INVENTORY", "PROJECT", "FACILITIES", "OFFICE"}
@@ -54,7 +58,24 @@ def chapters() -> list[tuple[str, str, str]]:
 
 
 def shot_ids() -> list[str]:
-    return re.findall(r"shot:\s*\[\"([^\"]+)\"", source())
+    """Every screenshot either document shows.
+
+    This read only Manual.jsx, so the 24 numbered files Help.jsx points at
+    were covered by nothing at all — and `05a-reconcile.png` sat on the
+    chapter telling the controller to reconcile first, showing "Cross-
+    reference points 10" against eleven, no payroll register, and a nav
+    carrying tabs that had been renamed.
+    """
+    return sorted(set(re.findall(r"shot:\s*\[\"([^\"]+)\"", source()))
+                  | set(re.findall(r'src="/help/([^"]+)\.png"', HELP.read_text())))
+
+
+def taken() -> dict:
+    """What scripts/walk_manuals.py actually produced, as it recorded it."""
+    assert MANIFEST.exists(), (
+        "web/public/help/taken.json is missing. Run the walk: "
+        "PYTHONPATH=. YBI_SEED_PASSWORD=... python3 scripts/walk_manuals.py")
+    return json.loads(MANIFEST.read_text())
 
 
 CHAPTERS = chapters()
@@ -73,6 +94,35 @@ def test_every_screenshot_the_manual_shows_exists(shot):
         f"the manual shows {shot}.png and there is no such file. Take it "
         f"with: PYTHONPATH=. python3 scripts/walk_manuals.py")
     assert path.stat().st_size > 2000, f"{shot}.png is suspiciously small"
+
+
+@pytest.mark.parametrize("shot", SHOT_IDS)
+def test_every_screenshot_the_manual_shows_is_one_the_walk_takes(shot):
+    """Existing is not the same as being retaken.
+
+    A file-exists test passes for ever on a photograph nothing regenerates,
+    which is how the Help page came to show a reconciliation screen with ten
+    control points and a nav that had been rebuilt since. The walk writes
+    down what it produced; a shot that is not in that list is one somebody
+    took by hand and nobody will take again.
+
+    This is the derive-don't-keep rule the review script already follows for
+    the endpoints each screen calls.
+    """
+    assert shot in taken(), (
+        f"{shot}.png is shown in the manual and scripts/walk_manuals.py does "
+        f"not produce it, so nothing will ever retake it. Add it to SHOTS — "
+        f"with steps, if it needs a tab or a panel opened — or stop showing "
+        f"a picture that cannot be refreshed.")
+
+
+def test_nothing_is_kept_that_nothing_shows():
+    """The other direction: 23 files were on disk that no page referenced."""
+    on_disk = {p.stem for p in SHOTS.glob("*.png")}
+    assert not on_disk - set(SHOT_IDS), (
+        "screenshots on disk that no page shows: "
+        + ", ".join(sorted(on_disk - set(SHOT_IDS)))
+        + ". They are shipped to every visitor and read by nobody.")
 
 
 @pytest.mark.parametrize("chapter_id,needs,title", CHAPTERS,
@@ -181,3 +231,59 @@ def test_the_nav_lets_a_controller_everywhere_the_api_does():
     assert 'includes("CONTROLLER")' in manual, (
         "the manual gates chapters more strictly than the nav offers tabs, "
         "so a controller gets a screen with no chapter explaining it")
+
+
+def test_the_manual_counts_the_controls_the_schema_defines():
+    """"Ten cross-reference points" was in four places and wrong in all of them.
+
+    The Help chapter's prose, its caption, its "four of the ten are worth
+    knowing by name", and the in-application manual's caption. The eleventh
+    control — the payroll register against the ledger's wage accounts — is
+    the one CLAUDE.md calls the one that pays for itself: it is how a $45,000
+    donor credit in an intern wage account was found, having moved the fringe
+    rate from 22.45% to 21.90%, and none of the other ten touches the
+    register. The chapter that tells the controller to reconcile before
+    classifying anything did not mention it.
+
+    A figure in a document for somebody else is read off the record, not
+    recalled. The register is in the schema, so the count is read from there.
+    """
+    body = ""
+    for path in sorted((ROOT / "app" / "sql").glob("*.sql"), reverse=True):
+        src = path.read_text()
+        i = src.find("CREATE OR REPLACE VIEW v_statement_reconciliation AS")
+        if i == -1:
+            i = src.find("CREATE VIEW v_statement_reconciliation AS")
+        if i != -1:
+            j = min((k for k in (src.find("\nCOMMENT ON", i + 10),
+                                 src.find("\nCREATE ", i + 10)) if k != -1),
+                    default=len(src))
+            body = src[i:j]
+            break
+    assert body, "v_statement_reconciliation is not defined in any migration"
+
+    # Each control is named in the evaluability CASE, which is the one place
+    # every control has to appear: a control missing from it falls to the
+    # ELSE and is treated as evaluable over no data, which is the defect 029
+    # was written to fix.
+    controls = {c for c in re.findall(r"WHEN\s+'([A-Z][A-Z_]{3,})'", body)
+                if not c.startswith("WHEN")}
+    n = len(controls)
+    assert n >= 11, f"only found {n} controls in the register: {sorted(controls)}"
+
+    words = {10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen"}
+    said = words.get(n, str(n))
+    for doc, src in (("Help.jsx", HELP.read_text()),
+                     ("Manual.jsx", source())):
+        for wrong in (w for k, w in words.items() if k != n):
+            assert f"{wrong} cross-reference" not in src.lower(), (
+                f"{doc} says {wrong!r} cross-reference points; the register "
+                f"defines {n}. The count is in the schema — read it, do not "
+                f"recall it.")
+        if "cross-reference point" in src.lower():
+            assert f"{said} cross-reference point" in src.lower(), (
+                f"{doc} names a number of cross-reference points that is not "
+                f"{said}")
+    assert "PAYROLL_REGISTER" in controls, (
+        "the payroll register is no longer one of the controls; the manual "
+        "chapter describing it needs to change with it")

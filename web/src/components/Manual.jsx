@@ -151,7 +151,7 @@ const CHAPTERS = [
        "A rate over a ledger that does not match its own statements is a " +
        "rate over the wrong numbers, however carefully the pools were built."],
     ],
-    shot: ["m-reconcile", "Ten cross-reference points, and what is left at " +
+    shot: ["m-reconcile", "Eleven cross-reference points, and what is left at " +
                           "each."],
   },
   {
