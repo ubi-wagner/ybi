@@ -325,5 +325,19 @@ def undo(body: UndoIn, actor: Actor = Depends(require_own_writes)) -> dict:
         except HTTPException as e:
             refused.append({"entry_id": r["entry_id"], "why": e.detail})
 
+    # Nothing walked back is not a success, whatever else is in the body.
+    #
+    # This used to answer 200 with `undone: []`, and a caller checking the
+    # status — which is every caller, and every person watching a screen —
+    # was told it had worked. A state machine drive counted forty successes
+    # over one actual undo. The reasons were in the body the whole time and
+    # nobody was reading them, because nothing said to.
+    if not done:
+        why = "; ".join(f"{r['entry_id']}: {r['why']}" for r in refused)
+        raise HTTPException(
+            409,
+            f"Nothing was walked back. {why}" if why else
+            "Nothing was walked back.")
+
     return {"undone": done, "refused": refused,
             "count": len(done)}

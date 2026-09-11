@@ -150,7 +150,12 @@ def queue(period: str = "2025",
                count(DISTINCT att.attachment_id)     AS evidence_count,
                count(DISTINCT n.note_id)             AS note_count
           FROM ledger_line l
-          LEFT JOIN decision_line dl ON dl.line_id = l.line_id
+          -- `dl.live` is load-bearing. Without it a line that has been
+          -- reclassified joins once per judgment it has ever carried, and
+          -- every sum in this query multiplies: a group judged four times
+          -- printed four times its amount, on the screen the whole
+          -- engagement is worked from.
+          LEFT JOIN decision_line dl ON dl.line_id = l.line_id AND dl.live
           LEFT JOIN decision d ON d.decision_id = dl.decision_id AND d.reversed_at IS NULL
           LEFT JOIN ledger_revision rev ON rev.line_id = l.line_id
                                        AND rev.affects_decision IS NOT NULL

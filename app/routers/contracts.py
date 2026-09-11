@@ -471,7 +471,14 @@ def milestone(milestone_id: str, period: str | None = None) -> dict:
                            sum(l.amount)  AS amount,
                            count(*)       AS lines
                       FROM ledger_line l
+                      -- `dl.live` is redundant against the inner join to a
+                      -- live decision below, and it is here anyway: the rule
+                      -- is "every join to decision_line by line_id filters
+                      -- live", and a rule with an exception for "unless the
+                      -- next join happens to be inner" is one somebody gets
+                      -- wrong the day they change this to a LEFT JOIN.
                       JOIN decision_line dl ON dl.line_id = l.line_id
+                                           AND dl.live
                       JOIN decision d ON d.decision_id = dl.decision_id
                                      AND d.reversed_at IS NULL
                      WHERE d.objective_id = %s AND l.period = %s

@@ -214,3 +214,76 @@ def test_the_propagation_matrix_asserts_both_directions():
     assert "nothing said it could" in drive, (
         "the drive no longer reports a figure that moved without being "
         "listed — which is how the coverage double-count was found")
+
+
+def test_an_undo_that_walked_nothing_back_is_not_a_success():
+    """It answered 200 with `undone: []` and the reasons buried in the body.
+
+    Every caller checks the status, and a state machine drive counted forty
+    successes over one actual undo. The information was there the whole time
+    and nothing said to read it.
+    """
+    src = (ROOT / "app" / "routers" / "undo.py").read_text()
+    m = re.search(r"def undo\(body: UndoIn.*?\n(?=\n@router|\Z)", src, re.S)
+    assert m, "the undo handler is gone"
+    body = m.group(0)
+    assert "if not done:" in body and "409" in body, (
+        "an undo that walks nothing back no longer refuses; it will report "
+        "success over having done nothing")
+
+
+def test_a_settled_entry_does_not_jam_the_undo_trail():
+    """Undo walks newest first, which is right — undoing out of order puts a
+    value back that a later action moved on from. But there was no way *past*
+    an entry that can never be undone, and one sits in the ordinary
+    lifecycle: seal, compute, unseal, and the SEAL entry is offered for ever
+    while answering "that set is not sealed".
+
+    Everything older than it — every classification, every document — became
+    permanently unreachable. A drive walked back forty times and moved one
+    thing.
+    """
+    joined = "\n".join(p.read_text() for p in sorted(SQL.glob("*.sql")))
+    m = re.findall(r"CREATE OR REPLACE VIEW v_undoable AS(.*?);\s*COMMENT",
+                   joined, re.S)
+    assert m, "v_undoable is no longer redefined"
+    body = m[-1]
+    assert "already_undone" in body
+    assert "WHEN 'SEAL' THEN NOT EXISTS" in body, (
+        "a seal whose set has since been unsealed is still offered as "
+        "undoable, and blocks everything older than it")
+    assert "WHEN 'CLASSIFY' THEN EXISTS" in body, (
+        "a classification a later judgment superseded is still offered as "
+        "undoable")
+
+
+def test_the_state_machine_refuses_to_start_from_an_unknown_state():
+    """Every expectation in it is an absolute count from a known start, so a
+    second run over the first run's leavings measures from the wrong zero —
+    which is exactly what it did, reporting two findings that were really its
+    own arithmetic."""
+    drive = (ROOT / "scripts" / "drive_state_machine.py").read_text()
+    assert "COULD NOT RUN — the record is not at rest" in drive
+    assert "decisions_live" in drive and "rates_all" in drive
+
+
+def test_the_state_machine_checks_every_invariant_every_turn():
+    """A chain reaction that goes wrong two turns downstream is invisible to
+    a check that only looks at what it expected to change."""
+    drive = (ROOT / "scripts" / "drive_state_machine.py").read_text()
+    assert "INVARIANTS = [" in drive
+    n = drive.count('     """SELECT count(*)')
+    assert n >= 10, f"only {n} invariants; the set has been thinned out"
+    m = re.search(r"def turn\(.*?\n(?=\ndef )", drive, re.S)
+    assert m and "check_invariants(" in m.group(0), (
+        "turn() no longer re-checks the invariants, so it can only catch a "
+        "defect in the thing it was already looking at")
+
+
+def test_the_reset_is_bounded_to_the_drive_s_own_actions():
+    """An undo loop that ran to exhaustion would carry on into the seed and
+    start reversing the eighteen foundational documents. That is not a reset,
+    it is demolition."""
+    drive = (ROOT / "scripts" / "drive_state_machine.py").read_text()
+    assert "floor" in drive and "entry_id > %s" in drive, (
+        "the reset is no longer bounded by an audit floor")

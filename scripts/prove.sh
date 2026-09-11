@@ -46,6 +46,12 @@ step "The manual"
 run "screenshots are current" $PY scripts/walk_manuals.py --base "$BASE"
 run "manual tests" $PY -m pytest -q tests/test_manual.py
 
+step "The system as a state machine, one action at a time"
+# Before everything, because it needs the record at rest: every expectation in
+# it is an absolute count from a known start. It walks its own turns back and
+# leaves the live state exactly as it found it.
+run "drive_state_machine" $PY scripts/drive_state_machine.py --base "$BASE"
+
 step "The whole system, as everybody, in six dimensions"
 # Before the drives, for the same reason the manual walk is: the drives seal
 # the decision set, and a sealed set refuses the one classification this

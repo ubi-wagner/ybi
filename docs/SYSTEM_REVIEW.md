@@ -10,7 +10,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Gaps | 1 |
 | Notes | 25 |
 | GET routes probed | 80 (× 6 people) |
-| Audit entries | 181 |
+| Audit entries | 193 |
 
 ## Who was driven
 
@@ -153,7 +153,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "c2407e37-aa2f-430f-a01d-a1a50870ae8c",
+    "actor_id": "da60197d-3516-4967-88ab-aa25acab8fd9",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -287,29 +287,34 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "/api/contracts/employees": 43,
     "/api/certify/status": 43
   },
-  "audit_rows": 181,
+  "audit_rows": 193,
   "audit_by_action": {
     "EXPORT": 42,
     "DOCUMENT_LIBRARY_READ": 26,
     "AWARD_TERM": 26,
-    "SIGN_IN": 22,
+    "SIGN_IN": 25,
     "EVIDENCE_UPLOAD": 18,
     "EVIDENCE_DOWNLOAD": 12,
     "REVIEW_READ": 12,
     "RECONCILE_ITEM": 6,
     "ACTOR_CREATE": 5,
+    "CLASSIFY": 4,
     "IMPORT_UPLOAD": 3,
     "IMPORT_PARSE": 3,
     "IMPORT_ACCEPT": 2,
+    "UNDO": 2,
     "PASSWORD_CHANGE": 2,
-    "RECONCILE_ALIAS": 1,
-    "RECORD_ACCESS": 1
+    "RATE_COMPUTE": 1,
+    "SEAL": 1,
+    "RECORD_ACCESS": 1,
+    "UNSEAL": 1,
+    "RECONCILE_ALIAS": 1
   },
   "audit_by_actor": [
     {
       "actor": "Tom Metzinger",
       "role": "CONTROLLER",
-      "n": 83
+      "n": 93
     },
     {
       "actor": "Barb Ewing",
@@ -319,12 +324,12 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     {
       "actor": "Engagement Auditor",
       "role": "AUDITOR",
-      "n": 20
+      "n": 21
     },
     {
       "actor": "Heidi Ruby",
       "role": "CONTROLLER",
-      "n": 19
+      "n": 20
     },
     {
       "actor": "Eric Wagner",
@@ -343,7 +348,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "decisions recorded": 0,
     "sealed sets": 0,
     "rates": 0,
-    "allocations": 0,
+    "allocations": 16,
     "invoices": 3,
     "restatements": 0
   },
@@ -392,7 +397,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "proportion_before": {
     "classified_dollars": "0.0",
     "decisions": "0",
-    "audit": "184",
+    "audit": "196",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
@@ -405,7 +410,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "proportion_after": {
     "classified_dollars": "13.0",
     "decisions": "1",
-    "audit": "185",
+    "audit": "197",
     "ledger": "14371299.30",
     "register": "1835047.18",
     "open_controls": "55"
@@ -420,8 +425,8 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
       "1"
     ],
     "audit": [
-      "184",
-      "185"
+      "196",
+      "197"
     ]
   }
 }

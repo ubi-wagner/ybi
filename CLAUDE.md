@@ -628,6 +628,57 @@ matter; `anonymous` is honest for a 401 *and* for a body FastAPI rejects
 before any dependency runs; and recording a refusal must never turn a refusal
 into a crash.
 
+## Supersession, and the one rule it needs
+
+Reclassifying leaves the old `decision_line` in place with `live = false` —
+that is how the record stays append-only. So:
+
+> **Every join to `decision_line` by `line_id` says `AND dl.live`.**
+> No exceptions, including where an inner join to a live decision already
+> makes it redundant.
+
+Without it a line joins once per judgment it has ever carried and every sum
+multiplies. This was latent for as long as nothing could supersede, which is
+why **three** places had it and none was wrong when written:
+
+| | |
+| --- | --- |
+| `v_classification_coverage` | `classified` doubled on one reclassification — and the *scope* grew, which is the tell: no judgment changes how much there is to judge |
+| the classification queue | a group judged four times printed **four times its amount**, on the screen the engagement is worked from |
+| `v_form_990_functional` | a reclassified line landed in its function *and* in `NOT_YET_CLASSIFIED`, so a **tax return** carried the same cost twice — and the extra would have looked like work remaining |
+
+Migrations `042`, `044` and `045` close them; `045` adds the filter to three
+more that are safe only because their next join is inner, because a rule with
+an exception is one somebody gets wrong the day they change that join.
+`tests/test_supersession.py` sweeps both the SQL and the handlers, so a fourth
+is caught by a test rather than by somebody noticing a number that looks high.
+
+Two things learned writing those migrations, both worth not repeating: a view
+body must be **lifted, not retyped** — one draft rewrote
+`v_form_990_functional`'s scope from memory and silently changed how every
+line is categorised — and a `CREATE VIEW` extracted by regex runs into the
+next one unless you find its terminating semicolon.
+
+## The undo trail cannot jam
+
+Undo walks newest first, which is right: undoing out of order puts a value
+back that a later action had already moved on from. But there was no way
+*past* an entry that can never be undone, and one sits in the ordinary
+lifecycle — seal, compute, unseal, and the `SEAL` entry is offered for ever
+while answering "that set is not sealed". Everything older became
+unreachable; a drive walked back forty times and moved one thing.
+
+`v_undoable.already_undone` (migration `043`) now covers two cases, not one:
+somebody pressed undo on it, **or** its effect is already gone by another
+route — a seal whose set has since been unsealed, a classification a later
+judgment superseded. The distinction that matters is between *must not be*
+undone (something later depends on it — the chain is supposed to stop) and
+*need not be* (there is nothing left to walk back).
+
+And **an undo that walked nothing back answers 409**, not 200 with an empty
+list. The reasons were in the body the whole time and every caller checks the
+status.
+
 ## What one change moves
 
 **Reclassifying one expense changes the whole system**, and
@@ -696,6 +747,7 @@ are tested at.
 | `scripts/drive_access.py` | rank, portfolios, the seal, the password gate, the library, the reports |
 | `scripts/drive_actors.py` | anonymous, auditor, employee, controller boundaries |
 | `scripts/review_system.py` | six dimensions, as all six people, forward and backward |
+| `scripts/drive_state_machine.py` | the lifecycle one action at a time, every invariant re-checked each turn, then walked back |
 | `scripts/drive_propagation.py` | what one reclassification moves, and what it must not |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 

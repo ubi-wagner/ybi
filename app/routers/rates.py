@@ -384,8 +384,35 @@ def current(period: str = "2025") -> dict:
 
 
 @router.get("/allocation")
-def allocation(rate_id: str) -> list[dict]:
-    return query("""SELECT a.objective_id, o.label, o.is_federal,
+def allocation(rate_id: str) -> dict:
+    """What one rate allocated, and whether that rate still stands.
+
+    The caller names the rate, so a superseded one is a legitimate thing to
+    ask for — a workpaper that cited it has to keep resolving. What is not
+    legitimate is showing its allocation without saying so, which is exactly
+    the trap `v_rate_buildup` fell into when it presented four superseded
+    rates as the rate on file.
+
+    Unsealing supersedes every rate and leaves its allocations in place, so
+    this is not a rare state: it is what the record looks like the moment a
+    controller reopens classification.
+    """
+    r = one("""SELECT status, kind, seal_hash, computed_at
+                 FROM rate WHERE rate_id = %s""", (rate_id,))
+    if not r:
+        raise HTTPException(404, "No such rate.")
+    rows = query("""SELECT a.objective_id, o.label, o.is_federal,
                            a.base_amount, a.allocated, a.rounding_adj
                       FROM allocation a JOIN cost_objective o USING (objective_id)
                      WHERE a.rate_id=%s ORDER BY a.allocated DESC""", (rate_id,))
+    superseded = r["status"] == "SUPERSEDED"
+    return {
+        "rate_id": rate_id, "kind": r["kind"], "status": r["status"],
+        "seal_hash": r["seal_hash"], "computed_at": r["computed_at"],
+        "superseded": superseded,
+        "caveat": ("This rate has been superseded — the classifications under "
+                   "it have been reopened. The allocation below is what it "
+                   "produced when it stood, not the allocation on file."
+                   if superseded else ""),
+        "allocation": rows,
+    }
