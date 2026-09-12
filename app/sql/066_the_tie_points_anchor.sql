@@ -126,7 +126,7 @@ COMMENT ON VIEW v_rate_buildup IS
 --     comparing them would be a false alarm every time a credit is judged.
 --
 --   * **The wage base is the payroll register.** The fringe denominator is
---     `SALARIES_WAGES` at $1,835,047.18, and that figure is `register_wages`
+--     `SALARIES_WAGES` at $1,835,047.17, and that figure is `register_wages`
 --     on the eleventh statement control — *the fringe base comes from the
 --     effort distribution, not from the ledger's wage accounts*. The anchor
 --     existed and the build-up never pointed at it, so a reviewer reading the

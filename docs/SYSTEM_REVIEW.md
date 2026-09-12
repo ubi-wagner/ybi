@@ -9,7 +9,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | Faults | 0 |
 | Gaps | 1 |
 | Notes | 33 |
-| GET routes probed | 90 (× 6 people) |
+| GET routes probed | 91 (× 6 people) |
 | Audit entries | 231 |
 
 ## Who was driven
@@ -185,13 +185,13 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "22ca098d-827c-42e6-a82c-b92a461ebac4",
+    "actor_id": "4370ee80-8018-429c-934a-220ee220ae6c",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
     "kind": "rate-buildup"
   },
-  "routes_probed": 90,
+  "routes_probed": 91,
   "routes_skipped": 8,
   "tabs": [
     {
@@ -457,7 +457,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "decisions": "0",
     "audit": "234",
     "ledger": "14371299.30",
-    "register": "1835047.18",
+    "register": "1835047.1700000000000000",
     "open_controls": "55"
   },
   "proportion_group": {
@@ -470,7 +470,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "decisions": "1",
     "audit": "235",
     "ledger": "14371299.30",
-    "register": "1835047.18",
+    "register": "1835047.1700000000000000",
     "open_controls": "55"
   },
   "proportion_moved": {

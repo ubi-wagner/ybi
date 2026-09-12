@@ -1,23 +1,23 @@
 -- The hard anchors, especially for fringe.
 --
 -- `066` anchored the fringe *denominator* — the wage base is the payroll
--- register, $1,835,047.18 — and left the numerator and the rate itself
+-- register, $1,835,047.17 — and left the numerator and the rate itself
 -- unanchored. The engagement has hard figures for both, off the source
 -- documents rather than out of the model, and they reproduce on the live
 -- record to the basis point:
 --
 --     the P&L's six fringe accounts        401,783.60
---     the payroll register's wages       1,835,047.18
+--     the payroll register's wages       1,835,047.17
 --     ---------------------------------------------- = 0.2190   21.90%
 --
 --     the same pool over the *ledger's*
 --     wage accounts, 1,789,993.94        = 0.2245   22.45%
 --
--- **That difference is one number: $45,053.24.** A donor credit sat in an
+-- **That difference is one number: $45,053.23.** A donor credit sat in an
 -- intern wage account for a year, so the ledger's wage accounts are
 -- understated by it and a rate taken over them reads high. The eleventh
--- statement control already finds it — `gross_difference` 45,053.24, `named`
--- -45,053.24, `unexplained` 0.00 — and this is the other end of the same
+-- statement control already finds it — `gross_difference` 45,053.23, `named`
+-- -45,053.23, `unexplained` 0.00 — and this is the other end of the same
 -- fact: **21.90% and 22.45% are not two opinions, they are one pool over two
 -- denominators, and only one of the denominators is the payroll.**
 --
@@ -44,7 +44,7 @@
 --
 -- Dropped and recreated rather than replaced: `unit` goes in beside the
 -- figures it describes, and this register now carries dollars *and* rates in
--- one column. A reader scanning 1,835,047.18 and 0.2190 in the same place
+-- one column. A reader scanning 1,835,047.17 and 0.2190 in the same place
 -- needs to be told which is which.
 DROP VIEW v_rate_anchor;
 CREATE VIEW v_rate_anchor AS
@@ -153,7 +153,7 @@ UNION ALL
 -- assertion: the pool the P&L names over the wages the register names, at
 -- the four decimal places `rate.rate` stores, against what was actually
 -- computed. **0.2190.** The same pool over the ledger's wage accounts is
--- 0.2245, and the $45,053.24 between them is the credit.
+-- 0.2245, and the $45,053.23 between them is the credit.
 SELECT p.period, 4 AS seq,
        'FRINGE_RATE_ON_THE_REGISTER'::text,
        'The rate the source documents imply, against the one computed'::text,
@@ -171,7 +171,7 @@ SELECT p.period, 4 AS seq,
            ELSE 'OPEN'
        END,
        'Over the payroll register, not the ledger''s wage accounts: those '
-       'are understated by the $45,053.24 credit and give 0.2245.'::text,
+       'are understated by the $45,053.23 credit and give 0.2245.'::text,
        (c.unclassified = 0),
        c.pct_dollars_covered,
        'RATE'::text
@@ -187,6 +187,6 @@ COMMENT ON VIEW v_rate_anchor IS
   'account for every judgment, the wage base is the payroll register, what '
   'is judged into FRINGE is the P&L''s fringe accounts, and the fringe rate '
   'the two imply — 0.2190 over the register, against 0.2245 over the '
-  'ledger''s wage accounts, which are understated by the $45,053.24 credit. '
+  'ledger''s wage accounts, which are understated by the $45,053.23 credit. '
   'Controls, not inputs: nothing here sets a rate. NO DATA is not a pass, '
   'and `unit` says whether a row is dollars or a rate.';

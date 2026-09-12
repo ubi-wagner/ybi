@@ -59,15 +59,15 @@ separately and answered 13.0% and 2.2% at the same moment.
 | | |
 | --- | --- |
 | People on the payroll register | 43 |
-| Register wages | 1,835,047.18 |
+| Register wages | 1,835,047.17 |
 | Ledger wage accounts | 1,789,993.94 |
-| Difference | 45,053.24 |
-| Named in reconciling items | 45,053.24 |
+| Difference | 45,053.23 |
+| Named in reconciling items | 45,053.23 |
 | **Unexplained** | **0.00** |
 | Effort allocations | 97 |
-| Distributed wages | 1,835,047.18 |
+| Distributed wages | 1,835,047.17 |
 
-The distribution foots to the register exactly. The 45,053.24 is the Bacon
+The distribution foots to the register exactly. The 45,053.23 is the Bacon
 credit sitting in an intern wage account, named rather than netted — it is
 the whole of the difference between a fringe rate of 22.45% and one of
 21.90%, and Tom has to reclassify it in QuickBooks before either is the

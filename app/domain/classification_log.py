@@ -487,7 +487,7 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
     #
     # `POST /api/rates/compute` feeds `v_labor_effective.distributed_wages`
     # into `PoolModel.add_labor()`, which sets `ObjectiveCost.direct_labor`
-    # per objective — $1,835,047.18, the payroll register to the cent, split
+    # per objective — $1,835,047.17, the payroll register to the cent, split
     # ESP $561,145, MBAC $278,466, YBI-GA $264,445, the Hub $172,214 and so
     # on down to DLA at $401. `build()` separately puts every DIRECT decision
     # into `direct_nonlabor`. **Both feed MTDC.** So a DIRECT judgment on
@@ -504,7 +504,7 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
     if leaf in ("5140 Employee Wages", "5142 Intern Wages"):
         extra = ""
         if leaf == "5142 Intern Wages":
-            extra = (" It also carries the $45,053.24 donor credit that sat "
+            extra = (" It also carries the $45,053.23 donor credit that sat "
                      "here for a year and made the fringe rate read 22.45% "
                      "instead of 21.90% — named as a reconciling item and "
                      "not yet reposted in QuickBooks, so a pool must not "
@@ -514,7 +514,7 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
             "CORROBORATED", "2 CFR 200.430(i)",
             "Wages reach the rate model through the effort distribution, not "
             "through this account: `v_labor_effective` distributes "
-            "$1,835,047.18 across the objectives and the computation reads it "
+            "$1,835,047.17 across the objectives and the computation reads it "
             "straight into the direct base. A pool judgment here would put "
             "the same labour in twice and every indirect rate over that base "
             "would read low by the width of the payroll." + extra,

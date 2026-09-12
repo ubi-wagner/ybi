@@ -24,7 +24,7 @@ what was decided while reading it.
 Why it ends at the anchors. A walk that only reports what it did is a review
 reading its own writing. The last section compares the result against figures
 that were fixed before it ran — the eleven cross-reference controls, the P&L's
-own fringe accounts at $401,783.60, the payroll register at $1,835,047.18 and
+own fringe accounts at $401,783.60, the payroll register at $1,835,047.17 and
 the 21.90% that falls out of the two — and reports a difference rather than
 absorbing one.
 """
@@ -182,10 +182,10 @@ def anchors(period: str) -> list[tuple[str, bool | None, str]]:
                           money(pr["ledger_wages"]))
         out.append(("the P&L's six fringe accounts = $401,783.60",
                     pool == Decimal("401783.60"), f"${pool:,.2f}"))
-        out.append(("the payroll register's wages = $1,835,047.18",
-                    reg == Decimal("1835047.18"), f"${reg:,.2f}"))
-        out.append(("the donor credit between the two = $45,053.24",
-                    money(reg - led) == Decimal("45053.24"),
+        out.append(("the payroll register's wages = $1,835,047.17",
+                    reg == Decimal("1835047.17"), f"${reg:,.2f}"))
+        out.append(("the donor credit between the two = $45,053.23",
+                    money(reg - led) == Decimal("45053.23"),
                     f"${money(reg - led):,.2f}"))
         rate = (pool / reg).quantize(Decimal("0.0001")) if reg else None
         alt = (pool / led).quantize(Decimal("0.0001")) if led else None

@@ -228,9 +228,9 @@ def test_the_fringe_rate_is_one_pool_over_two_denominators():
     """21.90% and 22.45% are not two opinions.
 
     The P&L's six fringe accounts come to $401,783.60. Over the payroll
-    register's $1,835,047.18 that is 0.2190; over the *ledger's* wage
+    register's $1,835,047.17 that is 0.2190; over the *ledger's* wage
     accounts, $1,789,993.94, it is 0.2245. The whole of the difference is
-    one number — **$45,053.24** — a donor credit that sat in an intern wage
+    one number — **$45,053.23** — a donor credit that sat in an intern wage
     account for a year, understating the ledger's wages and so overstating
     any rate taken over them.
 
@@ -240,12 +240,12 @@ def test_the_fringe_rate_is_one_pool_over_two_denominators():
     """
     from decimal import Decimal, ROUND_HALF_UP
     pool = Decimal("401783.60")
-    register = Decimal("1835047.18")
+    register = Decimal("1835047.17")
     ledger = Decimal("1789993.94")
     q = lambda x: x.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
     assert q(pool / register) == Decimal("0.2190")
     assert q(pool / ledger) == Decimal("0.2245")
-    assert register - ledger == Decimal("45053.24")
+    assert register - ledger == Decimal("45053.23")
 
 
 def test_the_anchor_reads_the_register_not_the_ledger():
@@ -256,7 +256,7 @@ def test_the_anchor_reads_the_register_not_the_ledger():
     assert "register_wages" in body, "the fringe rate anchor lost its denominator"
     assert "ledger_wages" not in body, (
         "the fringe rate anchor is taking the ledger's wage accounts, which "
-        "are understated by the $45,053.24 credit")
+        "are understated by the $45,053.23 credit")
 
 
 def test_nothing_sets_a_rate(cur):

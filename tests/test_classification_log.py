@@ -169,7 +169,7 @@ DELIBERATE: dict[str, str] = {
        for leaf in OCCUPANCY},
     "5140 Employee Wages": "EXCLUDED from the pools because the wages are "
                            "already in the base: v_labor_effective "
-                           "distributes $1,835,047.18 straight into "
+                           "distributes $1,835,047.17 straight into "
                            "direct_labor, and a pool judgment would count "
                            "the same payroll twice",
     "5010 Depreciation Expense": "OVERHEAD like every other occupancy cost, "

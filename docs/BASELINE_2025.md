@@ -24,7 +24,7 @@ cross-tied to at least one other document.
 | GL_BS_ACCOUNT | 71 tied | 0 off | TIES |
 | GL_BS_COVERAGE | 4 absent at zero | 0 carrying a balance | TIES |
 | SEGMENTATION | 14,371,299.30 | 14,371,299.30 | TIES |
-| PAYROLL_REGISTER | 1,835,047.18 | 1,789,993.94 | TIES |
+| PAYROLL_REGISTER | 1,835,047.17 | 1,789,993.94 | TIES |
 
 They tie on six named reconciling items and one alias — no plugs:
 
@@ -84,7 +84,7 @@ Expense by family, footing to the P&L to the cent:
 | wages as booked | **1,789,993.94** |
 | Bacon donor credit added back | 45,000.00 |
 | wages corrected | **1,834,993.94** |
-| controller's register | 1,835,047.18 |
+| controller's register | 1,835,047.17 |
 | unattributable residual | 53.24 |
 
 **The rate:**
@@ -93,7 +93,7 @@ Expense by family, footing to the P&L to the cent:
 |---|---:|---|
 | on wages as booked | **22.45%** | 401,783.60 / 1,789,993.94 |
 | on wages corrected | **21.90%** | 401,783.60 / 1,834,993.94 |
-| on the register | 21.90% | 401,783.60 / 1,835,047.18 |
+| on the register | 21.90% | 401,783.60 / 1,835,047.17 |
 
 Both figures in circulation are now derived rather than asserted. 22.45% is
 the rate over a wage base a $45,000 donor credit has been netted out of;
@@ -155,7 +155,7 @@ Balance sheet fixed assets: gross 23,735,007.69 less A/D 9,580,433.29 =
 the register. Correct — it is not depreciated — but it means the register is
 not a complete statement of what the organisation owns.
 
-## 6. Effort distribution — 43 people, 16 objectives, 1,835,047.16
+## 6. Effort distribution — 43 people, 16 objectives, 1,835,047.17
 
 | Objective | People | Wage dollars | % | Treatment |
 |---|---:|---:|---:|---|

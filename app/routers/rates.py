@@ -128,10 +128,29 @@ class ComputeIn(BaseModel):
     fringe_base: str = "SALARIES_WAGES"
     combined: bool = True
     note: str = ""
+    #: How general-administration labour is treated. `OBJECTIVE` leaves
+    #: YBI-GA in the base taking an allocation of indirect — what every rate
+    #: before migration 068 did. `POOL` puts its wages and fringe into the
+    #: G&A pool, per Appendix IV B.
+    #:
+    #: **The default is deliberately the old behaviour.** This is a judgment
+    #: about whether YBI-GA is genuinely general administration or the bucket
+    #: unattributable time went into, and only the person who built the
+    #: reconstruction can answer it. Worth 34.82% against 43.99% on the same
+    #: sealed judgments, so it is recorded on the rate rather than decided by
+    #: whichever branch of the code ran.
+    admin_labour: str = "OBJECTIVE"
+
+
+#: The objective that carries general-administration effort. Named once: a
+#: second spelling of it in the handler would be a hand-kept map of a value
+#: the distribution decides.
+ADMIN_OBJECTIVE = "YBI-GA"
 
 
 def _build_model(period: str,
-                 fringe_base: "AllocationBase | None" = None):
+                 fringe_base: "AllocationBase | None" = None,
+                 admin_labour: str = "OBJECTIVE"):
     """Assemble the domain model from what is on file.
 
     The engine is pure and knows nothing about Postgres; this is the seam.
@@ -221,6 +240,13 @@ def _build_model(period: str,
     # 34.82% depending on how many times the button had been pressed.
     model.apply_fringe(fringe_base)
 
+    # Administration into the pool, if that is the decision on this run. It
+    # happens after `apply_fringe` on purpose: what moves is wages *and* the
+    # fringe on them, and the fringe does not exist until the rate that
+    # carries it has been applied.
+    if admin_labour == "POOL":
+        model.administration_into_the_pool(ADMIN_OBJECTIVE)
+
     # Carve-outs from the facilities work: tenant, vacant and committed space
     # is the rental operation's cost and never reaches a federal pool.
     occupancy = query("""SELECT name, tenant_sqft, vacant_sqft, committed_sqft,
@@ -303,9 +329,18 @@ def compute(body: ComputeIn, period: str = "2025",
     except ValueError:
         raise HTTPException(422, f"Unknown base {body.fringe_base!r}.")
 
-    model = _build_model(period, base_type)
+    if body.admin_labour not in ("OBJECTIVE", "POOL"):
+        raise HTTPException(
+            422, f"admin_labour must be OBJECTIVE or POOL, not "
+                 f"{body.admin_labour!r}. OBJECTIVE leaves general "
+                 f"administration in the base taking an allocation of "
+                 f"indirect; POOL puts it in the G&A pool per Appendix IV B.")
+
+    model = _build_model(period, base_type, body.admin_labour)
     model.decisions._sealed_hash = sealed["seal_hash"]   # the seal on file
-    fringe_base = model.base_amount(base_type)
+    # The payroll, not the allocation base: administration moved into the
+    # G&A pool is out of one and still in the other.
+    fringe_base = model.base_amount(base_type, fringe_denominator=True)
 
     rates = model.compute_rates(fringe_base=fringe_base)
     model.allocate(use_combined=body.combined)
@@ -408,12 +443,13 @@ def compute(body: ComputeIn, period: str = "2025",
                 continue          # a rate on no base is not a rate
             cur.execute("""INSERT INTO rate
                              (period, set_id, seal_hash, kind, pool_amount,
-                              base_type, base_amount, rate, computed_by)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                              base_type, base_amount, rate, computed_by,
+                              admin_labour_basis)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                            RETURNING rate_id""",
                         (period, sealed["set_id"], sealed["seal_hash"], kind,
                          pool_for[kind], bt.value, base_amount, value,
-                         actor.display_name))
+                         actor.display_name, body.admin_labour))
             rate_id = cur.fetchone()["rate_id"]
             rate_ids[kind] = str(rate_id)
             written.append({"kind": kind, "rate": str(value),

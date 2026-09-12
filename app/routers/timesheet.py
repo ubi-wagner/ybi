@@ -18,7 +18,7 @@ recorded, and the row carries both.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -404,6 +404,291 @@ def coverage(period: str = None, employee_key: str = None,
                   WHERE period = %s AND employee_key = %s""", (period, key))
     return {"period": period, "employee_key": key,
             "coverage": row, "min_coverage": MIN_COVERAGE}
+
+
+class AdoptIn(BaseModel):
+    #: Which objectives of the draft the person is adopting. Empty means all
+    #: of them — the ordinary case, and still an explicit act.
+    objective_ids: list[str] = []
+    acknowledged: bool = False
+    note: str = ""
+
+
+def spread_hours(total: Decimal, days: int) -> list[Decimal]:
+    """Split `total` hours across `days`, exactly, by largest remainder.
+
+    **Rounding to the nearest cent is what gets this wrong**, and it did:
+    rounding rounds up as often as down, and where it rounds up the residual
+    goes negative. MBAC's 25.31 hours over 261 days is 0.09697 a day, which
+    became 0.10 and adopted 26.00 — more than the draft showed, with the
+    negative last day silently dropped by a `<= 0` guard. The sheet said one
+    figure and the record held another.
+
+    So: floor every day to the cent, which can only ever be short, and hand
+    the spare cents out one at a time. The total is exact by construction and
+    no day is more than a cent from the mean, which also keeps the last
+    working day from carrying a visible spike that means nothing.
+
+    A total too small to give every day a cent still lands in full, on as
+    many days as there are cents — better a short run of real days than a
+    year of zeroes that loses the objective entirely.
+    """
+    if days <= 0:
+        return []
+    daily = (total / days).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+    spare = int(((total - daily * days) * 100).to_integral_value())
+    return [daily + (Decimal("0.01") if i < spare else Decimal(0))
+            for i in range(days)]
+
+
+def _working_days(period: str, employee_key: str) -> list[date]:
+    """The weekdays of the employed span, which is what a year of hours is
+    spread across.
+
+    Weekends are left out rather than given a share: a uniform split that
+    books Saturdays is visibly not a record of anything, and the point of the
+    draft is a sheet the person can read and correct.
+    """
+    p_start, p_end = _period_bounds(period)
+    terms = one("""SELECT from_date, to_date FROM v_employment_expected
+                    WHERE period = %s AND employee_key = %s""",
+                (period, employee_key))
+    start = max(terms["from_date"], p_start) if terms else p_start
+    end = min(terms["to_date"] or p_end, p_end) if terms else p_end
+    out, d = [], start
+    while d <= end:
+        if d.weekday() < 5:
+            out.append(d)
+        d += timedelta(days=1)
+    return out
+
+
+@router.get("/draft")
+def draft(period: str = None,
+          actor: Actor = Depends(current_actor)) -> dict:
+    """What the controller's reconstruction says your year was.
+
+    **Nothing here is on your timesheet.** It is a proposal, in the same
+    sense every other proposal in this system is one: the controller rebuilt
+    the 2025 distribution from payroll and hours logs, that reconstruction is
+    already on the record as *their* account of the work, and this is it
+    shown to the person whose work it was.
+
+    Why a draft at all. Forty-three people cannot reconstruct a year from
+    memory, and the honest alternative to showing them the reconstruction is
+    not a better record — it is no record, which is where 2025 has been
+    sitting. 200.430(i) does not require a contemporaneous record; it
+    requires one that reflects the work actually performed, supported, and
+    reviewed after the fact. A reconstruction the person reads, corrects and
+    signs meets that. A reconstruction nobody ever saw does not.
+
+    Why it is hours and not dollars. `labor_allocation` distributes *wages*,
+    so the draft turns each objective's share of the person's wages into the
+    same share of their contracted hours. That needs employment terms, and
+    where those are missing this answers with what is missing rather than
+    with a guess — a year of hours invented against an unknown denominator
+    is the thing the coverage check exists to refuse.
+    """
+    period = period or settings.period
+    if not actor.employee_key:
+        raise HTTPException(
+            403, "Only an employee has a timesheet. This account is not "
+                 "linked to one.")
+    key = actor.employee_key
+    p_start, p_end = _period_bounds(period)
+
+    # **The terms come from the register of terms, not from the coverage
+    # view.** `v_timesheet_coverage` is `FROM v_timesheet_entry`, so somebody
+    # with no entries has no row in it at all — and that is exactly who this
+    # screen is for. Reading `expected_hours` from there made the draft
+    # answer "nobody has recorded your employment terms" to a person whose
+    # terms were on the record, and no draft could ever become adoptable:
+    # its precondition was satisfied only by already having the entries it
+    # exists to create. `entered_hours` genuinely is a coverage question and
+    # is honestly zero when the view has nothing to say.
+    terms = one("""SELECT expected_hours, employed_days
+                     FROM v_employment_expected
+                    WHERE period = %s AND employee_key = %s""", (period, key))
+    expected = Decimal(str(terms["expected_hours"] or 0)) if terms else Decimal(0)
+    cover = one("""SELECT entered_hours FROM v_timesheet_coverage
+                    WHERE period = %s AND employee_key = %s""", (period, key))
+
+    rows = query("""SELECT objective_id,
+                           COALESCE(reconstructed_units, original_units) AS units,
+                           evidence_quality::text AS grade, rationale,
+                           source_label
+                      FROM labor_allocation
+                     WHERE period = %s AND employee_key = %s
+                     ORDER BY COALESCE(reconstructed_units, original_units) DESC""",
+                 (period, key))
+    total = sum(Decimal(str(r["units"] or 0)) for r in rows)
+
+    if not rows:
+        return {"period": period, "employee_key": key, "lines": [],
+                "expected_hours": str(expected), "adoptable": False,
+                "because": "The controller's reconstruction has no line for "
+                           "you in this period, so there is nothing to "
+                           "propose. Record your time directly."}
+    if expected <= 0:
+        return {"period": period, "employee_key": key, "lines": [],
+                "expected_hours": "0", "adoptable": False,
+                "because": "Nobody has recorded your employment terms for "
+                           "this period, so there are no contracted hours to "
+                           "divide. Until then a draft would be a year of "
+                           "hours against an unknown denominator. Ask the "
+                           "administrator to record your status, your "
+                           "contracted hours and the dates you worked."}
+
+    days = _working_days(period, key)
+    if not days:
+        return {"period": period, "employee_key": key, "lines": [],
+                "expected_hours": str(expected), "adoptable": False,
+                "because": "Your employment span for this period contains no "
+                           "working days, so there is nothing to spread the "
+                           "hours across. Check the dates on your terms."}
+
+    lines = []
+    for r in rows:
+        units = Decimal(str(r["units"] or 0))
+        share = (units / total) if total else Decimal(0)
+        lines.append({
+            "objective_id": r["objective_id"],
+            "share": str(share.quantize(Decimal("0.0001"))),
+            "hours": str((expected * share).quantize(Decimal("0.01"))),
+            "grade": r["grade"],
+            "rationale": r["rationale"],
+            "source": r["source_label"]})
+    return {"period": period, "employee_key": key, "lines": lines,
+            "expected_hours": str(expected),
+            "working_days": len(days),
+            "hours_per_day": str((expected / len(days)).quantize(Decimal("0.01"))),
+            "already_entered": str(cover["entered_hours"] or 0) if cover else "0",
+            "adoptable": True,
+            "because": "This is the controller's reconstruction, not your "
+                       "timesheet. Adopting it records these hours under "
+                       "your name as a recalled record — correct anything "
+                       "that is wrong first, because what you adopt is what "
+                       "you will be certifying."}
+
+
+@router.post("/adopt")
+def adopt(body: AdoptIn, period: str = None,
+          actor: Actor = Depends(require_own_writes)) -> dict:
+    """Adopt the reconstruction as your own record.
+
+    The one act that turns somebody else's account of your year into yours.
+    It is **yours to perform and nobody else's** — the router's first rule is
+    that nobody enters time for anybody else, and this does not bend it: the
+    entries are written under the calling actor, for the calling actor's own
+    employee key, and there is no parameter naming somebody else.
+
+    `basis = RECALL`, always. It is not contemporaneous and recording it as
+    though it were would be the one lie that matters here; `AS_WORKED` is
+    refused by the schema more than seven days after the fact anyway, and
+    `v_certification_status.reconstructed` reads from this.
+
+    **One entry per objective per working day, and the schema decided that,
+    not this handler.** The first version wrote one entry per objective dated
+    the last day of the period, reasoning that spreading a reconstruction
+    across the calendar manufactures a daily record nobody has. The concern
+    is real and the table had already answered it: `timesheet_hours_sane`
+    caps a row at 24 hours and `timesheet_day_must_fit` caps a person-day at
+    24 across rows, so the unit of `timesheet_entry` **is** a day. 978.68
+    hours on 31 December is not a coarser record, it is a refused one — read
+    the schema, never recall it.
+
+    So the year is spread uniformly across the weekdays of the employed span.
+    Uniform is the honest shape: it is visibly the same split every day,
+    which together with RECALL on every row tells a reviewer at a glance that
+    this is a reconstruction. Varying it to look contemporaneous is what
+    would manufacture precision.
+
+    The rounding residual lands on the last working day rather than being
+    dropped, so the hours adopted are the hours the draft showed. A
+    distribution that quietly loses a few hours per objective is the thing
+    `allocation_proof` exists to refuse one level up.
+    """
+    period = period or settings.period
+    if not actor.employee_key:
+        raise HTTPException(
+            403, "Only an employee records their own time. This account is "
+                 "not linked to one.")
+    if not body.acknowledged:
+        raise HTTPException(
+            422, "Adopting says this is a true record of your own work. It "
+                 "has to be acknowledged — that is the whole point of the "
+                 "act, and an unacknowledged adoption would be the "
+                 "controller's reconstruction wearing your name.")
+    key = actor.employee_key
+    p_start, p_end = _period_bounds(period)
+
+    proposed = draft(period=period, actor=actor)
+    if not proposed["adoptable"]:
+        raise HTTPException(409, proposed["because"])
+    wanted = set(body.objective_ids) or {l["objective_id"]
+                                         for l in proposed["lines"]}
+    unknown = wanted - {l["objective_id"] for l in proposed["lines"]}
+    if unknown:
+        raise HTTPException(
+            422, f"The draft has no line for {', '.join(sorted(unknown))}. "
+                 f"Adopting can only accept what was proposed; record "
+                 f"anything else as an entry of your own.")
+
+    days = _working_days(period, key)
+    # A day holds 24 hours and the trigger says so. Refuse in words here
+    # rather than let the person meet `RUBY has 31.50 hours on 2025-03-04`.
+    per_day_total = sum(Decimal(l["hours"]) for l in proposed["lines"]
+                        if l["objective_id"] in wanted) / len(days)
+    if per_day_total > 24:
+        raise HTTPException(
+            409, f"Adopting this would book {per_day_total.quantize(Decimal('0.01'))} "
+                 f"hours a day across {len(days)} working days, and a day "
+                 f"holds 24. The contracted hours and the employed span "
+                 f"disagree — ask the administrator to check your terms.")
+
+    written, hours = 0, Decimal(0)
+    with turn(period) as cur:
+        for line in proposed["lines"]:
+            if line["objective_id"] not in wanted:
+                continue
+            total_h = Decimal(line["hours"])
+            if total_h <= 0:
+                continue
+            spread = list(zip(days, spread_hours(total_h, len(days))))
+            note = (f"Adopted from the controller's reconstruction "
+                    f"({line['share']} of contracted hours spread over "
+                    f"{len(days)} working days; {line['grade']}). "
+                    f"{line['rationale']}"
+                    + (f" {body.note.strip()}" if body.note.strip() else ""))[:900]
+            for d, h in spread:
+                if h <= 0:
+                    continue
+                cur.execute(
+                    """INSERT INTO timesheet_entry
+                         (period, employee_key, work_date, objective_id, hours,
+                          basis, note, entered_by, entered_by_name)
+                       VALUES (%s,%s,%s,%s,%s,'RECALL',%s,%s,%s)""",
+                    (period, key, d, line["objective_id"], h,
+                     note, actor.actor_id, actor.display_name))
+                written += 1
+                hours = hours + h
+        record(actor, "TIMESHEET_ADOPT", "timesheet_entry", key,
+               after={"period": period, "entries": written,
+                      "hours": str(hours), "working_days": len(days),
+                      "objectives": sorted(wanted)},
+               reason=(body.note.strip()
+                       or "Adopted the controller's reconstruction as my own "
+                          "record of the period."),
+               cursor=cur)
+    if not written:
+        raise HTTPException(
+            409, "Nothing was adopted: every line of the draft came to zero "
+                 "hours. Nothing has been recorded.")
+    return {"period": period, "employee_key": key, "entries": written,
+            "hours": str(hours), "working_days": len(days),
+            "next": "Submit the sheet, then sign the certification. What you "
+                    "sign is what is on the sheet now, so change anything "
+                    "that is wrong before you do."}
 
 
 @router.post("/submit")

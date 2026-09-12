@@ -61,7 +61,7 @@ State this rather than discovering it:
   reconstruction from calendars and project logs, and each one names what it
   rests on.
 - **No seal, no rate, no allocation.** A rate over an unsealed set is refused.
-- **45,053.24** between the payroll register and the ledger's wage accounts —
+- **45,053.23** between the payroll register and the ledger's wage accounts —
   named down to zero unexplained, but not yet corrected at source.
 - **No square footage** on any building, so the facilities carve-out is
   unsized.

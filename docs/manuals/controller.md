@@ -45,7 +45,7 @@ be evaluated has not passed.
 The eleventh point is the payroll register, and it is the one that pays for
 itself. The fringe base comes from the effort distribution, not from the
 ledger's wage accounts, so a difference between them is **two denominators for
-one rate**. Today that difference is 45,053.24 — a donor credit sitting in an
+one rate**. Today that difference is 45,053.23 — a donor credit sitting in an
 intern wage account. It is named, so the control ties, but it still needs
 reclassifying in QuickBooks: it is the whole gap between a fringe rate of
 22.45% and one of 21.90%.

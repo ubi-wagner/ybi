@@ -1120,17 +1120,83 @@ perfectly stable at the wrong answer.
 - **No 200.465 carve-out is in it.** Per the section below, a seeded record
   has no buildings, so OVERHEAD is uncarved and every dollar of tenant and
   vacant occupancy cost is in the federal pool. That pushes 29.61% *up*.
-- **Administrative labour is an objective, not pool cost.** `YBI-GA` carries
-  $264,444.90 of wages and takes a $100,013.06 allocation *of* indirect
-  rather than forming part of it. Appendix IV would ordinarily put executive
-  and administrative salaries in the G&A pool; modelling them as a
-  benefiting objective makes the allocation proof tie and pushes the rate
-  *down*. It is a modelling choice, it is worth arguing about, and it is
-  the single largest lever left in the model.
+- **Administrative labour is an objective, not pool cost** — *set up for a
+  decision, and deliberately not applied.* See **A decision, not a property
+  of the code** below.
 - **`evidence_ratio` is 0.0000 on every objective.** Nothing is
   timesheet-backed; the whole distribution is management reconstruction,
   which is exactly what `v_certification_status` has been saying.
 
+
+### A decision, not a property of the code
+
+Migration `068`. `YBI-GA` carries **$264,444.90** of wages ($322,358.32 with
+fringe) and the model treats it as a **cost objective**, so it takes a
+$100,013.06 allocation *of* indirect rather than forming part of it. 2 CFR
+200 Appendix IV B puts the director's office, accounting and personnel
+administration *in* the G&A pool, and the YBI-GA distribution is Kelly, Ruby,
+Shaulis, Jaric, Politsky and Ewing — the administrator herself. Modelling
+that as an objective **allocates the indirect pool to its own
+administration**, which recovers from nobody.
+
+The counter-argument is real and does not apply here: `FUNDRAISING` and
+`UNALLOWABLE-ACTIVITY` *are* deliberately benefiting objectives, because
+200.413 and Appendix IV B.3.d make them bear indirect while recovering
+nothing. General administration is the opposite case — it **is** the
+indirect.
+
+It is **34.82% against 43.99% on the same sealed judgments**, ~$464,000 a
+year on a $5.06m base. That is too large to be a property of whichever code
+happened to be deployed, and it is a judgment rather than arithmetic:
+whether YBI-GA is genuinely general administration or the bucket
+unattributable time went into is something only the person who built the
+reconstruction can say. So the treatment is a **recorded choice on the
+rate** — `rate.admin_labour_basis`, the way `base_type` already records
+which base a rate was taken over — chosen per computation, defaulting to
+`OBJECTIVE`, which is exactly what every rate before `068` used. **Nothing
+changes by default.**
+
+`v_admin_labour_decision` puts both answers on one row, so the decision is
+taken with the alternative visible rather than against a number somebody
+remembers, and reports `NO DATA` where there is no allocation to move. It is
+also an independent check: the view's arithmetic on the recorded OBJECTIVE
+row gives 0.439926, and the engine computing under POOL gives 0.4399 — two
+routes to one figure.
+
+Two things came out of building it:
+
+- **The wage base is the payroll register and stays the payroll register.**
+  Deleting the objective took its $264,444.90 out of the *fringe* base as
+  well and the fringe rate went 21.90% to 25.58%. Administrative staff draw
+  benefits like everybody else, so their wages belong in the fringe
+  denominator whether or not their salary sits in the G&A pool — two
+  questions, and the first draft answered both at once.
+  `WAGE_BASE_IS_THE_REGISTER` and `FRINGE_RATE_ON_THE_REGISTER` both reported
+  OPEN the moment it ran, which is what `066` and `067` are for. And the base
+  *type* cannot tell the two apart — `SALARIES_WAGES` is legitimately either
+  the payroll the fringe pool is spread over or the base an indirect pool is
+  allocated on — so `base_amount(..., fringe_denominator=True)` makes the
+  caller say which. Inferring it from the type silently returned
+  wages-without-fringe on a `SALARIES_FRINGE` denominator.
+- **A control nobody can clear by doing the work.** Under POOL the G&A pool
+  carries labour that came from the effort distribution rather than from a
+  classification, so `v_rate_buildup` reported OPEN by exactly that amount
+  the moment the choice was made — `FACILITY_UNPARTITIONED` again. It reads
+  the expected pool against the basis the rate was computed on, the way
+  `pool_state` already reads against the completion of the classification.
+  The first fix then reported INDIRECT_COMBINED OPEN by exactly the G&A
+  gross: `pool_for_kind` has **two rows** for that kind, so an add-back
+  joined to it multiplied the pool. Aggregate first, add once afterwards.
+
+Both bases tie on the live record — every pool at `pool_variance` 0.00, all
+four `v_rate_anchor` rows, and FRINGE at 21.90% under either:
+
+| | OBJECTIVE | POOL |
+| --- | ---: | ---: |
+| FRINGE | 21.90% | 21.90% |
+| OVERHEAD | 29.61% | 31.62% |
+| G&A | 5.21% | 12.37% |
+| **INDIRECT_COMBINED** | **34.82%** | **43.99%** |
 
 ### The carve-out that cannot fire, and says nothing
 
@@ -1361,6 +1427,100 @@ the rate build up completely as items are classified*:
 Its last step takes the carve-outs out from under a live rate and checks that
 the build-up **reports two rates not tying, by -$932,254.78** — because a
 control nobody has watched fail is a control nobody has tested.
+
+### The register was never $1,835,047.18
+
+Migration `069`. `v_labor_effective.distributed_wages` was
+`round(payroll_wages * share, 2)` computed **per row, independently**, so a
+person's distributed wages did not have to add back to what they were paid.
+The residual was lost or gained a cent at a time, and **six of the
+forty-three people already drifted** before any timesheet existed. The
+eleventh control tied anyway, because the cents happened to net out — which
+is luck, not a control, and the worst kind of green.
+
+Read off the controller's workbook, column B, forty-three employees, the
+register is **$1,835,047.17**. `FOUNDATION.md`, `BASELINE_2025.md`, `067`'s
+anchors, the classification log and a memo all carried `.18`, which is this
+view's rounding; `BASELINE_2025.md` carried `.16` in a third place. Three
+readings of one document, which is what per-row rounding produces when
+different things aggregate it. The rule was already written down — *figures
+in a document for somebody else get read from the record, not recalled* —
+and here the record itself was recalling an artefact.
+
+**Nothing published moves.** 401,783.60 / 1,835,047.17 is 0.2190 to four
+places, as it was; every pool ties, all four `v_rate_anchor` rows tie, and
+all four rates are unchanged. What moves is the cent: the difference the
+Bacon credit explains is $45,053.23, and `reconcile.py` computes the
+`ROUNDING` item from the live difference rather than a constant, so it lands
+at $53.23 on its own and `PAYROLL_REGISTER` ties without being told to.
+
+**What exposed it was adopting a reconstruction as a timesheet.** Submitting
+one switches that person's distribution from reconstructed units to hours,
+the shares move in the sixth decimal, the cents fall the other way, and the
+eleventh control went OPEN by $0.01 — refusing `POST /api/rates/compute`
+outright. The certification work asks forty-three people to do exactly that,
+so it would have fired on the first one and gone on firing.
+
+Largest remainder now: floor every share to the cent and hand the spare
+cents to the largest remainders, ties broken by objective so the answer is
+deterministic. **`floor` rather than `round` is the load-bearing part** — a
+floor can only be short, so the spare is always a non-negative number of
+cents to hand out, where rounding to nearest makes it signed and a negative
+spare is the shape that silently drops a line.
+
+## The sheet somebody signs
+
+`GET /api/timesheet/draft`, `POST /api/timesheet/adopt`. The whole
+$1,835,047.17 labour distribution is `MANAGEMENT_RECONSTRUCTION`, there are
+**zero timesheet entries and zero certifications**, and 43 people carry
+`NEEDS_CERTIFICATION` at BLOCKING. That does not change a figure in the rate;
+it changes whether the rate is *usable*, because 200.430(i) goes to the
+allowability of the entire direct labour charge.
+
+**The goal is not to invent 2025 timesheets.** 200.430(i) does not require a
+contemporaneous record — it requires one that reflects the work actually
+performed, supported, and reviewed after the fact. A reconstruction the
+person reads, corrects and signs meets that; a reconstruction nobody ever saw
+does not, which is where 2025 has been sitting. So the draft is the
+controller's reconstruction shown to the person whose work it was, and
+adopting it writes the entries **under their own name**. `require_own_writes`,
+the calling actor's own employee key, and no parameter naming anybody else —
+the router's first rule does not bend for this.
+
+Three things came out of building it, and each is a rule this file already
+has in another place:
+
+- **The terms come from the register of terms.** The draft read
+  `expected_hours` from `v_timesheet_coverage`, which is `FROM
+  v_timesheet_entry` — so somebody with **no entries has no row in it at
+  all**, and that is exactly who the draft is for. It told a person whose
+  terms were on the record that nobody had recorded any, and no draft could
+  ever become adoptable: its precondition was satisfied only by already
+  having the entries it exists to create. `FACILITY_UNPARTITIONED` in a new
+  place.
+- **A `timesheet_entry` is a day.** The first version wrote one entry per
+  objective dated the last day of the period, reasoning that spreading a
+  reconstruction across the calendar manufactures a daily record nobody has.
+  The concern is real and the table had already answered it:
+  `timesheet_hours_sane` caps a row at 24 hours and `timesheet_day_must_fit`
+  caps the person-day at 24 across rows. **978.68 hours on 31 December is not
+  a coarser record, it is a refused one** — *read the schema, never recall
+  it.* Uniform across the weekdays of the employed span is the honest shape:
+  visibly the same split every day, which with `RECALL` on every row says at
+  a glance that this is a reconstruction. Varying it to look contemporaneous
+  is what would manufacture precision.
+- **The hours adopted are the hours the draft showed.** The residual went on
+  the last day, and where the daily rate rounded *up* the residual went
+  negative and a `<= 0` guard skipped it: 25.31 hours adopted as 26.00, and
+  the sheet said one figure while the record held another. Largest remainder,
+  and `spread_hours()` is a pure function tested directly, because this
+  arithmetic was wrong twice.
+
+**Submitting does not move the rate, and that is the property worth having.**
+A submitted timesheet switches that person's distribution in
+`v_labor_effective` from reconstructed units to hours; adopting the
+reconstruction faithfully reproduces its shares, so the rate holds. If it did
+not, the rate would depend on who had got round to signing.
 
 ## Five registers with no writer, found by sweeping rather than by reading
 
