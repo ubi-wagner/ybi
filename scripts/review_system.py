@@ -792,7 +792,7 @@ def proportion(clients: dict[str, httpx.Client]) -> None:
 
     # And the seal: no rate may exist while classification is open, however
     # much of it is done. This is the guarantee the whole system rests on.
-    r = tom.post("/api/rates/compute", json={"period": "2025"})
+    r = tom.post("/api/rates/compute", params={"period": "2025"}, json={})
     if r.status_code == 200:
         finding("PROPORTION", FAULT,
                 "a rate was computed over an unsealed decision set",

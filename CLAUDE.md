@@ -1826,6 +1826,86 @@ terms*, **on one screen at one moment**, with *Submit* disabled. 13.0% and
 2.2% in a smaller place. The terms come from `v_employment_expected` in both,
 so the two cannot disagree rather than being patched where they happened to.
 
+## The band, and what makes it wide
+
+`docs/RATE_RECOMMENDATION.md`. The whole build-up as a min, a mid and a max,
+where **the mid is the recommendation and the width is the open judgments**.
+Every figure in it was computed by the engine from an empty database —
+seeded, 757 judgments applied, sealed, and each scenario run by unsealing,
+reclassifying through the real API, re-sealing and re-computing. Nothing in
+it is arithmetic on a remembered rate.
+
+**Recommended: fringe 21.90%, indirect combined 37.67% on MTDC** — the POOL
+basis with a provisional 20% tenant share. Band 9.58% to 50.23% today;
+27.06% to 43.01% once two documents arrive.
+
+Four things worth carrying:
+
+- **The fringe rate is not in the band.** Both of its parts are anchored to
+  source documents — the P&L's six accounts over the payroll register — so it
+  is 21.90% in every scenario that does not move an account into the fringe
+  pool. That is what `067` bought.
+- **One missing measurement is worth 24 points of the width.** The 200.465
+  carve-out is exactly linear in the tenant share and the record carries no
+  building at all, so five engine runs draw the whole line and Kelly's
+  square footage substitutes straight into it. 82.0% of the *base* is
+  settled; the numerator looks worse only because the carve-out touches
+  every dollar of overhead.
+- **The conservative reading of a classification can be the aggressive
+  reading of the rate.** Reading the 5227 consultants as subrecipients takes
+  cost *out of the base* and the combined rate *up*, 34.82% to 39.40%. Worth
+  knowing before assuming which direction caution points.
+- **The hours log settles the administrative-labour question, and it did not
+  before.** All ten people carrying YBI-GA wages split their time; the three
+  with a monthly log book it as one line among seven to nine, beside named
+  programmes — including the administrator, at 13.5%. That is a real
+  assignment, not the bucket unattributable time went into, which is the
+  counter-argument `068` says the decision turns on. Seven of the ten still
+  have no hours evidence, and the certifications now under way are what
+  close it.
+
+### A rate computed under a policy nobody chose
+
+`POST /api/rates/compute` takes `admin_labour`; the column it lands in is
+`admin_labour_basis`. Sending the **column** name — which is the name anybody
+reads off the schema, and this file's own rule is to read the schema rather
+than recall it — made pydantic drop the key, apply the `OBJECTIVE` default,
+compute, persist and answer **200**. Nine points of combined rate, chosen by
+a typo, with nothing anywhere saying which basis had been used. It was caught
+only because the scenario harness read `admin_labour_basis` back off
+`v_rate_buildup` afterwards and refused to report a run whose stored basis
+was not the one asked for.
+
+`ComputeIn` refuses an unknown key now, and it is **the only body in this API
+that does**. The house rule is the opposite — `DecideIn.decided_by` is kept
+precisely so an older client is not rejected — and that rule is right
+everywhere else. A rate is where it is wrong: every field on that body is a
+*policy* and every one has a default, so the ordinary behaviour is not
+"ignore something harmless", it is "apply a policy the caller did not
+choose". The same guard caught `scripts/review_system.py` sending `period` in
+the body, where it is a query parameter and did nothing; the default happened
+to agree, so it had never mattered.
+
+`tests/test_compute_policies.py` holds both halves — the unknown key is a 422
+naming the field, and an empty body still computes, because `{}` is what the
+screen and four drives send.
+
+### The carve-out takes the tenant share off a pool already net of tenant recovery
+
+Named tenants already reimburse **$100,931.51** into the OVERHEAD accounts —
+Steelite for property tax and Semple utilities, NCDMM for Boardman electric
+and gas, Ursa Major, Vista AST, Tailored Alloys, AMI, Factset. The engine
+computes `share × the pool net of those credits`, so the same money leaves
+twice, by `$100,931.51 × (1 − share)` — $80,745.21 and 1.60 points of
+combined rate at a 20% share. It errs **against** YBI, which is why it is
+recorded as a recommendation rather than changed here: which credits are
+tenant recovery is a judgment ($33,066.60 of the $133,998.11 carry no payee,
+and two of those are a reclassification and an insurance recovery for
+parking-lot damage), and so is whether a square-footage driver should reach
+the $181,276.15 of T1 access, telephone, insurance and equipment sitting in
+the same pool. Fix it before the square footage arrives, so the first real
+measurement produces the right answer.
+
 ## Five registers with no writer, found by sweeping rather than by reading
 
 Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to

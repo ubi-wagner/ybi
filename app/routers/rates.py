@@ -6,7 +6,7 @@ guarantee survives a bug here.
 """
 
 from fastapi import Depends, APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.auth import require_controller, require_reader
 from app.audit import record
@@ -122,6 +122,30 @@ def unseal(reason: str, period: str = "2025",
 
 
 class ComputeIn(BaseModel):
+    """What to compute, and under which policies.
+
+    **An unknown key is a 422 here, and nowhere else in this file.** The rest
+    of the API keeps accepting a field it no longer uses, deliberately, so an
+    older client is not rejected — `DecideIn.decided_by` says so in as many
+    words. A rate is the one body where that is the wrong trade: every field
+    on it is a *policy*, each has a default, and pydantic's ordinary
+    behaviour is to drop what it does not recognise and quietly apply the
+    default instead.
+
+    So `admin_labour_basis` — the name of the column the answer is stored in,
+    which is the name anybody reads off the schema — computes and persists a
+    rate under `OBJECTIVE`, answers 200, and says nothing. Nine points of
+    combined rate, chosen by a typo. Measured: it happened while building the
+    min/max band in `docs/RATE_RECOMMENDATION.md`, and only a check on the
+    stored basis caught it.
+
+    It also catches the same shape pointing the other way. `period` is a
+    query parameter; `scripts/review_system.py` sent it in the body, where it
+    did nothing and the default happened to agree.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
     #: Fringe is recovered on a salary base, not on MTDC. Left to the caller
     #: because the base is a policy choice the controller makes and defends,
     #: not something to infer.
