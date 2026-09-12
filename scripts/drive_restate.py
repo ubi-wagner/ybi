@@ -12,10 +12,23 @@ the three things the handler says it will not do:
     it will not present a proposal as a position
     it will not net an over-collection against an under-recovery
 
-**It needs a rate**, and says so rather than sealing on its own. Sealing is a
-judgment and a drive that makes one to give itself something to measure is a
-drive reading its own writing — which is what `review_system` was fixed for.
-`scripts/prove.sh` runs it after `drive_state_machine`, which seals.
+**It will compute a rate and it will not seal one.** The two are not the
+same act and the difference is the whole guarantee: sealing says *these
+judgments are final*, which is a judgment, and a drive that makes one to give
+itself something to measure is a drive reading its own writing — which is
+what `review_system` was fixed for. Computing over a seal somebody else
+applied is arithmetic over judgments this drive did not make and cannot
+reach. So where the set is sealed and no rate is live, it computes; where the
+set is open, it stops and says so.
+
+An earlier version of this drive asserted instead that `scripts/prove.sh`
+runs it after `drive_state_machine`, "which seals". It does seal — and then
+unseals, which supersedes every rate, so by the time this ran there was
+none. That was a hand-kept claim about what another script leaves behind,
+which is this repository's most-repeated defect in a new place. It reads the
+state now, through the door the system actually has: the compute route
+answers 409 and says why when the set is open, so there is no second
+implementation of "is it sealed" to drift out of step with the first.
 
 Leaves the record as it found it, against a census taken before it started.
 
@@ -107,12 +120,30 @@ def main() -> int:
     cand = call(tom, "GET", "/api/restate/candidates", 200, "the candidates",
                 params={"period": args.period}).json()
     if cand["blocked_because"]:
-        # Not a failure and not a pass: the route's whole design is to answer
-        # "not yet, because" rather than with an empty list, and the reason is
-        # the work. But there is nothing here to drive.
-        print("\nCOULD NOT RUN — " + cand["blocked_because"][0],
-              file=sys.stderr)
-        return 2
+        # No rate is live. That is either arithmetic nobody has run or a seal
+        # nobody has applied, and only the second is a reason to stop. Asking
+        # the compute route is how the two are told apart — it is the only
+        # thing that knows, and a second reading of `decision_set` here would
+        # be a copy of that rule free to drift from it.
+        r = tom.post("/api/rates/compute", params={"period": args.period},
+                     json={"note": "Drive: computed over the seal already on "
+                                   "file. This drive does not seal."})
+        if r.status_code != 200:
+            print("\nCOULD NOT RUN — " + cand["blocked_because"][0]
+                  + f"\n               the compute route answered "
+                    f"{r.status_code}: {r.text[:300]}", file=sys.stderr)
+            return 2
+        ok("no rate was live, and the set was already sealed — computed one "
+           "over judgments this drive did not make. It stays: a rate "
+           "supersedes, it does not vanish, because a workpaper you have "
+           "issued is not something you can un-issue")
+        cand = call(tom, "GET", "/api/restate/candidates", 200,
+                    "the candidates, now there is something to measure "
+                    "against", params={"period": args.period}).json()
+        if cand["blocked_because"]:
+            print("\nCOULD NOT RUN — " + cand["blocked_because"][0],
+                  file=sys.stderr)
+            return 2
     rate = next((r for r in cand["rates"]
                  if r["kind"] == "INDIRECT_COMBINED"), None)
     if not rate:

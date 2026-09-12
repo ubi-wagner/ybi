@@ -847,7 +847,7 @@ $15,278.16 under-recovered on one invoice that claimed no indirect at all.**
 The engine's own finding line is the case: *"No indirect line. On a
 cost-reimbursement award this forgoes recovery outright."*
 
-`scripts/drive_restate.py` walks it as the controller and the auditor. Two
+`scripts/drive_restate.py` walks it as the controller and the auditor. Three
 things came out of writing it. **`restatement` is append-only** — *correct by
 superseding, never by editing* — so the drive cannot delete what it made and
 should not: a position taken and then withdrawn is part of the trail. Its
@@ -855,6 +855,22 @@ census counts restatements **standing as a claim**, and it withdraws its own
 through the route a person would use. That is the `invoice_no_delete` lesson
 in a second place: a cleanup that assumes it can remove what it made stops
 working the day the table grows a guarantee.
+
+**Sealing and having a rate are not the same state, and a drive that assumes
+one from the other is a hand-kept map again.** The drive was written to
+refuse to seal — correctly: sealing says *these judgments are final*, which
+is a judgment, and a drive that makes one to give itself something to measure
+is reading its own writing. But it then asserted in its own docstring that
+`prove.sh` runs it after `drive_state_machine`, "which seals". It does seal —
+and then unseals, which supersedes every rate — so on a proof from an empty
+database there was no rate and the drive exited 2 against working code. The
+distinction it was missing is the one that matters: **computing is arithmetic
+and sealing is a judgment.** It computes now where the set is already sealed,
+over judgments it did not make and cannot reach, and stops only where the set
+is open. And it finds that out by asking `POST /api/rates/compute`, which is
+the only thing that knows — a second reading of `decision_set` in the drive
+would be a copy of the rule, free to drift from it, which is the defect it
+was just caught in.
 
 ## The handoff
 
@@ -1389,6 +1405,21 @@ Three rules came out of it:
   and then re-reads the seal; `/api/restate` re-reads the rate's status.
   Either is a 409 that says what moved, rather than a raw constraint
   violation that says nothing.
+
+**A race that goes all one way leaves a guarantee untested, and the drive has
+to say so.** `drive_concurrency` reported 16 checks on one run and 15 on the
+next with nothing explaining the difference: where every judgment beat the
+seal, the branch that reads *whether a refusal names the seal* had no refusal
+to read, so it printed nothing at all. That is the register's `NO DATA` state
+in a drive — not a pass, not a finding — and a check count that moves without
+saying why is how somebody learns to ignore the run that actually lost one.
+It prints a note now and counts them in the summary.
+
+And **one more test that could not fail**, found in the same file: the
+summary called `coverage_is_arithmetic()`, bound the answer to `good, how`
+and read neither. `walk_back` checks it properly a few lines up; this one was
+a query run for nothing. The fourth instance of the shape, in the drive whose
+whole job is to catch what nobody would notice.
 
 **Serialising makes the order deterministic; it does not make it
 comprehensible.** Tom judges 5227 at 10:31, Barb's queue was drawn at 10:29,

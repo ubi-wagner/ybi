@@ -1162,6 +1162,21 @@ a fifth.
 copies of the kind map across three screens, the manual's screenshots against
 the walk's. In every case the thing the list was missing *was* the defect.
 
+It has a sixth instance now, and it is the one that got furthest — because
+it was not a list, it was a *sentence*. `drive_restate.py`'s docstring said
+"`scripts/prove.sh` runs it after `drive_state_machine`, which seals", and
+that is true and useless: `drive_state_machine` seals, computes, and then
+**unseals**, which supersedes every rate it just computed. So on the first
+proof run from an empty database the drive found no rate, exited 2, and
+reported working code as a failure. A claim about what the script before you
+leaves behind is a hand-kept map of another program's state. The drive reads
+it now, through `POST /api/rates/compute`, which is the only thing that
+knows — and the reading is *also* the fix, because the distinction the
+sentence was papering over is the one the whole exercise turns on:
+**computing is arithmetic, sealing is a judgment.** A drive may do the first
+over a seal somebody else applied. It may not do the second, and this one
+still will not.
+
 **A test that cannot fail for the thing it names.** Two in
 `test_worklist_ownership.py`, one in `test_review.py` scoped to the single
 view its bug was found in, one in `test_document_access.py` asserting a

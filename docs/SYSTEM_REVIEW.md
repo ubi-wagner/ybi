@@ -8,7 +8,7 @@ Six dimensions, because a system can be sound on one and broken on another and t
 | --- | --- |
 | Faults | 0 |
 | Gaps | 1 |
-| Notes | 31 |
+| Notes | 33 |
 | GET routes probed | 90 (× 6 people) |
 | Audit entries | 231 |
 
@@ -75,6 +75,10 @@ Reachable by URL and absent from the nav.
 
 Reachable by URL and absent from the nav.
 
+### NOTE — Eric is not shown 'Restate' but /api/restate/candidates answers 200
+
+Reachable by URL and absent from the nav.
+
 ### NOTE — Barb is not shown 'Import' but /api/imports answers 200
 
 Reachable by URL and absent from the nav.
@@ -116,6 +120,10 @@ Reachable by URL and absent from the nav.
 Reachable by URL and absent from the nav.
 
 ### NOTE — Barb is not shown 'Rates' but /api/rates/current answers 200
+
+Reachable by URL and absent from the nav.
+
+### NOTE — Barb is not shown 'Restate' but /api/restate/candidates answers 200
 
 Reachable by URL and absent from the nav.
 
@@ -177,7 +185,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "e7694543-28f4-4406-9432-e9f0085a16b0",
+    "actor_id": "5eb03423-0245-49bb-9998-041f6fdb0ae7",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -292,6 +300,12 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
       "path": "/rates",
       "label": "Rates",
       "schedule": "D",
+      "needs": "CONTROLLER"
+    },
+    {
+      "path": "/restate",
+      "label": "Restate",
+      "schedule": "F",
       "needs": "CONTROLLER"
     },
     {

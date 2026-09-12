@@ -112,9 +112,13 @@ run "drive_concurrency" $PY scripts/drive_concurrency.py --base "$BASE"
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 
-# After drive_state_machine, which seals and computes — a restatement is a
-# consequence of the rate and the rate of the judgments, and a drive that
-# sealed to give itself something to measure would be reading its own writing.
+# After the drives that seal. A restatement is a consequence of the rate and
+# the rate of the judgments, so a drive that sealed to give itself something
+# to measure would be reading its own writing — this one computes over a seal
+# somebody else applied and refuses to make one. Note that sealing is not the
+# same as leaving a rate live: drive_state_machine seals, computes and then
+# unseals, which supersedes every rate. The drive reads the state rather than
+# assuming what the script before it left behind.
 step "The number walked out to NCDMM"
 run "drive_restate" $PY scripts/drive_restate.py --base "$BASE"
 

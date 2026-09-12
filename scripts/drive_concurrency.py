@@ -67,6 +67,21 @@ def ok(msg: str) -> None:
     print(f"  ok       {msg}", flush=True)
 
 
+#: A race can legitimately go entirely one way, and then a guarantee that is
+#: only reachable down the other branch has no occasion to be tested. That is
+#: not a pass and it is not a finding — it is the `NO DATA` state of the
+#: control register, in a drive. Said out loud, because the alternative is a
+#: check count that reads 16 one run and 15 the next with nothing explaining
+#: the difference, which is how somebody comes to dismiss the run that
+#: actually lost a check.
+NOTES: list[str] = []
+
+
+def note(msg: str) -> None:
+    NOTES.append(msg)
+    print(f"  --       {msg}", flush=True)
+
+
 def head(msg: str) -> None:
     print(f"\n\033[1m{msg}\033[0m", flush=True)
 
@@ -216,7 +231,10 @@ def race_same_group_stale(tom, heidi) -> list[str]:
 
     refused = next((r for r in results
                     if isinstance(r, httpx.Response) and r.status_code == 409), None)
-    if refused is not None:
+    if refused is None:
+        note("no judgment was refused, so there was nothing to read the "
+             "refusal off — covered by the finding above")
+    else:
         detail = refused.json().get("detail", {})
         msg = detail.get("message", "") if isinstance(detail, dict) else str(detail)
         if "changed while this screen was open" in msg and "classified it as" in msg:
@@ -332,6 +350,10 @@ def race_classify_against_seal(tom, heidi) -> list[str]:
     else:
         if refused:
             ok("and every refusal says the set was sealed")
+        else:
+            note("every judgment beat the seal this run, so there was no "
+                 "refusal to read — the guarantee that a refusal names the "
+                 "seal had no occasion to be tested")
 
     same, how = seal_recomputes()
     if same:
@@ -432,10 +454,18 @@ def main() -> int:
     walk_back(tom, touched)
 
     head("Summary")
-    good, how = coverage_is_arithmetic()
-    print(f"  {CHECKS} check(s), {len(FINDINGS)} finding(s)")
+    # `coverage_is_arithmetic()` used to be called here and its answer thrown
+    # away — bound to `good, how` and read by nothing, so it could not pass
+    # and could not fail. `walk_back` checks it properly; this was a fourth
+    # instance of *a test that cannot fail for the thing it names*.
     for f in FINDINGS:
         print(f"    - {f}")
+    for n in NOTES:
+        print(f"    ~ {n}")
+    # Last, because `scripts/prove.sh` prints the final line of a passing run
+    # as the result and the count is what a reader wants there.
+    print(f"  {CHECKS} check(s), {len(FINDINGS)} finding(s), "
+          f"{len(NOTES)} note(s)")
     return 1 if FINDINGS else 0
 
 
