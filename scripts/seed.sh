@@ -15,6 +15,9 @@
 #   load_2025         the ledger, the P&L and the balance sheet, each proving
 #                     off its own printed subtotals before anything is promoted
 #   load_labor        the effort distribution, which the fringe base comes from
+#   load_calendar     YBI's own working calendar and the hours log under it —
+#                     261 work days and 2,088 hours in 2025, which is what
+#                     every `Allow Hours` in their record is measured against
 #   load_invoices     the three America Makes invoices, and the four awards the
 #                     register did not have; links each invoice to its award
 #   load_contract_terms   what the signed agreements actually say, with the
@@ -75,6 +78,10 @@ fi
 step "The books"
 run "ledger, P&L, sheet" $PY scripts/load_2025.py --base "$BASE"
 run "effort distribution" $PY scripts/load_labor.py
+# The calendar and the hours behind that distribution. After it, because the
+# hours log maps its objective headings through labor_objective_map, and the
+# cost objectives have to exist first.
+run "calendar and hours log" $PY scripts/load_calendar.py
 
 step "The awards, and what they say"
 run "invoices and awards" $PY scripts/load_invoices.py

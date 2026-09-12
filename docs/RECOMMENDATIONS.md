@@ -100,15 +100,22 @@ that reflects the work actually performed, supported, and reviewed after the
 fact. A reconstruction the person signs meets that. A reconstruction nobody
 ever saw does not, which is where 2025 has been sitting.
 
-**Contracted hours are not project hours.** `expected_hours` is
-`weekly_hours × 52` — what the person was *paid* for, holidays and vacation
-included. The draft books the eleven public holidays to Paid leave at the
-contracted daily rate and divides the rest across the 250 remaining working
-days: 2,080 = 1,992 on projects + 88 on leave. Leave is excluded from the
-distribution, so `share_variance` is 0.0000 on every objective — this changes
-no rate, only whether the sheet claims somebody worked on Christmas. **Personal
-vacation and sick days are on no record we hold**, so none is invented; the
-draft says so and each person moves their own days across before submitting.
+**The calendar is theirs.** YBI's own workbook carries a `Hours available`
+sheet — *Work Days* and *Hours Per Month*, by month — and it counts **261 work
+days and 2,088 hours in 2025**, every weekday with no holiday deducted. That
+is what every `Allow Hours` in their hours log is measured against, and it is
+eight hours above the `weekly_hours × 52` the employment terms give. The draft
+uses it rather than a calendar this system derived.
+
+**And the raw timesheets were already on file.** The `Hours Log` sheet holds
+45 people and 144 person-months for 2025 with hours by objective — the figures
+`labor_allocation` was built from, correlation 1.000000 on every full-year
+person. Nine people have a real month-by-month record and now get a draft that
+is their own log, month by month, at 8.00 hours a day. **Thirty-six have only
+a single summary row** — for thirty of them a round 100 hours — so for them the
+draft is the year's distribution and says so. That gap is worth knowing before
+43 certifications go out: for most of the organisation, the monthly record
+does not exist.
 
 The work hours are spread uniformly across those days, because
 `timesheet_entry` is a *day's* record — a row is capped at 24 hours

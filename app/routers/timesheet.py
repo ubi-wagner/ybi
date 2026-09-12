@@ -29,7 +29,7 @@ from app.auth import (Actor, Role, current_actor, require_controller,
 from app.db import one, query, transaction
 from app.settings import settings
 from app.domain.core import money
-from app.domain.workdays import split_contracted, split_days
+from app.domain.workdays import month_span, weekdays
 from app.statelock import turn
 from app.vocab import EmploymentStatus, TimeBasis
 
@@ -457,22 +457,53 @@ def spread_hours(total: Decimal, days: int) -> list[Decimal]:
             for i in range(days)]
 
 
-def _days_of(period: str, employee_key: str) -> tuple[list[date], list[date]]:
-    """The employed span's weekdays, split into days worked and holidays.
+def _calendar_months(period: str, employee_key: str) -> list[dict]:
+    """Each month of the employed span, with its dates and what YBI says it
+    holds.
 
-    Weekends are left out rather than given a share: a person contracted for
-    a five-day week is not paid for Saturday, so it is neither work nor
-    leave. Public holidays *are* paid, so they are kept and booked to LEAVE —
-    the first version spread the contracted hours over every weekday and
-    charged projects for Christmas.
+    **The counts are theirs.** `work_month` is transcribed from the
+    `Hours available` sheet of the controller's workbook — *Work Days* and
+    *Hours Per Month* — which for 2025 is 261 days and 2,088 hours, every
+    weekday with no holiday deducted. This used to derive federal holidays
+    and take them out, which imposed another organisation's calendar on this
+    one and made the draft disagree with the `Allow Hours` the record itself
+    measures every person against.
+
+    The dates are enumerated here because a table of monthly counts cannot
+    say *which* days they are; `v_work_calendar_check` holds the two against
+    each other and names any month where they differ.
     """
     p_start, p_end = _period_bounds(period)
-    terms = one("""SELECT from_date, to_date FROM v_employment_expected
+    terms = one("""SELECT from_date, to_date, weekly_hours
+                     FROM v_employment_expected
                     WHERE period = %s AND employee_key = %s""",
                 (period, employee_key))
     start = max(terms["from_date"], p_start) if terms else p_start
     end = min(terms["to_date"] or p_end, p_end) if terms else p_end
-    return split_days(start, end)
+    # A week of the organisation's own calendar, so a part-time person's
+    # capacity is a fraction of the month rather than a guess at one.
+    scale = Decimal(1)
+    if terms and terms["weekly_hours"]:
+        scale = Decimal(str(terms["weekly_hours"])) / 40
+
+    out = []
+    for row in query("""SELECT month_start, work_days, available_hours
+                          FROM work_month WHERE period = %s
+                         ORDER BY month_start""", (period,)):
+        m_start, m_end = month_span(row["month_start"])
+        days = [d for d in weekdays(max(m_start, start), min(m_end, end))]
+        if not days:
+            continue
+        whole = weekdays(m_start, m_end)
+        # Employed for part of a month: the share of its days they were here.
+        part = (Decimal(len(days)) / len(whole)) if whole else Decimal(0)
+        out.append({
+            "month_start": row["month_start"],
+            "days": days,
+            "work_days": row["work_days"],
+            "available": money(Decimal(str(row["available_hours"]))
+                               * scale * part)})
+    return out
 
 
 @router.get("/draft")
@@ -551,65 +582,117 @@ def draft(period: str = None,
                            "administrator to record your status, your "
                            "contracted hours and the dates you worked."}
 
-    days, holidays = _days_of(period, key)
-    if not days:
+    months = _calendar_months(period, key)
+    if not months:
         return {"period": period, "employee_key": key, "lines": [],
                 "expected_hours": str(expected), "adoptable": False,
-                "because": "Your employment span for this period contains no "
-                           "working days, so there is nothing to spread the "
-                           "hours across. Check the dates on your terms."}
+                "because": "The organisation's working calendar has no month "
+                           "covering your employment span, so there is "
+                           "nothing to place these hours in. Load it from "
+                           "the `Hours available` sheet of the grant "
+                           "reconciliation workbook."}
 
-    # **Contracted hours are not project hours.** `expected_hours` is
-    # `weekly_hours * 52` — what the person was *compensated* for, holidays
-    # and vacation included. Spending all of it on cost objectives says they
-    # worked every weekday of the year and took nothing off, which is what
-    # the first version of this did.
-    #
-    # A paid holiday is a day the record can defend, so its hours go to
-    # LEAVE at the contracted daily rate and the rest is what the objectives
-    # divide. The total still comes to the contracted figure, so coverage is
-    # unchanged; and LEAVE is `is_final = false`, so
-    # `v_timesheet_distribution` leaves it out and the shares between
-    # objectives — and therefore the rate — do not move at all.
-    work_hours, leave_hours = split_contracted(
-        expected,
-        Decimal(str(terms["weekly_hours"] or 0)) if terms else Decimal(0),
-        len(holidays))
+    available = money(sum(m["available"] for m in months))
+    all_days = [d for m in months for d in m["days"]]
 
-    lines = []
-    for r in rows:
-        units = Decimal(str(r["units"] or 0))
-        share = (units / total) if total else Decimal(0)
-        lines.append({
-            "objective_id": r["objective_id"],
-            "share": str(share.quantize(Decimal("0.0001"))),
-            "hours": str((work_hours * share).quantize(Decimal("0.01"))),
-            "grade": r["grade"],
-            "rationale": r["rationale"],
-            "source": r["source_label"]})
+    # **The hours log, where the person has one.** `labor_month` is the
+    # controller's `Hours Log` sheet at the grain it is kept — a person, a
+    # month, an objective — and `labor_allocation`'s wage distribution is a
+    # linear function of it (correlation 1.000000 on all eight full-year
+    # people). Nine of forty-five have a month-by-month record; the other
+    # thirty-six carry one summary row, so for them the year is all there is
+    # and the draft says so rather than inventing twelve months.
+    logged = query("""SELECT month_start, objective_id,
+                             sum(adjusted_hours) AS hours
+                        FROM labor_month
+                       WHERE period = %s AND employee_key = %s
+                       GROUP BY month_start, objective_id
+                       HAVING sum(adjusted_hours) > 0
+                       ORDER BY month_start, sum(adjusted_hours) DESC""",
+                   (period, key))
+    by_month: dict = {}
+    for r in logged:
+        by_month.setdefault(r["month_start"], []).append(r)
+
+    lines, monthly = [], []
+    if by_month:
+        totals: dict[str, Decimal] = {}
+        for m in months:
+            rows_m = by_month.get(m["month_start"], [])
+            hours_m = money(sum(Decimal(str(r["hours"])) for r in rows_m))
+            for r in rows_m:
+                totals[r["objective_id"]] = money(
+                    totals.get(r["objective_id"], Decimal(0))
+                    + Decimal(str(r["hours"])))
+            monthly.append({
+                "month": m["month_start"].strftime("%B"),
+                "month_start": str(m["month_start"]),
+                "days": len(m["days"]),
+                "available": str(m["available"]),
+                "hours": str(hours_m),
+                "lines": [{"objective_id": r["objective_id"],
+                           "hours": str(Decimal(str(r["hours"])))}
+                          for r in rows_m]})
+        drawn = money(sum(totals.values()))
+        for oid, h in sorted(totals.items(), key=lambda kv: -kv[1]):
+            src = next((r for r in rows if r["objective_id"] == oid), None)
+            lines.append({
+                "objective_id": oid,
+                "share": str((h / drawn).quantize(Decimal("0.0001"))
+                             if drawn else Decimal(0)),
+                "hours": str(h),
+                "grade": src["grade"] if src else "MANAGEMENT_RECONSTRUCTION",
+                "rationale": (src["rationale"] if src else
+                              "From the hours log for this period."),
+                "source": src["source_label"] if src else "Hours Log"})
+        work_hours = drawn
+    else:
+        # No monthly record: the year's distribution, over the hours their
+        # own calendar says the span holds.
+        for r in rows:
+            units = Decimal(str(r["units"] or 0))
+            share = (units / total) if total else Decimal(0)
+            lines.append({
+                "objective_id": r["objective_id"],
+                "share": str(share.quantize(Decimal("0.0001"))),
+                "hours": str((available * share).quantize(Decimal("0.01"))),
+                "grade": r["grade"],
+                "rationale": r["rationale"],
+                "source": r["source_label"]})
+        work_hours = money(sum(Decimal(l["hours"]) for l in lines))
+
     return {"period": period, "employee_key": key, "lines": lines,
             "expected_hours": str(expected),
+            "available_hours": str(available),
             "work_hours": str(work_hours),
-            "leave_hours": str(leave_hours),
-            "leave_days": [str(d) for d in holidays],
-            "working_days": len(days),
-            "hours_per_day": str((work_hours / len(days)).quantize(Decimal("0.01"))
-                                 if days else Decimal(0)),
+            "months": monthly,
+            "from_hours_log": bool(by_month),
+            "working_days": len(all_days),
+            "hours_per_day": str((work_hours / len(all_days)).quantize(
+                Decimal("0.01")) if all_days else Decimal(0)),
             "already_entered": str(cover["entered_hours"] or 0) if cover else "0",
             "adoptable": True,
-            "because": "This is the controller's reconstruction, not your "
-                       "timesheet. Adopting it records these hours under "
-                       "your name as a recalled record — correct anything "
-                       "that is wrong first, because what you adopt is what "
-                       "you will be certifying.",
-            #: Said out loud rather than left for somebody to notice. The
-            #: holidays are the public ones and may not be the days YBI
-            #: closes; personal leave is on no record here at all.
-            "not_known": ("The days off in this draft are the public "
-                          "holidays only. Your own vacation and sick days "
-                          "are on no record we hold, so they are not in it — "
-                          "move any day you were away to Paid leave before "
-                          "you submit.")}
+            "because": ("This is your own hours log, month by month, as the "
+                        "controller keeps it — not a figure spread evenly "
+                        "over the year. Adopting records it under your name; "
+                        "correct anything that is wrong first, because what "
+                        "you adopt is what you will be certifying."
+                        if by_month else
+                        "This is the controller's reconstruction, not your "
+                        "timesheet. There is no month-by-month record of "
+                        "your hours, so it is the year's distribution spread "
+                        "evenly. Adopting records it under your name — "
+                        "correct anything that is wrong first, because what "
+                        "you adopt is what you will be certifying."),
+            #: Their calendar counts every weekday as available and deducts
+            #: no holiday, so nothing here separates a day off from a day
+            #: worked. Said out loud rather than left to be noticed.
+            "not_known": ("YBI's calendar counts every weekday as available "
+                          f"— {len(all_days)} of them here, and no holiday "
+                          "taken out — so nothing in this draft separates a "
+                          "day you were off from a day you worked. Move any "
+                          "holiday, vacation or sick day to Paid leave "
+                          "before you submit.")}
 
 
 @router.post("/adopt")
@@ -683,78 +766,74 @@ def adopt(body: AdoptIn, period: str = None,
                  f"Adopting can only accept what was proposed; record "
                  f"anything else as an entry of your own.")
 
-    days, holidays = _days_of(period, key)
+    months = _calendar_months(period, key)
+    all_days = [d for m in months for d in m["days"]]
     # A day holds 24 hours and the trigger says so. Refuse in words here
     # rather than let the person meet `RUBY has 31.50 hours on 2025-03-04`.
-    per_day_total = sum(Decimal(l["hours"]) for l in proposed["lines"]
-                        if l["objective_id"] in wanted) / len(days)
+    per_day_total = (sum(Decimal(l["hours"]) for l in proposed["lines"]
+                         if l["objective_id"] in wanted) / len(all_days)
+                     if all_days else Decimal(0))
     if per_day_total > 24:
         raise HTTPException(
             409, f"Adopting this would book {per_day_total.quantize(Decimal('0.01'))} "
-                 f"hours a day across {len(days)} working days, and a day "
-                 f"holds 24. The contracted hours and the employed span "
-                 f"disagree — ask the administrator to check your terms.")
+                 f"hours a day across {len(all_days)} working days, and a day "
+                 f"holds 24. The hours and the employed span disagree — ask "
+                 f"the administrator to check your terms.")
 
-    written, hours = 0, Decimal(0)
-    with turn(period) as cur:
+    # **Each month's hours in that month.** Where the hours log has a
+    # month-by-month record it is placed month by month, because that is the
+    # grain the record is kept at and smearing it over the year would throw
+    # away the only part of it that is a fact. Where there is no monthly
+    # record the year is spread evenly, and the draft says which it is.
+    plan: list[tuple] = []
+    if proposed.get("months"):
+        for m in proposed["months"]:
+            days_m = next((c["days"] for c in months
+                           if str(c["month_start"]) == m["month_start"]), [])
+            if not days_m:
+                continue
+            for ln in m["lines"]:
+                if ln["objective_id"] not in wanted:
+                    continue
+                plan.append((ln["objective_id"], Decimal(ln["hours"]),
+                             days_m, m["month"]))
+    else:
         for line in proposed["lines"]:
             if line["objective_id"] not in wanted:
                 continue
-            total_h = Decimal(line["hours"])
-            if total_h <= 0:
-                continue
-            spread = list(zip(days, spread_hours(total_h, len(days))))
-            note = (f"Adopted from the controller's reconstruction "
-                    f"({line['share']} of the hours worked, spread over "
-                    f"{len(days)} working days; {line['grade']}). "
-                    f"{line['rationale']}"
-                    + (f" {body.note.strip()}" if body.note.strip() else ""))[:900]
-            for d, h in spread:
-                if h <= 0:
-                    continue
-                cur.execute(
-                    """INSERT INTO timesheet_entry
-                         (period, employee_key, work_date, objective_id, hours,
-                          basis, note, entered_by, entered_by_name)
-                       VALUES (%s,%s,%s,%s,%s,'ADOPTED',%s,%s,%s)""",
-                    (period, key, d, line["objective_id"], h,
-                     note, actor.actor_id, actor.display_name))
-                written += 1
-                hours = hours + h
+            plan.append((line["objective_id"], Decimal(line["hours"]),
+                         all_days, "the year"))
 
-        # **The paid holidays, booked as leave rather than spent on a
-        # project.** LEAVE is `is_final = false`, so it is out of the
-        # distribution and out of the base — it changes no share and no
-        # rate. What it changes is whether the sheet claims somebody worked
-        # on Christmas. `cost_objective` has carried a LEAVE row since `017`
-        # and nothing had ever written it, which is the dead-register shape
-        # in the one place it makes a certification untrue.
-        leave_hours = Decimal(proposed.get("leave_hours") or 0)
-        leave_written = 0
-        if leave_hours > 0 and holidays:
-            for d, h in zip(holidays, spread_hours(leave_hours, len(holidays))):
+    grade = {l["objective_id"]: l for l in proposed["lines"]}
+    written, hours = 0, Decimal(0)
+    with turn(period) as cur:
+        for objective, total_h, days_m, when in plan:
+            if total_h <= 0 or not days_m:
+                continue
+            src = grade.get(objective, {})
+            note = (f"Adopted from the controller's hours log for {when} "
+                    f"({total_h} hours over {len(days_m)} working days; "
+                    f"{src.get('grade', 'MANAGEMENT_RECONSTRUCTION')}). "
+                    f"{src.get('rationale', '')}"
+                    + (f" {body.note.strip()}" if body.note.strip() else ""))[:900]
+            for d, h in zip(days_m, spread_hours(total_h, len(days_m))):
                 if h <= 0:
                     continue
                 cur.execute(
                     """INSERT INTO timesheet_entry
                          (period, employee_key, work_date, objective_id, hours,
                           basis, note, entered_by, entered_by_name)
-                       VALUES (%s,%s,%s,%s,%s,'ADOPTED',%s,%s,%s)""",
-                    (period, key, d, "LEAVE", h,
-                     ("A public holiday, at the contracted daily rate. Your "
-                      "own vacation and sick days are on no record we hold "
-                      "and are not in this — move any day you were away to "
-                      "Paid leave.")[:900],
-                     actor.actor_id, actor.display_name))
-                leave_written += 1
+                       VALUES (%s,%s,%s,%s,%s,'ADOPTED',%s,%s,%s)
+                       ON CONFLICT DO NOTHING""",
+                    (period, key, d, objective, h,
+                     note, actor.actor_id, actor.display_name))
                 written += 1
                 hours = hours + h
 
         record(actor, "TIMESHEET_ADOPT", "timesheet_entry", key,
                after={"period": period, "entries": written,
-                      "hours": str(hours), "working_days": len(days),
-                      "leave_days": leave_written,
-                      "leave_hours": str(leave_hours),
+                      "hours": str(hours), "working_days": len(all_days),
+                      "months": len(proposed.get("months") or []),
                       "objectives": sorted(wanted)},
                reason=(body.note.strip()
                        or "Adopted the controller's reconstruction as my own "
@@ -765,8 +844,9 @@ def adopt(body: AdoptIn, period: str = None,
             409, "Nothing was adopted: every line of the draft came to zero "
                  "hours. Nothing has been recorded.")
     return {"period": period, "employee_key": key, "entries": written,
-            "hours": str(hours), "working_days": len(days),
-            "leave_days": leave_written, "leave_hours": str(leave_hours),
+            "hours": str(hours), "working_days": len(all_days),
+            "months": len(proposed.get("months") or []),
+            "from_hours_log": bool(proposed.get("from_hours_log")),
             "next": "Submit the sheet, then sign the certification. What you "
                     "sign is what is on the sheet now, so change anything "
                     "that is wrong before you do."}

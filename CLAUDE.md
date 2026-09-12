@@ -1498,28 +1498,11 @@ has in another place:
   ever become adoptable: its precondition was satisfied only by already
   having the entries it exists to create. `FACILITY_UNPARTITIONED` in a new
   place.
-- **Contracted hours are not project hours.** `expected_hours` is
-  `weekly_hours * 52` — what somebody was *compensated* for, paid holidays
-  and vacation included. The first version divided all of it across every
-  weekday of the span and booked the lot to cost objectives, which asserts
-  that forty-three people each worked 1 January, 4 July, Thanksgiving and
-  Christmas, took no holiday, no vacation and no sick day, and did it for a
-  whole year — on a certification whose own wording is *"including the time
-  I was not working on any project"* and which contained none of it. All
-  eleven federal holidays fall on weekdays in 2025, so the sheet charged a
-  project for every one. `app/domain/workdays.py` splits the span; the
-  holidays go to LEAVE at the contracted daily rate and the rest is what the
-  objectives divide. **`cost_objective` has carried a LEAVE row since `017`
-  — *paid leave: holiday, PTO, sick* — and nothing had ever written it**,
-  the dead-register shape in the one place it makes a certification untrue.
-  Leave is `is_final = false`, so `v_timesheet_distribution` leaves it out:
-  measured on the live record, `share_variance` is **0.0000 on every
-  objective**, so this moves no share, no wage and no rate — only whether
-  the sheet claims somebody worked on Christmas. The holidays are *derived*
-  from their rules rather than listed, because a hand-kept table needs
-  editing every December; what cannot be derived is personal leave, so none
-  is invented and the draft says so — *the days off here are the public
-  holidays only, move any day you were away to Paid leave.*
+- **The calendar is theirs, and so are the hours.** See **Their calendar,
+  and the hours log under it** below. The first version divided
+  `expected_hours` across every weekday and booked the lot to cost
+  objectives; the second derived United States federal holidays and took
+  them out. Both were inventing a fact that was on file.
 - **A `timesheet_entry` is a day.** The first version wrote one entry per
   objective dated the last day of the period, reasoning that spreading a
   reconstruction across the calendar manufactures a daily record nobody has.
@@ -1587,6 +1570,71 @@ columns, while `019` is where the view is actually defined now. **Lift from
 the definition in force, not the first one written.** And a new enum label
 cannot be used in the transaction that adds it, which migrations run in, so
 the mapping compares `e.basis::text` rather than casting a literal.
+
+## Their calendar, and the hours log under it
+
+Migration `071`, `scripts/load_calendar.py`. The adopt route needed to know
+which days somebody was working. It guessed twice — first every weekday, then
+every weekday less the eleven United States federal holidays — and **the
+answer was in the controller's workbook the whole time, on two sheets nothing
+had ever read.**
+
+**`Hours available`** is the calendar: a *Work Days* row and an *Hours Per
+Month* row, by month, October 2023 to July 2026. YBI counts **261 work days
+and 2,088 hours in 2025** — every weekday, with **no holiday deducted at
+all**. So taking eleven out was not a correction, it was a second
+organisation's calendar imposed on this one, and it put the draft 88 hours
+below the `Allow Hours` their own record measures every person against. It is
+also eight hours *above* `weekly_hours * 52`, which is where 2,080 comes
+from: their year is 2,088.
+
+**`Hours Log`** is the timesheet as kept — 1.2MB, 45 people, 144
+person-months for 2025, hours by objective, with `TS Hours` as logged,
+`Allow Hours` as the month's capacity, `Variance` between them, and an `Adj-`
+set normalising one to the other. Gaffney logged 2,682 hours against 2,088
+available; her adjusted hours come to exactly 2,088. **`labor_allocation` —
+the distribution the entire rate model rests on — was built from these**: the
+correlation between adjusted hours and allocated wages is **1.000000 on all
+eight full-year people**. `load_labor.py` took the finished wage figures and
+left the hours, so the evidence a reviewer asks for was on file and in no
+database.
+
+Three things came out of loading it:
+
+- **Thirty-six of the forty-five have no monthly record.** They carry a
+  single row in a block at the bottom of the sheet, labelled December, with
+  `Allow Hours` equal to `TS Hours` — and for thirty of them the figure is a
+  round **100**. Loading that as December would say those people worked 100
+  hours in December and nothing in the other eleven months. **A person with
+  one row has no monthly record**, whatever month it is labelled with, and
+  the loader names all thirty-six rather than filing a number. The nine with
+  a real month-by-month record get one; the rest get the year, and the draft
+  says which it is showing.
+- **`month_hours_sane` caught it before the rule did.** The first load
+  refused on `FIFFICK, 2025-12-01, 1739.25` — a year's hours wearing a
+  month's label. An invariant in the schema found the shape of the data
+  before the loader knew to look for it, which is the argument for putting
+  them there.
+- **`v_work_calendar_check` holds their calendar against the calendar.**
+  Their `Work Days` should be the weekdays of the month and for every month
+  of 2025 it is. OPEN there is **not a defect** — a shutdown week, or a
+  holiday they do deduct, is a fact about the organisation and the reason a
+  working calendar exists at all. The dates are still enumerated in
+  `app/domain/workdays.py`, because a table of monthly counts cannot say
+  *which* days they are; the control is what keeps the two honest.
+
+**The draft is a timesheet now, not a smear.** Where the hours log has the
+months, each month's hours are placed in that month and spread across its own
+working days — 23 days and 184 hours in January, 20 and 160 in February, at
+**8.00 hours a day**, which is a figure a person actually writes. Where there
+is no monthly record it is the year's distribution and says so.
+
+What their calendar cannot say is which day anybody was off: it counts every
+weekday as available and separates nothing. So nothing is invented, and the
+draft states it — *YBI's calendar counts every weekday as available and takes
+no holiday out, so nothing here separates a day you were off from a day you
+worked; move any holiday, vacation or sick day to Paid leave before you
+submit.*
 
 ## The screen the draft never had
 

@@ -583,12 +583,37 @@ function DraftCard({ draft, onDone }) {
       </Table>
 
       <p className="quiet small">
-        Adopting records these hours as <strong>recalled</strong>, spread
-        evenly across the {draft.working_days} days you were working — about{" "}
-        {hours(draft.hours_per_day)} hours a day. It is not a diary and does
-        not pretend to be one: the same split every day is what a
-        reconstruction honestly looks like.
+        {draft.from_hours_log
+          ? <>Adopting records these as <strong>recalled</strong>, each
+              month&apos;s hours placed in that month and spread across its
+              working days — about {hours(draft.hours_per_day)} a day. It is
+              not a diary, but the months are yours: they come from the hours
+              log, not from a figure smeared over the year.</>
+          : <>Adopting records these as <strong>recalled</strong>, spread
+              evenly across the {draft.working_days} working days — about{" "}
+              {hours(draft.hours_per_day)} a day. There is no month-by-month
+              record of your hours, so this is the year&apos;s distribution
+              and it says so rather than pretending to a shape it has not
+              got.</>}
       </p>
+
+      {(draft.months || []).length > 0 && (
+        <Table columns={[
+          { label: "Month", align: "left" }, { label: "Work days" },
+          { label: "Available" }, { label: "On the log" },
+          { label: "Objectives" },
+        ]}>
+          {draft.months.map((m) => (
+            <tr key={m.month_start}>
+              <td className="l">{m.month}</td>
+              <td className="num">{m.days}</td>
+              <td className="num">{hours(m.available)}</td>
+              <td className="num">{hours(m.hours)}</td>
+              <td className="num">{m.lines.length}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
 
       {/* **Contracted hours are not project hours**, and a sheet that spends
           all of them on cost objectives says nobody took a day off all year.
@@ -596,12 +621,14 @@ function DraftCard({ draft, onDone }) {
           the person's to correct, and saying so is the whole point of
           showing them a draft. */}
       <div className="stat-row">
-        <Stat label="Paid for" size="lg" value={hours(draft.expected_hours)}
-              note="contracted hours" />
-        <Stat label="On projects" value={hours(draft.work_hours)}
-              note={`${draft.working_days} days`} />
-        <Stat label="Paid leave" value={hours(draft.leave_hours)}
-              note={`${(draft.leave_days || []).length} public holidays`} />
+        <Stat label="Available" size="lg" value={hours(draft.available_hours)}
+              note={`${draft.working_days} work days, YBI's calendar`} />
+        <Stat label="On the log" value={hours(draft.work_hours)}
+              note={draft.from_hours_log
+                    ? `${(draft.months || []).length} months on file`
+                    : "no monthly record"} />
+        <Stat label="Contracted" value={hours(draft.expected_hours)}
+              note="from your terms" />
       </div>
       {/* Not a failure — a caveat the reader must not miss. Warm, per the
           annotation rule: pencil, not traffic light. */}
