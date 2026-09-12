@@ -130,7 +130,8 @@ class ComputeIn(BaseModel):
     note: str = ""
 
 
-def _build_model(period: str):
+def _build_model(period: str,
+                 fringe_base: "AllocationBase | None" = None):
     """Assemble the domain model from what is on file.
 
     The engine is pure and knows nothing about Postgres; this is the seam.
@@ -142,8 +143,11 @@ def _build_model(period: str):
 
     from app.domain.core import (Decision, DecisionSet, EvidenceGrade,
                                  FederalTreatment, Function990, PoolType)
+    from app.domain.core import AllocationBase
     from app.domain.ingest import Ledger, LedgerLine
     from app.domain.pools import CarveOut, PoolModel
+
+    fringe_base = fringe_base or AllocationBase.SALARIES_WAGES
 
     rows = query("""SELECT line_id::text AS line_id, period,
                            txn_date::text AS date, account,
@@ -205,17 +209,17 @@ def _build_model(period: str):
          GROUP BY objective_id""", (period,))
     federal = {r["objective_id"] for r in
                query("SELECT objective_id FROM cost_objective WHERE is_federal")}
-    fringe_rate = Decimal("0")
-    fr = one("""SELECT rate FROM rate WHERE period = %s AND kind = 'FRINGE'
-                  AND status <> 'SUPERSEDED'
-                 ORDER BY computed_at DESC LIMIT 1""", (period,))
-    if fr:
-        fringe_rate = Decimal(str(fr["rate"]))
     model.add_labor({r["objective_id"]: {"wages": r["wages"] or Decimal(0),
                                          "backed": r["backed"] or Decimal(0)}
                      for r in labour},
-                    fringe_rate=fringe_rate,
+                    fringe_rate=Decimal(0),
                     objective_map={}, federal=federal)
+    # And now the fringe, at this model's own rate rather than at whatever
+    # rate happened to be on file. See `PoolModel.apply_fringe`: reading it
+    # from the rate table made the first computation after a seal build its
+    # base with no fringe in it, so one sealed set answered 37.82% and then
+    # 34.82% depending on how many times the button had been pressed.
+    model.apply_fringe(fringe_base)
 
     # Carve-outs from the facilities work: tenant, vacant and committed space
     # is the rental operation's cost and never reaches a federal pool.
@@ -294,13 +298,13 @@ def compute(body: ComputeIn, period: str = "2025",
                  "classifications first — the rate has to be a consequence of "
                  "the judgments, not an input to them.")
 
-    model = _build_model(period)
-    model.decisions._sealed_hash = sealed["seal_hash"]   # the seal on file
-
     try:
         base_type = AllocationBase(body.fringe_base)
     except ValueError:
         raise HTTPException(422, f"Unknown base {body.fringe_base!r}.")
+
+    model = _build_model(period, base_type)
+    model.decisions._sealed_hash = sealed["seal_hash"]   # the seal on file
     fringe_base = model.base_amount(base_type)
 
     rates = model.compute_rates(fringe_base=fringe_base)

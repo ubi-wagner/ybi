@@ -286,3 +286,105 @@ def test_a_fringe_pool_nobody_has_judged_is_no_data(cur):
                 (PERIOD,))
     row = cur.fetchone()
     assert row["state"] == "NO DATA", row
+
+
+def test_the_same_sealed_set_computes_the_same_rate_twice():
+    """A rate must not depend on how many times the button was pressed.
+
+    `_build_model` read the fringe rate from *whatever FRINGE rate was
+    already on file*, and on the first computation after a seal there is
+    none — the FRINGE rate is produced by that same call, a few lines later.
+    So the first compute built every objective's base with no fringe in it
+    and every later one built it with fringe, and one sealed set answered
+    **37.82% and then 34.82%**, converging silently on the right answer after
+    one wasted press.
+
+    Nothing caught it. The pools tie to themselves either way, so
+    `v_rate_buildup` reports TIES on both; and MTDC is deliberately not
+    anchored, because a second derivation of it in SQL would be one figure
+    computed twice. The only thing that can see it is running the
+    computation twice and comparing — which is what this does.
+    """
+    from decimal import Decimal
+
+    from app.domain.core import (AllocationBase, Decision, DecisionSet,
+                                 EvidenceGrade, FederalTreatment, Function990,
+                                 PoolType)
+    from app.domain.ingest import Ledger, LedgerLine
+    from app.domain.pools import PoolModel
+
+    def build() -> PoolModel:
+        lines = [
+            LedgerLine(line_id="L1", period="2025", date="2025-01-31",
+                       account="5130 Benefits", payee="", description="",
+                       amount=Decimal("21900.00"), pl_scope="P&L",
+                       pl_section="Expense", source_key="L1"),
+            LedgerLine(line_id="L2", period="2025", date="2025-01-31",
+                       account="5500 Travel", payee="", description="",
+                       amount=Decimal("10000.00"), pl_scope="P&L",
+                       pl_section="Expense", source_key="L2"),
+            LedgerLine(line_id="L3", period="2025", date="2025-01-31",
+                       account="8100 Accounting", payee="", description="",
+                       amount=Decimal("5000.00"), pl_scope="P&L",
+                       pl_section="Expense", source_key="L3"),
+        ]
+        ledger = Ledger("2025", lines)
+        ds = DecisionSet("2025")
+        ds.record(Decision(decision_id="d1", scope="fringe", line_ids=("L1",),
+                           pool=PoolType.FRINGE,
+                           function_990=Function990.NOT_APPLICABLE,
+                           federal=FederalTreatment.ALLOWABLE,
+                           objective_id=None,
+                           evidence=EvidenceGrade.CORROBORATED,
+                           rationale="fringe", decided_by="test"))
+        ds.record(Decision(decision_id="d2", scope="direct", line_ids=("L2",),
+                           pool=PoolType.DIRECT,
+                           function_990=Function990.PROGRAM,
+                           federal=FederalTreatment.ALLOWABLE,
+                           objective_id="PROG",
+                           evidence=EvidenceGrade.CORROBORATED,
+                           rationale="direct", decided_by="test"))
+        ds.record(Decision(decision_id="d3", scope="ga", line_ids=("L3",),
+                           pool=PoolType.GA,
+                           function_990=Function990.MGMT_GENERAL,
+                           federal=FederalTreatment.ALLOWABLE,
+                           objective_id=None,
+                           evidence=EvidenceGrade.CORROBORATED,
+                           rationale="ga", decided_by="test"))
+        ds.seal()
+        m = PoolModel(ledger, ds, "2025")
+        m.build()
+        m.add_labor({"PROG": {"wages": Decimal("100000.00"),
+                              "backed": Decimal("0")}},
+                    fringe_rate=Decimal(0), objective_map={},
+                    federal={"PROG"})
+        m.apply_fringe(AllocationBase.SALARIES_WAGES)
+        return m
+
+    first, second = build(), build()
+    r1 = first.compute_rates(
+        fringe_base=first.base_amount(AllocationBase.SALARIES_WAGES))
+    r2 = second.compute_rates(
+        fringe_base=second.base_amount(AllocationBase.SALARIES_WAGES))
+    assert r1 == r2, f"two runs of one sealed set disagree: {r1} vs {r2}"
+
+    # And the base has to carry the fringe on the very first run — that is
+    # the half the repeat cannot show, because a model that never puts
+    # fringe in the base is stable at the wrong answer.
+    assert first.objectives["PROG"].fringe == Decimal("21900.00"), (
+        "the base carries no fringe on the first computation, so MTDC is "
+        "short by the whole fringe pool and every indirect rate over it "
+        "reads high — 2 CFR 200.1 puts applicable fringe in MTDC")
+    assert first.base_amount(AllocationBase.MTDC) == Decimal("131900.00")
+
+
+def test_the_handler_no_longer_reads_a_rate_to_compute_a_rate():
+    """The structural half: a computation that reads its own output is one
+    whose answer depends on its history."""
+    src = (ROOT / "app" / "routers" / "rates.py").read_text()
+    body = src[src.index("def _build_model"):src.index("@router.post(\"/compute\")")]
+    assert "apply_fringe" in body, (
+        "the model no longer derives its own fringe rate")
+    assert "FROM rate WHERE" not in body, (
+        "_build_model reads the rate table again, so the first computation "
+        "after a seal builds its base from a rate that does not exist yet")

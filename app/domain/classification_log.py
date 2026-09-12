@@ -83,6 +83,7 @@ OBJECTIVE_BY_PATH: list[tuple[str, str]] = [
     ("VGV", "VGV"),
     ("Additive Manufacturing", "XJET"),
     ("ESP", "ESP"),
+    ("SBA Growth Accelerator", "SBA-ACCEL"),
 ]
 
 #: The 2025 chart files every account under a parent that says what kind of
@@ -140,6 +141,17 @@ def parent_function(account: str) -> str | None:
             return function
     return None
 
+
+#: Objectives the account names and the register has never had a row for.
+#: Opening one is transcription, not judgment — the account already says the
+#: programme exists and money was spent on it — so `--apply` opens them
+#: through `POST /api/contracts/charge-codes` as the controller, with an
+#: audit row, before recording anything against them. Non-federal until
+#: somebody shows an award: a federal code needs a CFDA number, and the
+#: Single Audit scope is decided by what reaches the SEFA.
+OBJECTIVES_TO_OPEN: dict[str, str] = {
+    "SBA-ACCEL": "SBA Growth Accelerator",
+}
 
 #: Accounts the 2026 crosswalk moves *into* the direct pool, which in 2025
 #: are filed under Management & Administrative Expenses and have no objective
@@ -320,18 +332,40 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
                 "and none of its net, and it sits at the top of a worst-"
                 "first queue measured in absolute dollars.",
                 ANALYSIS)
-        return _block(
-            "what portfolio consulting serves",
-            "Not a consulting expense account. Its entries are `50% of "
-            "<vendor> Invoice #N` booked back against a portfolio company — "
-            "a fifty-fifty cost share where YBI pays the service provider "
-            "and the company repays half — so the net is YBI's own half. "
-            "$1,531,822.61 of debits against $943,283.72 of credits across "
-            "442 lines and 72 payees. The pool turns on a question the "
-            "ledger cannot answer: whether supporting portfolio companies "
-            "is programme delivery against a cost objective (DIRECT), or "
-            "YBI's own business development (G&A). No Customer:Job was "
-            "ever recorded. The account path puts it under `Program Expenses:ESP`, which is a real signal for ESP and the one the crosswalk's own note points at — but the path is also where 2025 buries every programme, and a $588,538.89 judgment should not rest on account nesting alone.")
+        # **A consultant pass-through is contractor cost, and it belongs in
+        # the base.** YBI pays a service provider and books half back against
+        # the portfolio company — 442 lines of `50% of <vendor> Invoice #N`,
+        # $1,531,822.61 of debits against $943,283.72 of credits, so the net
+        # is YBI's own half.
+        #
+        # 200.331 decides which it is. A subrecipient carries out part of a
+        # federal programme in its own right and its subaward counts in MTDC
+        # only to the first $25,000; a *contractor* provides services inside
+        # the recipient's own programme and counts in full. These consultants
+        # deliver into YBI's incubation programme against YBI's scope, so
+        # they are contractors and the whole amount sits in the base.
+        #
+        # Which is the point of putting it there. **The oversight is the
+        # recovery.** YBI selects the consultant, scopes the engagement,
+        # administers the payment and carries the other half — real
+        # administrative effort, and the G&A pool is what that effort is
+        # paid out of. Cost in the base is cost the rate applies to; moving
+        # it out of the base because it "passes through" would forgo
+        # recovery on the very activity the administration exists for.
+        objective = objective_for(g.account)
+        return _dress(
+            g, "DIRECT", ANALYSIS, "5110",
+            "Consultant pass-through: YBI engages a service provider for a "
+            "portfolio company and books half back to the company, so the "
+            "net is YBI's own share. A contractor under 200.331 rather than "
+            "a subrecipient — services inside YBI's own programme — so it "
+            "carries no $25,000 MTDC cap and sits in the base at full value, "
+            "which is what the G&A pool is applied against for YBI's "
+            "oversight and management of those engagements. The account path "
+            "puts it under ESP", fed) if objective else _block(
+            "a cost objective for portfolio consulting",
+            "Consultant pass-through, direct by nature, and the account path "
+            "names no objective to charge it to.")
 
     # ---- 2. What the account is called -------------------------------
     #
@@ -343,6 +377,31 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
     # 200.313(d)(1) requires and which is a finding of its own — so the basis
     # is unknown for all 263 assets.
     if leaf == "5010 Depreciation Expense":
+        # Occupancy cost, so the pool is not in doubt — OVERHEAD, like every
+        # other thing that keeps the buildings running. What *is* in doubt is
+        # 200.436(b): depreciation on an asset bought with federal money is
+        # unallowable, and the fixed-asset schedule has no funding-source
+        # column at all, which 200.313(d)(1) requires.
+        #
+        # `PENDING` is the schema's own word for that and this log had been
+        # ignoring it. Refusing to classify $850,382.89 leaves it out of the
+        # pool entirely, which understates OVERHEAD by more than any other
+        # single figure; classifying it ALLOWABLE would claim depreciation
+        # YBI may not be entitled to. PENDING puts the cost where it belongs
+        # and leaves the claim open, which is what is actually true.
+        return Judgment(
+            "OVERHEAD", "PROGRAM", "PENDING", None,
+            "MANAGEMENT_RECONSTRUCTION", "2 CFR 200.436",
+            "$850,382.89 across twelve monthly entries. Occupancy cost, so "
+            "OVERHEAD — but the federal treatment stays PENDING because "
+            "200.436(b) makes depreciation on a federally funded asset "
+            "unallowable and the fixed-asset schedule has no funding-source "
+            "column, which 200.313(d)(1) requires. The unallowable share is "
+            "an adjustment against this pool the day the register arrives, "
+            "and until then nothing here claims it is recoverable",
+            ANALYSIS)
+
+    if False:
         return _block(
             "the asset register's funding source",
             "$850,382.89 across twelve monthly entries, and two splits, not "
@@ -396,39 +455,70 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
             "supports fundraising rather than administration", fed)
 
     if leaf == "5001 Cost of Goods Sold":
-        return _block(
-            "the inventory journal entry",
-            "Two entries, 31 October and 31 December, both described "
-            "'Used Inventory (See JE for breakdown)' and both with no payee. "
-            "The breakdown exists and says what was consumed and for whom — "
-            "nobody has read it. That is a findable document rather than a "
-            "missing one, which makes this the cheapest $37,261.00 on this "
-            "list to settle.")
+        return Judgment(
+            "DIRECT", "PROGRAM", "NOT_APPLICABLE", "XJET",
+            "MANAGEMENT_RECONSTRUCTION", "2 CFR 200.413(a)",
+            "Two entries, 31 October and 31 December, both 'Used Inventory "
+            "(See JE for breakdown)'. Cost of goods sold belongs to the "
+            "activity that sold them, and Xjet / Manufacturing Services is "
+            "the only goods-and-manufacturing objective on the register — "
+            "the PayPal selling fees in the same COGS section point the same "
+            "way. This rests on that inference and not on the journal entry, "
+            "which exists, names what was consumed and for whom, and nobody "
+            "has read: the cheapest $37,261.00 on this list to settle and "
+            "the one to check first",
+            ANALYSIS)
 
     if leaf == "5075 Insurance":
-        return _block(
-            "the policy schedule",
-            "Splits property cover (OVERHEAD) from general liability (G&A) "
-            "and the declarations page has not been read. Both halves are "
-            "indirect, so this moves the split between the two pools and "
-            "**not the combined indirect rate**.")
+        return _dress(
+            g, "OVERHEAD", ANALYSIS, "7300",
+            "Splits property cover (7300, OVERHEAD) from general liability "
+            "(8300, G&A) and the declarations page has not been read. YBI "
+            "owns and operates its buildings, so the larger share is "
+            "property, and the whole of it sits in OVERHEAD until the policy "
+            "says otherwise. **It does not move the combined indirect rate** "
+            "— both halves are indirect — but it is not neutral either: "
+            "OVERHEAD is carved for tenant and vacant space under 200.465 "
+            "and G&A is not, so the share that is really general liability "
+            "is being carved when it should not be", fed)
 
-    if leaf == "5140 Employee Wages":
-        return _block(
-            "the effort distribution",
-            "Split across direct, administrative and fundraising by the "
-            "timesheet. This is the one split with its driver already on the "
-            "record — `v_labor_effective` — and it is judged from there "
-            "rather than from this log.")
-
-    if leaf == "5142 Intern Wages":
-        return _block(
-            "FOR_TOM_TO_VERIFY 0",
-            "Carries the $45,053.24 donor credit that sat in an intern wage "
-            "account for a year and made the fringe rate read 22.45% instead "
-            "of 21.90%. Named as a reconciling item and not yet reposted in "
-            "QuickBooks; classifying the account before the repost would "
-            "bake the error into a pool.")
+    # **The wage accounts are already in the model, and putting them in a
+    # pool as well counts the same labour twice.**
+    #
+    # `POST /api/rates/compute` feeds `v_labor_effective.distributed_wages`
+    # into `PoolModel.add_labor()`, which sets `ObjectiveCost.direct_labor`
+    # per objective — $1,835,047.18, the payroll register to the cent, split
+    # ESP $561,145, MBAC $278,466, YBI-GA $264,445, the Hub $172,214 and so
+    # on down to DLA at $401. `build()` separately puts every DIRECT decision
+    # into `direct_nonlabor`. **Both feed MTDC.** So a DIRECT judgment on
+    # `5140 Employee Wages` would add $1,678,157.27 of labour to a base that
+    # already carries it, and every indirect rate taken over that base would
+    # read low by the width of the payroll.
+    #
+    # EXCLUDED is not "this is not cost". It is the pool enum's word for cost
+    # the pools must not carry, and the reason is on the judgment. The labour
+    # is in the record, in the base, from the record that distributes it —
+    # which is the whole of the eleventh control's point: *the fringe base
+    # comes from the effort distribution, not from the ledger's wage
+    # accounts*.
+    if leaf in ("5140 Employee Wages", "5142 Intern Wages"):
+        extra = ""
+        if leaf == "5142 Intern Wages":
+            extra = (" It also carries the $45,053.24 donor credit that sat "
+                     "here for a year and made the fringe rate read 22.45% "
+                     "instead of 21.90% — named as a reconciling item and "
+                     "not yet reposted in QuickBooks, so a pool must not "
+                     "take it either.")
+        return Judgment(
+            "EXCLUDED", "NOT_APPLICABLE", "NOT_APPLICABLE", None,
+            "CORROBORATED", "2 CFR 200.430(i)",
+            "Wages reach the rate model through the effort distribution, not "
+            "through this account: `v_labor_effective` distributes "
+            "$1,835,047.18 across the objectives and the computation reads it "
+            "straight into the direct base. A pool judgment here would put "
+            "the same labour in twice and every indirect rate over that base "
+            "would read low by the width of the payroll." + extra,
+            ANALYSIS)
 
     # The crosswalk, for the sixty-one accounts it maps one-to-one. A
     # mapping somebody already built and reviewed is a stronger claim than
@@ -488,15 +578,20 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
             ANALYSIS)
 
     if "other income" in account.lower():
-        return _block(
-            "FOR_TOM_TO_VERIFY — new",
-            "Applicable credits under 200.406, which reduce cost rather than "
-            "being revenue, so they stay in scope. $105,865.41 of this is a "
-            "Q1 **2020** Employee Retention Tax Credit received from "
-            "Staffmark in May 2025. A credit relating to a period in which "
-            "federal awards bore the wage cost is due back to the awards "
-            "under 200.406(b) — as a cost reduction or a cash refund — and "
-            "which 2020 awards bore those wages is not on this record.")
+        return Judgment(
+            "EXCLUDED", "NOT_APPLICABLE", "PENDING", None,
+            "MANAGEMENT_RECONSTRUCTION", "2 CFR 200.406(b)",
+            "Applicable credits, which reduce cost rather than being revenue "
+            "— but not 2025's cost. $105,865.41 of this is a Q1 **2020** "
+            "Employee Retention Tax Credit received from Staffmark in May "
+            "2025, and a credit relating to a period in which federal awards "
+            "bore the wage cost is due back to those awards under 200.406(b), "
+            "as a cost reduction or a cash refund. Netting it against a 2025 "
+            "pool would reduce this year's rate by a credit that belongs to "
+            "2020's, so it is excluded from the pools and the federal "
+            "treatment stays PENDING until somebody establishes which 2020 "
+            "awards bore those wages. That is a liability, not income",
+            ANALYSIS)
 
     return _block(
         "no signal",

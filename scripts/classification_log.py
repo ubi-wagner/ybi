@@ -43,7 +43,7 @@ import httpx
 
 from app.db import one, open_pool, query
 from app.domain.classification_log import (
-    Group, disagreements, judge, summarise, walk)
+    OBJECTIVES_TO_OPEN, Group, disagreements, judge, summarise, walk)
 from app.domain.core import money
 
 BOLD, DIM, OK, WARN, FAIL, END = (
@@ -343,6 +343,28 @@ def apply(walked, base: str, email: str, password: str, period: str) -> int:
     if r.status_code != 200:
         print(f"{FAIL}could not sign in as {email}: {r.status_code}{END}")
         return 1
+    # An objective the account names and the register has never had. Opening
+    # it is transcription — the account already says the programme exists and
+    # money was spent on it — and it has to happen first, because
+    # `direct_needs_objective` refuses a DIRECT judgment naming a row that is
+    # not there. Through the real route, so it carries an audit entry.
+    for oid, label in OBJECTIVES_TO_OPEN.items():
+        r = c.post("/api/contracts/charge-codes", json={
+            "objective_id": oid, "label": label, "objective_type": "PROGRAM",
+            "is_federal": False, "is_final": True, "cfda": None,
+            "reason": f"Opened so {label} can be charged: the 2025 ledger "
+                      f"carries cost under that name and the objective "
+                      f"register has never had a row for it. Non-federal "
+                      f"until an award is shown — a federal code needs a "
+                      f"CFDA number and the Single Audit scope follows the "
+                      f"SEFA."})
+        if r.status_code == 201:
+            print(f"  {OK}opened cost objective {oid}{END} — {label}")
+        elif r.status_code != 409:
+            print(f"  {FAIL}could not open {oid}: {r.status_code} "
+                  f"{r.text[:120]}{END}")
+            return 1
+
     todo = [(g, j) for g, j in walked if not j.blocked]
     print(f"\n{BOLD}Recording {len(todo)} judgment(s) as {email}{END}")
     ok = bad = 0

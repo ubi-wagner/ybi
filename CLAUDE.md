@@ -1031,32 +1031,106 @@ share on top of a figure already net of recovery removes the same money twice.
 
 ### The rate that falls out
 
-Applied end to end — recorded through the API as Tom, then sealed and
-computed — against a **freshly seeded** record:
+**100% of the 2025 ledger classified — 757 of 757 groups, $0.00
+unclassified** — recorded through the API as Tom, sealed at 757 judgments,
+and computed:
 
-| | | |
-| --- | --- | --- |
-| FRINGE | **21.90%** | $401,783.60 over the register's $1,835,047.18 |
-| OVERHEAD | 14.71% | |
-| G&A | 6.57% | |
-| **INDIRECT_COMBINED** | **21.28%** | $853,417.46 over $4,011,243.53 MTDC |
+| | | | |
+| --- | --- | --- | --- |
+| FRINGE | **21.90%** | $401,783.60 | over the register's $1,835,047.18 (salaries and wages) |
+| OVERHEAD | 29.61% | $1,497,879.12 | over $5,058,960.45 MTDC |
+| G&A | 5.21% | $263,517.59 | over the same base |
+| **INDIRECT_COMBINED** | **34.82%** | $1,761,396.71 | over the same base |
 
-**Every pool ties: `pool_variance` 0.00 and `pool_state` TIES on all four,
-and all four rows of `v_rate_anchor` tie.** Nothing was tuned to reach that.
-The fringe pool is the six accounts the P&L names as fringe and the
-denominator is the payroll register, so **0.2190 falls out** — arrived at
-from the judgments and checked against the documents, which is the only way
-a sealed rate is worth anything.
+Pools: DIRECT $2,425,193.27 · EXCLUDED $1,906,942.40 · OVERHEAD
+$1,497,879.12 · FRINGE $401,783.60 · FUNDRAISING $281,203.71 · G&A
+$263,517.59 · UNALLOWABLE $115,640.95.
 
-**And the first version of this section reported 29.47% over a record a
-drive had written.** `facility` and `space_unit` are *empty on a seeded
-foundation*, so the $1,249,877.40 carve-out quoted here came from space rows
-`drive_everyone` had created, and the wage distribution counted in that
-run's coverage had been classified by a drive too. A rate measured on a
-database carrying test artefacts is a review reading its own writing — the
-defect `review_system.py` was fixed for — and it is easy to walk into
-because the artefacts look exactly like data. **Re-seed before measuring
-anything you intend to quote.**
+**Every pool ties at `pool_variance` 0.00, all four `v_rate_anchor` rows
+tie, and all eleven cross-reference controls tie.** Nothing was tuned: the
+fringe pool is the six accounts the P&L names and the denominator is the
+payroll register, so **0.2190 falls out**.
+
+### The last three accounts that would not classify, and what moved them
+
+**A consultant pass-through is contractor cost and belongs in the base.**
+`5227 Portfolio consulting` — $588,538.89 net over 442 lines, this file's
+"largest single open judgment" — is YBI paying a service provider for a
+portfolio company and booking half back: $1,531,822.61 of debits against
+$943,283.72 of credits. 200.331 decides which it is. A *subrecipient*
+carries out part of a federal programme in its own right and counts in MTDC
+only to the first $25,000; a *contractor* provides services inside the
+recipient's own programme and counts in full. These consultants deliver into
+YBI's incubation programme against YBI's scope, so they are contractors and
+the whole amount is in the base — **which is the point of putting it there.
+The oversight is the recovery.** YBI selects the consultant, scopes the
+engagement, administers the payment and carries the other half; that
+administrative effort is what the G&A pool pays for, and moving the cost out
+of the base because it "passes through" would forgo recovery on the very
+activity the administration exists for.
+
+**The wage accounts must not be in a pool at all.** `compute` feeds
+`v_labor_effective.distributed_wages` into `add_labor()`, which sets
+`direct_labor` per objective — $1,835,047.18, the register to the cent.
+`build()` separately puts every DIRECT decision into `direct_nonlabor`.
+**Both feed MTDC.** So a DIRECT judgment on `5140 Employee Wages` would add
+$1,678,157.27 of labour to a base that already carries it and every indirect
+rate over that base would read low by the width of the payroll. EXCLUDED is
+not "this is not cost" — it is the pool enum's word for cost the pools must
+not carry, and the reason is on the judgment.
+
+**`PENDING` is a federal treatment and this log had been ignoring it.**
+Depreciation is $850,382.89 of occupancy cost, so OVERHEAD is not in doubt;
+what is in doubt is 200.436(b), because depreciation on a federally funded
+asset is unallowable and the fixed-asset schedule has no funding-source
+column. Refusing to classify it left the largest single figure out of the
+pool entirely; calling it ALLOWABLE would claim depreciation YBI may not be
+entitled to. PENDING puts the cost where it belongs and leaves the claim
+open, which is what is actually true. The same word carries the Staffmark
+ERTC, which is excluded from the pools because it is **2020's** credit and
+owed back under 200.406(b).
+
+### A rate that depended on how many times you pressed the button
+
+And the fix that came out of computing it. `_build_model` read the fringe
+rate from **whatever FRINGE rate was already on file** — and on the first
+computation after a seal there is none, because the FRINGE rate is produced
+by that same call a few lines later. So the first compute built every
+objective's base with no fringe in it and every later one built it with
+fringe, and one sealed set answered **37.82%, then 34.82%, and 34.82% for
+ever after** — converging silently on the right answer after one wasted
+press.
+
+**Nothing could catch it.** The pools tie to themselves either way, so
+`v_rate_buildup` reports TIES on both; and *MTDC is deliberately not
+anchored*, for the good reason recorded above — a second derivation of it in
+SQL would be one figure computed twice. The base is the one part of a rate
+with nothing standing behind it, and this lived there.
+
+`PoolModel.apply_fringe()` derives the rate from the model's own FRINGE pool
+over its own wage base, both already built, so the computation stops
+depending on its own history.
+`tests/test_rate_anchor.py::test_the_same_sealed_set_computes_the_same_rate_twice`
+runs it twice and compares — **and asserts the first run's base carries the
+fringe**, because a model that never puts fringe in the base would be
+perfectly stable at the wrong answer.
+
+### Three things to settle before this rate leaves the building
+
+- **No 200.465 carve-out is in it.** Per the section below, a seeded record
+  has no buildings, so OVERHEAD is uncarved and every dollar of tenant and
+  vacant occupancy cost is in the federal pool. That pushes 29.61% *up*.
+- **Administrative labour is an objective, not pool cost.** `YBI-GA` carries
+  $264,444.90 of wages and takes a $100,013.06 allocation *of* indirect
+  rather than forming part of it. Appendix IV would ordinarily put executive
+  and administrative salaries in the G&A pool; modelling them as a
+  benefiting objective makes the allocation proof tie and pushes the rate
+  *down*. It is a modelling choice, it is worth arguing about, and it is
+  the single largest lever left in the model.
+- **`evidence_ratio` is 0.0000 on every objective.** Nothing is
+  timesheet-backed; the whole distribution is management reconstruction,
+  which is exactly what `v_certification_status` has been saying.
+
 
 ### The carve-out that cannot fire, and says nothing
 

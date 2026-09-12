@@ -150,6 +150,36 @@ class PoolModel:
             o.timesheet_backed_labor = money(o.timesheet_backed_labor + vals["backed"])
             o.fringe = money(o.direct_labor * fringe_rate)
 
+    def apply_fringe(self, base_type: AllocationBase) -> Decimal:
+        """Put fringe into the base, at this model's own fringe rate.
+
+        2 CFR 200.1 includes applicable fringe in MTDC, so every objective's
+        base has to carry it. `add_labor` used to take the rate from
+        *whatever FRINGE rate was already on file* — which on the first
+        computation after a seal is none, because the FRINGE rate is
+        computed by this same call a few lines later.
+
+        So the first compute built its base with **no fringe at all** and
+        every subsequent one built it with fringe, and the same sealed set
+        answered 37.82% then 34.82% — a rate that depended on how many times
+        somebody pressed the button, converging silently on the right answer
+        after one wasted press. Nothing caught it: the pools tie to
+        themselves either way, and MTDC is deliberately not anchored because
+        a second derivation of it in SQL would be one figure computed twice.
+
+        The rate is a property of this model — the FRINGE pool over the wage
+        base, both already built — so it is taken from here rather than from
+        the rate table, and the computation stops depending on its own
+        history.
+        """
+        base = self.base_amount(base_type)
+        pool = self.pools[PoolType.FRINGE].allocable
+        rate = ((pool / base).quantize(Decimal("0.0001"))
+                if base else Decimal(0))
+        for o in self.objectives.values():
+            o.fringe = money(o.direct_labor * rate)
+        return rate
+
     def add_carve_out(self, pool_type: PoolType, carve: CarveOut) -> None:
         self.pools[pool_type].carve_outs.append(carve)
 

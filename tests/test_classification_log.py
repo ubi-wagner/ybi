@@ -27,8 +27,8 @@ import pytest
 from app.domain.chart import pool_for
 from app.domain.classification_log import (
     ANALYSIS, BLOCKED, CROSSWALK_ONE_POOL, OBJECTIVE_BY_PATH, OCCUPANCY,
-    RECORDED, Group, disagreements, judge, objective_for, parent_function,
-    pick_branch, summarise, walk)
+    OBJECTIVES_TO_OPEN, RECORDED, Group, disagreements, judge,
+    objective_for, parent_function, pick_branch, summarise, walk)
 from app.domain.crosswalk import CROSSWALK
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,10 +69,23 @@ ACCOUNTS = [
 
 
 def test_there_are_accounts_to_check():
-    """A sweep that checks nothing passes for ever."""
+    """A sweep that checks nothing passes for ever.
+
+    Every account in the live 2025 chart is judged now, so unlike earlier
+    versions of this file none of ACCOUNTS blocks. That makes it *more*
+    important to prove the blocked path is still reachable, not less — a
+    module that can no longer refuse anything has stopped being a judgment
+    and become a default, which is the one thing this log must not be.
+    """
     assert len(ACCOUNTS) > 20
-    assert any(not judge(g(a)).blocked for a in ACCOUNTS)
-    assert any(judge(g(a)).blocked for a in ACCOUNTS)
+    assert all(not judge(g(a)).blocked for a in ACCOUNTS), (
+        "an account in the live chart no longer has a treatment, so the "
+        "log has stopped covering the year it claims to cover")
+    stranger = judge(g("9999 An Account Nobody Mapped"))
+    assert stranger.blocked and stranger.blocked_on == "no signal", (
+        "an account with no crosswalk entry, no name pattern and no "
+        "objective in its path is being given a pool anyway — unclassified "
+        "cost is never defaulted into one")
 
 
 @pytest.mark.parametrize("account", ACCOUNTS)
@@ -154,6 +167,18 @@ DELIBERATE: dict[str, str] = {
     **{leaf: ("occupancy: 2025 has no rental pool, so it goes to OVERHEAD and "
               "the tenant share comes out as a 200.465 carve-out at rate time")
        for leaf in OCCUPANCY},
+    "5140 Employee Wages": "EXCLUDED from the pools because the wages are "
+                           "already in the base: v_labor_effective "
+                           "distributes $1,835,047.18 straight into "
+                           "direct_labor, and a pool judgment would count "
+                           "the same payroll twice",
+    "5010 Depreciation Expense": "OVERHEAD like every other occupancy cost, "
+                                 "with the federal treatment PENDING because "
+                                 "200.436(b) turns on a funding-source column "
+                                 "the asset register does not have",
+    "5075 Insurance": "OVERHEAD in full: YBI owns its buildings so the larger "
+                      "share is property cover, and the 8300/7300 division "
+                      "does not move the combined indirect rate",
     "5027 TTC Utilities": "rebilled to Steelite International in full and "
                           "evidenced line for line, so it is EXCLUDED rather "
                           "than split at all",
@@ -190,7 +215,11 @@ def test_a_split_across_pools_is_refused_when_nothing_names_the_function():
     was right about.
     """
     leaves = [x for x in _cross_pool_leaves() if x not in DELIBERATE]
-    assert len(leaves) > 5, "no cross-pool splits left to check"
+    # Five: travel, conference, meals, equipment leases and workshops. The
+    # floor is exact rather than loose, so resolving one of them has to be a
+    # deliberate act that updates DELIBERATE with a reason rather than a
+    # quiet shrinking of what this test covers.
+    assert len(leaves) >= 5, "no cross-pool splits left to check"
     reached = 0
     for leaf in leaves:
         j = judge(g(leaf))
@@ -230,17 +259,22 @@ def test_the_parent_of_the_account_settles_a_split_of_function():
         "rule is guessing rather than reading a signal")
 
 
-def test_insurance_stays_blocked_on_its_own_named_rule():
-    """Not the parent rule — insurance never reaches it.
+def test_insurance_goes_to_overhead_and_says_what_that_costs():
+    """Classified, and honest about the part still open.
 
-    The first version of this test said insurance exercised the
-    "more than one candidate" guard. It does not: a named rule several
-    branches earlier catches it, so the test passed with that guard deleted.
-    The same shape as the cross-pool test before it, found the same way.
+    The 8300/7300 division does not move the *combined* indirect rate —
+    both halves are indirect — but it is not neutral either: OVERHEAD is
+    carved for tenant and vacant space under 200.465 and G&A is not, so the
+    share that is really general liability gets carved when it should not.
+    A judgment that said only "does not move the rate" would be telling half
+    the truth.
     """
     j = judge(g("Management & Administrative Expenses:5075 Insurance"))
-    assert j.blocked and j.blocked_on == "the policy schedule"
+    assert j.pool == "OVERHEAD"
     assert "combined indirect rate" in j.rationale
+    assert "200.465" in j.rationale, (
+        "insurance is in OVERHEAD and the judgment does not mention that "
+        "OVERHEAD is carved and G&A is not")
 
 
 def test_more_than_one_candidate_means_no_candidate():
@@ -326,9 +360,26 @@ def test_every_objective_in_the_map_is_a_real_objective():
     by a foreign key, which is the same defect as naming none."""
     sql = "\n".join(p.read_text() for p in sorted((ROOT / "app" / "sql").glob("*.sql")))
     for _, objective in OBJECTIVE_BY_PATH:
+        if objective in OBJECTIVES_TO_OPEN:
+            continue          # opened by --apply, checked below
         assert re.search(rf"'{re.escape(objective)}'", sql), (
-            f"{objective} is proposed for DIRECT cost and no migration "
-            f"creates a cost_objective row for it")
+            f"{objective} is proposed for DIRECT cost, no migration creates "
+            f"a cost_objective row for it, and it is not in "
+            f"OBJECTIVES_TO_OPEN either — so the judgment would be refused "
+            f"by a foreign key")
+
+    # And an objective this log opens for itself has to actually be opened,
+    # before anything is recorded against it. A name in OBJECTIVES_TO_OPEN
+    # that nothing creates is worse than one missing from the map: the
+    # judgment looks acceptable right up until the foreign key refuses it.
+    script = (ROOT / "scripts" / "classification_log.py").read_text()
+    assert "OBJECTIVES_TO_OPEN" in script and "charge-codes" in script, (
+        "the log names objectives to open and the script does not open "
+        "them through the real route")
+    assert script.index("OBJECTIVES_TO_OPEN.items()") < script.index(
+        "/api/classify/decide"), (
+        "the objectives are opened after the judgments are recorded, so "
+        "every DIRECT judgment naming one is refused")
 
 
 def test_the_queue_no_longer_proposes_what_it_cannot_accept():
