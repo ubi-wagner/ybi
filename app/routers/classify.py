@@ -66,7 +66,6 @@ class GroupOut(BaseModel):
     objective_hint: str = ""
     sample_memos: list[str] = []
     decided: bool = False
-    stale: bool = False
     #: What is live on this group right now — a decision id, "none", or
     #: "several" where the group is covered by more than one judgment. The
     #: screen sends it straight back as `based_on` so a judgment made from a
@@ -156,7 +155,7 @@ def coverage(period: str = "2025") -> CoverageOut:
 
 @router.get("/queue", response_model=list[GroupOut])
 def queue(period: str = "2025",
-          status: str = Query("undecided", pattern="^(undecided|decided|stale|all)$"),
+          status: str = Query("undecided", pattern="^(undecided|decided|all)$"),
           search: str = "",
           limit: int = Query(50, le=200),
           offset: int = 0) -> list[GroupOut]:
@@ -177,10 +176,21 @@ def queue(period: str = "2025",
                -- collapsed, because "several" and "none" are different
                -- states and a judgment made against either is stale in a
                -- different way.
+               --
+               -- There used to be a `stale` column here too, from
+               -- `ledger_revision` — a ledger line amended after somebody
+               -- judged it. The importer inserts lines `ON CONFLICT DO
+               -- NOTHING` and nothing updates one, so that could never
+               -- happen and the table was never written. The queue carried
+               -- an "Amended" filter that always returned nothing and a
+               -- tick that never lit: a control on the screen the whole
+               -- engagement is worked from that doing the work could not
+               -- clear. Migration `063` drops the table; change here is
+               -- expressed by supersession, which `live_decisions` above
+               -- already shows.
                count(DISTINCT d.decision_id)         AS live_decisions,
                max(d.decision_id::text)              AS live_decision,
                max(d.decided_by)                     AS decided_by,
-               bool_or(rev.revision_id IS NOT NULL)  AS stale,
                count(DISTINCT att.attachment_id)     AS evidence_count,
                count(DISTINCT n.note_id)             AS note_count
           FROM ledger_line l
@@ -191,8 +201,6 @@ def queue(period: str = "2025",
           -- engagement is worked from.
           LEFT JOIN decision_line dl ON dl.line_id = l.line_id AND dl.live
           LEFT JOIN decision d ON d.decision_id = dl.decision_id AND d.reversed_at IS NULL
-          LEFT JOIN ledger_revision rev ON rev.line_id = l.line_id
-                                       AND rev.affects_decision IS NOT NULL
           LEFT JOIN attachment att ON att.target_type = 'LEDGER_LINE'
                                   AND att.target_id = l.line_id
                                   AND att.detached_at IS NULL
@@ -204,7 +212,6 @@ def queue(period: str = "2025",
         HAVING CASE %(status)s
                  WHEN 'undecided' THEN NOT bool_or(d.decision_id IS NOT NULL)
                  WHEN 'decided'   THEN bool_or(d.decision_id IS NOT NULL)
-                 WHEN 'stale'     THEN bool_or(rev.revision_id IS NOT NULL)
                  ELSE true END
          ORDER BY sum(abs(l.amount)) DESC
          LIMIT %(limit)s OFFSET %(offset)s
@@ -220,7 +227,7 @@ def queue(period: str = "2025",
             amount=Decimal(r["amount"] or 0), abs_amount=Decimal(r["abs_amount"] or 0),
             objective_hint=r["objective_hint"] or "",
             sample_memos=[m for m in (r["sample_memos"] or []) if m],
-            decided=bool(r["decided"]), stale=bool(r["stale"]),
+            decided=bool(r["decided"]),
             live_decision=("none" if not r["live_decisions"]
                            else r["live_decision"] if r["live_decisions"] == 1
                            else "several"),

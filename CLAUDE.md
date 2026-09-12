@@ -872,6 +872,107 @@ the only thing that knows — a second reading of `decision_set` in the drive
 would be a copy of the rule, free to drift from it, which is the defect it
 was just caught in.
 
+## Five registers with no writer, found by sweeping rather than by reading
+
+Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to
+the shape, not the twelfth instance of it.**
+
+Every previous one — `space_partition`, `rate.superseded_by`, the three
+`evidence` fact columns, `award_budget_line`, `donation_rate`, the three
+`lane_*` override tables — was found by somebody reading one area closely,
+and this file has said *"assume there is a fifth"* for months. A note to self
+is the hand-kept map applied to defects: it cannot be wrong, so it is never
+checked, and it never finds anything.
+
+The sweep derives every table and column from the database, asks what could
+write each, and fails on one that something reads and nothing writes. No list
+of tables in it — the database is the list, the same way
+`tests/test_sql_is_real.py` hands the schema the code. It found five tables
+and they split three ways.
+
+**`carve_out` was the worst instance in the system, because of where the
+wrong answer landed.** `POST /api/rates/compute` builds the 2 CFR 200.465
+facilities carve-out from `v_facility_occupancy` and applies it correctly —
+the rate it persists is right. It never wrote the carve-out down, and three
+things read that table: `v_pool_balance`, `v_rate_buildup` and `/review/rate`.
+
+Measured against the live record: the computation carved **$932,254.78** out
+of a $1,678,057.27 overhead pool — 3,000 of 5,400 usable square feet at Tech
+Block 5, tenant and vacant — while `v_pool_balance` reported `carved = 0` and
+the review screen showed no carve-out at all. **The single largest adjustment
+in the rate model, 55.6% of the pool it applies to, absent from the workpaper
+an auditor reads, with a control-shaped view asserting the opposite.** It
+also broke the rule the review screens exist on: *every figure is read from
+the row it was recorded in* — the row was never written, so the screen read
+zero. The handler writes it now, in the turn that writes the rate, against
+the same seal, rewritten each run rather than appended to.
+
+**`constraint_result` told the controller an invoice was safe to issue
+because nobody had checked.** `GET /api/awards/{id}/trueup` counted blocking
+failures and answered `INVOICE_ISSUABLE` when it found none; it found none on
+all four awards because `app/domain/awards.py::test_constraints` — a complete
+engine, written with the schema — **had no caller anywhere**. An empty set
+matching an empty set perfectly, which is what `029` fixed for the eleven
+controls and what `v_invoice_budget_check` already reports as
+`evaluable = false`.
+
+It runs from the rate computation now, inside that turn and against that
+rate's id, because every one of these tests is a statement about a claim and
+a claim is direct cost plus a rate applied to it. `Constraint.evaluable`
+carries the three-state, and `unevaluable_never_passes` holds it in the
+schema. Six tests × four awards, and the first run is not decoration:
+
+- **COST_SHARE fails on Last Tactical Mile ($513,065) and Hybrid
+  ($104,000).** The $617,065 this file calls *the largest untracked
+  obligation in the file* is now a failing test rather than a paragraph.
+- **RATE_METHOD fails on all four** — awards set to `DE_MINIMIS_10`, model
+  applying `NEGOTIATED`. The restatement's whole thesis, stated as a
+  constraint against each agreement.
+- **EVIDENCE is unevaluable on all four**, because nothing is classified to
+  those objectives yet. Unevaluable, not passed.
+
+**`ledger_revision` is dropped, because the shape it records cannot occur.**
+It held a source line amended after somebody judged it, and `v_worklist`
+raised `STALE_DECISION` off it. The importer inserts lines `ON CONFLICT
+(line_id) DO NOTHING` and nothing updates one, so a ledger line cannot change
+after it is written: this system models change by supersession. The
+classification queue carried an **"Amended" filter that always returned
+nothing and a tick that never lit** — a control on the screen the whole
+engagement is worked from that doing the work could not clear, which is the
+`FACILITY_UNPARTITIONED` defect in the worst place to have it.
+
+**`control_total` and `evidence_match_proposal` are dropped because nothing
+reads them either.** The first predates `v_statement_reconciliation`, which
+computes rather than stores; the second predates
+`domain/evidence_match.py`, which deliberately persists nothing — *proposals
+are never decisions*, so a proposal register is a second place a judgment can
+appear to have been made.
+
+**The allowlist is the part that has to stay honest.** Twenty-three columns
+are written by nothing on purpose, each carrying its reason, and **an entry
+that is no longer needed fails the test** — so the list can only shrink by
+somebody noticing, which is the opposite of how the twelve got there. An
+entry with a reason under twenty-five characters fails too: an allowlist
+entry with no reason is the defect wearing a permission slip.
+
+Two things worth carrying from writing it:
+
+- **The detector was itself an instance of the class, twice.** Its first
+  draft matched `SET col =` and `"col":` anywhere in the source, so it
+  reported `milestone.delivered_on` dead (written through a dict of state to
+  column name) and `invoice.milestone_id` written (an unrelated `UPDATE` had
+  `WHERE milestone_id` in its span). A column belongs to a table, and a check
+  that forgets which is the hand-kept map in a new costume. Then it read
+  `load_labor.py` — the loader for the entire payroll distribution — as
+  writing nothing, because a three-line `--` comment sits between its column
+  list and its `SELECT`. That is *exactly* the mistake recorded further up
+  this file about semicolons hiding in comments.
+- **Two more citations with no document behind them.**
+  `chart_split_driver.evidence_id` and `in_kind_claim.evidence_id` are the
+  `award_term.evidence_id` shape — a citation in text with nothing to check
+  it against. Both are recorded in the allowlist rather than fixed blind,
+  because what each should point at is a judgment.
+
 ## A helper recommends; the controller verifies and seals
 
 Migration `062`. `060` made an act by one person raise work for another

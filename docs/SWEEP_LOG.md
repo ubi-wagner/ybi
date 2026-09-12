@@ -1203,6 +1203,27 @@ same few things over and over.
 each read by views that quietly answered the wrong question. Assume there is
 a fifth.
 
+> **There were eight more, and "assume there is a fifth" never found one of
+> them.** That sentence stood here for months. It is a note to self, which
+> is a hand-kept map of what is wrong with the code: it cannot fail, so
+> nobody checks it, and it never finds anything. `donation_rate`, the three
+> `lane_*` override tables, `carve_out`, `constraint_result`,
+> `ledger_revision`, `control_total`, `evidence_match_proposal` — every one
+> found by a person reading one area closely, one at a time, over months.
+>
+> Migration `063` and `tests/test_no_register_is_dead.py` end it. The check
+> derives every table and column from the database, asks what could write
+> each, and fails on one that something reads and nothing writes. The worst
+> of the five it found was `carve_out`: **$932,254.78 of 200.465 facilities
+> carve-out applied to the rate and absent from the workpaper**, with
+> `v_pool_balance` reporting `carved = 0` at the same moment. The next worst
+> was `constraint_result`, which had `/trueup` answering `INVOICE_ISSUABLE`
+> on all four awards because nothing had ever tested one.
+>
+> The lesson is not "there was a twelfth". It is that **a defect shape you
+> can name is a defect shape you can sweep for**, and writing the name down
+> instead is how you get eight more of them.
+
 **A hand-kept list of what the code does.** The worklist test's kinds, three
 copies of the kind map across three screens, the manual's screenshots against
 the walk's. In every case the thing the list was missing *was* the defect.

@@ -52,12 +52,22 @@ class Award:
 
 @dataclass
 class Constraint:
+    """One contract test, and whether it could be run at all.
+
+    `evaluable` is the three-state this repository already uses everywhere a
+    control meets missing data — `v_award_budget_check`'s unread award,
+    `v_award_citation_check`'s NO TEXT LAYER, the register's NO DATA. **A
+    control that cannot be evaluated has not passed**, and the alternative is
+    the defect this engine was found in: an award reporting INVOICE_ISSUABLE
+    because nobody had tested anything.
+    """
     code: str
     citation: str
     description: str
     passed: bool
     detail: str
     blocking: bool = True
+    evaluable: bool = True
 
 
 @dataclass
@@ -101,8 +111,16 @@ class TrueUp:
 
 
 def test_constraints(award: Award, direct: Decimal, indirect: Decimal,
-                     rate: Decimal, evidence: EvidenceGrade,
+                     rate: Decimal, evidence: EvidenceGrade | None,
                      rate_method: RateMethod) -> list[Constraint]:
+    """Every constraint, each carrying whether it could be run.
+
+    `evidence` is optional because it genuinely can be absent: an award with
+    no cost classified to its objective has no evidence grade to test, and
+    saying so is the honest answer. Everything else here is read off the
+    agreement and the invoices, which are on the record or the award has not
+    been set up.
+    """
     claim = money(direct + indirect)
     cs: list[Constraint] = []
 
@@ -133,8 +151,11 @@ def test_constraints(award: Award, direct: Decimal, indirect: Decimal,
     cs.append(Constraint(
         "EVIDENCE", "2 CFR 200.403(g)",
         "Charged costs must be adequately documented",
-        evidence.federally_supportable,
-        f"supporting evidence graded {evidence.value}"))
+        bool(evidence and evidence.federally_supportable),
+        (f"supporting evidence graded {evidence.value}" if evidence else
+         "no cost is classified to this objective yet, so there is no "
+         "evidence grade to test — unevaluable, which is not a pass"),
+        evaluable=evidence is not None))
 
     budget_labor = award.budget_lines.get("LABOR")
     if budget_labor is not None:

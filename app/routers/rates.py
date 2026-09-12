@@ -337,6 +337,7 @@ def compute(body: ComputeIn, period: str = "2025",
     }
 
     written = []
+    rate_ids: dict[str, str] = {}
     with turn(period) as cur:
         # The model above was built from live rows on other connections, which
         # takes long enough for somebody to unseal underneath it. The period is
@@ -362,6 +363,41 @@ def compute(body: ComputeIn, period: str = "2025",
         # is a position taken with a sponsor and is not ours to overwrite.
         cur.execute("""UPDATE rate SET status = 'SUPERSEDED'
                         WHERE period = %s AND status = 'PROPOSED'""", (period,))
+
+        # And the carve-outs the model applied, written down beside the rate
+        # they are part of.
+        #
+        # This was the largest hole in the system and it was invisible from
+        # the code: `_build_model` applies the 200.465 facilities carve-out
+        # correctly and `rate.pool_amount` is net of it, so every figure the
+        # computation produced was right. It simply never recorded *what* it
+        # excluded — and `v_pool_balance`, `v_rate_buildup` and the
+        # `/review/rate` screen all read `carve_out`, found nothing, and
+        # reported that nothing had been carved out.
+        #
+        # Against the live record that was $932,254.78 of a $1,678,057.27
+        # overhead pool: the single largest adjustment in the rate model,
+        # missing from the workpaper an auditor reads, with a control-shaped
+        # view stating the opposite. A rate whose largest adjustment cannot
+        # be seen is exactly the rate somebody asks whether you
+        # reverse-engineered.
+        #
+        # Rewritten each time rather than appended to, because a carve-out
+        # belongs to the computation that applied it: leaving the previous
+        # run's rows would make `v_pool_balance` net a superseded exclusion
+        # off a live pool. The delete and the insert are one statement apart
+        # inside the turn that writes the rate, so no reader sees neither and
+        # no reader sees both.
+        cur.execute("DELETE FROM carve_out WHERE period = %s", (period,))
+        for pool in model.pools.values():
+            for c in pool.carve_outs:
+                cur.execute("""INSERT INTO carve_out
+                                 (pool, period, name, citation, amount,
+                                  driver, grade, created_by)
+                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                            (pool.pool_type.value, period, c.name, c.citation,
+                             c.amount, c.driver, c.evidence.value,
+                             actor.display_name))
         for kind, value in rates.items():
             base_amount, bt = base_for[kind]
             if base_amount <= 0:
@@ -375,6 +411,7 @@ def compute(body: ComputeIn, period: str = "2025",
                          pool_for[kind], bt.value, base_amount, value,
                          actor.display_name))
             rate_id = cur.fetchone()["rate_id"]
+            rate_ids[kind] = str(rate_id)
             written.append({"kind": kind, "rate": str(value),
                             "pool": str(pool_for[kind]),
                             "base": str(base_amount),
@@ -393,8 +430,23 @@ def compute(body: ComputeIn, period: str = "2025",
                                      DO UPDATE SET allocated = EXCLUDED.allocated""",
                                 (rate_id, o.objective_id, o.mtdc, allocated))
 
+        # The contract constraints, tested against the rate that was just
+        # written and recorded against its id. `domain/awards.py` has had
+        # this engine since the schema was written and no caller anywhere,
+        # so `/trueup` answered INVOICE_ISSUABLE on every award because it
+        # counted zero blocking failures out of zero tests.
+        from app.domain.awards import RateMethod
+        from app.routers.awards import evaluate as evaluate_awards
+        combined = "INDIRECT_COMBINED" if body.combined else "G&A"
+        tested = evaluate_awards(
+            cur, period, rate_ids.get(combined), rates.get(combined, Decimal(0)),
+            RateMethod.NEGOTIATED)
+
         record(actor, "RATE_COMPUTE", "decision_set", str(sealed["set_id"]),
                after={"seal_hash": sealed["seal_hash"],
+                      "constraints_tested": tested,
+                      "carve_outs": [c.name for p in model.pools.values()
+                                     for c in p.carve_outs],
                       "rates": {k: str(v) for k, v in rates.items()},
                       "objectives": len(model.objectives),
                       "unclassified": str(model.unclassified)},

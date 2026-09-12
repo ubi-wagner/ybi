@@ -272,7 +272,7 @@ export default function ClassifyQueue({ actor }) {
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "18px 0 12px" }}>
         <Segmented value={mode} onChange={setMode} options={[["sweep", "Sweep"], ["focus", "Focus"]]} />
         <Segmented value={status} onChange={setStatus}
-                   options={[["undecided", "Open"], ["decided", "Done"], ["stale", "Amended"], ["all", "All"]]} />
+                   options={[["undecided", "Open"], ["decided", "Done"], ["all", "All"]]} />
         <div ref={searchRef}>
           <Search value={search} onChange={setSearch} placeholder="Account or vendor   /" />
         </div>
@@ -333,8 +333,10 @@ export default function ClassifyQueue({ actor }) {
                 </td>
               )}
               <td className="l">
-                <Tick state={r.stale ? "flagged" : r.decided ? "done" : "open"}
-                      title={r.stale ? "Amended in QuickBooks since it was classified" : undefined} />
+                {/* No "Amended" state: a ledger line cannot change after it
+                    is written — the importer inserts ON CONFLICT DO NOTHING —
+                    so the flag it read could never light. Migration `063`. */}
+                <Tick state={r.decided ? "done" : "open"} />
               </td>
               <td className="l trunc">{r.account}</td>
               <td className="l trunc" style={{ color: "var(--graphite)" }}>{r.payee || "—"}</td>
