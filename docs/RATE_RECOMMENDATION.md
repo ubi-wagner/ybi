@@ -11,6 +11,16 @@ a scenario that silently did not apply cannot be reported as one that did.
 Reproduce it: `scripts/seed.sh`, then `scripts/classification_log.py --apply`,
 then seal and `POST /api/rates/compute`.
 
+> **Two of these questions have since been decided, and
+> `docs/AMERICA_MAKES_RESTATEMENT.md` carries the answer through to the
+> invoices.** General administration goes into the G&A pool across every
+> programme (`admin_labour = POOL`), and 5227 portfolio consulting stays in the
+> base as contractor cost under 200.331. On the record as it stands — no
+> facilities carve-out — that is **21.90% fringe and 43.99% combined**; at the
+> provisional 20% tenant share this document recommends, **37.67%**. Everything
+> below still reads as written: §4.3 and §4.4 are the two questions that were
+> open when it was drafted, and the measurements either way are unchanged.
+
 ---
 
 ## 1. The short answer

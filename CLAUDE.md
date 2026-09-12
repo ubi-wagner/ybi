@@ -1864,6 +1864,56 @@ Four things worth carrying:
   have no hours evidence, and the certifications now under way are what
   close it.
 
+### The two decisions, carried through to the invoices
+
+`docs/AMERICA_MAKES_RESTATEMENT.md`. Two of the five open questions were
+settled by instruction — **general administration into the G&A pool across
+every programme**, and **5227 portfolio consulting kept in the base as
+contractor cost under 200.331**, so the oversight it takes is what the G&A
+pool recovers on. That is `admin_labour = POOL` over the baseline
+classification: **43.99% combined** with no carve-out, **37.67%** at the
+provisional 20% tenant share, fringe 21.90% either way. Every figure
+computed, sealed and restated through `POST /api/restate`, each restatement
+checked against the rate that had just been computed.
+
+**"The old rate" is three different things on three invoices under one
+election**, which is the finding the register could not have produced before
+the invoices were loaded:
+
+| | | |
+| --- | ---: | ---: |
+| 10018 Drive AM | no indirect line | **0.00%** |
+| 10023 Hybrid II | no indirect line | **0.00%** |
+| 10039 LTM | a round $3,000 | **18.76%** |
+
+Two forgo recovery outright. The third is **$1,400.65 above** what the elected
+de minimis would have produced on that base — so the same three invoices carry
+money YBI did not ask for *and* money it asked for on a basis the election does
+not support. `v_restatement` is built to never net those together, and the
+document raises the over-billing first, unprompted, because that is what makes
+the ask credible.
+
+Three things worth carrying:
+
+- **The invoices are not the prize.** $57,961.42 of billing sits against
+  $999,842.96 of 2025 cost on those objectives. Restating the three recovers
+  $21,177.53; the *year* supports **$439,830.92** against $99,984.30 from the
+  elected method and $109,272.76 the four schedules actually budget. Digital
+  Engineering's $91,234.76 has **no invoice to restate against at all**, and
+  its period of performance ended 9 July 2025.
+- **The case does not depend on the carve-out.** Priced across the whole band
+  — five engine runs, each computed *and* restated — one year still supports
+  more than three times the elected method at a 40% tenant share. The square
+  footage decides the size of the ask, not whether there is one.
+- **Two of the three invoices cannot carry an indirect line at all.** Drive
+  AM's and Hybrid's Schedule B contain **no INDIRECT category**, so adding one
+  is `billed_not_budgeted = {INDIRECT}` — a budget realignment beside the §4.4
+  change of basis. And the two schedules that *do* carry the category are
+  both over it on 2025 cost alone, LTM by $63,619.94 and ICAM by $63,734.76.
+  The de minimis election is visible in exactly one place in any executed
+  document: LTM budgets **10.00% of its whole direct**, to four decimal
+  places.
+
 ### A rate computed under a policy nobody chose
 
 `POST /api/rates/compute` takes `admin_labour`; the column it lands in is
