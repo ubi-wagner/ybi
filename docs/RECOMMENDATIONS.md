@@ -100,8 +100,18 @@ that reflects the work actually performed, supported, and reviewed after the
 fact. A reconstruction the person signs meets that. A reconstruction nobody
 ever saw does not, which is where 2025 has been sitting.
 
-The hours are spread uniformly across the weekdays of the employed span,
-because `timesheet_entry` is a *day's* record — a row is capped at 24 hours
+**Contracted hours are not project hours.** `expected_hours` is
+`weekly_hours × 52` — what the person was *paid* for, holidays and vacation
+included. The draft books the eleven public holidays to Paid leave at the
+contracted daily rate and divides the rest across the 250 remaining working
+days: 2,080 = 1,992 on projects + 88 on leave. Leave is excluded from the
+distribution, so `share_variance` is 0.0000 on every objective — this changes
+no rate, only whether the sheet claims somebody worked on Christmas. **Personal
+vacation and sick days are on no record we hold**, so none is invented; the
+draft says so and each person moves their own days across before submitting.
+
+The work hours are spread uniformly across those days, because
+`timesheet_entry` is a *day's* record — a row is capped at 24 hours
 and a trigger caps the person-day at 24 across rows. Uniform is the honest
 shape: it is visibly the same split every day, which together with
 `basis = RECALL` on every row tells a reviewer at a glance that this is a

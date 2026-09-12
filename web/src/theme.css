@@ -712,6 +712,12 @@ tbody tr.ts-foot td { border-top: 1px solid var(--ink); border-bottom: none;
 .modal > input { width: 100%; padding: 9px 11px; border: 1px solid var(--rule);
   border-radius: 7px; font: inherit; background: var(--surface); color: var(--ink); }
 
+/* A caveat the reader must not miss, and which is not a failure: pencil
+   rather than traffic light, per the annotation rule. */
+.caveat { margin: 10px 0 4px; padding: 9px 12px; max-width: 80ch;
+  border-radius: 7px; background: var(--pencil-wash, #f7f2e4);
+  border-left: 2px solid var(--warn); font-size: 13px; }
+
 /* ── Advice at the point of judgment ──────────────────────────────── */
 .advice { margin-top: 16px; display: grid; gap: 8px; }
 .advice-item { display: grid; grid-template-columns: 92px 1fr; gap: 12px;

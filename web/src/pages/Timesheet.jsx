@@ -584,11 +584,28 @@ function DraftCard({ draft, onDone }) {
 
       <p className="quiet small">
         Adopting records these hours as <strong>recalled</strong>, spread
-        evenly across the {draft.working_days} weekdays you were employed —
-        about {hours(draft.hours_per_day)} hours a day. It is not a diary and
-        does not pretend to be one: the same split every day is what a
+        evenly across the {draft.working_days} days you were working — about{" "}
+        {hours(draft.hours_per_day)} hours a day. It is not a diary and does
+        not pretend to be one: the same split every day is what a
         reconstruction honestly looks like.
       </p>
+
+      {/* **Contracted hours are not project hours**, and a sheet that spends
+          all of them on cost objectives says nobody took a day off all year.
+          The public holidays are the part the record can defend; the rest is
+          the person's to correct, and saying so is the whole point of
+          showing them a draft. */}
+      <div className="stat-row">
+        <Stat label="Paid for" size="lg" value={hours(draft.expected_hours)}
+              note="contracted hours" />
+        <Stat label="On projects" value={hours(draft.work_hours)}
+              note={`${draft.working_days} days`} />
+        <Stat label="Paid leave" value={hours(draft.leave_hours)}
+              note={`${(draft.leave_days || []).length} public holidays`} />
+      </div>
+      {/* Not a failure — a caveat the reader must not miss. Warm, per the
+          annotation rule: pencil, not traffic light. */}
+      {draft.not_known && <p className="caveat">{draft.not_known}</p>}
 
       <button className="linkish" onClick={() => setOpen(!open)}>
         {open ? "Hide" : "Where these figures come from"}

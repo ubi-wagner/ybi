@@ -28,6 +28,8 @@ from app.auth import (Actor, Role, current_actor, require_controller,
                       require_own_writes)
 from app.db import one, query, transaction
 from app.settings import settings
+from app.domain.core import money
+from app.domain.workdays import split_contracted, split_days
 from app.statelock import turn
 from app.vocab import EmploymentStatus, TimeBasis
 
@@ -455,13 +457,14 @@ def spread_hours(total: Decimal, days: int) -> list[Decimal]:
             for i in range(days)]
 
 
-def _working_days(period: str, employee_key: str) -> list[date]:
-    """The weekdays of the employed span, which is what a year of hours is
-    spread across.
+def _days_of(period: str, employee_key: str) -> tuple[list[date], list[date]]:
+    """The employed span's weekdays, split into days worked and holidays.
 
-    Weekends are left out rather than given a share: a uniform split that
-    books Saturdays is visibly not a record of anything, and the point of the
-    draft is a sheet the person can read and correct.
+    Weekends are left out rather than given a share: a person contracted for
+    a five-day week is not paid for Saturday, so it is neither work nor
+    leave. Public holidays *are* paid, so they are kept and booked to LEAVE —
+    the first version spread the contracted hours over every weekday and
+    charged projects for Christmas.
     """
     p_start, p_end = _period_bounds(period)
     terms = one("""SELECT from_date, to_date FROM v_employment_expected
@@ -469,12 +472,7 @@ def _working_days(period: str, employee_key: str) -> list[date]:
                 (period, employee_key))
     start = max(terms["from_date"], p_start) if terms else p_start
     end = min(terms["to_date"] or p_end, p_end) if terms else p_end
-    out, d = [], start
-    while d <= end:
-        if d.weekday() < 5:
-            out.append(d)
-        d += timedelta(days=1)
-    return out
+    return split_days(start, end)
 
 
 @router.get("/draft")
@@ -520,7 +518,7 @@ def draft(period: str = None,
     # its precondition was satisfied only by already having the entries it
     # exists to create. `entered_hours` genuinely is a coverage question and
     # is honestly zero when the view has nothing to say.
-    terms = one("""SELECT expected_hours, employed_days
+    terms = one("""SELECT expected_hours, employed_days, weekly_hours
                      FROM v_employment_expected
                     WHERE period = %s AND employee_key = %s""", (period, key))
     expected = Decimal(str(terms["expected_hours"] or 0)) if terms else Decimal(0)
@@ -553,13 +551,30 @@ def draft(period: str = None,
                            "administrator to record your status, your "
                            "contracted hours and the dates you worked."}
 
-    days = _working_days(period, key)
+    days, holidays = _days_of(period, key)
     if not days:
         return {"period": period, "employee_key": key, "lines": [],
                 "expected_hours": str(expected), "adoptable": False,
                 "because": "Your employment span for this period contains no "
                            "working days, so there is nothing to spread the "
                            "hours across. Check the dates on your terms."}
+
+    # **Contracted hours are not project hours.** `expected_hours` is
+    # `weekly_hours * 52` — what the person was *compensated* for, holidays
+    # and vacation included. Spending all of it on cost objectives says they
+    # worked every weekday of the year and took nothing off, which is what
+    # the first version of this did.
+    #
+    # A paid holiday is a day the record can defend, so its hours go to
+    # LEAVE at the contracted daily rate and the rest is what the objectives
+    # divide. The total still comes to the contracted figure, so coverage is
+    # unchanged; and LEAVE is `is_final = false`, so
+    # `v_timesheet_distribution` leaves it out and the shares between
+    # objectives — and therefore the rate — do not move at all.
+    work_hours, leave_hours = split_contracted(
+        expected,
+        Decimal(str(terms["weekly_hours"] or 0)) if terms else Decimal(0),
+        len(holidays))
 
     lines = []
     for r in rows:
@@ -568,21 +583,33 @@ def draft(period: str = None,
         lines.append({
             "objective_id": r["objective_id"],
             "share": str(share.quantize(Decimal("0.0001"))),
-            "hours": str((expected * share).quantize(Decimal("0.01"))),
+            "hours": str((work_hours * share).quantize(Decimal("0.01"))),
             "grade": r["grade"],
             "rationale": r["rationale"],
             "source": r["source_label"]})
     return {"period": period, "employee_key": key, "lines": lines,
             "expected_hours": str(expected),
+            "work_hours": str(work_hours),
+            "leave_hours": str(leave_hours),
+            "leave_days": [str(d) for d in holidays],
             "working_days": len(days),
-            "hours_per_day": str((expected / len(days)).quantize(Decimal("0.01"))),
+            "hours_per_day": str((work_hours / len(days)).quantize(Decimal("0.01"))
+                                 if days else Decimal(0)),
             "already_entered": str(cover["entered_hours"] or 0) if cover else "0",
             "adoptable": True,
             "because": "This is the controller's reconstruction, not your "
                        "timesheet. Adopting it records these hours under "
                        "your name as a recalled record — correct anything "
                        "that is wrong first, because what you adopt is what "
-                       "you will be certifying."}
+                       "you will be certifying.",
+            #: Said out loud rather than left for somebody to notice. The
+            #: holidays are the public ones and may not be the days YBI
+            #: closes; personal leave is on no record here at all.
+            "not_known": ("The days off in this draft are the public "
+                          "holidays only. Your own vacation and sick days "
+                          "are on no record we hold, so they are not in it — "
+                          "move any day you were away to Paid leave before "
+                          "you submit.")}
 
 
 @router.post("/adopt")
@@ -656,7 +683,7 @@ def adopt(body: AdoptIn, period: str = None,
                  f"Adopting can only accept what was proposed; record "
                  f"anything else as an entry of your own.")
 
-    days = _working_days(period, key)
+    days, holidays = _days_of(period, key)
     # A day holds 24 hours and the trigger says so. Refuse in words here
     # rather than let the person meet `RUBY has 31.50 hours on 2025-03-04`.
     per_day_total = sum(Decimal(l["hours"]) for l in proposed["lines"]
@@ -678,7 +705,7 @@ def adopt(body: AdoptIn, period: str = None,
                 continue
             spread = list(zip(days, spread_hours(total_h, len(days))))
             note = (f"Adopted from the controller's reconstruction "
-                    f"({line['share']} of contracted hours spread over "
+                    f"({line['share']} of the hours worked, spread over "
                     f"{len(days)} working days; {line['grade']}). "
                     f"{line['rationale']}"
                     + (f" {body.note.strip()}" if body.note.strip() else ""))[:900]
@@ -694,9 +721,40 @@ def adopt(body: AdoptIn, period: str = None,
                      note, actor.actor_id, actor.display_name))
                 written += 1
                 hours = hours + h
+
+        # **The paid holidays, booked as leave rather than spent on a
+        # project.** LEAVE is `is_final = false`, so it is out of the
+        # distribution and out of the base — it changes no share and no
+        # rate. What it changes is whether the sheet claims somebody worked
+        # on Christmas. `cost_objective` has carried a LEAVE row since `017`
+        # and nothing had ever written it, which is the dead-register shape
+        # in the one place it makes a certification untrue.
+        leave_hours = Decimal(proposed.get("leave_hours") or 0)
+        leave_written = 0
+        if leave_hours > 0 and holidays:
+            for d, h in zip(holidays, spread_hours(leave_hours, len(holidays))):
+                if h <= 0:
+                    continue
+                cur.execute(
+                    """INSERT INTO timesheet_entry
+                         (period, employee_key, work_date, objective_id, hours,
+                          basis, note, entered_by, entered_by_name)
+                       VALUES (%s,%s,%s,%s,%s,'ADOPTED',%s,%s,%s)""",
+                    (period, key, d, "LEAVE", h,
+                     ("A public holiday, at the contracted daily rate. Your "
+                      "own vacation and sick days are on no record we hold "
+                      "and are not in this — move any day you were away to "
+                      "Paid leave.")[:900],
+                     actor.actor_id, actor.display_name))
+                leave_written += 1
+                written += 1
+                hours = hours + h
+
         record(actor, "TIMESHEET_ADOPT", "timesheet_entry", key,
                after={"period": period, "entries": written,
                       "hours": str(hours), "working_days": len(days),
+                      "leave_days": leave_written,
+                      "leave_hours": str(leave_hours),
                       "objectives": sorted(wanted)},
                reason=(body.note.strip()
                        or "Adopted the controller's reconstruction as my own "
@@ -708,6 +766,7 @@ def adopt(body: AdoptIn, period: str = None,
                  "hours. Nothing has been recorded.")
     return {"period": period, "employee_key": key, "entries": written,
             "hours": str(hours), "working_days": len(days),
+            "leave_days": leave_written, "leave_hours": str(leave_hours),
             "next": "Submit the sheet, then sign the certification. What you "
                     "sign is what is on the sheet now, so change anything "
                     "that is wrong before you do."}

@@ -273,3 +273,119 @@ def test_it_holds_on_the_shape_the_real_entries_have(cur):
     row = cur.fetchone()
     assert row["lag_days"] > 45, "the point of this test is a long lag"
     assert row["g"] == "MANAGEMENT_RECONSTRUCTION"
+
+
+# ── contracted hours are not project hours ───────────────────────────
+#
+# The first version divided `expected_hours` — `weekly_hours * 52`, what the
+# person was *compensated* for — across every weekday of the span and booked
+# all of it to cost objectives. That asserts forty-three people each worked
+# 1 January, 4 July, Thanksgiving and Christmas, took no holiday, no vacation
+# and no sick day, and did it for a whole year. On a certification whose own
+# wording is "including the time I was not working on any project", and which
+# contained none of it.
+
+from datetime import date
+
+from app.domain.workdays import (public_holidays, split_contracted,
+                                 split_days)
+
+
+def test_the_holidays_are_derived_rather_than_listed():
+    """Rules, not a table: a fixed date or an nth weekday. A hand-kept list
+    is the shape this codebase keeps finding wrong, and it would need
+    editing every December."""
+    h = public_holidays(2025)
+    assert len(h) == 11
+    assert date(2025, 12, 25) in h                 # Christmas, a Thursday
+    assert date(2025, 11, 27) in h                 # Thanksgiving, 4th Thursday
+    assert date(2025, 5, 26) in h                  # Memorial, last Monday
+    assert date(2025, 1, 20) in h                  # MLK, 3rd Monday
+
+
+@pytest.mark.parametrize("year,actual,observed", [
+    (2026, date(2026, 7, 4), date(2026, 7, 3)),    # Saturday -> Friday before
+    (2027, date(2027, 7, 4), date(2027, 7, 5)),    # Sunday   -> Monday after
+])
+def test_a_fixed_holiday_on_a_weekend_is_taken_on_a_weekday(year, actual, observed):
+    """2025 happens to put all eleven on weekdays, so the rule is not
+    exercised by the year in front of us — which is exactly when a rule
+    rots."""
+    h = public_holidays(year)
+    assert observed in h and actual not in h
+    assert observed.weekday() < 5
+
+
+def test_a_weekend_is_neither_worked_nor_leave():
+    """A person contracted for a five-day week is not paid for Saturday, so
+    it is not leave either — it does not appear at all."""
+    worked, holidays = split_days(date(2025, 1, 1), date(2025, 12, 31))
+    assert len(worked) == 250 and len(holidays) == 11
+    assert len(worked) + len(holidays) == 261      # the weekdays of 2025
+    assert all(d.weekday() < 5 for d in worked + holidays)
+
+
+def test_no_project_work_is_booked_on_a_public_holiday():
+    """The one that makes a reconstruction unbelievable on sight."""
+    worked, holidays = split_days(date(2025, 1, 1), date(2025, 12, 31))
+    assert date(2025, 12, 25) not in worked
+    assert date(2025, 7, 4) not in worked
+    assert date(2025, 12, 25) in holidays
+    # Christmas Eve is not a federal holiday and stays a working day, which
+    # is the other half: the calendar must not invent days off either.
+    assert date(2025, 12, 24) in worked
+
+
+@pytest.mark.parametrize("contracted,weekly,holidays", [
+    ("2080.00", "40", 11),      # the full-year, full-time case
+    ("1040.00", "20", 11),      # half time — the leave halves with the day
+    ("173.33", "40", 11),       # a month-long span: leave cannot exceed it
+    ("2080.00", "40", 0),       # a span with no holiday in it
+    ("0.00", "40", 11),         # no contracted hours at all
+])
+def test_the_split_always_adds_to_what_the_person_was_paid_for(
+        contracted, weekly, holidays):
+    """Leave is not a deduction. The person was compensated for the whole
+    contracted figure; the draft says how much of it was project work and
+    how much was a paid day off, and the two come back to the total.
+
+    This calls the code rather than restating its arithmetic — the first
+    version recomputed the split in the test and so passed happily with the
+    handler spending the leave on projects as well.
+    """
+    expected = Decimal(contracted)
+    work, leave = split_contracted(expected, Decimal(weekly), holidays)
+    assert work + leave == expected
+    assert work >= 0 and leave >= 0
+
+
+def test_the_full_year_case_is_the_one_on_the_record():
+    work, leave = split_contracted(Decimal("2080.00"), Decimal("40"), 11)
+    assert leave == Decimal("88.00")        # 11 days at the contracted 8.00
+    assert work == Decimal("1992.00")
+
+
+def test_a_span_too_short_to_hold_its_holidays_is_all_leave():
+    """Rather than a negative number of project hours, which the spreader
+    would then quietly drop."""
+    work, leave = split_contracted(Decimal("16.00"), Decimal("40"), 11)
+    assert work == Decimal("0.00") and leave == Decimal("16.00")
+
+
+def test_the_draft_hands_leave_to_the_objective_that_exists_for_it():
+    """`cost_objective` has carried a LEAVE row since `017` — *paid leave:
+    holiday, PTO, sick* — and nothing had ever written it. It is
+    `is_final = false`, so `v_timesheet_distribution` leaves it out and it
+    can move no share and no rate; what it changes is whether the sheet
+    claims somebody worked on Christmas."""
+    adopt = body_of("adopt")
+    assert '"LEAVE"' in adopt, "the holidays have to be booked somewhere"
+
+
+def test_the_draft_says_what_it_cannot_know():
+    """Public holidays are defensible; which Tuesday in August somebody was
+    away is on no record here. None is invented and the gap is named — the
+    intake rule applied to a calendar."""
+    draft = body_of("draft")
+    assert "not_known" in draft
+    assert "sick" in draft.lower() and "vacation" in draft.lower()

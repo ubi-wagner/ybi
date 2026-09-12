@@ -1498,6 +1498,28 @@ has in another place:
   ever become adoptable: its precondition was satisfied only by already
   having the entries it exists to create. `FACILITY_UNPARTITIONED` in a new
   place.
+- **Contracted hours are not project hours.** `expected_hours` is
+  `weekly_hours * 52` — what somebody was *compensated* for, paid holidays
+  and vacation included. The first version divided all of it across every
+  weekday of the span and booked the lot to cost objectives, which asserts
+  that forty-three people each worked 1 January, 4 July, Thanksgiving and
+  Christmas, took no holiday, no vacation and no sick day, and did it for a
+  whole year — on a certification whose own wording is *"including the time
+  I was not working on any project"* and which contained none of it. All
+  eleven federal holidays fall on weekdays in 2025, so the sheet charged a
+  project for every one. `app/domain/workdays.py` splits the span; the
+  holidays go to LEAVE at the contracted daily rate and the rest is what the
+  objectives divide. **`cost_objective` has carried a LEAVE row since `017`
+  — *paid leave: holiday, PTO, sick* — and nothing had ever written it**,
+  the dead-register shape in the one place it makes a certification untrue.
+  Leave is `is_final = false`, so `v_timesheet_distribution` leaves it out:
+  measured on the live record, `share_variance` is **0.0000 on every
+  objective**, so this moves no share, no wage and no rate — only whether
+  the sheet claims somebody worked on Christmas. The holidays are *derived*
+  from their rules rather than listed, because a hand-kept table needs
+  editing every December; what cannot be derived is personal leave, so none
+  is invented and the draft says so — *the days off here are the public
+  holidays only, move any day you were away to Paid leave.*
 - **A `timesheet_entry` is a day.** The first version wrote one entry per
   objective dated the last day of the period, reasoning that spreading a
   reconstruction across the calendar manufactures a daily record nobody has.
