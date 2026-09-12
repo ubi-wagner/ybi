@@ -47,6 +47,7 @@ from app.statelock import turn
 from app.domain.advice import GroupFacts, advise
 from app.domain.chart import pool_for
 from app.domain.crosswalk import CROSSWALK
+from app.domain.classification_log import objective_for
 from app.domain.segment import Part, SegmentError, plan_segments
 
 router = APIRouter(prefix="/classify", tags=["classify"],
@@ -318,18 +319,45 @@ def propose(g: GroupOut) -> dict | None:
     # account number it becomes, and `pool_for()` reads the pool off that
     # number. Sixty-one map one-to-one and are a real signal.
     #
-    # The other twenty-four are splits — depreciation by square footage,
-    # wages by timesheet — and those return nothing. A split needs a
-    # documented driver, which is a judgment with a person's name on it, and
-    # proposing one side of it would be inventing the driver.
+    # The other twenty-four are splits, and the rule for them used to be "a
+    # split proposes nothing" — because a split needs a documented driver and
+    # proposing one side of it would be inventing the driver. That is right
+    # about the driver and **wrong about the pool**, which is what the queue
+    # is asking. Five of the twenty-four split by *natural type*: Rising
+    # Tides, LTM, Drive AM, Digital Engineering and AAMEN each divide labour
+    # to 5100, subawards to 5200, materials to 5300, travel to 5500 — and
+    # every one of those numbers is in the DIRECT range. The split decides
+    # which 2026 account, not which 2025 pool.
+    #
+    # So the test is on the pools rather than on the slash, and $1,382,737 of
+    # the queue stops being refused for punctuation. A split that genuinely
+    # crosses pools — depreciation between OVERHEAD and RENTAL_DIRECT, wages
+    # between direct, administrative and fundraising — still proposes
+    # nothing, which was always the point.
     leaf = (g.account or "").rsplit(":", 1)[-1].strip()
     mapped = CROSSWALK.get(leaf)
-    if mapped and "/" not in mapped[0]:
-        try:
-            pool = pool_for(mapped[0]).value
-        except Exception:                          # noqa: BLE001
-            pool = None
+    if mapped:
+        pools = {pool_for(p.strip()) for p in mapped[0].split("/")}
+        pools.discard(None)
+        pool = pools.pop().value if len(pools) == 1 else None
         if pool:
+            # DIRECT needs an objective, and this branch used to send
+            # `objective_id: None` with it — a proposal that
+            # `direct_needs_objective` refuses outright, on 24 of the
+            # accounts in the live ledger. So pressing Enter on the queue's
+            # own suggestion answered an error, which is the nav-stricter-
+            # than-the-API defect pointing the other way: a screen offering
+            # what the server will not take.
+            #
+            # 2025 buries programme identity in the account *name* — the
+            # structural defect the 2026 chart fixes — so the path is the
+            # objective signal, and `customer_job_hint` is empty on all 4,038
+            # cost lines, so it is the only one. Where the path names no
+            # objective there is nothing to charge it to, and the honest
+            # answer is no proposal rather than a refusable one.
+            objective = objective_for(g.account) if pool == "DIRECT" else None
+            if pool == "DIRECT" and objective is None:
+                return None
             return {
                 "pool": pool,
                 # The 990 function and the federal treatment do not fall out
@@ -340,11 +368,13 @@ def propose(g: GroupOut) -> dict | None:
                 "function_990": "PROGRAM" if pool in ("DIRECT", "OVERHEAD")
                                 else "NOT_APPLICABLE",
                 "federal": "PENDING",
-                "objective_id": None,
+                "objective_id": objective,
                 "grade": "CORROBORATED",
                 "citation": "2026 chart crosswalk",
                 "rationale": (f"The 2026 crosswalk maps {leaf} to account "
-                              f"{mapped[0]}, which is a {pool} account"),
+                              f"{mapped[0]}, which is a {pool} account"
+                              + (f", and the account path names {objective}"
+                                 if objective else "")),
                 "source": "crosswalk", "confidence": "medium"}
 
     return None

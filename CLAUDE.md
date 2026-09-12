@@ -922,6 +922,147 @@ scope by hand — the coverage view, the worklist, the queue handler and the
 evidence matcher — which is precisely the shape that produced 13.0% and 2.2%.
 `tests/test_review.py` fails a handler that grows a fifth copy.
 
+## Walking the whole year, and writing down why
+
+`app/domain/classification_log.py`, `scripts/classification_log.py`,
+`docs/CLASSIFICATION_LOG.md`. A reasoned treatment for every one of the 757
+cost groups, walked a month at a time from January, with a citation and a
+rationale on each — and a named reason where there is none.
+
+**It proposes and does not decide, and that is not a hedge.** Run without
+`--apply` it writes nothing to the cost record at all. With `--apply` it
+records through the real API signed in as the controller, so every judgment
+carries that person's name and an audit row. There is no path in it that
+writes a decision behind the API's back. *Proposals are never decisions*: a
+log that sealed 572 judgments would put the machine's name on the seal, and
+the seal is the whole reason a reviewer can be told the rate was not
+reverse-engineered.
+
+**The walk is monthly and the judgment is not.** The unit is a group — an
+account and a payee — and a group spans months, so a strictly monthly queue
+deals the same group twelve times. Each group is reached in **the month it
+first appears** and judged once. And the log covers the *whole* ledger rather
+than what is open, so it reads the same after its recommendations are
+accepted: a log that empties itself when acted on cannot be checked against
+the books afterwards, which is the one time anybody will want to.
+
+Four things came out of walking it that reading one screen at a time did not
+show.
+
+**A split that lands in one pool is not a split, for this question.**
+`propose()` refused all twenty-four crosswalk splits, on the right principle
+— *a split needs a documented driver, and proposing one side would be
+inventing it*. But five of them (Rising Tides, LTM, Drive AM, Digital
+Engineering, AAMEN) divide by *natural type*: labour to 5100, subawards to
+5200, materials to 5300, travel to 5500 — and **every one of those numbers is
+in the DIRECT range**. The split decides which 2026 account; the queue is
+asking which 2025 pool. **$1,382,737 of the queue was refused on a slash.**
+The test is on the pools now, and `test_the_crosswalk_refuses_to_guess_a_split`
+asserts that property rather than the literal source `'"/" not in mapped[0]'`
+— it was testing the punctuation rather than the rule it describes, which is
+the same defect as `test_coverage_is_defined_once` asserting `l.statement =
+'P&L'`.
+
+**And the proposal it did make could not be accepted.** The crosswalk branch
+returned DIRECT with `objective_id: None`, which `direct_needs_objective`
+refuses outright — on **24 accounts of the live ledger**. Pressing Enter on
+the queue's own suggestion answered a constraint violation. It is the
+nav-stricter-than-the-API defect pointing the other way: a screen offering
+what the server will not take. The objective is read off the account path
+now, because 2025 buries programme identity in the account *name* — the
+structural defect the 2026 chart fixes — and `customer_job_hint` is empty on
+all 4,038 cost lines, so the path is not merely a signal, it is the only one.
+
+**A pass-through is not cost, and the ledger says so on its face.**
+`5027 TTC Utilities` is $257,774.24 of gross movement and **$0.00 net**: Ohio
+Edison bills 255 W. Federal and Steelite International — a tenant —
+reimburses the identical amount, line for line, twelve pairs. It needs no
+square footage; the tenant pays all of it. `ARC Arise` is $21,000 in and
+$21,000 straight back out. Coverage counts *absolute* dollars so a group
+counts by what it moved, which `039` chose deliberately and which is right —
+but it puts these at the top of a worst-first queue while they represent no
+cost at all.
+
+**An account can be something other than its name.** `5227 Portfolio
+consulting` — $588,538.89 net, 442 lines, 72 payees, this file's "largest
+single open judgment" — is not a consulting expense account. Its entries are
+`50% of <vendor> Invoice #N` booked back against a portfolio company: a
+fifty-fifty cost share where YBI pays a service provider and the company
+repays half. $1,531,822.61 of debits against $943,283.72 of credits. And
+among them **a $392,447.09 pair on 31 December, no payee, no description,
+posted and reversed the same day** — one wash worth $784,894 of the account's
+$2,475,106 gross and nothing of its net. It stays blocked: the pool turns on
+whether supporting portfolio companies is programme delivery or YBI's own
+business development, and the ledger cannot answer that.
+
+### What it will not judge, and what each is waiting for
+
+$3.9m of the $10.2m, every dollar of it naming the thing to go and get.
+"Cannot be classified" on its own is a dead end — the shape this file keeps
+finding — so a test fails a block whose reason is too short to act on.
+
+| | |
+| --- | --- |
+| **$2,475,106** | what portfolio consulting serves (above) |
+| **$850,383** | the asset register's funding source. Depreciation has *two* splits, not one: the occupancy share is the carve-out's to make, and 200.436(b) makes depreciation on a federally funded asset unallowable. The fixed-asset schedule has no funding-source column at all — which 200.313(d)(1) requires and is a finding of its own. The largest figure here that no amount of reading the ledger can settle. |
+| **$283,761** | intern wages, carrying the $45,053.24 donor credit, not yet reposted in QuickBooks |
+| **$110,183** | Other Income — and **$105,865.41 of it is a Q1 *2020* Employee Retention Tax Credit** received from Staffmark in May 2025. A credit relating to a period in which federal awards bore the wage cost is due back to those awards under 200.406(b), and which 2020 awards bore them is not on this record. New, and not on `FOR_TOM_TO_VERIFY.md` yet. |
+| **$88,870** | splits that genuinely cross pools — dues between G&A and unallowable memberships, travel between direct and administrative |
+| **$71,797** | cost objectives that do not exist: ARC Arise and SBA Growth Accelerator have no `cost_objective` row |
+| **$57,596** | the insurance policy schedule, splitting property from general liability. **Both halves are indirect, so this moves the OVERHEAD/G&A split and not the combined rate.** |
+
+**Occupancy is deliberately *not* on that list, and getting it right is the
+difference between a usable answer and a wrong one.** The 2026 chart books
+tenant cost straight to 93xx, so there it is a classification question. 2025
+has no such account: occupancy goes to OVERHEAD and the tenant share comes out
+at rate time as a 200.465 carve-out. The square footage is the *carve-out's*
+problem, not the classification's. That exception is written down in
+`tests/test_classification_log.py::DELIBERATE` with its own staleness check,
+because the first version of the cross-pool test listed three accounts by hand
+and every one was blocked by a named rule several branches earlier — so it
+passed with the rule it was written about deleted. **A test that cannot fail
+for the thing it names**, found by watching it fail.
+
+What it carries instead is a warning that moves the rate. Facilities accounts
+already hold **$262,885 of tenant credits** — Real Estate Tax is $149,466
+gross and $26,527 net, Boardman Street Electric $154,268 and $78,514 — so part
+of the tenant share is *booked* rather than estimated. Carving a square-footage
+share on top of a figure already net of recovery removes the same money twice.
+
+### The rate that falls out
+
+Applied end to end on a development rig — 572 judgments recorded through the
+API as Tom, then sealed and computed — coverage goes **21.8% → 61.3%** and:
+
+| | | |
+| --- | --- | --- |
+| FRINGE | **21.90%** | $401,783.60 over the register's $1,835,047.18 |
+| OVERHEAD | 24.94% | after a $1,249,877.40 carve-out |
+| G&A | 4.53% | |
+| **INDIRECT_COMBINED** | **29.47%** | $1,181,353.73 over $4,009,264.44 MTDC |
+
+**Every pool ties: `pool_variance` 0.00 and `pool_state` TIES on all four,
+and all four rows of `v_rate_anchor` tie.** Nothing was tuned to reach that.
+The fringe pool is the six accounts the P&L names as fringe and the
+denominator is the payroll register, so **0.2190 falls out** — arrived at from
+the judgments and checked against the documents, which is the only way a
+sealed rate is worth anything.
+
+And the thing worth knowing about the direction: at 21.8% coverage the
+combined rate read **40.64%**; at 61.3% it reads **29.47%**. **As
+classification completes the rate falls**, because the MTDC base grows faster
+than the pools do. That is *unclassified cost is never defaulted into a pool*
+with numbers on it — the rate reads high while work is unfinished, which is
+the honest direction to err, and the restatement moves with it: Drive AM is
+$15,278.16 under-recovered at 40.64% and **$11,078.92 at 29.47%**, on the one
+invoice that claimed no indirect at all.
+
+**Do not read 29.47% as the answer.** It is a rate over a 61.3% complete
+classification, and the $850,383 of depreciation still outside the pools is
+the single largest thing that will move it. `PROJECT_CONTEXT.md`'s 31.78% is
+the modelled figure and neither supersedes the other yet.
+
+
 ## The build-up ties to the pool
 
 Migration `065`. `063` gave `carve_out` its writer; this is the control that
