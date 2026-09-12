@@ -1914,6 +1914,76 @@ Three things worth carrying:
   document: LTM budgets **10.00% of its whole direct**, to four decimal
   places.
 
+### The check that could not see the restatement's own exposure
+
+Migration `074`, `docs/INVOICE_GAP_TABLE.md`. `040` exempted INDIRECT from
+`billed_not_budgeted` and said why — *"an indirect line is claimed under a
+rate or a de minimis provision rather than a budget line, which is the whole
+subject of the restatement"*. True of the record it was written against.
+`052` then transcribed all four America Makes schedules and **two of them
+budget INDIRECT** — ICAM $27,500 and LTM $81,772.76 — while Drive AM's and
+Hybrid's contain no such category. So an indirect line is *inside* the
+schedule on two of these awards and *outside* it on the other two, and the
+exemption meant the check could not say which.
+
+**Measured rather than argued**, which is the only reason it was found: a
+$16,537.56 indirect line inserted on invoice 10018 — the largest single
+figure a restatement puts anywhere, on the award with the largest variance —
+produced an **empty** `billed_not_budgeted`. And the paragraph in
+`AMERICA_MAKES_RESTATEMENT.md` §5 asserting it *would* be flagged was written
+one commit earlier, from the view's name rather than from its body. It
+carries a correction now.
+
+**A second defect in the same view, pointing the other way.** `funded` read
+`federal + cost_share > 0`, so a category the schedule *names at zero* was
+indistinguishable from one it never names — the exception to a rule this file
+states plainly and the code follows everywhere else. It is why invoice 10039
+reported `{MATERIALS, TRAVEL}`: two categories LTM's Schedule B **does** name,
+at zero, with $0.00 against them. A flag with no money behind it, on the one
+invoice with a real exposure, while `OTHER` — genuinely absent from that
+schedule — went unreported because it was exempt too.
+
+Three facts, kept apart: `billed_outside_the_schedule` (never named),
+`billed_against_a_zero_line` (named at zero, money against it — available and
+unfunded is a different finding from absent), and `budgeted_not_billed`
+unchanged. A category named at zero and billed at zero is none of the three,
+because **a line at zero is a line** and 10018 carries three of them.
+
+**And the comparison nothing in the system made.** `v_award_claim_check` is
+cumulative claimed against budgeted, by award and category. Per-invoice is the
+wrong unit — a monthly invoice is meant to be a fraction of a budget, so a
+per-invoice over-budget test would never fire and would mean nothing if it
+did. Its first draft joined the two registers and filtered on the award, which
+dropped **exactly the row that matters**: a category claimed with no budget
+line behind it had no award on its side of the join, so `OUTSIDE SCHEDULE`
+could never be reported at all. Found by the test, not by reading. The
+category universe is a union of both registers now.
+
+### The invoicing bears almost no relation to the cost
+
+What the two new views then say about the live record, and it is not what
+"invoiced too much" sounds like — on every budget line the invoices are
+comfortably `WITHIN`, and cumulatively nothing is `OVER`:
+
+| | |
+| --- | ---: |
+| ever invoiced, against $3,516,193 of ceilings | **1.6%** |
+| 2025 MTDC on the four awards, never invoiced at all | **$936,190.52** |
+| Digital Engineering: invoices on file | **none**, and its period ended 9 July 2025 |
+
+The flags that do fire are about *basis and term*, not amount:
+`TERM` fails on Drive AM — **the whole of invoice 10018's $37,593.90 bills
+April 2026 service against an award that ended 4 January 2026**, and restating
+makes that worse, not better, by adding $16,537.56 to a claim already outside
+the period. `COST_SHARE` fails on LTM and Hybrid for $617,065. `RATE_METHOD`
+fails on all four, which is the restatement's own thesis.
+
+Two gaps no control covers yet, both worth knowing: **nothing in the record
+supports any invoice's service period** — the ledger is 2025 and all three
+invoices bill April 2026 — and **no payment is recorded against any invoice**,
+which decides whether a restatement is an additional claim or a correction to
+a settled one.
+
 ### A rate computed under a policy nobody chose
 
 `POST /api/rates/compute` takes `admin_labour`; the column it lands in is

@@ -175,8 +175,14 @@ to, and the clearest statement of what it gave up.
 
 **Two of the three invoices cannot carry an indirect line without a schedule
 change.** Drive AM's and Hybrid's schedules contain no INDIRECT category. Adding
-one to 10018 or 10023 bills a category that is **not in the agreement**, which
-`v_invoice_budget_check` would report as `billed_not_budgeted = {INDIRECT}`.
+one to 10018 or 10023 bills a category that is **not in the agreement**.
+
+> **Correction.** This paragraph first said `v_invoice_budget_check` would
+> report that as `billed_not_budgeted = {INDIRECT}`. It would not have:
+> migration `040` exempted INDIRECT from the test outright, so a $16,537.56
+> indirect line on invoice 10018 produced an *empty* list — measured, not
+> reasoned about. Migration `074` fixes it, and
+> `docs/INVOICE_GAP_TABLE.md` §3 has the whole of it.
 10039 is the easier case in form — LTM's schedule does have the category — and
 the harder one in size: 2025 supports $145,392.70 against a budgeted
 $81,772.76, so even LTM needs a realignment of $63,619.94 on that line alone.
