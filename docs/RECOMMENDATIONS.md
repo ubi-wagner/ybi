@@ -241,6 +241,56 @@ code. Nothing has been changed by default.
 
 ---
 
+## Does fringe include holiday and time off?
+
+**As a cost category, yes** — 2 CFR 200.431(b) makes paid leave a fringe
+benefit. **In these books, it is not in the fringe pool, and it must not be
+put there.**
+
+There is no holiday, PTO, vacation, sick or leave account anywhere on the
+P&L. Leave is paid through `5140 Employee Wages` as regular compensation, so
+it is **already inside the $1,835,047.17 denominator**. The fringe pool is
+six accounts — Benefits, FICA, 401k, SUI, BWC, FUTA — totalling $401,783.60,
+and none of them is leave.
+
+That is the leave-charged-as-salary method, which 200.431(b) allows. The
+alternative is a leave add-on rate over an accrual, which needs a leave
+accrual system YBI does not keep. **Mixing them is the error**: adding leave
+to the numerator when it is already in the denominator counts it twice and
+inflates 21.90%.
+
+The distribution handles it correctly too — the 2,088 available hours include
+the paid days off, so leave cost is allocated in proportion to the work each
+person did, which is what 200.431(b)(1) asks.
+
+**One item to look at:** `5137 Payroll Processing Fees` ($5,236.70) sits in
+G&A rather than fringe. Defensible either way; it is worth 0.29 points of
+fringe if it moved. The six accounts are a transcription of a judgment, so
+this is the controller's call rather than a rule to derive.
+
+---
+
+## Effort on the record with no cost behind it
+
+`v_labor_hours_check` (migration `072`) compares each person's share of
+logged hours to their share of distributed wages. Across the eight people
+with a full-year hours log the worst gap is **0.000013** — the distribution
+is the hours log, proven rather than asserted.
+
+It surfaces one thing nobody had asked: **Tom Metzinger logged 781 hours
+across all twelve months of 2025** — 504 on general administration, 120 on
+Hybrid II, 120 on Rising Tides, 37 on ESP — **with no row in the payroll
+distribution and no payment to him anywhere in the general ledger.** 277 of
+those hours are on award objectives.
+
+Three possibilities and they lead to different places: donated time under
+200.306(e) (which needs a valuation somebody other than him sets), a
+contractor paid through another entity (which needs the cost on the record),
+or uncompensated executive effort (which is a disclosure, not a cost). Worth
+settling before the Single Audit.
+
+---
+
 ## Smaller things, already done or still open
 
 **Done in the classification work** — see `CLAUDE.md` for each:

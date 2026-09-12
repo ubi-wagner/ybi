@@ -177,3 +177,153 @@ def test_a_month_cannot_hold_more_hours_than_a_month_has(cur):
     a_month(cur, 5, 22, "176.00")
     with pytest.raises(psycopg.errors.CheckViolation):
         logged(cur, 5, "1739.25", "1739.25")
+
+
+# ── the hours against the wages they produced ────────────────────────
+#
+# Migration `072`. `labor_allocation` carried a wage distribution with **no
+# independent source in the database to check it against**, so every
+# downstream tie proved the wages added up and none could ask whether they
+# were split the way the hours were. They were: across the eight people with
+# a full-year log the largest gap between a person's share of adjusted hours
+# and their share of distributed wages is 0.000013, which is the source's own
+# two-decimal rounding.
+
+def a_person(cur, key, rows, wages="1000.00"):
+    """`rows` is {objective: [(month, hours), ...]}, written to both the
+    hours log and the distribution it is supposed to have produced."""
+    total = sum(h for spans in rows.values() for _, h in spans)
+    for oid, spans in rows.items():
+        an_objective(cur, oid)
+        for month, h in spans:
+            a_month(cur, month, weekday_count(2096, month),
+                    str(weekday_count(2096, month) * 8) + ".00")
+            cur.execute("""INSERT INTO labor_month
+                             (period, employee_key, month_start, objective_id,
+                              logged_hours, adjusted_hours)
+                           VALUES (%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT DO NOTHING""",
+                        (PERIOD, key, date(2096, month, 1), oid, h, h))
+        cur.execute("""INSERT INTO labor_allocation
+                         (period, employee_key, employee_name, objective_id,
+                          payroll_wages, original_units, reconstructed_units,
+                          evidence_quality, rationale, loaded_by)
+                       VALUES (%s,%s,%s,%s,%s,0,%s,
+                               'MANAGEMENT_RECONSTRUCTION','test','test')
+                       ON CONFLICT DO NOTHING""",
+                    (PERIOD, key, key, oid, wages,
+                     sum(h for _, h in spans)))
+    return total
+
+
+def hours_check(cur, key):
+    cur.execute("""SELECT objectives, adjusted_hours, available_hours,
+                          capacity_gap, rounding_bound, worst_gap, state,
+                          capacity_state
+                     FROM v_labor_hours_check
+                    WHERE period = %s AND employee_key = %s""", (PERIOD, key))
+    return cur.fetchone()
+
+
+def test_a_distribution_built_from_the_hours_ties(cur):
+    """The property the live record has: the wage share *is* the hours
+    share, because one was computed from the other."""
+    a_person(cur, "TIER", {"A": [(1, 100), (2, 60)], "B": [(1, 84), (2, 100)]})
+    row = hours_check(cur, "TIER")
+    assert row["state"] == "TIES"
+    assert row["objectives"] == 2
+    assert row["worst_gap"] <= Decimal("0.0001")
+
+
+def test_a_distribution_that_is_not_the_hours_is_open(cur):
+    """The failure this exists for: somebody redistributed the wages and the
+    hours no longer account for them."""
+    an_objective(cur, "A")
+    an_objective(cur, "B")
+    a_person(cur, "SKEW", {"A": [(1, 160)], "B": [(1, 24)]})
+    # Move the wages without moving the hours.
+    cur.execute("""UPDATE labor_allocation SET reconstructed_units = 24
+                    WHERE period = %s AND employee_key = 'SKEW'
+                      AND objective_id = 'A'""", (PERIOD,))
+    cur.execute("""UPDATE labor_allocation SET reconstructed_units = 160
+                    WHERE period = %s AND employee_key = 'SKEW'
+                      AND objective_id = 'B'""", (PERIOD,))
+    assert hours_check(cur, "SKEW")["state"] == "OPEN"
+
+
+def test_a_small_real_difference_is_still_open(cur):
+    """The case the tolerance decides. The gross-redistribution test above
+    exceeds any tolerance anybody would write, so it cannot tell 0.0001 from
+    0.5 — and a tolerance nothing tests is one that can be widened without
+    a single test noticing. One per cent of a person's effort is far above
+    the rounding of a two-decimal hours column and far below anything that
+    looks obviously wrong.
+    """
+    an_objective(cur, "A")
+    an_objective(cur, "B")
+    a_person(cur, "NUDGE", {"A": [(1, 92)], "B": [(1, 92)]})
+    cur.execute("""UPDATE labor_allocation SET reconstructed_units = 93.84
+                    WHERE period = %s AND employee_key = 'NUDGE'
+                      AND objective_id = 'A'""", (PERIOD,))
+    cur.execute("""UPDATE labor_allocation SET reconstructed_units = 90.16
+                    WHERE period = %s AND employee_key = 'NUDGE'
+                      AND objective_id = 'B'""", (PERIOD,))
+    row = hours_check(cur, "NUDGE")
+    assert row["worst_gap"] == Decimal("0.010000"), row["worst_gap"]
+    assert row["state"] == "OPEN"
+
+
+def test_a_person_with_no_hours_log_is_not_a_pass(cur):
+    """Thirty-six of the forty-five carry one summary row, so there is
+    nothing to compare — and an empty comparison reporting TIES is `029` in
+    the newest place in the system."""
+    an_objective(cur, "A")
+    cur.execute("""INSERT INTO labor_allocation
+                     (period, employee_key, employee_name, objective_id,
+                      payroll_wages, original_units, reconstructed_units,
+                      evidence_quality, rationale, loaded_by)
+                   VALUES (%s,'QUIET','Quiet','A','900.00',0,100,
+                           'MANAGEMENT_RECONSTRUCTION','test','test')""",
+                (PERIOD,))
+    row = hours_check(cur, "QUIET")
+    assert row["state"] == "NO HOURS LOG"
+    assert row["capacity_state"] == "NO HOURS LOG"
+    assert row["worst_gap"] is None
+
+
+def test_hours_with_no_wages_behind_them_are_named(cur):
+    """Tom Metzinger logged 781 hours across twelve months of 2025 — 504 on
+    general administration and 240 on award objectives — with no row in the
+    payroll distribution and no payment to him anywhere in the ledger.
+    Starting this view from the distribution alone hid him entirely, which
+    is the finding it exists to surface."""
+    an_objective(cur, "A")
+    cur.execute("""INSERT INTO labor_month
+                     (period, employee_key, month_start, objective_id,
+                      logged_hours, adjusted_hours)
+                   VALUES (%s,'UNPAID',%s,'A',40,40)""",
+                (PERIOD, date(2096, 1, 1)))
+    assert hours_check(cur, "UNPAID")["state"] == "HOURS WITHOUT WAGES"
+
+
+def test_the_rounding_bound_is_derived_from_the_rows_it_sums(cur):
+    """Each row is recorded to the cent of an hour, so a sum of n of them
+    carries up to n/200 and nothing more. A round number chosen instead
+    would flag a person with many rows and swallow a difference on a person
+    with few."""
+    a_person(cur, "MANY", {"A": [(m, 8) for m in range(1, 13)],
+                           "B": [(m, 8) for m in range(1, 13)]})
+    a_person(cur, "FEW", {"A": [(1, 8)]})
+    assert hours_check(cur, "MANY")["rounding_bound"] == Decimal("0.1200")
+    assert hours_check(cur, "FEW")["rounding_bound"] == Decimal("0.0050")
+
+
+def test_a_log_that_does_not_reach_its_capacity_is_open(cur):
+    """Beyond the rounding of the rows that made it, a log that does not add
+    to what the calendar says those months held is a difference to look at."""
+    n = weekday_count(2096, 1)
+    a_month(cur, 1, n, str(n * 8) + ".00")
+    a_person(cur, "SHORT", {"A": [(1, 40)]})       # a month of 8-hour days
+    row = hours_check(cur, "SHORT")
+    assert row["capacity_state"] == "OPEN"
+    assert row["capacity_gap"] == Decimal("40.00") - Decimal(n * 8)

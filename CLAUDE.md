@@ -1636,6 +1636,94 @@ no holiday out, so nothing here separates a day you were off from a day you
 worked; move any holiday, vacation or sick day to Paid leave before you
 submit.*
 
+### Fringe is not holiday pay here, and that is why the rate is right
+
+2 CFR 200.431(b) makes paid leave — holiday, vacation, sick — a **fringe
+benefit cost**, so the category question answers yes. Where it sits in these
+books answers differently, and the distinction is the whole of the fringe
+rate.
+
+**There is no holiday, PTO, vacation, sick or leave account anywhere on the
+P&L.** The payroll side is two wage accounts and six benefit accounts:
+
+| | |
+| --- | --- |
+| `5140 Employee Wages` | $1,678,157.27 |
+| `5142 Intern Wages` | $111,836.67 net of the $45,053.23 credit |
+| `5130 Benefits` | $194,353.59 |
+| `5151 Social Security & Medicare` | $139,303.78 |
+| `5133 401k Match & Profit Sharing` | $56,519.42 |
+| `5195 SUI` | $7,246.30 |
+| `5145 Bureau of Worker's Compensation` | $2,707.00 |
+| `5185 FUTA` | $1,653.51 |
+| **the six, which are the fringe pool** | **$401,783.60** |
+
+So YBI pays leave through the wage accounts as regular compensation. That is
+the **leave-charged-as-salary** method, and 200.431(b) allows it; the
+alternative is a leave add-on rate over an accrual, which needs a leave
+accrual system YBI does not keep. What is not allowed is mixing them, and
+that is the trap: **leave is already inside the $1,835,047.17 denominator, so
+putting it in the numerator as well would count it twice** and inflate
+21.90%. Nothing in the six accounts is leave, and nothing should be added.
+
+It also settles what the distribution does with it. The 2,088 available hours
+include the paid days off, and distributing all of them across the objectives
+distributes the leave cost in proportion to the work — which is exactly what
+200.431(b)(1) requires of it. A person who moves days to `LEAVE` on their
+sheet does not lose those wages either: `LEAVE` is `is_final = false`, so the
+distribution redistributes them across the objectives they did work on, which
+is the same answer by a different route.
+
+One thing to know rather than trust: **`5137 Payroll Processing Fees`
+($5,236.70) is not in the six** and the classification log puts it in G&A
+under 200.414(a). Arguable — it is the cost of administering the payroll the
+fringe pool pays for — and it is worth 0.29 points of fringe if it moved. It
+is left where it is because the six accounts are a transcription of a
+judgment somebody made once, and this file's rule is that inventing a rule to
+derive that judgment would be guessing at it.
+
+## The hours account for the wages
+
+Migration `072`. `071` loaded the hours log; this is the control it makes
+possible. Until it existed **`labor_allocation` had no independent source in
+the database to check it against** — every downstream tie proved the wages
+added up, and not one could ask whether they were *split the way the hours
+were*.
+
+They are. Across the eight people with a full-year log, the largest gap
+between a person's share of adjusted hours and their share of distributed
+wages is **0.000013** — thirteen millionths, which is the source's own
+two-decimal rounding and nothing else. That is the evidence that the
+distribution *is* the hours log rather than somebody's allocation of it, and
+it is a control now rather than a paragraph.
+
+Three things it can say that nothing else could:
+
+- **`NO HOURS LOG` is not a pass.** Thirty-five of the forty-three in the
+  distribution carry one summary row, so there is nothing to compare —
+  `029` in the newest place in the system.
+- **`HOURS WITHOUT WAGES`.** Tom Metzinger logged **781 hours across all
+  twelve months** — 504 on general administration, 120 on Hybrid II, 120 on
+  Rising Tides, 37 on ESP — and has **no row in the payroll distribution and
+  no payment to him anywhere in the general ledger**. 277 hours of that sit
+  on award objectives. Whether that is donated time under 200.306(e), a
+  contractor paid through another entity, or uncompensated executive effort
+  is a judgment; what the record now says out loud is that the effort is
+  there and the cost is not. The first draft of this view started from the
+  distribution alone and hid him entirely.
+- **Whether a log adds to the capacity its months held.** All eight do,
+  within the rounding of the rows that made the sum.
+
+**The tolerance is derived, not chosen.** Each row is recorded to the cent of
+an hour, so a sum of `n` rows carries up to `n/200` and no more — 0.53 hours
+for a person with 106 rows, 0.005 for a person with one. A round number
+instead would flag the first and swallow a real difference on the second. And
+the *share* tolerance is one basis point, tested by a deliberate one per cent
+skew: the gross-redistribution test that was there first exceeds any
+tolerance anybody would write, so it could not tell 0.0001 from 0.5 — **a
+tolerance nothing tests is one that can be widened without a single test
+noticing.**
+
 ## The screen the draft never had
 
 `DraftCard` in `Timesheet.jsx`. The routes above shipped with **no page, no
