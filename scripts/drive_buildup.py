@@ -88,7 +88,7 @@ def coverage(period: str) -> dict:
 def buildup(period: str) -> dict[str, dict]:
     return {r["kind"]: r for r in query("""
         SELECT kind, pool_amount, base_amount, rate, pool_gross, pool_carved,
-               pool_allocable, carve_outs, pool_variance, ties
+               pool_allocable, carve_outs, pool_variance, pool_state, ties
           FROM v_rate_buildup WHERE period = %s""", (period,))}
 
 
@@ -97,17 +97,29 @@ def d(v) -> Decimal:
 
 
 def check_ties(b: dict[str, dict], when: str) -> None:
-    """The control. Every live rate against the pool underneath it."""
+    """The control. Every live rate against the pool underneath it.
+
+    Three states, not two. A pool nobody has classified into is NO DATA while
+    the queue is open — `0 = 0` is not a tie — and reporting that as a
+    failure would be the same overstatement in the other direction. Only OPEN
+    is a finding.
+    """
     if not b:
         finding(f"no rate on file {when}")
         return
-    broken = [f"{k} off by {r['pool_variance']}" for k, r in b.items()
-              if not r["ties"]]
-    if broken:
-        finding(f"the build-up does not tie {when}: {'; '.join(broken)}")
-    else:
-        ok(f"every rate ties to its pool {when} — "
-           + ", ".join(f"{k} {r['pool_amount']}" for k, r in sorted(b.items())))
+    open_ = [f"{k} off by {r['pool_variance']}" for k, r in b.items()
+             if r["pool_state"] == "OPEN"]
+    empty = sorted(k for k, r in b.items() if r["pool_state"] == "NO DATA")
+    if open_:
+        finding(f"the build-up does not tie {when}: {'; '.join(open_)}")
+        return
+    tied = sorted(k for k, r in b.items() if r["pool_state"] == "TIES")
+    ok(f"every pool with cost in it ties {when} — "
+       + ", ".join(f"{k} {b[k]['pool_amount']}" for k in tied))
+    if empty:
+        note(f"{', '.join(empty)} hold nothing yet, so they read NO DATA "
+             f"rather than tying at zero — the tie points anchor when the "
+             f"queue is empty, and it is not")
 
 
 def seal_and_compute(tom, period: str, why: str) -> bool:
@@ -184,6 +196,19 @@ def main() -> int:
     # genuinely empty here — the first version of this drive sealed at a
     # "baseline" it had not earned and met NOTHING_TO_SEAL. A drive that
     # needs a starting position makes its own.
+    # Open the set if somebody left it sealed. The drive makes its own
+    # starting position rather than assuming one — the first version sealed a
+    # baseline it had not earned, and this is the same assumption from the
+    # other side. A 404 here means it was already open, which is the state
+    # wanted.
+    u = tom.post("/api/rates/unseal",
+                 params={"reason": f"{MARK}: opening the set to judge into "
+                                   f"it. Walked back at the end of this run."})
+    if u.status_code not in (200, 404):
+        print(f"\nCOULD NOT RUN — could not open the set: {u.status_code} "
+              f"{u.text[:160]}", file=sys.stderr)
+        return 2
+
     q = tom.get("/api/classify/queue",
                 params={"status": "undecided", "limit": 40}).json()
     wages = [g for g in q if "Payroll" in g["account"]][:2]
@@ -291,6 +316,23 @@ def main() -> int:
                     finding(f"an indirect pool of {combined} was computed and "
                             f"no objective carries any of it")
 
+    step("What the rate as a whole is anchored to")
+    for a in query("""SELECT control, description, expected, actual,
+                             variance, state, classification_complete
+                        FROM v_rate_anchor WHERE period = %s ORDER BY seq""",
+                   (period,)):
+        if a["state"] == "TIES":
+            ok(f"{a['control']} — {a['description'].lower()}: "
+               f"{a['expected']} both sides"
+               + ("" if a["classification_complete"]
+                  else ", over a queue that is not finished"))
+        elif a["state"] == "NO DATA":
+            note(f"{a['control']} cannot be evaluated yet — {a['description']}")
+        else:
+            finding(f"{a['control']} does not tie: {a['description']} — "
+                    f"{a['expected']} against {a['actual']}, off by "
+                    f"{a['variance']}")
+
     step("The control can fail, which is the only reason to trust it")
     # Take the carve-outs away underneath the rate and read the view. This is
     # the exact state the system was in for its whole life.
@@ -318,11 +360,19 @@ def main() -> int:
                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
                   (c["pool"], c["period"], c["name"], c["citation"],
                    c["amount"], c["driver"], c["grade"], c["created_by"]))
-        if all(r["ties"] for r in buildup(period).values()):
+        # `pool_state == OPEN`, not `not ties`. An empty pool reads NO DATA
+        # while the queue is open and `ties` is false on it — correctly — so
+        # a check written as `all(ties)` calls a pool nobody has classified
+        # into a broken control. Same assumption `check_ties` was just fixed
+        # for, one function away, which is the argument for going back
+        # through a file once you have found one in it.
+        still_open = [k for k, r in buildup(period).items()
+                      if r["pool_state"] == "OPEN"]
+        if not still_open:
             ok("and it ties again once they are put back")
         else:
-            finding("the carve-outs were restored and the build-up still "
-                    "does not tie")
+            finding(f"the carve-outs were restored and {', '.join(still_open)} "
+                    f"still does not tie")
 
     return walk_back(tom, period, before_cov)
 

@@ -946,6 +946,57 @@ could not say, both visible the moment carve-outs started being written:
   meaning the same thing in two spellings — and a tie cannot be evaluated
   against a NULL.
 
+### And the tie points anchor at completion
+
+Migration `066`. The control `065` added then reported **TIES on FRINGE and
+on G&A over nothing at all** — an empty pool holds 0.00, the ledger says 0,
+and `0 = 0` is green. That is `029` reproduced *inside the control written to
+catch the last one*: **an empty period compares zero against zero and looks
+green.** A control that cannot be evaluated has not passed.
+
+**The way out is completion**, and it is the same idea at two scales.
+
+`pool_state` is three states now. While anything is unjudged, an empty pool
+means *nobody has judged any of this yet* — `NO DATA`. Once `unclassified`
+reaches zero it means *there is none of this*, which is a figure and ties
+honestly. So the state is read against the completion of the classification
+rather than against the pool alone, and `tests/test_rate_anchor.py` holds
+both halves: the same empty pool is NO DATA with cost outstanding and TIES
+with the queue finished. `OPEN` is never softened by completion.
+
+**And a rate is a pool over a base, so `065` had anchored only the
+numerator.** `v_rate_anchor` adds the two comparisons that have genuinely
+independent sources:
+
+| | |
+| --- | --- |
+| `POOLS_ACCOUNT_FOR_JUDGMENTS` | the signed sum of live decision lines against the sum of every pool's gross. **Nothing had ever compared them**, so cost could go missing between the queue and the pools and each pool would still tie to itself perfectly. |
+| `WAGE_BASE_IS_THE_REGISTER` | the fringe denominator against `register_wages` on the eleventh statement control — *the fringe base comes from the effort distribution, not from the ledger's wage accounts*. The anchor existed and the build-up never pointed at it. |
+
+**Signed on both sides of the first one, deliberately.** Coverage measures in
+*absolute* dollars — `039` chose that so a group counts by what it moved —
+and the pools carry the signed position, so the same judgments read
+$2,219,105.55 and $1,678,057.27. Both are right, and comparing those two
+would be a false alarm every time a credit is judged.
+
+**MTDC is deliberately not anchored.** It is labour plus fringe plus direct
+non-labour less the 200.1 exclusions, and every part comes from the model, so
+a second derivation in SQL would be one figure computed twice — the thing
+that can disagree with itself. It is anchored through its parts instead: the
+labour in it is the wage base, and the non-labour in it is the DIRECT pool,
+which the first control covers.
+
+These are read-side only. `POST /api/rates/compute` gates on the statement
+register because a rate over books that disagree is a rate over the wrong
+numbers; these are checks *on* the rate it produced, and gating a computation
+on a control derived from its own output would be circular.
+
+One thing worth not repeating: **the boolean assumption survived two more
+places in the file that introduced it.** `drive_buildup`'s `check_ties` read
+`not ties` and would have called a pool nobody has classified into a broken
+control; so did its carve-out restore check, one function away. Finding one
+of these in a file is the argument for reading the rest of it.
+
 `scripts/drive_buildup.py` walks the whole chain and is the answer to *does
 the rate build up completely as items are classified*:
 

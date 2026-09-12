@@ -41,7 +41,14 @@ def rate_buildup(period: str | None = None) -> dict:
     rates = query("""SELECT kind, pool_amount, base_type, base_amount, rate,
                             status, seal_hash, computed_at, computed_by,
                             decision_set, sealed_at, sealed_by,
-                            pool_gross, pool_carved, pool_allocable, carve_outs
+                            pool_gross, pool_carved, pool_allocable, carve_outs,
+                            -- The control on the build-up itself: what the
+                            -- computation used against what the ledger says
+                            -- is left after recorded carve-outs. A workpaper
+                            -- that shows the pool and not whether it ties is
+                            -- asking the reader to take the tie on trust,
+                            -- which is the thing this screen exists to stop.
+                            pool_variance, pool_state
                        FROM v_rate_buildup
                       WHERE period = %s
                       ORDER BY CASE kind WHEN 'FRINGE' THEN 1
@@ -59,7 +66,17 @@ def rate_buildup(period: str | None = None) -> dict:
                                FROM v_statement_reconciliation
                               WHERE period = %s AND NOT ties ORDER BY seq""",
                           (period,))
+    # What the rate as a whole is anchored to, beyond each pool tying to
+    # itself: that the pools account for every judgment made, and that the
+    # fringe denominator is the payroll register rather than the ledger's
+    # wage accounts. NO DATA is not a pass, and `classification_complete`
+    # says whether these are read over a finished queue or a partial one.
+    anchors = query("""SELECT control, description, expected, actual, variance,
+                              state, note, classification_complete
+                         FROM v_rate_anchor WHERE period = %s ORDER BY seq""",
+                    (period,))
     return {"period": period, "rates": rates, "carve_outs": carves,
+            "anchors": anchors,
             "coverage": cov, "open_controls": open_controls,
             # A rate is final when the judgments under it are finished and the
             # books they came from agree. Neither is a matter of opinion, so
