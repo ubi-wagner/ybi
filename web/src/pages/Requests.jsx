@@ -118,8 +118,24 @@ export default function Requests({ actor }) {
     setBusy(true);
     try {
       const r = await api.acceptRequest(id);
-      toast.ok(`${r.written} row${r.written === 1 ? "" : "s"} written`
-               + (r.held_back ? `, ${r.held_back} held back and named` : ""));
+      /* Accepting is one-way — the request moves to ACCEPTED and a second
+         acceptance is a 409 — so a reply that wrote nothing is the end of
+         that request, not a step in it. "0 rows written" in green is the
+         shape this system keeps finding: an honest number in a sentence that
+         reads as success. Every count it held back is named, because that is
+         the work: `held_back` is what came with a problem, `untouched` is
+         what nobody filled in, and the two lead somewhere different. */
+      const left = [r.held_back && `${r.held_back} held back and named`,
+                    r.untouched && `${r.untouched} left blank`]
+        .filter(Boolean).join(", ");
+      if (!r.written) {
+        toast.warn(`Nothing was written from this reply${left ? ` — ${left}` : ""}. `
+                   + "The request is closed; issue a new one to ask again.",
+                   { sticky: true });
+      } else {
+        toast.ok(`${r.written} row${r.written === 1 ? "" : "s"} written`
+                 + (left ? `, ${left}` : ""));
+      }
       setOpen(null); setPreview(null);
       await load();
     } catch (e) { toast.fail(String(e.message || e)); }

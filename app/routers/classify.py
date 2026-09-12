@@ -532,17 +532,31 @@ def decide(body: DecideIn, period: str = "2025",
                             "from them.")})
         set_id = st["set_id"]
 
+        skipped: list[str] = []
         for key in body.group_keys:
             account, _, payee = key.partition("\x1f")
             # `amount` as well as `line_id`, so the response can say what
             # the judgment covered without a second round trip — and from
             # the same rows the decision is attached to, rather than from a
             # separate sum that could disagree with them.
+            # `coalesce(payee,'')` the way `advice`, `segment` and the
+            # evidence attach all spell it. `payee` is NOT NULL DEFAULT ''
+            # today so the two agree, and a rule with one exception is the
+            # one somebody gets wrong the day the column changes.
             cur.execute("""SELECT line_id, amount FROM ledger_line
-                            WHERE period = %s AND account = %s AND payee = %s""",
+                            WHERE period = %s AND account = %s
+                              AND coalesce(payee, '') = %s""",
                         (period, account, payee))
             with_lines = cur.fetchall()
             if not with_lines:
+                # A group key that matches no line in this period. Skipping
+                # it is right — the rest of the batch is real work — but
+                # skipping it *silently* was the shape this handler was
+                # already fixed for once, one level up: the group is
+                # swallowed rather than the lines, `decisions_created` counts
+                # the ones that landed, and a screen judging a single stale
+                # group is told "Recorded" over nothing at all.
+                skipped.append(key)
                 continue
             # Reclassifying supersedes; it does not stack.
             #
@@ -680,8 +694,28 @@ def decide(body: DecideIn, period: str = "2025",
     # neither can a person reading "1 decision recorded" after judging
     # $1.2m across thirteen lines. The count is already computed to prove
     # the lines landed; this is saying it out loud.
+    # And nothing at all is a refusal, not a result. Every other way this
+    # handler can record nothing already answers 409; a batch where no group
+    # matched a line answered 200 with zeroes, which the screen printed as a
+    # judgment. The transaction has already committed by here and it wrote
+    # nothing, so there is nothing to roll back — the answer is simply to say
+    # so in the one place a person is looking.
+    if not created:
+        raise HTTPException(
+            409,
+            f"Nothing was recorded. "
+            + (f"No line in {period} matches "
+               + (f"{skipped[0].split(chr(31))[0]}." if len(skipped) == 1
+                  else f"any of those {len(skipped)} groups.")
+               + " The queue has moved on since this screen was drawn — "
+                 "reload it."
+               if skipped else "No group in this request had any lines."))
+
     return {"decisions_created": created, "superseded": replaced,
             "lines": lines_covered, "amount": str(money(amount_covered)),
+            # Named, not counted: a batch of eight where one group has gone
+            # is a different thing to see than a number.
+            "skipped": skipped,
             "set_id": str(set_id)}
 
 

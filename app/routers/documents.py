@@ -604,9 +604,14 @@ def attach_bulk(body: BulkAttachIn,
                                            detached_at = NULL""",
                         (a.evidence_id, a.target_type, a.target_id,
                          a.relevance, actor.display_name))
-    for a in body.attachments:
-        record(actor, "EVIDENCE_ATTACH", a.target_type, a.target_id,
-               after={"evidence_id": a.evidence_id, "in_bulk": True},
-               reason=a.relevance)
+        # Inside the transaction, for the reason `decide()` gives: the two
+        # have to stand or fall together. Recorded after the commit, a
+        # `record` that failed partway would leave attachments in the record
+        # with no entry naming who made them — the same defect as an audit
+        # row for a change that rolled back, pointing the other way.
+        for a in body.attachments:
+            record(actor, "EVIDENCE_ATTACH", a.target_type, a.target_id,
+                   after={"evidence_id": a.evidence_id, "in_bulk": True},
+                   reason=a.relevance, cursor=cur)
     return {"attached": len(body.attachments),
             "documents": sorted({a.evidence_id for a in body.attachments})}

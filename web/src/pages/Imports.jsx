@@ -22,12 +22,9 @@ export default function Imports() {
   const send = async (file, report) => {
     setBusy(report);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const r = await fetch(`/api/imports/upload?report=${report}&uploaded_by=tom`,
-                            { method: "POST", body: fd }).then((x) => x.json());
-      await fetch(`/api/imports/${r.batch_id}/parse`, { method: "POST" });
-      const p = await fetch(`/api/imports/${r.batch_id}/preview`).then((x) => x.json());
+      const r = await api.importUpload(file, report);
+      await api.importParse(r.batch_id);
+      const p = await api.importPreview(r.batch_id);
       setPreview({ ...p, batch_id: r.batch_id, name: file.name });
       load();
     } catch (e) {
@@ -37,12 +34,36 @@ export default function Imports() {
     }
   };
 
+  /* Promoting a batch used to be a bare `fetch(...).then(x => x.json())`
+     with no status check and no `catch`. A refusal — a batch already
+     accepted, a subtotal that does not tie — comes back as `{detail: "..."}`
+     with a 4xx, `lines_promoted` is undefined, and the `?? 0` printed
+     "0 lines added to the ledger" in the tone this screen uses for success.
+     The ledger is the spine of the whole engagement; an import that did not
+     happen must never read as one that did. */
   const accept = async () => {
-    const r = await fetch(`/api/imports/${preview.batch_id}/accept?accepted_by=tom`,
-                          { method: "POST" }).then((x) => x.json());
-    toast(`${r.lines_promoted?.toLocaleString?.() ?? 0} lines added to the ledger`);
-    setPreview(null);
-    load();
+    setBusy("accept");
+    try {
+      const r = await api.importAccept(preview.batch_id);
+      const n = Number(r.lines_promoted ?? 0);
+      if (n === 0) {
+        /* The server answered, and what it did was nothing. Sticky, because
+           a warning that fades while somebody is reading the preview is the
+           same as no warning at all. */
+        toast.warn("The batch was accepted and no line reached the ledger. "
+                   + "Every line was already on it, or the batch held none. "
+                   + "Check the register below before importing again.",
+                   { sticky: true });
+      } else {
+        toast.ok(`${n.toLocaleString()} lines added to the ledger`);
+      }
+      setPreview(null);
+      load();
+    } catch (e) {
+      toast.fail(String(e.message || e));
+    } finally {
+      setBusy("");
+    }
   };
 
   return (
@@ -123,8 +144,12 @@ export default function Imports() {
           )}
 
           <div style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
-            <button className="primary" disabled={!preview.acceptable} onClick={accept}>
-              Accept import
+            {/* Disabled while it runs. A second press promotes nothing and
+                meets "already accepted", which is a refusal for a thing the
+                person did not do. */}
+            <button className="primary" onClick={accept}
+                    disabled={!preview.acceptable || busy === "accept"}>
+              {busy === "accept" ? "Adding to the ledger…" : "Accept import"}
             </button>
             <button onClick={() => setPreview(null)}>Discard</button>
             {!preview.acceptable && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api, money } from "../api.js";
-import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* A ceiling of zero is not a ceiling of zero. Two of the three awards on file
    carry no ceiling because nobody has read one off the agreement yet, and the
@@ -50,17 +50,31 @@ function instrument(v) {
 }
 
 export default function Awards() {
+  const toast = useToast();
   const [awards, setAwards] = useState([]);
   const [detail, setDetail] = useState(null);
 
   useEffect(() => { api.awards().then(setAwards).catch(() => {}); }, []);
 
+  /* Both of these were bare `fetch(...).then(r => r.json())` with no status
+     check and no `catch`, which failed in the two worst ways at once. A 403
+     or a 500 parses to `{detail: "..."}`, and the drawer then calls
+     `.map` on it — so a refusal took the page down rather than saying
+     anything. A network error rejected a promise nobody was awaiting, so the
+     row simply did not open: a click that does nothing, tells nobody, and
+     leaves no trace on the failure list. Through `api` both answer with the
+     sentence the server gave, and `FailureBell` sees them. */
   const open = async (a) => {
-    const [constraints, trueup] = await Promise.all([
-      fetch(`/api/awards/${a.award_id}/constraints`).then((r) => r.json()),
-      fetch(`/api/awards/${a.award_id}/trueup`).then((r) => r.json()),
-    ]);
-    setDetail({ award: a, constraints, trueup });
+    try {
+      const [constraints, trueup] = await Promise.all([
+        api.awardConstraints(a.award_id),
+        api.awardTrueup(a.award_id),
+      ]);
+      setDetail({ award: a, constraints, trueup });
+    } catch (e) {
+      setDetail(null);
+      toast.fail(String(e.message || e));
+    }
   };
 
   return (

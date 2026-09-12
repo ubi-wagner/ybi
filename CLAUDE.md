@@ -1485,6 +1485,83 @@ matter; `anonymous` is honest for a 401 *and* for a body FastAPI rejects
 before any dependency runs; and recording a refusal must never turn a refusal
 into a crash.
 
+### And the door underneath it had six holes in it
+
+The section above ends on the right rule — *the record is taken underneath
+them in `req()` itself, where a caller cannot forget it* — and
+`tests/test_failure_contract.py` held it. What nothing held was whether the
+screens **go through `req()`**, and six calls did not.
+
+`Imports.jsx` ran the entire import cycle on bare
+`fetch(...).then(x => x.json())`, and that is the worst place in the system
+for it. A refusal comes back as `{detail: "..."}` with a 4xx, which parses
+perfectly: `lines_promoted` is undefined, the `?? 0` fills in, and the screen
+said **"0 lines added to the ledger"** in the tone it uses for success. A
+refused import of the general ledger, reported as nothing having happened, on
+the screen the whole engagement starts at. `Awards.jsx` opened its drawer the
+same way and failed in both directions at once — a 403 parsed to an object
+and was handed to `.map`, which took the page down, and a network error
+rejected a promise nobody awaited, so the row simply did not open and no
+trace of it reached anything.
+
+The rule is the one `tests/test_storage_paths.py` already holds for the
+volume: **there is one door.** `test_no_screen_reaches_past_the_request_layer`
+fails a `fetch(` anywhere in `web/src` outside `api.js`.
+
+And the three multipart helpers — which genuinely cannot use `req()`, because
+setting `Content-Type` by hand drops the boundary the browser generates and
+the server sees no file — were hand-rolled, checked `res.ok`, and stopped
+there. So an upload that failed left nothing on the list `FailureBell` exists
+to surface. `sendForm()` is `req()` with different headers and *nothing else
+different*: same statuses, same sentence, same record taken underneath.
+
+### A count is honest and a tone is not
+
+The other half of the question. Sweeping the sixty-seven success toasts, most
+read a figure back from the response, and **five could report a write that
+landed on nothing in the tone used for success** — which is worse than a
+wrong number, because nobody re-reads a green toast.
+
+The shape this file already records shipping once: *the handler said
+`decisions_created: 1` ... and the controller was told it had worked.* Each
+of these is reachable and each is now a sticky `warn` naming what happened:
+
+| | |
+| --- | --- |
+| the import | a batch already promoted is `ON CONFLICT DO UPDATE`, so it is a no-op — the ledger got nothing |
+| a reply accepted | every row unusable writes none, and the request closes: a second acceptance is a 409, so it is the end rather than a step |
+| a document attached | attachment is per line and `attached_to` is how many the group key matched; zero means the file is in the library and on nothing |
+| the classification queue | `decide()` skipped a group whose key matches no line — *silently*, with `continue`. One stale group judged alone answered **200 with zeroes**, and the screen's detail suffix vanished, leaving "Recorded 5227 → G&A" over nothing |
+| the bulk evidence confirm | printed `rows.length`, its own selection, rather than the `attached` the server answered with |
+
+The queue is the one worth keeping. The insert-level version of this defect
+was found and fixed before — *`ON CONFLICT DO NOTHING` swallowed the
+conflict* — and the **group-level** version was one loop out from it the
+whole time. Nothing at all is a refusal now (409 naming the group and saying
+to reload), a partial batch names what it skipped in `skipped`, and the
+screen says both halves. Two smaller things fell out of reading that loop:
+its line lookup was the one of five spellings using bare `payee = %s` where
+`advice`, `segment` and the evidence attach all say `coalesce(payee,'')`, and
+the bulk attach wrote its audit rows *after* its transaction committed —
+`decide()`'s rule pointing the other way, attachments with nobody's name on
+them rather than a name on a change that rolled back.
+
+### A name in the request is only ever a label
+
+Eight of the nine mutating routes carrying a `*_by` parameter reassign it
+from the session, most with a comment saying why. `POST /api/imports/
+{batch_id}/accept` did not — and the screen sent the literal string `tom` in
+the query string, which reached `staging_batch.accepted_by` and
+`ledger_import.imported_by`, **the permanent provenance record every ledger
+line points back to**. Who promoted the general ledger was whatever the URL
+said.
+
+`test_mutating_route_takes_its_actor_from_the_session` could not see it:
+resolving an `Actor` through a dependency and *using* it are different facts,
+and that route did the first. `test_a_name_in_the_request_is_only_ever_a_label`
+is the second, over the same parametrised list of routes, and it fails on
+exactly the one route that was wrong.
+
 ## Supersession, and the one rule it needs
 
 Reclassifying leaves the old `decision_line` in place with `live = false` —

@@ -122,13 +122,18 @@ export default function Evidence({ actor }) {
     if (!rows.length) return;
     setBusy(true);
     try {
-      await api.attachDocuments(rows.map((d) => ({
+      const r = await api.attachDocuments(rows.map((d) => ({
         evidence_id: d.evidence_id,
         target_type: d.target.target_type,
         target_id: d.target.target_id,
         relevance: d.target.because,
       })));
-      toast.ok(`${rows.length} document${rows.length === 1 ? "" : "s"} attached. `
+      /* `r.attached`, not `rows.length`. The batch is one transaction so the
+         two agree, and a screen that counts its own selection is asserting
+         what the server did from local state — which is the same shape as a
+         nav stricter than the API, one step smaller. */
+      const n = r?.attached ?? 0;
+      toast.ok(`${n} document${n === 1 ? "" : "s"} attached. `
                + `Citing one on a judgment is what raises its grade.`);
       await load();
       await loadProposals();

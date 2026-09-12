@@ -73,6 +73,40 @@ async function req(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+/* Multipart, which cannot go through req(): setting Content-Type by hand
+   drops the boundary the browser generates and the server sees no file. So
+   the headers differ and *nothing else does* — same statuses, same sentence,
+   and the same record taken underneath.
+
+   The three upload helpers used to check `res.ok` and stop there, so an
+   upload that failed threw a sentence the screen might catch and left no
+   trace on the failure list at all. `FailureBell` exists to surface what the
+   screens swallow, and it could not see an upload. */
+async function sendForm(path, form, opts = {}) {
+  const method = opts.method || "POST";
+  let res;
+  try {
+    res = await fetch(base + path,
+                      { method, credentials: "same-origin", body: form });
+  } catch (e) {
+    noteFailure({ path, method, status: 0,
+                  message: "The server could not be reached." });
+    throw new Error(`Could not reach the server: ${e.message}`);
+  }
+  if (res.status === 401) throw new Unauthorized("Not signed in");
+  if (res.status === 403) {
+    const body = await res.text();
+    noteFailure({ path, method, status: 403, message: detailOf(body) });
+    throw new Forbidden(body);
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    noteFailure({ path, method, status: res.status, message: detailOf(body) });
+    throw new Error(`${res.status}: ${detailOf(body)}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
 /* The sentence the API gave, not the JSON it gave it in. A person reading
    `{"detail":"..."}` in a toast is reading our plumbing. */
 function detailOf(body) {
@@ -248,16 +282,7 @@ export const api = {
                                                  target_id: targetId })),
   evidenceFileUrl: (id) => `/api/evidence/${encodeURIComponent(id)}/file`,
   addNote: (body) => req("/evidence/note", { method: "POST", body: JSON.stringify(body) }),
-  /* Multipart, so it cannot go through req(): setting Content-Type by hand
-     drops the boundary the browser generates and the server sees no file. */
-  uploadEvidence: async (form) => {
-    const res = await fetch("/api/evidence/upload",
-                            { method: "POST", credentials: "same-origin", body: form });
-    if (res.status === 401) throw new Unauthorized("Not signed in");
-    if (res.status === 403) throw new Forbidden(await res.text());
-    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-    return res.json();
-  },
+  uploadEvidence: (form) => sendForm("/evidence/upload", form),
   facilities: (period = "2025") => req(`/facilities?period=${period}`),
   putFacility: (body) => req("/facilities", { method: "PUT", body: JSON.stringify(body) }),
   spaceUnits: (params) => req("/facilities/space?" + new URLSearchParams(params || {})),
@@ -270,6 +295,24 @@ export const api = {
   putInKind: (body) =>
     req("/facilities/in-kind", { method: "POST", body: JSON.stringify(body) }),
   awards: () => req("/awards"),
+  awardConstraints: (id) => req(`/awards/${id}/constraints`),
+  awardTrueup: (id) => req(`/awards/${id}/trueup`),
+
+  /* The import cycle. These four were the last raw `fetch()` calls in the
+     SPA, and they were raw in the way that matters: no status check, so an
+     import the server *refused* came back as `{detail: "..."}`, was read as
+     a result, and the screen said "0 lines added to the ledger" in the tone
+     it uses for success. A refusal is the one thing an import screen must
+     never round to nothing happening. */
+  importUpload: (file, report, period = "2025") => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return sendForm(`/imports/upload?report=${encodeURIComponent(report)}`
+                    + `&period=${encodeURIComponent(period)}`, fd);
+  },
+  importParse: (batchId) => req(`/imports/${batchId}/parse`, { method: "POST" }),
+  importPreview: (batchId) => req(`/imports/${batchId}/preview`),
+  importAccept: (batchId) => req(`/imports/${batchId}/accept`, { method: "POST" }),
   chartSummary: () => req("/chart/summary"),
   chartAccounts: () => req("/chart/accounts"),
   chartCrosswalk: (period = "2025") => req(`/chart/crosswalk?period=${period}`),
@@ -304,14 +347,7 @@ export const api = {
 
   // My documents — the module everybody gets
   myDocuments: () => req("/documents/mine"),
-  uploadDocument: async (form) => {
-    const res = await fetch("/api/documents/upload",
-                            { method: "POST", credentials: "same-origin", body: form });
-    if (res.status === 401) throw new Unauthorized("Not signed in");
-    if (res.status === 403) throw new Forbidden(await res.text());
-    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-    return res.json();
-  },
+  uploadDocument: (form) => sendForm("/documents/upload", form),
   documentInbox: (period = "2025") =>
     req(`/documents/inbox?period=${period}`),
 
@@ -378,16 +414,7 @@ export const api = {
   requestPreview: (id) => req(`/requests/${id}/preview`),
   acceptRequest: (id, note = "") =>
     req(`/requests/${id}/accept`, { method: "POST", body: JSON.stringify({ note }) }),
-  /* Multipart, so it cannot go through req(): setting Content-Type by hand
-     drops the boundary the browser generates and the server sees no file. */
-  replyToRequest: async (id, form) => {
-    const res = await fetch(`/api/requests/${id}/reply`,
-                            { method: "POST", credentials: "same-origin", body: form });
-    if (res.status === 401) throw new Unauthorized("Not signed in");
-    if (res.status === 403) throw new Forbidden(await res.text());
-    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-    return res.json();
-  },
+  replyToRequest: (id, form) => sendForm(`/requests/${id}/reply`, form),
   documentFacts: (id, body) =>
     req(`/documents/${encodeURIComponent(id)}/facts`,
         { method: "PATCH", body: JSON.stringify(body) }),

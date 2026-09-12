@@ -287,3 +287,91 @@ def test_the_reset_is_bounded_to_the_drive_s_own_actions():
     drive = (ROOT / "scripts" / "drive_state_machine.py").read_text()
     assert "floor" in drive and "entry_id > %s" in drive, (
         "the reset is no longer bounded by an audit floor")
+
+
+def test_no_screen_reaches_past_the_request_layer():
+    """`req` records, and for six calls nothing did.
+
+    The test above proves the request layer takes the record underneath every
+    call site. It never proved the call sites *go through it* — and six did
+    not. `Imports.jsx` ran the whole import cycle on bare `fetch(...).then(x
+    => x.json())`, and `Awards.jsx` opened its drawer the same way.
+
+    Both failed in the way this file exists for. A refused import comes back
+    as `{detail: "..."}` with a 4xx, which parses perfectly: `lines_promoted`
+    is undefined, `?? 0` fills in, and the screen says "0 lines added to the
+    ledger" in the tone it uses for success — a refusal over the general
+    ledger, reported as nothing having happened. A 403 on the award drawer
+    parsed the same way and was then handed to `.map`, which took the page
+    down; a network error rejected a promise nobody awaited, so the row
+    simply did not open and no trace of it reached anything.
+
+    So the rule is the one `tests/test_storage_paths.py` already holds for
+    the volume: there is one door, and a screen that grows its own is the
+    defect rather than a shortcut.
+    """
+    offenders = []
+    for path in sorted(SRC.rglob("*.jsx")):
+        for n, line in enumerate(path.read_text().splitlines(), 1):
+            if re.search(r"(?<![.\w])fetch\s*\(", line.split("//")[0]) \
+               and not line.lstrip().startswith(("*", "/*")):
+                offenders.append(f"{path.relative_to(SRC)}:{n}: {line.strip()}")
+    assert not offenders, (
+        "a screen calls fetch() directly, so its failures never reach "
+        "noteFailure() and an error body is read as a result:\n  "
+        + "\n  ".join(offenders)
+        + "\nAdd a helper to web/src/api.js instead.")
+
+
+def test_a_multipart_upload_records_its_failures_too():
+    """The three upload helpers cannot use `req` — setting Content-Type by
+    hand drops the boundary the browser generates and the server sees no file
+    — so they were hand-rolled, and each checked `res.ok` and stopped there.
+    A failed upload threw a sentence a screen might catch and left nothing on
+    the failure list at all, which is precisely what `FailureBell` exists to
+    surface. One helper now, recording the same three ways `req` does.
+    """
+    api = API.read_text()
+    m = re.search(r"async function sendForm\(path, form, opts = \{\}\) \{(.*?)\n\}",
+                  api, re.S)
+    assert m, ("the multipart helper is gone; the upload routes are back to "
+               "hand-rolled fetches that record nothing")
+    body = m.group(1)
+    assert body.count("noteFailure(") >= 3, (
+        "sendForm does not record every failure path: a transport error, a "
+        "403 and any other bad status are three different failures")
+    assert "if (res.status === 401) throw new Unauthorized" in body
+
+
+#: Every place a write can land on nothing and still answer 200, and the
+#: field that says so. Each one is reachable — a batch already promoted, a
+#: group key the queue has moved past, a reply where every row came back
+#: unusable — and each read as a confirmation before this.
+LANDED_ON_NOTHING = [
+    ("pages/Imports.jsx", "lines_promoted", "the general ledger"),
+    ("pages/Requests.jsx", "r.written", "a reply nobody can send twice"),
+    ("pages/ClassifyQueue.jsx", "attached_to", "a document filed against no cost"),
+]
+
+
+def test_a_write_that_landed_on_nothing_does_not_read_as_success():
+    """An honest number in a sentence that reads as success.
+
+    This is the shape the file above records shipping once already: *"the
+    handler said `decisions_created: 1`, the pools still read the old pool,
+    two live decisions disagreed with each other, and the controller was told
+    it had worked."* The count was right and the tone was wrong, which is
+    worse than a wrong count — nobody re-reads a green toast.
+
+    So where a write can succeed and reach nothing, the screen says so in the
+    failure-adjacent tone and says it stickily. A warning that fades in six
+    seconds while somebody is looking at the preview is the same as no
+    warning.
+    """
+    for rel, field, why in LANDED_ON_NOTHING:
+        src = (SRC / rel).read_text()
+        assert field in src, f"{rel} no longer reads {field}"
+        assert "toast.warn(" in src and "sticky: true" in src, (
+            f"{rel} can write nothing and say nothing about it — {why}. "
+            "A zero here has to reach the person in a tone that is not the "
+            "one used for success, and it has to stay on screen.")
