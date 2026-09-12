@@ -1724,6 +1724,77 @@ tolerance anybody would write, so it could not tell 0.0001 from 0.5 — **a
 tolerance nothing tests is one that can be widened without a single test
 noticing.**
 
+## He is 1099, and the expense was on the record
+
+Migration `073`. `v_labor_hours_check` reported one person as
+`HOURS WITHOUT WAGES` — 781 hours across all twelve months, no payroll row,
+and searching his surname found no payment anywhere in the ledger.
+
+**A contractor is paid as a company.** The expense is
+`Management & Administrative Expenses:5201 Professional Services:5202
+Accounting`, payee **`Metz Consulting, LLC.`**, $73,024.44 over 25 lines:
+twenty-two semi-monthly payments at $3,000, two December payments at $3,375
+after a rate rise, and $274.44 of 1099 filing fees. The controller's workbook
+carries him too, in a block below the payroll rows headed `5202 Accounting`,
+at **$72,375** — the same figure less one December payment still at the old
+rate ($375) and the filing fees ($274.44). **Both differences reconcile
+exactly.**
+
+`contractor_identity` is the key that was missing. *Never join on a name*
+has always been the rule; what it needed was somewhere to hold the fact
+instead, and rediscovering this one cost a trip through a spreadsheet. A link
+with a note under twenty characters is refused — a key with no explanation is
+the next person's puzzle again — and a link naming a payee the ledger has
+never paid is not written at all, because an identity pointing at no money is
+the citation-with-no-document shape.
+
+**He is paid three ways and they mean three different things**, which is why
+`v_contractor_effort_check` is one row per *group* — an account and a payee,
+the unit everything else here is judged in:
+
+| | | |
+| --- | ---: | --- |
+| `5202 Accounting` | $73,024.44 | the retainer, his time — **G&A** |
+| `5215 Dues and Subscriptions` | $4,909.82 | software he buys and rebills — **G&A** |
+| `Program Expenses:ESP:5221` | $4,880.00 | EIR work — **already DIRECT** |
+
+Rolling those into one figure and applying an hours percentage would put a
+share of a software subscription on a cost objective. It would also hide the
+most useful fact on the page: **YBI already direct-charges his project work
+when it is billed as project work.** That is evidence about how the
+organisation treats this, and it belongs in front of whoever answers the
+question rather than averaged away.
+
+**The question is the retainer, and it is not arithmetic.** His log puts
+35.47% of his effort on ESP, Hybrid II and Rising Tides — 240 of those hours
+on Hybrid and Rising Tides that nothing bills separately — which is
+**$25,899.83** of a group sitting wholly in G&A. Moving it would take the
+combined rate from 34.82% to **34.13%**, *down* 0.69 points, which is the
+direction worth knowing before anybody assumes a finding is worth chasing.
+
+It stays a question because **2 CFR 200.413(c)** decides it: directly
+charging what is otherwise an administrative function takes four conditions,
+and the third — explicitly in the budget, or prior written approval — is
+exactly what these awards do not have. The view states the amount and names
+the objectives; somebody else answers it.
+
+Two things it deliberately does not do. It puts **no figure against a group
+already on a cost objective**, because a number against a settled question is
+a number in a control that means nothing. And it **cannot tell time from
+pass-through** — `5215` is software and is flagged beside the retainer
+because nothing in the data distinguishes them. The account name does, to a
+reader, and the rows are ordered by size so the $73,024.44 question sits
+above the $4,909.82 one. Inventing a rule to separate them would be guessing
+at a judgment.
+
+One thing found by a test: the first draft wrote **`'YBI-GA'` as a literal**
+for the administrative objective in three places.
+`cost_objective.objective_type` already carries it — `ADMINISTRATION` — and a
+second copy of that fact is free to be wrong the day somebody opens another
+administrative objective. The test that caught it then failed again because
+the fixture said `INDIRECT` from memory; *read the schema, never recall it*
+applies to the test as much as to the code.
+
 ## The screen the draft never had
 
 `DraftCard` in `Timesheet.jsx`. The routes above shipped with **no page, no

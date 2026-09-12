@@ -224,6 +224,48 @@ def load_hours(rows: dict, period: str, source: str):
     return written, sorted(monthly), summary, sorted(unmapped)
 
 
+#: Who in the hours log is paid as which ledger payee.
+#:
+#: **A contractor is paid as a company, so a search for their name finds
+#: nothing.** `v_labor_hours_check` reported Tom Metzinger as HOURS WITHOUT
+#: WAGES — 781 hours across twelve months, no payroll row, and no payment to
+#: "Metzinger" anywhere in the general ledger. He is 1099, and the expense is
+#: `5202 Accounting` / `Metz Consulting, LLC.`, $73,024.44. The link took a
+#: trip through a spreadsheet to find; it is a fact, so it is written down.
+CONTRACTORS = [
+    ("METZINGER", "Metz Consulting, LLC.", "W9_1099",
+     "Fractional controller on a semi-monthly retainer, 1099. The hours log "
+     "carries him below the payroll block of the Time Breakdown sheet, "
+     "headed 5202 Accounting, at $72,375 — the ledger's $73,024.44 less one "
+     "December payment still at the old $3,000 rate ($375) and $274.44 of "
+     "1099 filing fees."),
+]
+
+
+def load_contractors(period: str) -> tuple[int, list[str]]:
+    """Record who is paid as whom, and report a link with no ledger behind it.
+
+    A payee that matches nothing is not written: an identity pointing at no
+    money is the citation-with-no-document shape, and it would report a
+    contractor as unclassified for ever.
+    """
+    written, missing = 0, []
+    for key, payee, basis, note in CONTRACTORS:
+        hit = one("""SELECT count(*) AS n FROM ledger_line
+                      WHERE period = %s AND payee = %s""", (period, payee))
+        if not hit or not hit["n"]:
+            missing.append(f"{key} -> {payee}")
+            continue
+        execute("""INSERT INTO contractor_identity
+                     (period, employee_key, payee, basis, note, recorded_by)
+                   VALUES (%s,%s,%s,%s,%s,'load_calendar.py')
+                   ON CONFLICT (period, employee_key, payee) DO UPDATE
+                     SET basis = EXCLUDED.basis, note = EXCLUDED.note""",
+                (period, key, payee, basis, note))
+        written += 1
+    return written, missing
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path", nargs="?", default=str(SOURCE))
@@ -253,6 +295,26 @@ def main() -> int:
         print(f"     {DIM}{', '.join(summary)}{END}")
     if unmapped:
         print(f"  {WARN}unmapped objective(s): {', '.join(unmapped)}{END}")
+
+    linked, missing = load_contractors(a.period)
+    if linked or missing:
+        print(f"  contractors {linked} identity(ies) recorded")
+        for m in missing:
+            print(f"     {WARN}no ledger lines for {m} — not recorded{END}")
+    for r in query("""SELECT employee_key, payee, account, expense, pools,
+                             project_pct, at_stake, objectives, state
+                        FROM v_contractor_effort_check
+                       WHERE period = %s
+                       ORDER BY employee_key, expense DESC""", (a.period,)):
+        mark = {"OPEN": WARN, "TIES": OK}.get(r["state"], DIM)
+        leaf = r["account"].split(":")[-1]
+        print(f"     {mark}{r['state']:<14}{END} {leaf:<34} "
+              f"${r['expense']:>10,} {r['pools'] or '—'}")
+        if r["state"] == "OPEN":
+            print(f"       {DIM}{r['project_pct']}% of {r['employee_key']}'s "
+                  f"hours are on {r['objectives']} — ${r['at_stake']:,} of "
+                  f"this group. 2 CFR 200.413(c) decides it, not "
+                  f"arithmetic.{END}")
 
     off = query("""SELECT month_label, says, weekdays, difference
                      FROM v_work_calendar_check

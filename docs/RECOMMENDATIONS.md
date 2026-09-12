@@ -270,24 +270,37 @@ this is the controller's call rather than a rule to derive.
 
 ---
 
-## Effort on the record with no cost behind it
+## The 1099 controller, and $25,899.83 in the wrong pool — or not
 
-`v_labor_hours_check` (migration `072`) compares each person's share of
-logged hours to their share of distributed wages. Across the eight people
-with a full-year hours log the worst gap is **0.000013** — the distribution
-is the hours log, proven rather than asserted.
+`v_labor_hours_check` found Tom Metzinger with **781 hours across all twelve
+months and no payroll row**. He is 1099: the expense is `5202 Accounting`,
+payee **`Metz Consulting, LLC.`** — $73,024.44, twenty-two semi-monthly
+payments at $3,000, two December at $3,375, and $274.44 of filing fees. The
+workbook's $72,375 reconciles exactly (one December payment at the old rate,
+plus the fees).
 
-It surfaces one thing nobody had asked: **Tom Metzinger logged 781 hours
-across all twelve months of 2025** — 504 on general administration, 120 on
-Hybrid II, 120 on Rising Tides, 37 on ESP — **with no row in the payroll
-distribution and no payment to him anywhere in the general ledger.** 277 of
-those hours are on award objectives.
+He is billed three ways: the retainer ($73,024.44, G&A), software he rebills
+($4,909.82, G&A), and EIR work ($4,880.00, **already direct to ESP**). That
+last one matters — **YBI already direct-charges his project work when it is
+billed as project work.**
 
-Three possibilities and they lead to different places: donated time under
-200.306(e) (which needs a valuation somebody other than him sets), a
-contractor paid through another entity (which needs the cost on the record),
-or uncompensated executive effort (which is a disclosure, not a cost). Worth
-settling before the Single Audit.
+**The open question is the retainer.** His hours log puts 35.47% of his
+effort on ESP, Hybrid II and Rising Tides — 240 hours on Hybrid and Rising
+Tides that nothing bills separately — which is **$25,899.83** of a group
+sitting wholly in G&A.
+
+| | combined rate |
+| --- | ---: |
+| as classified | **34.82%** |
+| if the retainer followed his hours | **34.13%** |
+
+**It goes down, not up.** Worth knowing before treating it as recovery.
+
+**2 CFR 200.413(c) decides it.** Directly charging an otherwise
+administrative function takes four conditions, and the third — explicitly in
+the budget, or prior written approval — is what these awards do not have.
+Two answers are defensible; the record now states the amount and names the
+objectives so the controller can pick one and write down why.
 
 ---
 
