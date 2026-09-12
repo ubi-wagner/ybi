@@ -220,3 +220,69 @@ def _migration(view: str) -> str:
         if m:
             return re.sub(r"--[^\n]*", "", m.group(1))
     raise AssertionError(f"{view} is not defined in any migration")
+
+
+# ── The hard anchors for fringe ───────────────────────────────────────
+
+def test_the_fringe_rate_is_one_pool_over_two_denominators():
+    """21.90% and 22.45% are not two opinions.
+
+    The P&L's six fringe accounts come to $401,783.60. Over the payroll
+    register's $1,835,047.18 that is 0.2190; over the *ledger's* wage
+    accounts, $1,789,993.94, it is 0.2245. The whole of the difference is
+    one number — **$45,053.24** — a donor credit that sat in an intern wage
+    account for a year, understating the ledger's wages and so overstating
+    any rate taken over them.
+
+    Asserted as arithmetic rather than against the live record, so it holds
+    on the empty database CI builds and cannot quietly become a restatement
+    of whatever the database happens to say.
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+    pool = Decimal("401783.60")
+    register = Decimal("1835047.18")
+    ledger = Decimal("1789993.94")
+    q = lambda x: x.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    assert q(pool / register) == Decimal("0.2190")
+    assert q(pool / ledger) == Decimal("0.2245")
+    assert register - ledger == Decimal("45053.24")
+
+
+def test_the_anchor_reads_the_register_not_the_ledger():
+    """Which denominator is the whole question, so the view has to say which
+    one it took. Over the ledger's wage accounts the anchor would assert
+    22.45% — the figure the credit produced — as the thing to converge on."""
+    body = _migration("v_rate_anchor")
+    assert "register_wages" in body, "the fringe rate anchor lost its denominator"
+    assert "ledger_wages" not in body, (
+        "the fringe rate anchor is taking the ledger's wage accounts, which "
+        "are understated by the $45,053.24 credit")
+
+
+def test_nothing_sets_a_rate(cur):
+    """The anchors are controls, not inputs.
+
+    *No rate is computed or displayed during classification; the decision set
+    is sealed first and the rate carries the seal.* An anchor that wrote
+    0.2190 in would be the reverse-engineering the whole system exists to
+    rule out — so the fringe rate is anchored by anchoring both of its parts
+    and letting the figure fall out.
+    """
+    body = _migration("v_rate_anchor")
+    assert "INSERT" not in body.upper() and "UPDATE" not in body.upper(), (
+        "the anchor register writes something")
+    cur.execute("""SELECT count(*) AS n FROM information_schema.views
+                    WHERE table_schema = 'public'
+                      AND table_name = 'v_rate_anchor'""")
+    assert cur.fetchone()["n"] == 1, "v_rate_anchor is not a view"
+
+
+def test_a_fringe_pool_nobody_has_judged_is_no_data(cur):
+    """Same rule as the pool states: 0 against $401,783.60 is not a failing
+    control while nothing has been judged into fringe — it is unevaluated."""
+    a_ledger_line(cur, "1000.00")
+    cur.execute("""SELECT state FROM v_rate_anchor
+                    WHERE period = %s AND control = 'FRINGE_RATE_ON_THE_REGISTER'""",
+                (PERIOD,))
+    row = cur.fetchone()
+    assert row["state"] == "NO DATA", row

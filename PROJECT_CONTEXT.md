@@ -74,7 +74,12 @@ distribution across 20 objectives.
 - **Four people carry 80% of federal labor** — Gaffney, Longo, Engel, Negro.
   All four already keep timesheets. The certification critical path is ~7
   people, not 45.
-- Fringe **22.45%**, matching the controller's own Reference Sheet exactly.
+- Fringe **21.90%**. 22.45% matches the controller's own Reference Sheet
+  exactly, and that agreement is *why the error is worth stating plainly*:
+  both were taken over the ledger's wage accounts, which a $45,053.24
+  donor credit had understated. One pool over two denominators —
+  401,783.60 / 1,835,047.18 = **0.2190** against the payroll register,
+  401,783.60 / 1,789,993.94 = 0.2245 against the ledger. §8.6.
 - 2025 timesheet hours 31,460.5 against 29,397.0 allowable. The controller's
   proportional scaling **is total time accounting** and is the correct method —
   algebraically identical to the effective-rate approach. It also lands
@@ -109,10 +114,19 @@ allocable.
 
 | Rate | |
 |---|---:|
-| **Fringe** on salaries and wages | **22.45%** |
+| **Fringe** on salaries and wages | **21.90%** |
 | Facilities on MTDC | 12.89% |
 | G&A on MTDC | 18.89% |
-| **Combined indirect** on MTDC | **31.78%** |
+| **Combined indirect** on MTDC | **31.78%** * |
+
+\* Computed with fringe at 22.45%. Fringe is part of total direct cost,
+so MTDC moves a little with it and the combined rate moves with MTDC.
+The figure is not restated here because doing so needs a complete
+classification, and the queue is open — **every derived figure ties to a
+control, and one recomputed from an incomplete pool would tie to
+nothing.** `v_rate_anchor` carries the fringe figure the source
+documents imply, and the system arrives at it independently once the
+six accounts the P&L names as fringe are judged.
 
 Certification assumptions worth defending: CEO 50% G&A / 15% fundraising /
 10% facilities; program director 30% G&A; timesheet staff 5% general floor;
@@ -452,7 +466,11 @@ describes a renovation, not an occupancy.
 
 The fringe question is untouched: 21.90% remains the defensible figure and
 22.45% remains a rate computed on a wage base a $45,000 donor credit was
-netted out of. Nothing here bears on the Bacon reclassification, which is
+netted out of. The tables above said 22.45% for longer than this paragraph
+said 21.90% — a document that carried both and put the stale one where a
+reader would quote it. Corrected from the record rather than from memory:
+the credit is $45,053.24 to the cent, and `v_rate_anchor` now holds the
+arithmetic as a control. Nothing here bears on the Bacon reclassification, which is
 still a QuickBooks entry Tom has to make.
 
 ---

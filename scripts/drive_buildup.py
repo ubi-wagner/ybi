@@ -209,11 +209,26 @@ def main() -> int:
               f"{u.text[:160]}", file=sys.stderr)
         return 2
 
-    q = tom.get("/api/classify/queue",
-                params={"status": "undecided", "limit": 40}).json()
-    wages = [g for g in q if "Payroll" in g["account"]][:2]
+    # The six accounts the P&L itself names as fringe, not "something with
+    # Payroll in the name". `v_payroll_reconciliation.fringe_pool` is the sum
+    # of exactly these, so judging them is what makes the fringe anchors
+    # evaluable — and the rate that falls out is checkable against a figure
+    # off the source documents rather than against whatever the drive
+    # happened to pick.
+    FRINGE_ACCOUNTS = ("5130 Benefits", "5133 401k", "5145 Bureau",
+                       "5151 Social", "5185 FUTA", "5195 SUI")
+    q = []
+    for offset in (0, 200, 400, 600, 800):
+        page = tom.get("/api/classify/queue",
+                       params={"status": "undecided", "limit": 200,
+                               "offset": offset}).json()
+        if not isinstance(page, list) or not page:
+            break
+        q += page
+    wages = [g for g in q
+             if any(a in g["account"] for a in FRINGE_ACCOUNTS)]
     if not wages:
-        print("\nCOULD NOT RUN — no open payroll group to put in FRINGE.",
+        print("\nCOULD NOT RUN — none of the P&L's fringe accounts is open.",
               file=sys.stderr)
         return 2
     # And something into OVERHEAD, because the two checks that matter most
@@ -317,6 +332,20 @@ def main() -> int:
                             f"no objective carries any of it")
 
     step("What the rate as a whole is anchored to")
+    # The fringe rate the source documents imply, stated before the loop so a
+    # reader sees the hard number rather than inferring it from a variance.
+    hard = one("""SELECT round(fringe_pool / NULLIF(register_wages, 0), 4) AS r,
+                         fringe_pool, register_wages, ledger_wages,
+                         round(fringe_pool / NULLIF(ledger_wages, 0), 4) AS on_ledger
+                    FROM v_payroll_reconciliation WHERE period = %s""",
+              (period,))
+    if hard and hard["r"] is not None:
+        ok(f"the register implies fringe at {hard['r']} — {hard['fringe_pool']} "
+           f"over {hard['register_wages']}. The same pool over the ledger's "
+           f"wage accounts is {hard['on_ledger']}, and the difference between "
+           f"the two denominators is the "
+           f"{Decimal(str(hard['register_wages'])) - Decimal(str(hard['ledger_wages']))} "
+           f"credit")
     for a in query("""SELECT control, description, expected, actual,
                              variance, state, classification_complete
                         FROM v_rate_anchor WHERE period = %s ORDER BY seq""",

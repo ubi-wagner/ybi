@@ -72,7 +72,7 @@ def rate_buildup(period: str | None = None) -> dict:
     # wage accounts. NO DATA is not a pass, and `classification_complete`
     # says whether these are read over a finished queue or a partial one.
     anchors = query("""SELECT control, description, expected, actual, variance,
-                              state, note, classification_complete
+                              state, note, unit, classification_complete
                          FROM v_rate_anchor WHERE period = %s ORDER BY seq""",
                     (period,))
     return {"period": period, "rates": rates, "carve_outs": carves,

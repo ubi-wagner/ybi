@@ -991,6 +991,58 @@ register because a rate over books that disagree is a rate over the wrong
 numbers; these are checks *on* the rate it produced, and gating a computation
 on a control derived from its own output would be circular.
 
+### The hard anchors for fringe
+
+Migration `067`. The engagement has hard figures off the source documents,
+and they reproduce on the live record to the basis point:
+
+        the P&L's six fringe accounts        401,783.60
+        the payroll register's wages       1,835,047.18
+        ---------------------------------------------- = 0.2190   21.90%
+
+        the same pool over the *ledger's*
+        wage accounts, 1,789,993.94                     = 0.2245   22.45%
+
+**21.90% and 22.45% are not two opinions. They are one pool over two
+denominators, and only one of the denominators is the payroll.** The whole of
+the difference is $45,053.24 — the donor credit that sat in an intern wage
+account for a year, understating the ledger's wages so that any rate taken
+over them reads high. The eleventh statement control already finds that
+number (`gross_difference` 45,053.24, `named` −45,053.24, `unexplained`
+0.00); this is the other end of the same fact.
+
+**They are controls, not inputs, and the distinction is the whole system.**
+Nothing here sets a rate — *no rate is computed or displayed during
+classification, the set is sealed first, and the rate carries the seal.*
+Writing 21.90% in as an input would be exactly the reverse-engineering the
+seal exists to rule out. So the fringe rate is anchored the honest way, **by
+anchoring both of its parts**: the numerator to the P&L's fringe accounts and
+the denominator to the payroll register. 21.90% then *falls out* rather than
+being asserted.
+
+And it does. Judge the six accounts the P&L names as fringe and the pool
+comes to $401,783.60 to the cent and the computed rate to **0.219000** —
+arrived at from the judgments, checked against the documents.
+`scripts/drive_buildup.py` does exactly that every run and states the hard
+number, the alternative denominator and the credit between them before it
+checks anything.
+
+One thing to know rather than trust: the six accounts are named **by hand**
+inside `v_payroll_reconciliation` — 5130 Benefits, 5133 401k, 5145 BWC, 5151
+FICA, 5185 FUTA, 5195 SUI. That is the hand-kept-map shape, left alone
+deliberately: it is a transcription of which accounts are fringe, which is a
+judgment somebody made once, and inventing a rule to derive it would be
+guessing at that judgment.
+
+**And `PROJECT_CONTEXT.md` carried both figures.** Its recommendation tables
+said 22.45% while §8.6 said *"21.90% remains the defensible figure"* — a
+load-bearing document contradicting itself with the stale number in the row a
+reader would quote. Corrected from the record. The combined indirect rate is
+flagged rather than restated: fringe is part of total direct cost, so MTDC
+moves with it, and recomputing 31.78% needs a complete classification —
+*every derived figure ties to a control, and one recomputed from an
+incomplete pool would tie to nothing.*
+
 One thing worth not repeating: **the boolean assumption survived two more
 places in the file that introduced it.** `drive_buildup`'s `check_ties` read
 `not ties` and would have called a pool nobody has classified into a broken
