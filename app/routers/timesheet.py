@@ -192,6 +192,20 @@ def put_entry(body: EntryIn, period: str = None,
                  "not linked to one.")
     key = actor.employee_key
 
+    # **`ADOPTED` is not a basis anybody chooses.** It says the hours came
+    # from the controller's reconstruction and the person affirmed them, and
+    # it carries that reconstruction's grade — so a hand-typed day claiming
+    # it would take `MANAGEMENT_RECONSTRUCTION` for a figure nobody rebuilt.
+    # The picker never offers it; this is the gate for a request that does
+    # not come from the picker.
+    if body.basis == TimeBasis.ADOPTED:
+        raise HTTPException(
+            422, "ADOPTED is written only by adopting the reconstruction on "
+                 "your draft — it says those hours came from the controller's "
+                 "rebuild of the year. For a day you are entering yourself, "
+                 "say what it actually rests on: your calendar, a project "
+                 "record, a dated deliverable, or memory.")
+
     p_start, p_end = _period_bounds(period)
     if not (p_start <= body.work_date <= p_end):
         raise HTTPException(
@@ -582,10 +596,18 @@ def adopt(body: AdoptIn, period: str = None,
     entries are written under the calling actor, for the calling actor's own
     employee key, and there is no parameter naming somebody else.
 
-    `basis = RECALL`, always. It is not contemporaneous and recording it as
+    `basis = ADOPTED`, always. It is not contemporaneous and recording it as
     though it were would be the one lie that matters here; `AS_WORKED` is
     refused by the schema more than seven days after the fact anyway, and
     `v_certification_status.reconstructed` reads from this.
+
+    It was `RECALL` and that made the record **worse for being certified**:
+    RECALL grades `UNSUPPORTED`, so a person who read the reconstruction and
+    signed it took their own distribution from
+    `MANAGEMENT_RECONSTRUCTION` down a rung — same numbers, same provenance,
+    plus a signature. `ADOPTED` (migration `070`) carries the
+    reconstruction's grade across instead. RECALL still means what it always
+    meant for a day somebody types from memory.
 
     **One entry per objective per working day, and the schema decided that,
     not this handler.** The first version wrote one entry per objective dated
@@ -667,7 +689,7 @@ def adopt(body: AdoptIn, period: str = None,
                     """INSERT INTO timesheet_entry
                          (period, employee_key, work_date, objective_id, hours,
                           basis, note, entered_by, entered_by_name)
-                       VALUES (%s,%s,%s,%s,%s,'RECALL',%s,%s,%s)""",
+                       VALUES (%s,%s,%s,%s,%s,'ADOPTED',%s,%s,%s)""",
                     (period, key, d, line["objective_id"], h,
                      note, actor.actor_id, actor.display_name))
                 written += 1
@@ -1122,6 +1144,37 @@ def summary(period: str = None, employee_key: str = None,
 
     cover = one("""SELECT * FROM v_timesheet_coverage
                     WHERE period = %s AND employee_key = %s""", (period, key))
+    # **`v_timesheet_coverage` is `FROM v_timesheet_entry`, so somebody with
+    # no entries has no row in it — and their employment terms are still on
+    # the record.** Returning nothing here told the screen the terms were
+    # unknown while the draft card beside it printed "2,080 contracted
+    # hours" from `v_employment_expected`: two cards on one screen
+    # disagreeing about the same fact at the same moment, which is 13.0%
+    # and 2.2% in a smaller place. It also disabled *Submit*, the one thing
+    # somebody with a full sheet and no coverage row would want.
+    #
+    # The terms come from the register of terms either way, so the two
+    # cannot disagree rather than being patched where they happened to.
+    terms = one("""SELECT expected_hours, employed_days, weekly_hours,
+                          statuses, from_date AS employed_from,
+                          to_date AS employed_to
+                     FROM v_employment_expected
+                    WHERE period = %s AND employee_key = %s""", (period, key))
+    if cover is None:
+        cover = {"period": period, "employee_key": key, "entered_hours": 0,
+                 "chargeable_hours": 0, "leave_hours": 0, "days_with_time": 0,
+                 "donated_hours": 0, "coverage": None,
+                 "submitted_coverage": None, "submitted_at": None,
+                 "first_day": None, "last_day": None,
+                 "expected_hours": None, "employed_days": None,
+                 "weekly_hours": None, "statuses": None,
+                 "employed_from": None, "employed_to": None,
+                 "terms_known": False}
+    else:
+        cover = dict(cover)
+    if terms:
+        cover.update(dict(terms))
+        cover["terms_known"] = terms["expected_hours"] is not None
     by_month = query("""SELECT month_label, entered_hours, expected_hours,
                                coverage, days_with_time
                           FROM v_timesheet_month

@@ -160,6 +160,13 @@ export const api = {
     req("/timesheet/employment", { method: "PUT", body: JSON.stringify(body) }),
   timesheetCoverage: (params) =>
     req("/timesheet/coverage?" + new URLSearchParams(params || {})),
+  /* The controller's reconstruction, shown to the person whose work it was.
+     A proposal, in the same sense every other proposal here is one: nothing
+     is on the sheet until they adopt it. */
+  timesheetDraft: (period = "2025") =>
+    req(`/timesheet/draft?period=${period}`),
+  adoptDraft: (body) =>
+    req("/timesheet/adopt", { method: "POST", body: JSON.stringify(body) }),
   submitTimesheet: (body) =>
     req("/timesheet/submit", { method: "POST", body: JSON.stringify(body) }),
   withdrawTimesheet: (body) =>

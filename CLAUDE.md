@@ -1522,6 +1522,81 @@ A submitted timesheet switches that person's distribution in
 reconstruction faithfully reproduces its shares, so the rate holds. If it did
 not, the rate would depend on who had got round to signing.
 
+### And certifying must not make the record worse
+
+Migration `070`. `adopt` wrote `basis = 'RECALL'`, and `v_timesheet_entry`
+grades RECALL `UNSUPPORTED` unconditionally. So the act the whole
+certification exercise exists to produce made the record **weaker**, measured
+on the live record for one person:
+
+    before adopting    RECONSTRUCTION   MANAGEMENT_RECONSTRUCTION
+    after submitting   TIMESHEET        UNSUPPORTED
+
+Same numbers, same provenance — the controller's rebuild from payroll and
+hours logs — plus a signature, and the grade drops a rung. Across forty-three
+people that is every workpaper reading `evidence_quality` getting worse for
+doing the work: **a control that punishes the person who clears it**, which
+is `FACILITY_UNPARTITIONED` wearing the opposite sign.
+
+**`RECALL` was never wrong, it was the wrong question.** For a day somebody
+types from memory it is exactly right — *honest recollection with nothing
+behind it* — and it stays `UNSUPPORTED`. What the enum could not say is that
+the hours came from the organisation's reconstruction and the person affirmed
+them. `ingest_channel = 'GENERATED'` in `038` is the same move for the same
+reason: every other value meant the document came from outside, and there was
+no value meaning *this system made it*.
+
+`ADOPTED` grades `MANAGEMENT_RECONSTRUCTION` — **carried across, not raised.**
+It *is* the reconstruction, which already holds that grade on
+`labor_allocation.evidence_quality`; adopting adds no document and takes none
+away. The strengthening a signature does belongs on `v_certification_status`,
+not in a column about documentary support, and `CORROBORATED` would claim a
+contemporaneous record that does not exist.
+
+**Nobody can choose it.** It is written only by the adopt route; the basis
+picker does not offer it and `POST /api/timesheet/entry` refuses it, because
+a hand-typed day claiming it would take `MANAGEMENT_RECONSTRUCTION` for a
+figure nobody rebuilt.
+
+One thing worth not repeating: `070` first replaced the view with the body
+from `017`, and Postgres refused with *cannot change name of view column
+"lag_days" to "override_reason"* — `017` says `SELECT e.*` and predates three
+columns, while `019` is where the view is actually defined now. **Lift from
+the definition in force, not the first one written.** And a new enum label
+cannot be used in the transaction that adds it, which migrations run in, so
+the mapping compares `e.basis::text` rather than casting a literal.
+
+## The screen the draft never had
+
+`DraftCard` in `Timesheet.jsx`. The routes above shipped with **no page, no
+call in `api.js`, nothing in `App.jsx`** — the restatement's defect,
+reintroduced one section later by the person who wrote that section down.
+Forty-three people were the users and none of them could reach it.
+
+It sits above the submit card, because the order is read the proposal, adopt
+it, correct what is wrong, then submit. Three rules it keeps:
+
+- **"Not yet, because", never an empty list.** Where the draft is not
+  adoptable the card is the same size and prints the server's reason — which
+  is nearly always that nobody has recorded the employment terms, the thing
+  somebody has to go and get.
+- **Nothing is computed on it.** The hours, the shares, the working days and
+  the per-day figure are read from the answer. A screen that divided the
+  shares itself would be a second implementation of the distribution.
+- **A button that would answer 409 is not offered.** Once the reconstruction
+  is on the sheet, adopting again collides on day and objective, so the card
+  says what the state is instead. `adopted` is derived from the sheet rather
+  than remembered in the component, because a flag set on success is wrong
+  the moment somebody reloads.
+
+And it found one more. `GET /api/timesheet/summary` returned `coverage: null`
+for anybody with no entries — `v_timesheet_coverage` is `FROM
+v_timesheet_entry` again — so the draft card printed *2,080 contracted hours*
+while the submit card beneath it said *nobody has recorded your employment
+terms*, **on one screen at one moment**, with *Submit* disabled. 13.0% and
+2.2% in a smaller place. The terms come from `v_employment_expected` in both,
+so the two cannot disagree rather than being patched where they happened to.
+
 ## Five registers with no writer, found by sweeping rather than by reading
 
 Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to

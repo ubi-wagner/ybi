@@ -185,7 +185,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "4370ee80-8018-429c-934a-220ee220ae6c",
+    "actor_id": "9f61b305-0a77-4890-a198-a0166e0994a0",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -375,13 +375,13 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
       "n": 27
     },
     {
-      "actor": "Engagement Auditor",
-      "role": "AUDITOR",
+      "actor": "Heidi Ruby",
+      "role": "CONTROLLER",
       "n": 21
     },
     {
-      "actor": "Heidi Ruby",
-      "role": "CONTROLLER",
+      "actor": "Engagement Auditor",
+      "role": "AUDITOR",
       "n": 21
     },
     {

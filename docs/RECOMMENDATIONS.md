@@ -84,12 +84,12 @@ no employment terms.
    and the dates worked. Those give `expected_hours`, which is the
    denominator, and until it exists the draft has nothing to divide and says
    so rather than guessing.
-2. **Each person adopts their own pre-populated sheet.**
-   `GET /api/timesheet/draft` turns each objective's share of that person's
-   wages into the same share of their contracted hours;
-   `POST /api/timesheet/adopt` writes it under their own name. Nobody enters
-   time for anybody else — that rule does not bend, and a sheet somebody else
-   filled in is the precise thing a certification exists to rule out.
+2. **Each person adopts their own pre-populated sheet.** On `/timesheet`,
+   under *The reconstruction of your year*: it shows each objective's share
+   of that person's wages as the same share of their contracted hours, and
+   adopting writes it under their own name. Nobody enters time for anybody
+   else — that rule does not bend, and a sheet somebody else filled in is the
+   precise thing a certification exists to rule out.
 3. **Each person submits and signs.** The certification records the
    distribution and its hash, so what was signed cannot drift afterwards.
 
@@ -113,6 +113,16 @@ submitted timesheet switches that person's distribution in
 `v_labor_effective` from reconstructed units to hours. Adopting the
 reconstruction faithfully reproduces its shares, so the rate holds — if it
 did not, the rate would depend on who had got round to signing.
+
+**And it does not weaken the evidence.** Adopting first recorded the hours as
+`RECALL`, which grades `UNSUPPORTED`, so a person who read the reconstruction
+and signed it took their own distribution *down* a rung from
+`MANAGEMENT_RECONSTRUCTION` — same numbers, same provenance, plus a
+signature. Across 43 people that would have made every workpaper reading
+`evidence_quality` worse for doing the work. It carries the reconstruction's
+grade across now: adopting adds no document and takes none away, and the
+strengthening a signature does is recorded where it belongs, on the
+certification.
 
 `v_certification_chase` is the list to work, by manager. A manager cannot
 sign on somebody's behalf: 200.430(i) wants the person whose effort it was.

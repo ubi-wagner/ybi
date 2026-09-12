@@ -54,6 +54,10 @@ class TimeBasis(StrEnum):
     PROJECT_RECORD = "PROJECT_RECORD"
     DELIVERABLE = "DELIVERABLE"
     RECALL = "RECALL"
+    #: Written only by POST /api/timesheet/adopt. Deliberately absent from
+    #: the basis picker: a person typing a day cannot assert that the
+    #: organisation reconstructed it for them.
+    ADOPTED = "ADOPTED"
 
 
 class EmploymentStatus(StrEnum):

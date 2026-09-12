@@ -109,11 +109,14 @@ def test_nobody_adopts_for_anybody_else():
         "adopt must not take an employee key from the request")
 
 
-def test_what_is_adopted_is_recorded_as_recalled():
+def test_what_is_adopted_is_not_recorded_as_contemporaneous():
     """It is not contemporaneous and recording it as though it were is the
     one lie that matters here. `v_certification_status.reconstructed` reads
-    from this."""
-    assert "'RECALL'" in body_of("adopt")
+    from this. `ADOPTED` since `070` — see the grade tests below for why it
+    is no longer `RECALL`."""
+    adopt = body_of("adopt")
+    assert "'ADOPTED'" in adopt
+    assert "'AS_WORKED'" not in adopt
 
 
 def test_adopting_has_to_be_acknowledged():
@@ -133,3 +136,140 @@ def test_a_day_holds_twenty_four_hours_and_the_handler_says_so_first():
         "adopt must check the per-day total before it writes")
     assert "holds 24" in adopt, (
         "and say so in words the person can act on")
+
+
+# ── adopting must not make the record worse ──────────────────────────
+#
+# Migration `070`. `adopt` wrote `basis = 'RECALL'`, which grades
+# `UNSUPPORTED` unconditionally — so a person who read the controller's
+# reconstruction and signed it took their own distribution from
+# `MANAGEMENT_RECONSTRUCTION` down a rung. Same numbers, same provenance,
+# plus a signature. Measured on the live record before the fix:
+#
+#     before adopting   RECONSTRUCTION   MANAGEMENT_RECONSTRUCTION
+#     after submitting  TIMESHEET        UNSUPPORTED
+#
+# Across forty-three people that is every workpaper reading
+# `evidence_quality` getting worse for doing the work.
+
+import os
+
+dbonly = pytest.mark.skipif(not os.getenv("DATABASE_URL"),
+                            reason="needs a database")
+
+PERIOD = "2095"
+
+
+@pytest.fixture
+def cur():
+    from app.db import conn
+    with conn() as c:
+        with c.transaction(force_rollback=True):
+            with c.cursor() as cursor:
+                cursor.execute(
+                    """INSERT INTO fiscal_period (period, start_date, end_date)
+                       VALUES (%s,'2095-01-01','2095-12-31')
+                       ON CONFLICT DO NOTHING""", (PERIOD,))
+                cursor.execute(
+                    """INSERT INTO cost_objective (objective_id, period, label,
+                                                   objective_type, is_federal)
+                       VALUES ('T-OBJ',%s,'Test','PROGRAM',false)
+                       ON CONFLICT DO NOTHING""", (PERIOD,))
+                yield cursor
+
+
+def an_entry(cur, basis, *, work_date="2095-06-03"):
+    cur.execute("""SELECT actor_id FROM actor LIMIT 1""")
+    row = cur.fetchone()
+    if row is None:                       # a bare database has no accounts
+        pytest.skip("no actor to enter time as")
+    cur.execute("""INSERT INTO timesheet_entry
+                     (period, employee_key, work_date, objective_id, hours,
+                      basis, entered_by, entered_by_name)
+                   VALUES (%s,'TESTER',%s,'T-OBJ',8,%s,%s,'test')
+                RETURNING entry_id""",
+                (PERIOD, work_date, basis, row["actor_id"]))
+    return cur.fetchone()["entry_id"]
+
+
+def grade_of(cur, entry_id):
+    cur.execute("""SELECT entry_grade::text AS g FROM v_timesheet_entry
+                    WHERE entry_id = %s""", (entry_id,))
+    return cur.fetchone()["g"]
+
+
+@dbonly
+def test_an_adopted_reconstruction_keeps_the_grade_it_came_from(cur):
+    """Carried across, not raised. It *is* the reconstruction, which already
+    holds that grade on `labor_allocation.evidence_quality`; adopting neither
+    adds a document nor takes one away."""
+    assert grade_of(cur, an_entry(cur, "ADOPTED")) == "MANAGEMENT_RECONSTRUCTION"
+
+
+@dbonly
+def test_adopting_is_not_graded_as_contemporaneous(cur):
+    """The strengthening a signature does belongs on
+    `v_certification_status`, not in a column about documentary support.
+    `CORROBORATED` would claim a record made at the time."""
+    assert grade_of(cur, an_entry(cur, "ADOPTED")) != "CORROBORATED"
+    assert grade_of(cur, an_entry(cur, "ADOPTED",
+                                  work_date="2095-12-31")) != "CORROBORATED"
+
+
+@dbonly
+def test_recall_still_means_what_it_always_meant(cur):
+    """`RECALL` was never wrong — it is exactly right for a day somebody
+    types from memory, and it stays UNSUPPORTED. The defect was that the
+    enum had no way to say the hours came from the organisation's
+    reconstruction, which is `ingest_channel = 'GENERATED'` in `038` for the
+    same reason."""
+    assert grade_of(cur, an_entry(cur, "RECALL")) == "UNSUPPORTED"
+
+
+@dbonly
+def test_adopting_never_grades_below_the_reconstruction(cur):
+    """The property, rather than the two spellings of it: whatever the
+    mapping says, an adopted entry must not rank below what
+    `labor_allocation` already carries for the same hours."""
+    cur.execute("""SELECT enumlabel, enumsortorder FROM pg_enum
+                    WHERE enumtypid = 'evidence_grade'::regtype""")
+    order = {r["enumlabel"]: r["enumsortorder"] for r in cur.fetchall()}
+    adopted = grade_of(cur, an_entry(cur, "ADOPTED"))
+    assert order[adopted] >= order["MANAGEMENT_RECONSTRUCTION"], (
+        f"adopting graded {adopted}, below the reconstruction it came from")
+
+
+def test_a_hand_typed_day_may_not_claim_it_was_adopted():
+    """It says the hours came from the controller's rebuild and carries that
+    grade, so a day somebody types claiming it would take
+    MANAGEMENT_RECONSTRUCTION for a figure nobody rebuilt. The picker never
+    offers it; the handler is the gate for a request that does not come from
+    the picker."""
+    entry = body_of("put_entry")
+    assert "TimeBasis.ADOPTED" in entry, (
+        "POST /timesheet/entry must refuse the adopted basis")
+
+
+def test_the_basis_picker_does_not_offer_adopted():
+    """A person cannot assert that the organisation reconstructed their day
+    for them, so it is not on the list they choose from."""
+    picker = re.search(r"^BASES\s*=\s*\[(.*?)^\]", SOURCE, re.S | re.M)
+    assert picker, "no BASES picker found"
+    assert "ADOPTED" not in picker.group(1)
+
+
+@dbonly
+def test_it_holds_on_the_shape_the_real_entries_have(cur):
+    """The fixture period above is in the future, so `lag_days` is negative
+    and every entry would reach the contemporaneous branch anyway — which
+    makes it a stringent test of precedence and a weak test of the real
+    case. A 2025 sheet adopted in 2026 has a lag of about 437 days, where
+    the fall-through is `UNSUPPORTED`, and that is the shape all
+    forty-three people have.
+    """
+    entry = an_entry(cur, "ADOPTED", work_date="2019-06-03")
+    cur.execute("""SELECT lag_days, entry_grade::text AS g
+                     FROM v_timesheet_entry WHERE entry_id = %s""", (entry,))
+    row = cur.fetchone()
+    assert row["lag_days"] > 45, "the point of this test is a long lag"
+    assert row["g"] == "MANAGEMENT_RECONSTRUCTION"

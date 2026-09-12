@@ -103,6 +103,7 @@ function Sheet({ actor, viewing, onBack }) {
   const [cursor, setCursor] = useState(() => new Date(2025, 2, 3));
   const [basis, setBasis] = useState("CALENDAR");
   const [openDay, setOpenDay] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [error, setError] = useState("");
 
   const year = cursor.getFullYear();
@@ -124,6 +125,17 @@ function Sheet({ actor, viewing, onBack }) {
       setData(d); setSummary(s); setError("");
     } catch (e) {
       setError(String(e.message || e));
+    }
+    /* The draft is only ever the caller's own — `adopt` writes under the
+       calling actor and takes no employee key, so offering it while reading
+       somebody else's sheet would be a button that cannot mean what it says.
+       It is loaded separately from the pair above because a person with no
+       reconstruction is a normal state and must not blank the screen. */
+    if (viewing) { setDraft(null); return; }
+    try {
+      setDraft(await api.timesheetDraft());
+    } catch {
+      setDraft(null);
     }
   }, [range.start, range.end, viewing]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -385,6 +397,10 @@ function Sheet({ actor, viewing, onBack }) {
         </Card>
       )}
 
+      {editable && !viewing && (
+        <DraftCard draft={draft} onDone={load} />
+      )}
+
       {editable && <SubmitCard summary={summary} onDone={load} />}
 
       <Card title="What this adds up to"
@@ -460,6 +476,158 @@ function Sheet({ actor, viewing, onBack }) {
 /* Calling the sheet finished is a separate act from filling it in, and it is
    the act that makes the timesheet speak for the year instead of the
    controller's reconstruction. So it says what it is claiming, in hours. */
+/*
+  The controller's reconstruction, shown to the person whose work it was.
+
+  2 CFR 200.430(i) does not require a contemporaneous record — it requires one
+  that reflects the work actually performed, supported, and reviewed after the
+  fact. A reconstruction the person reads, corrects and signs meets that; a
+  reconstruction nobody ever saw does not, which is where 2025 has been
+  sitting: 43 people, zero entries, zero certifications.
+
+  So this is a **proposal**, in the same sense every other proposal in this
+  system is one. Nothing here is on the sheet. Adopting writes it under the
+  person's own name, and the router takes no employee key, because nobody
+  enters time for anybody else.
+
+  Two rules the restatement screen already follows, and this one keeps:
+
+  - **"Not yet, because", never an empty list.** Where the draft cannot be
+    adopted the server says why, and the reason is the work — usually that
+    nobody has recorded the employment terms the hours are divided by.
+  - **Nothing is computed here.** Every figure is read from the answer,
+    including the hours, the working days and the share. A screen that
+    divided the shares itself would be a second implementation of the
+    distribution, free to disagree with the one that gets written.
+*/
+function DraftCard({ draft, onDone }) {
+  const toast = useToast();
+  const [ack, setAck] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  if (!draft) return null;
+
+  const lines = draft.lines || [];
+  const alreadyEntered = Number(draft.already_entered || 0);
+  /* Adopted is read from the sheet rather than remembered in this component:
+     a flag set on success would be wrong the moment somebody reloads, and
+     the answer is already on the record. Every proposed hour is on the sheet
+     when the entered total has reached what the draft proposes. */
+  const proposed = lines.reduce((a, l) => a + Number(l.hours || 0), 0);
+  const adopted = proposed > 0 && alreadyEntered >= proposed - 0.005;
+
+  async function adopt() {
+    setBusy(true);
+    try {
+      const r = await api.adoptDraft({ acknowledged: true });
+      toast(`Adopted — ${hours(r.hours)} hours across ${r.working_days} working days`,
+            { tone: "ok" });
+      setAck(false);
+      await onDone();
+    } catch (e) {
+      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
+      let detail = msg;
+      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
+      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+            { tone: "fail", sticky: true });
+    }
+    setBusy(false);
+  }
+
+  /* Not adoptable is the ordinary state until the roster reply comes back,
+     and it is worth as much screen as the adoptable one: the sentence names
+     the thing somebody has to go and get. */
+  if (!draft.adoptable) {
+    return (
+      <Card title="The reconstruction of your year"
+            aside="Not yet — and here is why">
+        <p className="quiet small">{draft.because}</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="The reconstruction of your year" variant="raised"
+          aside={`${hours(draft.expected_hours)} contracted hours · ${draft.working_days} working days`}>
+      <p className="quiet small">{draft.because}</p>
+
+      {adopted && (
+        <p className="quiet small">
+          You have adopted this. It is on your sheet above as your own record —
+          correct any day that is wrong, then submit. Adopting again would be
+          refused, because the hours are already there.
+        </p>
+      )}
+      {!adopted && alreadyEntered > 0 && (
+        <p className="quiet small">
+          You already have {hours(alreadyEntered)} hours on this sheet.
+          Adopting adds the reconstruction alongside them and will be refused
+          where the two land on the same day and objective — so correct or
+          remove those first if you want the reconstruction to stand instead.
+        </p>
+      )}
+
+      <Table columns={[
+        { label: "Objective", align: "left" }, { label: "Share" },
+        { label: "Hours" }, { label: "Grade", align: "left" },
+      ]}>
+        {lines.map((l) => (
+          <tr key={l.objective_id}>
+            <td className="l"><strong>{l.objective_id}</strong></td>
+            <td className="num">{(Number(l.share) * 100).toFixed(1)}%</td>
+            <td className="num">{hours(l.hours)}</td>
+            <td className="l quiet small">{GRADE[l.grade] || l.grade}</td>
+          </tr>
+        ))}
+      </Table>
+
+      <p className="quiet small">
+        Adopting records these hours as <strong>recalled</strong>, spread
+        evenly across the {draft.working_days} weekdays you were employed —
+        about {hours(draft.hours_per_day)} hours a day. It is not a diary and
+        does not pretend to be one: the same split every day is what a
+        reconstruction honestly looks like.
+      </p>
+
+      <button className="linkish" onClick={() => setOpen(!open)}>
+        {open ? "Hide" : "Where these figures come from"}
+      </button>
+      {open && (
+        <div className="ts-draft-why">
+          {lines.map((l) => (
+            <p key={l.objective_id} className="quiet small">
+              <strong>{l.objective_id}</strong> — {l.rationale}
+              {l.source ? ` (${l.source})` : ""}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* **A button that would answer 409 is the lesson the nav already
+          learned.** Once the reconstruction is on the sheet, adopting again
+          is refused by the day-and-objective collision, so the card stops
+          offering it and says what the state is instead. */}
+      {!adopted && (
+        <>
+          <label className="cert-ack">
+            <input type="checkbox" checked={ack}
+                   onChange={(e) => setAck(e.target.checked)} />
+            <span>
+              I have read this and it is a fair record of my own work. I
+              understand I can correct any day before I submit the sheet.
+            </span>
+          </label>
+          <button className="btn primary" disabled={!ack || busy} onClick={adopt}>
+            {busy ? "Adopting…" : "Adopt this as my sheet"}
+          </button>
+        </>
+      )}
+    </Card>
+  );
+}
+
+
 function SubmitCard({ summary, onDone }) {
   const toast = useToast();
   const [ack, setAck] = useState(false);
