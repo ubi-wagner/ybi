@@ -46,6 +46,23 @@ def code(cur):
 
 
 @pytest.fixture
+def somebody(cur):
+    """An account, because a todo reaches a person rather than a payroll key.
+
+    `060` moved `todo.assignee` to `assignee_actor` for one reason: Tom holds
+    CONTROLLER and is not on the payroll register, so the handoff this whole
+    mechanism exists for could never have reached him.
+    """
+    # CONTROLLER rather than EMPLOYEE: `employee_needs_key` requires an
+    # EMPLOYEE to be on the payroll register, and the point of this fixture
+    # is the person who is *not* — which is Tom exactly.
+    cur.execute("""INSERT INTO actor (email, display_name, password_hash, role)
+                   VALUES ('somebody@test.invalid','Somebody','x','CONTROLLER')
+                   RETURNING actor_id""")
+    return cur.fetchone()["actor_id"]
+
+
+@pytest.fixture
 def proj(cur, code):
     """A code that has been set up, because a todo hangs off a project.
 
@@ -84,10 +101,11 @@ def project(cur, code, **kw):
 
 
 def todo(cur, code=None, **kw):
-    cur.execute("""INSERT INTO todo (period, objective_id, title, assignee,
-                                     due_on, status, blocked_reason, done_at,
-                                     done_by, worklist_kind,
-                                     worklist_entity_id, opened_by)
+    cur.execute("""INSERT INTO todo (period, objective_id, title,
+                                     assignee_actor, due_on, status,
+                                     blocked_reason, done_at, done_by,
+                                     worklist_kind, worklist_entity_id,
+                                     opened_by)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'test')
                    RETURNING todo_id""",
                 (PERIOD, code, kw.get("title", "Do the thing"),
@@ -227,7 +245,7 @@ def test_naming_a_worklist_item_takes_both_halves(cur, proj):
 
 # ── The machine's list and a person's, joined ─────────────────────────
 
-def test_an_item_nobody_has_taken_is_the_interesting_row(cur, proj):
+def test_an_item_nobody_has_taken_is_the_interesting_row(cur, proj, somebody):
     """`v_worklist` has always known *what* is outstanding and
     `v_worklist_owned` added *which portfolio*. Neither could say **who** or
     **by when**, because nothing in the system could write that down."""
@@ -239,16 +257,16 @@ def test_an_item_nobody_has_taken_is_the_interesting_row(cur, proj):
                     WHERE kind = %s AND entity_id = %s""",
                 (item["kind"], item["entity_id"]))
     assert cur.fetchone()["taken"] is False
-    todo(cur, None, assignee="SOMEBODY", worklist_kind=item["kind"],
+    todo(cur, None, assignee=somebody, worklist_kind=item["kind"],
          worklist_entity_id=item["entity_id"])
     cur.execute("""SELECT taken, assignee FROM v_worklist_covered
                     WHERE kind = %s AND entity_id = %s""",
                 (item["kind"], item["entity_id"]))
     row = cur.fetchone()
-    assert row["taken"] and row["assignee"] == "SOMEBODY"
+    assert row["taken"] and row["assignee"] == "Somebody"
 
 
-def test_a_finished_todo_stops_covering_its_item(cur, proj):
+def test_a_finished_todo_stops_covering_its_item(cur, proj, somebody):
     """Otherwise an item stays "taken" for ever on the strength of work that
     finished without clearing it."""
     import datetime as dt
@@ -256,9 +274,9 @@ def test_a_finished_todo_stops_covering_its_item(cur, proj):
     item = cur.fetchone()
     if not item:
         pytest.skip("nothing outstanding on this database to take")
-    todo(cur, None, assignee="SOMEBODY", worklist_kind=item["kind"],
+    todo(cur, None, assignee=somebody, worklist_kind=item["kind"],
          worklist_entity_id=item["entity_id"], status="DONE",
-         done_at=dt.datetime.now(dt.timezone.utc), done_by="SOMEBODY")
+         done_at=dt.datetime.now(dt.timezone.utc), done_by="Somebody")
     cur.execute("""SELECT taken FROM v_worklist_covered
                     WHERE kind = %s AND entity_id = %s""",
                 (item["kind"], item["entity_id"]))
@@ -293,3 +311,162 @@ def test_no_second_register_grew_beside_the_ones_that_exist(cur):
     assert not grew, (
         f"these duplicate a register that already exists: {grew}. See "
         f"migration 059 for which one each of them would be a second copy of.")
+
+
+# ── The handoff ───────────────────────────────────────────────────────
+
+def claim(cur, code, somebody, **kw):
+    cur.execute("""INSERT INTO project_claim
+                     (objective_id, period, covers_from, covers_to, state,
+                      approved_by, note, saw_hours, saw_amount, saw_lines,
+                      saw_documents, invoice_id, invoiced_at, invoiced_by,
+                      queried_reason, queried_at, queried_by,
+                      withdrawn_reason)
+                   VALUES (%s,%s,'2095-01-01','2095-12-31',%s,%s,%s,
+                           %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                   RETURNING claim_id""",
+                (code, PERIOD, kw.get("state", "APPROVED"), somebody,
+                 kw.get("note", "The 2095 work as distributed."),
+                 kw.get("saw_hours", 0), kw.get("saw_amount", 0),
+                 kw.get("saw_lines", 0), kw.get("saw_documents", 0),
+                 kw.get("invoice_id"), kw.get("invoiced_at"),
+                 kw.get("invoiced_by"), kw.get("queried_reason"),
+                 kw.get("queried_at"), kw.get("queried_by"),
+                 kw.get("withdrawn_reason")))
+    return cur.fetchone()["claim_id"]
+
+
+def test_a_todo_reaches_somebody_who_is_not_on_the_payroll(cur, proj, somebody):
+    """The reason `060` exists at all.
+
+    `todo.assignee` was an `employee_key`, and **Tom holds CONTROLLER and is
+    not on the payroll register** — so the very thing the handoff exists to
+    do, hand him a job to invoice, could not have reached him. An employee
+    key says whose effort something was; an account says who is doing the
+    work, and a list of jobs wants the second.
+    """
+    cur.execute("SELECT employee_key FROM actor WHERE actor_id = %s", (somebody,))
+    assert cur.fetchone()["employee_key"] is None, (
+        "the fixture has grown a payroll key, so it no longer stands for the "
+        "person this test is about")
+    todo(cur, proj, assignee=somebody, title="Invoice it")
+    cur.execute("""SELECT assignee, assignee_actor FROM v_todo_live
+                    WHERE title = 'Invoice it'""")
+    got = cur.fetchone()
+    assert got["assignee_actor"] == somebody
+    assert got["assignee"] == "Somebody", (
+        "the live list resolves the account to a name, so a screen never has "
+        "to print a uuid at a person")
+
+
+def test_a_claim_records_what_was_approved_and_notices_it_moving(cur, proj,
+                                                                 somebody):
+    """The four `saw_` columns are the seal, not a second register.
+
+    A claim names a project and a span; what that span contains is read from
+    the registers that hold it. But an approval has to be *of something* or
+    the record moves underneath it and the approval silently comes to cover
+    something else — which is exactly what `decision_set.seal_hash` is for.
+    """
+    claim(cur, proj, somebody, saw_documents=0)
+    cur.execute("""SELECT still_agrees, saw_documents, documents
+                     FROM v_project_claim WHERE objective_id = %s""", (proj,))
+    got = cur.fetchone()
+    assert got["still_agrees"], f"nothing has changed and it reads as moved: {got}"
+
+    # File a document against the project — the record has now moved.
+    cur.execute("""INSERT INTO evidence (evidence_id, period, kind, uri,
+                                         sha256, filename)
+                   VALUES ('EV-claimtest',%s,'other','/tmp/x.pdf','ab','x.pdf')""",
+                (PERIOD,))
+    cur.execute("""INSERT INTO attachment (evidence_id, target_type, target_id,
+                                           attached_by)
+                   VALUES ('EV-claimtest','OBJECTIVE',%s,'test')""", (proj,))
+    cur.execute("""SELECT still_agrees, saw_documents, documents
+                     FROM v_project_claim WHERE objective_id = %s""", (proj,))
+    got = cur.fetchone()
+    assert not got["still_agrees"], (
+        "a document was filed against the project after the approval and the "
+        "claim still reads as agreeing — which is the approval quietly coming "
+        "to cover something it was never shown")
+    assert got["saw_documents"] == 0 and got["documents"] == 1
+
+
+def test_invoiced_carries_the_invoice_and_nothing_else_does(cur, proj, somebody):
+    """`(state = 'INVOICED') = (invoice_id IS NOT NULL)`, both ways. A claim
+    marked settled against nothing is a status somebody set."""
+    with refused(cur, psycopg.errors.CheckViolation):
+        claim(cur, proj, somebody, state="INVOICED")
+
+
+def test_a_query_says_what_is_wrong_with_it(cur, proj, somebody):
+    """A query with no reason is one nobody can answer — the blocked-todo
+    rule, in the place it matters most."""
+    with refused(cur, psycopg.errors.CheckViolation):
+        claim(cur, proj, somebody, state="QUERIED")
+    claim(cur, proj, somebody, state="QUERIED",
+          queried_reason="No ledger line is classified to this objective yet.")
+
+
+def test_withdrawing_says_why_too(cur, proj, somebody):
+    with refused(cur, psycopg.errors.CheckViolation):
+        claim(cur, proj, somebody, state="WITHDRAWN")
+
+
+def test_approving_takes_a_sentence(cur, proj, somebody):
+    """Ten characters is what the schema asks and a reader asks for more. An
+    approval a reviewer reads beside the invoice it led to is worth a
+    sentence."""
+    with refused(cur, psycopg.errors.CheckViolation):
+        claim(cur, proj, somebody, note="ok")
+
+
+def test_one_live_manager_per_code(cur, code):
+    """The rule every other grant here already follows: an amendment
+    supersedes rather than sitting beside. Two live managers on one code is
+    two people each believing the other is watching it."""
+    cur.execute("""INSERT INTO labor_allocation (period, employee_key,
+                                                 objective_id, payroll_wages)
+                   VALUES (%s,'ONE',%s,1000), (%s,'TWO',%s,1000)""",
+                (PERIOD, code, PERIOD, code))
+    cur.execute("""INSERT INTO charge_authority (period, objective_id,
+                                                 employee_key, role_on_project,
+                                                 granted_by, reason)
+                   VALUES (%s,%s,'ONE','MANAGER','test','runs it')""",
+                (PERIOD, code))
+    with refused(cur, psycopg.errors.UniqueViolation):
+        cur.execute("""INSERT INTO charge_authority (period, objective_id,
+                                                     employee_key,
+                                                     role_on_project,
+                                                     granted_by, reason)
+                       VALUES (%s,%s,'TWO','MANAGER','test','because')""",
+                    (PERIOD, code))
+    # And a second person in any other role is fine — the constraint is about
+    # the role, not about the code.
+    cur.execute("""INSERT INTO charge_authority (period, objective_id,
+                                                 employee_key, role_on_project,
+                                                 granted_by, reason)
+                   VALUES (%s,%s,'TWO','','test','on the distribution')""",
+                (PERIOD, code))
+
+
+def test_the_manager_reaches_the_overview_from_the_grant(cur, code):
+    """Read off `role_on_project` rather than a column of its own, because a
+    manager is somebody on the project with a role and that register already
+    exists."""
+    cur.execute("""INSERT INTO project (objective_id, name, opened_by)
+                   VALUES (%s,'A project','test')""", (code,))
+    cur.execute("SELECT manager FROM v_project_overview WHERE objective_id = %s",
+                (code,))
+    assert cur.fetchone()["manager"] is None
+    cur.execute("""INSERT INTO labor_allocation (period, employee_key,
+                                                 objective_id, payroll_wages)
+                   VALUES (%s,'BOSS',%s,1000)""", (PERIOD, code))
+    cur.execute("""INSERT INTO charge_authority (period, objective_id,
+                                                 employee_key, role_on_project,
+                                                 granted_by, reason)
+                   VALUES (%s,%s,'BOSS','MANAGER','test','runs it')""",
+                (PERIOD, code))
+    cur.execute("SELECT manager FROM v_project_overview WHERE objective_id = %s",
+                (code,))
+    assert cur.fetchone()["manager"] == "BOSS"

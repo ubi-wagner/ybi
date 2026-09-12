@@ -27,7 +27,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.audit import record
-from app.auth import Actor, require_project, require_reader
+from app.auth import (Actor, require_controller, require_project,
+                      require_reader)
 from app.db import one, query
 from app.settings import settings
 from app.statelock import turn
@@ -47,7 +48,10 @@ class PersonIn(BaseModel):
 class TodoSeed(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     detail: str = ""
-    assignee: str | None = None
+    #: An account, not a payroll key — see `060`. Tom holds CONTROLLER and is
+    #: not on the payroll register, so a todo keyed to an employee could
+    #: never have reached the one person the handoff exists to reach.
+    assignee_actor: str | None = None
     due_on: dt.date | None = None
 
 
@@ -78,7 +82,7 @@ class TodoIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     detail: str = ""
     objective_id: str | None = None
-    assignee: str | None = None
+    assignee_actor: str | None = None
     due_on: dt.date | None = None
     worklist_kind: str | None = None
     worklist_entity_id: str | None = None
@@ -92,7 +96,7 @@ class TodoPatch(BaseModel):
     title can be rewritten is one nobody can be held to — the same reason a
     reply from a spreadsheet may never touch `display_name`.
     """
-    assignee: str | None = None
+    assignee_actor: str | None = None
     due_on: dt.date | None = None
     status: str | None = None
     blocked_reason: str | None = None
@@ -211,11 +215,12 @@ def open_project(body: ProjectIn, period: str | None = None,
 
         for seed in body.todos:
             cur.execute("""INSERT INTO todo (period, objective_id, title,
-                                             detail, assignee, due_on,
+                                             detail, assignee_actor, due_on,
                                              opened_by, sort_index)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                           VALUES (%s,%s,%s,%s,%s::uuid,%s,%s,%s)""",
                         (period, body.objective_id, seed.title, seed.detail,
-                         seed.assignee, seed.due_on, actor.display_name, todos))
+                         seed.assignee_actor, seed.due_on,
+                         actor.display_name, todos))
             todos += 1
         if todos:
             record(actor, "TODO_OPEN", "project", body.objective_id,
@@ -249,10 +254,24 @@ def project(objective_id: str, period: str | None = None) -> dict:
         "todos": query("""SELECT * FROM v_todo_live WHERE objective_id = %s
                            ORDER BY (due_on IS NULL), due_on, sort_index""",
                        (objective_id,)),
-        "done": query("""SELECT todo_id, title, assignee, done_at, done_by
-                           FROM todo
-                          WHERE objective_id = %s AND status = 'DONE'
-                          ORDER BY done_at DESC LIMIT 20""", (objective_id,)),
+        "done": query("""SELECT t.todo_id, t.title, who.display_name AS assignee,
+                                t.done_at, t.done_by
+                           FROM todo t
+                           LEFT JOIN actor who ON who.actor_id = t.assignee_actor
+                          WHERE t.objective_id = %s AND t.status = 'DONE'
+                          ORDER BY t.done_at DESC LIMIT 20""", (objective_id,)),
+        # The invoices already on file for this objective — what a claim is
+        # settled *against*. No route in this system raises one.
+        "invoices": query("""SELECT invoice_id, invoice_number, invoice_date,
+                                    total, status
+                               FROM invoice
+                              WHERE objective_id = %s
+                              ORDER BY invoice_date, seq""", (objective_id,)),
+        "claims": query("""SELECT * FROM v_project_claim
+                            WHERE objective_id = %s
+                            ORDER BY approved_at DESC""", (objective_id,)),
+        "work": one("SELECT * FROM v_project_work WHERE objective_id = %s",
+                    (objective_id,)),
         "terms": query("""SELECT t.term_key, t.term_value, t.citation,
                                  c.state AS citation_state
                             FROM award_term t
@@ -313,6 +332,330 @@ def set_status(objective_id: str, body: StatusIn,
     return {"objective_id": objective_id, "status": body.status}
 
 
+# ── The handoff ───────────────────────────────────────────────────────
+#
+# The manager approves a span of work and the controller gets a job to do
+# about it — as one act, not two people remembering. And the other way: the
+# controller queries it and it goes back with a reason.
+
+
+class ClaimIn(BaseModel):
+    covers_from: dt.date
+    covers_to: dt.date
+    note: str = Field(min_length=10)
+    due_in_days: int = Field(default=14, ge=1, le=365)
+    #: Who is going to invoice it. Optional, and when it is left out the
+    #: route picks the sole holder of CONTROLLER or hands it to nobody with
+    #: the reason on it — see `_hand_to`. A *person* naming a person is
+    #: better than a rule guessing between two, which is why this exists at
+    #: all: the manager knows who does the invoicing and the system does not.
+    hand_to: str | None = None
+
+
+class QueryIn(BaseModel):
+    reason: str = Field(min_length=10)
+    due_in_days: int = Field(default=7, ge=1, le=365)
+
+
+class InvoicedIn(BaseModel):
+    invoice_id: str
+    note: str = ""
+
+
+def _hand_to(cur, actor: Actor, portfolio: str) -> tuple[str | None, str]:
+    """Who to give this to, and what to say when that is not one person.
+
+    More than one candidate means no candidate — the rule
+    `/api/reconcile/propose` and the evidence matcher both follow, for the
+    same reason: an attribution that could equally have been somebody else is
+    not an attribution. So an unassigned todo with the reason on it beats a
+    todo on whoever happened to sort first.
+    """
+    cur.execute("""SELECT a.actor_id, a.display_name
+                     FROM actor a
+                     JOIN actor_portfolio p ON p.actor_id = a.actor_id
+                    WHERE p.portfolio = %s AND p.revoked_at IS NULL
+                      AND a.is_active AND a.actor_id <> %s
+                    ORDER BY a.display_name""", (portfolio, actor.actor_id))
+    holders = cur.fetchall()
+    if len(holders) == 1:
+        return str(holders[0]["actor_id"]), holders[0]["display_name"]
+    if not holders:
+        return None, (f"nobody else holds {portfolio}, so this is on the list "
+                      f"and unassigned")
+    return None, (f"{len(holders)} people hold {portfolio} — "
+                  + ", ".join(h["display_name"] for h in holders)
+                  + " — so it is unassigned rather than given to whichever "
+                    "of them sorted first")
+
+
+def _raise_todo(cur, actor: Actor, *, period: str, objective_id: str,
+                title: str, detail: str, assignee: str | None,
+                due_on: dt.date, claim_id: str) -> str:
+    cur.execute("""INSERT INTO todo (period, objective_id, title, detail,
+                                     assignee_actor, due_on, opened_by,
+                                     from_claim)
+                   VALUES (%s,%s,%s,%s,%s::uuid,%s,%s,%s::uuid)
+                   RETURNING todo_id""",
+                (period, objective_id, title, detail, assignee, due_on,
+                 actor.display_name, claim_id))
+    return str(cur.fetchone()["todo_id"])
+
+
+@router.post("/{objective_id}/claims", status_code=201)
+def approve_claim(objective_id: str, body: ClaimIn, period: str | None = None,
+                  actor: Actor = Depends(require_project)) -> dict:
+    """The manager says a span of work is right and ready to invoice.
+
+    Nothing about the work is copied here. What the span contains is read
+    from `v_project_work` — hours from timesheets, cost from the live
+    decisions over the ledger, documents from `attachment` — and the four
+    figures recorded on the claim are **what the manager was looking at**, in
+    the sense a seal records what it covered. If the record moves afterwards,
+    `v_project_claim.still_agrees` says so instead of the approval silently
+    coming to cover something else.
+    """
+    period = period or settings.period
+    with turn(period) as cur:
+        cur.execute("""SELECT p.name, p.status,
+                              (SELECT c.employee_key FROM charge_authority c
+                                WHERE c.objective_id = p.objective_id
+                                  AND c.role_on_project = 'MANAGER'
+                                  AND c.revoked_at IS NULL LIMIT 1) AS manager
+                         FROM project p WHERE p.objective_id = %s""",
+                    (objective_id,))
+        proj = cur.fetchone()
+        if not proj:
+            raise HTTPException(404, f"No project on {objective_id}.")
+        if proj["status"] == "CLOSED":
+            raise HTTPException(
+                409, f"{proj['name']} is closed. Reopen it before claiming "
+                     f"against it — a claim on a closed project is work "
+                     f"nobody is watching for.")
+
+        # Read what is there inside the turn, because it is what the approval
+        # is going to be *of*. Read outside it and another controller's
+        # judgment could land between the reading and the recording.
+        cur.execute("""SELECT timesheet_hours, classified_amount,
+                              classified_lines, documents, distributed_wages
+                         FROM v_project_work WHERE objective_id = %s""",
+                    (objective_id,))
+        work = cur.fetchone()
+
+        cur.execute("""INSERT INTO project_claim
+                         (objective_id, period, covers_from, covers_to,
+                          approved_by, note, saw_hours, saw_amount,
+                          saw_lines, saw_documents)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                       RETURNING claim_id""",
+                    (objective_id, period, body.covers_from, body.covers_to,
+                     actor.actor_id, body.note.strip(),
+                     work["timesheet_hours"], work["classified_amount"],
+                     work["classified_lines"], work["documents"]))
+        claim_id = str(cur.fetchone()["claim_id"])
+
+        if body.hand_to:
+            cur.execute("""SELECT a.actor_id, a.display_name FROM actor a
+                             JOIN actor_portfolio p ON p.actor_id = a.actor_id
+                            WHERE (a.actor_id::text = %s OR a.email = %s)
+                              AND p.portfolio = 'CONTROLLER'
+                              AND p.revoked_at IS NULL AND a.is_active""",
+                        (body.hand_to, body.hand_to))
+            named = cur.fetchone()
+            if not named:
+                raise HTTPException(
+                    422, f"{body.hand_to} does not hold CONTROLLER, and "
+                         f"invoicing against an award is the controller's "
+                         f"job. Leave it out to hand it to whoever does.")
+            to, why = str(named["actor_id"]), named["display_name"]
+        else:
+            to, why = _hand_to(cur, actor, "CONTROLLER")
+        due = dt.date.today() + dt.timedelta(days=body.due_in_days)
+        todo_id = _raise_todo(
+            cur, actor, period=period, objective_id=objective_id,
+            title=f"Invoice {proj['name']} for "
+                  f"{body.covers_from} to {body.covers_to}",
+            detail=(f"{actor.display_name} approved it: {body.note.strip()} "
+                    f"— {work['timesheet_hours']} hours booked, "
+                    f"{work['classified_amount']} of cost classified to the "
+                    f"objective, {work['documents']} document(s) on file."
+                    + ("" if to else f" Unassigned: {why}.")),
+            assignee=to, due_on=due, claim_id=claim_id)
+
+        record(actor, "CLAIM_APPROVE", "project_claim", claim_id,
+               after={"objective_id": objective_id,
+                      "covers_from": str(body.covers_from),
+                      "covers_to": str(body.covers_to),
+                      "saw_hours": str(work["timesheet_hours"]),
+                      "saw_amount": str(work["classified_amount"]),
+                      "handed_to": to},
+               reason=body.note.strip(), cursor=cur)
+
+    return {"claim_id": claim_id, "todo_id": todo_id,
+            "handed_to": to, "why_unassigned": None if to else why,
+            "due_on": str(due),
+            "saw": {"hours": str(work["timesheet_hours"]),
+                    "amount": str(work["classified_amount"]),
+                    "lines": work["classified_lines"],
+                    "documents": work["documents"],
+                    "distributed_wages": str(work["distributed_wages"])}}
+
+
+claims = APIRouter(prefix="/claims", tags=["claims"],
+                   dependencies=[Depends(require_reader)])
+
+
+@claims.get("")
+def list_claims(period: str | None = None,
+                objective_id: str | None = None) -> dict:
+    period = period or settings.period
+    rows = query("""SELECT * FROM v_project_claim
+                     WHERE period = %s
+                       AND (%s::text IS NULL OR objective_id = %s)
+                     ORDER BY approved_at DESC""",
+                 (period, objective_id, objective_id))
+    return {"period": period, "claims": rows,
+            "to_invoice": sum(1 for r in rows if r["state"] == "APPROVED"),
+            "moved_since_approval":
+                sum(1 for r in rows if not r["still_agrees"])}
+
+
+@claims.post("/{claim_id}/query")
+def query_claim(claim_id: str, body: QueryIn,
+                actor: Actor = Depends(require_controller)) -> dict:
+    """The other direction. Send it back with what is wrong with it.
+
+    Takes `CONTROLLER` rather than `PROJECT`: querying a claim is the person
+    who would have to issue the invoice saying they cannot, and that is the
+    controller's judgment. The manager's answer comes back as an approval.
+    """
+    period = settings.period
+    with turn(period) as cur:
+        cur.execute("""SELECT c.state, c.objective_id, c.covers_from,
+                              c.covers_to, p.name,
+                              (SELECT a.actor_id FROM actor a
+                                WHERE a.actor_id = c.approved_by) AS manager
+                         FROM project_claim c
+                         JOIN project p ON p.objective_id = c.objective_id
+                        WHERE c.claim_id = %s::uuid""", (claim_id,))
+        claim = cur.fetchone()
+        if not claim:
+            raise HTTPException(404, "No such claim.")
+        if claim["state"] == "INVOICED":
+            raise HTTPException(
+                409, "That is already invoiced. A query after the invoice has "
+                     "gone is a credit or a restatement, not a query — "
+                     "POST /api/restate is the route for it.")
+
+        cur.execute("""UPDATE project_claim
+                          SET state = 'QUERIED', queried_reason = %s,
+                              queried_at = now(), queried_by = %s
+                        WHERE claim_id = %s::uuid""",
+                    (body.reason.strip(), actor.actor_id, claim_id))
+
+        # The todo this raised goes back to whoever approved it, because they
+        # are the one person who can answer — not to whoever holds PROJECT.
+        due = dt.date.today() + dt.timedelta(days=body.due_in_days)
+        todo_id = _raise_todo(
+            cur, actor, period=period, objective_id=claim["objective_id"],
+            title=f"Answer the query on {claim['name']} "
+                  f"{claim['covers_from']} to {claim['covers_to']}",
+            detail=f"{actor.display_name} could not invoice it: "
+                   f"{body.reason.strip()}",
+            assignee=str(claim["manager"]), due_on=due, claim_id=claim_id)
+
+        # And the job it was raised from is answered, whichever way this goes.
+        cur.execute("""UPDATE todo SET status = 'DONE', done_at = now(),
+                              done_by = %s
+                        WHERE from_claim = %s::uuid AND status <> 'DONE'
+                          AND todo_id <> %s::uuid""",
+                    (actor.display_name, claim_id, todo_id))
+
+        record(actor, "CLAIM_QUERY", "project_claim", claim_id,
+               before={"state": claim["state"]}, after={"state": "QUERIED"},
+               reason=body.reason.strip(), cursor=cur)
+    return {"claim_id": claim_id, "state": "QUERIED", "todo_id": todo_id,
+            "went_back_to": str(claim["manager"])}
+
+
+@claims.post("/{claim_id}/invoiced")
+def claim_invoiced(claim_id: str, body: InvoicedIn,
+                   actor: Actor = Depends(require_controller)) -> dict:
+    """Settle it against the invoice on file.
+
+    This links rather than creates. No route in this system raises an
+    invoice and `invoice` is append-only — which for 2025 is exactly right:
+    the invoice already exists, it is one of the three NCDMM issued, and what
+    has been missing is the thread from it back to the work, the people and
+    the documents underneath.
+    """
+    period = settings.period
+    with turn(period) as cur:
+        cur.execute("""SELECT c.state, c.objective_id, c.covers_from,
+                              c.covers_to, c.approved_by, p.name
+                         FROM project_claim c
+                         JOIN project p ON p.objective_id = c.objective_id
+                        WHERE c.claim_id = %s::uuid""", (claim_id,))
+        claim = cur.fetchone()
+        if not claim:
+            raise HTTPException(404, "No such claim.")
+        if claim["state"] == "INVOICED":
+            raise HTTPException(409, "That is already settled.")
+
+        cur.execute("""SELECT invoice_number, objective_id, total
+                         FROM invoice WHERE invoice_id = %s::uuid""",
+                    (body.invoice_id,))
+        inv = cur.fetchone()
+        if not inv:
+            raise HTTPException(404, f"No invoice {body.invoice_id}.")
+        if inv["objective_id"] and inv["objective_id"] != claim["objective_id"]:
+            raise HTTPException(
+                409, f"Invoice {inv['invoice_number']} is on "
+                     f"{inv['objective_id']} and this claim is on "
+                     f"{claim['objective_id']}. Settling a claim against "
+                     f"another objective's invoice is how cost ends up "
+                     f"charged to the wrong award.")
+
+        cur.execute("""UPDATE project_claim
+                          SET state = 'INVOICED', invoice_id = %s::uuid,
+                              invoiced_at = now(), invoiced_by = %s,
+                              queried_reason = NULL, queried_at = NULL,
+                              queried_by = NULL
+                        WHERE claim_id = %s::uuid""",
+                    (body.invoice_id, actor.actor_id, claim_id))
+        cur.execute("""UPDATE todo SET status = 'DONE', done_at = now(),
+                              done_by = %s
+                        WHERE from_claim = %s::uuid AND status <> 'DONE'""",
+                    (actor.display_name, claim_id))
+
+        # And back the other way, so the manager learns it went out rather
+        # than having to go and look. This is the "and vice versa" half: the
+        # loop is only a loop if it closes in both directions.
+        due = dt.date.today() + dt.timedelta(days=30)
+        todo_id = _raise_todo(
+            cur, actor, period=period, objective_id=claim["objective_id"],
+            title=f"Invoice {inv['invoice_number']} is out on "
+                  f"{claim['name']} — watch for the money",
+            detail=(f"{actor.display_name} settled "
+                    f"{claim['covers_from']} to {claim['covers_to']} against "
+                    f"invoice {inv['invoice_number']}"
+                    + (f" for {inv['total']}." if inv["total"] else ".")
+                    + " No payment is recorded against any invoice yet, so "
+                      "this is the record of one to chase."),
+            assignee=str(claim["approved_by"]), due_on=due, claim_id=claim_id)
+
+        record(actor, "CLAIM_INVOICED", "project_claim", claim_id,
+               before={"state": claim["state"]},
+               after={"state": "INVOICED",
+                      "invoice_number": inv["invoice_number"]},
+               reason=body.note.strip() or f"settled against "
+                                           f"{inv['invoice_number']}",
+               cursor=cur)
+    return {"claim_id": claim_id, "state": "INVOICED",
+            "invoice_number": inv["invoice_number"], "todo_id": todo_id,
+            "back_to": str(claim["approved_by"])}
+
+
 # ── The list a person can actually write ──────────────────────────────
 
 todos = APIRouter(prefix="/todos", tags=["todos"],
@@ -320,16 +663,16 @@ todos = APIRouter(prefix="/todos", tags=["todos"],
 
 
 @todos.get("")
-def list_todos(period: str | None = None, assignee: str | None = None,
+def list_todos(period: str | None = None, assignee_actor: str | None = None,
                mine: bool = False, actor: Actor = Depends(require_reader)) -> dict:
     period = period or settings.period
-    who = actor.employee_key if mine else assignee
+    who = str(actor.actor_id) if mine else assignee_actor
     rows = query("""SELECT * FROM v_todo_live
                      WHERE period = %s
-                       AND (%s::text IS NULL OR assignee = %s)
+                       AND (%s::uuid IS NULL OR assignee_actor = %s::uuid)
                      ORDER BY overdue DESC, (due_on IS NULL), due_on,
                               sort_index""", (period, who, who))
-    return {"period": period, "assignee": who, "todos": rows,
+    return {"period": period, "assignee_actor": who, "todos": rows,
             "overdue": sum(1 for r in rows if r["overdue"]),
             "unassigned": sum(1 for r in rows if not r["assignee"])}
 
@@ -351,18 +694,18 @@ def open_todo(body: TodoIn, period: str | None = None,
                          f"the engagement rather than a project carries no "
                          f"charge code at all.")
         cur.execute("""INSERT INTO todo (period, objective_id, title, detail,
-                                         assignee, due_on, worklist_kind,
+                                         assignee_actor, due_on, worklist_kind,
                                          worklist_entity_id, verification_ref,
                                          opened_by)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                       VALUES (%s,%s,%s,%s,%s::uuid,%s,%s,%s,%s,%s)
                        RETURNING todo_id""",
                     (period, body.objective_id, body.title, body.detail,
-                     body.assignee, body.due_on, body.worklist_kind,
+                     body.assignee_actor, body.due_on, body.worklist_kind,
                      body.worklist_entity_id, body.verification_ref,
                      actor.display_name))
         todo_id = str(cur.fetchone()["todo_id"])
         record(actor, "TODO_OPEN", "todo", todo_id,
-               after={"title": body.title, "assignee": body.assignee,
+               after={"title": body.title, "assignee": body.assignee_actor,
                       "due_on": str(body.due_on) if body.due_on else None,
                       "objective_id": body.objective_id,
                       "worklist_kind": body.worklist_kind},
@@ -376,7 +719,7 @@ def change_todo(todo_id: str, body: TodoPatch,
     """Assign it, date it, finish it, or say what is blocking it."""
     period = settings.period
     with turn(period) as cur:
-        cur.execute("""SELECT status, assignee, due_on, title
+        cur.execute("""SELECT status, assignee_actor, due_on, title
                          FROM todo WHERE todo_id = %s::uuid""", (todo_id,))
         was = cur.fetchone()
         if not was:
@@ -396,7 +739,7 @@ def change_todo(todo_id: str, body: TodoPatch,
                      "item nobody can unblock.")
 
         cur.execute("""UPDATE todo
-                          SET assignee = COALESCE(%s, assignee),
+                          SET assignee_actor = COALESCE(%s::uuid, assignee_actor),
                               due_on = COALESCE(%s, due_on),
                               detail = COALESCE(%s, detail),
                               status = %s,
@@ -407,12 +750,15 @@ def change_todo(todo_id: str, body: TodoPatch,
                               done_by = CASE WHEN %s = 'DONE'
                                    THEN COALESCE(done_by, %s) END
                         WHERE todo_id = %s::uuid""",
-                    (body.assignee, body.due_on, body.detail, status,
+                    (body.assignee_actor, body.due_on, body.detail, status,
                      status, (body.blocked_reason or "").strip() or None,
                      status, status, actor.display_name, todo_id))
         record(actor, "TODO_CHANGE", "todo", todo_id,
-               before={"status": was["status"], "assignee": was["assignee"]},
-               after={"status": status, "assignee": body.assignee or was["assignee"],
+               before={"status": was["status"],
+                       "assignee": str(was["assignee_actor"] or "")},
+               after={"status": status,
+                      "assignee": body.assignee_actor
+                                  or str(was["assignee_actor"] or ""),
                       "due_on": str(body.due_on) if body.due_on else None},
                reason=(body.blocked_reason or "").strip() or was["title"],
                cursor=cur)

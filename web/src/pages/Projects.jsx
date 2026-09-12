@@ -92,8 +92,10 @@ export default function Projects({ actor }) {
             { label: "Project", align: "left" },
             { label: "Contract", align: "left" },
             { label: "Ceiling" },
+            { label: "Manager", align: "left" },
             { label: "People" },
             { label: "To do" },
+            { label: "To invoice" },
             { label: "Overdue" },
             { label: "Status", align: "left" },
           ]}>
@@ -113,11 +115,19 @@ export default function Projects({ actor }) {
                   {p.ceiling_federal ? money(p.ceiling_federal)
                                      : <span className="rowsub">—</span>}
                 </td>
+                <td className="l rowsub">
+                  {p.manager || <span className="warnish">nobody</span>}
+                </td>
                 <td style={{ color: p.people === 0 ? "var(--warn)" : undefined }}>
                   {p.people}
                 </td>
                 <td>{p.todos_open}{p.todos_blocked > 0 &&
                   <span className="warnish"> · {p.todos_blocked} blocked</span>}</td>
+                <td>
+                  {p.claims_to_invoice || ""}
+                  {p.claims_queried > 0 &&
+                    <span className="warnish"> · {p.claims_queried} queried</span>}
+                </td>
                 <td className={p.todos_overdue > 0 ? "amt neg" : "amt"}>
                   {p.todos_overdue || ""}
                 </td>
@@ -250,6 +260,8 @@ function ProjectDetail({ d, canWrite, toast, onChange }) {
         )}
       </Card>
 
+      <Claims d={d} toast={toast} onChange={onChange} />
+
       <TodoList rows={d.todos} canWrite={canWrite} toast={toast}
                 onChange={onChange} objectiveId={p.objective_id}
                 title="To do on this project" />
@@ -336,7 +348,7 @@ function TodoList({ rows, canWrite, toast, onChange, objectiveId, title, aside }
       await api.openTodo({
         title: f.title, detail: f.detail,
         objective_id: objectiveId || null,
-        assignee: f.assignee.trim() || null,
+        assignee_actor: f.assignee.trim() || null,
         due_on: f.due_on || null,
       });
       toast.ok("On the list");
@@ -360,16 +372,19 @@ function TodoList({ rows, canWrite, toast, onChange, objectiveId, title, aside }
       {rows.length === 0 ? (
         <div className="rowsub">Nothing outstanding.</div>
       ) : (
+        /* Four columns, not five. In a drawer the "What" column gets a fifth
+           of the width and a sentence becomes one word per line — the same
+           squeeze the contract provisions had. Who and by when travel
+           together because they are read together. */
         <Table columns={[
           { label: "", width: 30, align: "left" },
           { label: "What", align: "left" },
-          { label: "Who", align: "left" },
-          { label: "By", align: "left" },
-          { label: "", width: 150, align: "left" },
+          { label: "Who and by when", align: "left" },
+          { label: "", width: 76, align: "left" },
         ]}>
           {rows.map((t) => (
             <tr key={t.todo_id}>
-              <td className="l">
+              <td className="l" style={{ verticalAlign: "top", paddingTop: 10 }}>
                 <Tick state={t.status === "BLOCKED" ? "flagged"
                              : t.overdue ? "failed" : "open"} />
               </td>
@@ -388,19 +403,18 @@ function TodoList({ rows, canWrite, toast, onChange, objectiveId, title, aside }
                   <div className="rowsub">{t.project_name}</div>
                 )}
               </td>
-              <td className="l rowsub">
-                {t.assignee || <span className="warnish">nobody</span>}
-              </td>
               <td className={"l rowsub" + (t.overdue ? " failish" : "")}>
-                {t.due_on || "—"}
-                {t.overdue && <div>{-t.days_to_due}d late</div>}
+                {t.assignee || <span className="warnish">nobody</span>}
+                <div>{t.due_on ? `by ${t.due_on}` : "no date"}
+                  {t.overdue && <> · {-t.days_to_due}d late</>}</div>
               </td>
-              <td className="l">
+              <td className="l" style={{ verticalAlign: "top", paddingTop: 8 }}>
                 {canWrite && (
                   <>
-                    <button className="sm"
+                    <button className="sm" style={{ marginBottom: 4 }}
                             onClick={() => change(t.todo_id, { status: "DONE" },
-                                                  "Done")}>Done</button>{" "}
+                                                  "Done")}>Done</button>
+                    <br />
                     {t.status !== "BLOCKED" && (
                       <button className="sm"
                               onClick={() => setBlocking(t)}>Blocked</button>
@@ -436,7 +450,7 @@ function TodoList({ rows, canWrite, toast, onChange, objectiveId, title, aside }
           </div>
           <div className="grid two" style={{ marginTop: 10 }}>
             <Field label="Who">
-              <input value={f.assignee} placeholder="METZINGER — or leave it for now"
+              <input value={f.assignee} placeholder="an account — or leave it for now"
                      onChange={(e) => setF({ ...f, assignee: e.target.value })} />
             </Field>
             <Field label="By when">
@@ -643,7 +657,7 @@ function TakeForm({ item, onDone }) {
       </Field>
       <div className="grid two" style={{ marginTop: 10 }}>
         <Field label="Who">
-          <input value={f.assignee} placeholder="employee key"
+          <input value={f.assignee} placeholder="account id or email"
                  onChange={(e) => setF({ ...f, assignee: e.target.value })} />
         </Field>
         <Field label="By when">
@@ -655,7 +669,7 @@ function TakeForm({ item, onDone }) {
         <button className="primary" disabled={!f.title.trim()}
                 onClick={() => onDone({
                   title: f.title.trim(),
-                  assignee: f.assignee.trim() || null,
+                  assignee_actor: f.assignee.trim() || null,
                   due_on: f.due_on || null,
                 })}>Take it on</button>
       </div>
@@ -794,6 +808,262 @@ function Setup({ f, setF, toast, onDone }) {
         <button className="primary"
                 disabled={!f.objective_id.trim() || !f.name.trim() || !f.reason.trim()}
                 onClick={go}>Set it up</button>
+      </div>
+    </>
+  );
+}
+
+
+/* ── The handoff ───────────────────────────────────────────────────────
+   The manager says a span of work is right; the controller invoices it or
+   sends it back. Nothing here is a copy of the work — the four figures on a
+   claim are what the manager was *looking at*, in the sense a seal records
+   what it covered, and they sit beside what the record says now. */
+const CLAIM = {
+  APPROVED:  { tick: "open",    says: "waiting to be invoiced" },
+  QUERIED:   { tick: "flagged", says: "sent back" },
+  INVOICED:  { tick: "done",    says: "settled" },
+  WITHDRAWN: { tick: "open",    says: "withdrawn" },
+};
+
+function Claims({ d, toast, onChange }) {
+  const p = d.project;
+  const w = d.work || {};
+  const [approving, setApproving] = useState(false);
+  const [acting, setActing] = useState(null);
+
+  return (
+    <Card variant="quiet" title="Claims"
+          aside="Approved by the manager, invoiced by the controller"
+          style={{ marginTop: 14 }}>
+      <div className="grid three" style={{ marginBottom: 12 }}>
+        <Stat label="Hours booked" value={Number(w.timesheet_hours || 0)}
+              note={Number(w.timesheet_hours) ? "from timesheets"
+                                              : "2025 effort is a distribution"} />
+        <Stat label="Cost classified" value={money(w.classified_amount || 0)}
+              note={`${w.classified_lines || 0} ledger line(s)`} />
+        <Stat label="Documents" value={w.documents || 0}
+              note="filed against this project" />
+      </div>
+      {Number(w.distributed_wages) > 0 && (
+        <div className="rowsub" style={{ marginBottom: 10 }}>
+          {money(w.distributed_wages)} of wages distributed to this objective
+          across {w.people_distributed} people. That is the 2025 reconstruction
+          and it is annual, not span-scoped — which is why it is named here
+          rather than folded into a claim.
+        </div>
+      )}
+
+      {d.claims.length === 0 ? (
+        <div className="rowsub">
+          Nothing claimed yet. A claim is the manager saying a span of work is
+          right and ready to invoice; it carries what she was looking at, so
+          if the record moves afterwards the screen says so rather than the
+          approval quietly coming to cover something else.
+        </div>
+      ) : (
+        /* Rows, not a table. A claim carries a sentence of judgment, the
+           four figures it was approved against and what the record says now
+           — five columns of that in a drawer is one word per line. */
+        d.claims.map((c) => (
+          <div key={c.claim_id}
+               style={{ padding: "10px 0", borderTop: "1px solid var(--rule)" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+              <Tick state={CLAIM[c.state]?.tick} />
+              <strong>{c.covers_from} to {c.covers_to}</strong>
+              <span className="rowsub">{CLAIM[c.state]?.says}</span>
+              <span style={{ marginLeft: "auto" }}>
+                {c.state !== "INVOICED" && (
+                  <>
+                    <button className="sm"
+                            onClick={() => setActing({ c, how: "invoiced" })}>
+                      Settle
+                    </button>{" "}
+                    {c.state !== "QUERIED" && (
+                      <button className="sm"
+                              onClick={() => setActing({ c, how: "query" })}>
+                        Send back
+                      </button>
+                    )}
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="wrap" style={{ margin: "4px 0" }}>{c.note}</div>
+            <div className="rowsub">
+              {c.approved_by} approved it against {Number(c.saw_hours)}h,{" "}
+              {money(c.saw_amount)} and {c.saw_documents} document(s) ·{" "}
+              {c.still_agrees
+                ? "unchanged since"
+                : <span className="failish">
+                    the record has moved since — now {Number(c.timesheet_hours)}h,{" "}
+                    {money(c.classified_amount)}, {c.documents} document(s)
+                  </span>}
+            </div>
+            {c.queried_reason && (
+              <div className="rowsub warnish wrap" style={{ marginTop: 3 }}>
+                {c.queried_by} sent it back: {c.queried_reason}
+              </div>
+            )}
+            {c.invoice_number && (
+              <div className="rowsub" style={{ marginTop: 3 }}>
+                settled against invoice {c.invoice_number} by {c.invoiced_by}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+
+      {p.status !== "CLOSED" && (
+        <button className="sm" style={{ marginTop: 10 }}
+                onClick={() => setApproving(true)}>Approve a span of work</button>
+      )}
+
+      <Drawer open={approving} onClose={() => setApproving(false)}
+              title="Approve a span of work"
+              subtitle="What the record holds for it, and your name on it">
+        {approving && (
+          <ApproveForm p={p} w={w} onDone={async (body) => {
+            try {
+              const got = await api.approveClaim(p.objective_id, body);
+              toast.ok(got.handed_to
+                ? "Approved, and it is on somebody's list to invoice"
+                : `Approved — ${got.why_unassigned}`);
+              setApproving(false);
+              onChange();
+            } catch (e) { toast.fail(String(e.message || e)); }
+          }} />
+        )}
+      </Drawer>
+
+      <Drawer open={!!acting} onClose={() => setActing(null)}
+              title={acting?.how === "query" ? "Send it back"
+                                             : "Settle it against an invoice"}
+              subtitle={acting?.how === "query"
+                ? "What is wrong with it — a query with no reason is one nobody can answer"
+                : "The invoice already on file. Nothing here creates one."}>
+        {acting && (
+          <ActForm act={acting} invoices={d.invoices || []}
+                   onDone={async (body) => {
+                     try {
+                       if (acting.how === "query") {
+                         await api.queryClaim(acting.c.claim_id, body);
+                         toast.ok("Sent back to the manager");
+                       } else {
+                         const got = await api.claimInvoiced(acting.c.claim_id, body);
+                         toast.ok(`Settled against invoice ${got.invoice_number}`);
+                       }
+                       setActing(null);
+                       onChange();
+                     } catch (e) { toast.fail(String(e.message || e)); }
+                   }} />
+        )}
+      </Drawer>
+    </Card>
+  );
+}
+
+
+function ApproveForm({ p, w, onDone }) {
+  const [f, setF] = useState({
+    covers_from: p.starts_on || "", covers_to: p.ends_on || "",
+    note: "", hand_to: "",
+  });
+  return (
+    <>
+      <div className="rowsub wrap" style={{ marginBottom: 12 }}>
+        What is on the record for this project right now:{" "}
+        <strong>{Number(w.timesheet_hours || 0)}</strong> hours booked,{" "}
+        <strong>{money(w.classified_amount || 0)}</strong> of cost classified
+        to the objective, <strong>{w.documents || 0}</strong> document(s)
+        filed. Those four figures are written onto the claim as what you were
+        looking at — not as a copy of the work, but so that if the record
+        moves afterwards the screen can say so.
+      </div>
+      <div className="grid two">
+        <Field label="From" required>
+          <input type="date" value={f.covers_from}
+                 onChange={(e) => setF({ ...f, covers_from: e.target.value })} />
+        </Field>
+        <Field label="To" required>
+          <input type="date" value={f.covers_to}
+                 onChange={(e) => setF({ ...f, covers_to: e.target.value })} />
+        </Field>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Field label="What you are approving" required>
+          <textarea rows={3} value={f.note}
+                    placeholder="A reviewer reads this next to the invoice it led to."
+                    onChange={(e) => setF({ ...f, note: e.target.value })} />
+        </Field>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Field label="Who invoices it">
+          <input value={f.hand_to} placeholder="an email — or leave it"
+                 onChange={(e) => setF({ ...f, hand_to: e.target.value })} />
+        </Field>
+      </div>
+      {/* More than one candidate means no candidate — but a person naming a
+          person beats a rule guessing between two. */}
+      <div className="rowsub" style={{ marginTop: 4 }}>
+        Left blank it goes to the only person holding CONTROLLER, or onto the
+        list unassigned with the reason on it if more than one does.
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <button className="primary"
+                disabled={!f.covers_from || !f.covers_to || f.note.trim().length < 10}
+                onClick={() => onDone({
+                  covers_from: f.covers_from, covers_to: f.covers_to,
+                  note: f.note.trim(), hand_to: f.hand_to.trim() || null,
+                })}>Approve it</button>
+      </div>
+    </>
+  );
+}
+
+
+function ActForm({ act, invoices, onDone }) {
+  const [reason, setReason] = useState("");
+  const [invoice, setInvoice] = useState(invoices[0]?.invoice_id || "");
+  if (act.how === "query") {
+    return (
+      <>
+        <Field label="What is wrong with it" required>
+          <textarea rows={3} value={reason}
+                    placeholder="No ledger line is classified to this objective yet, so there is no direct cost to invoice against."
+                    onChange={(e) => setReason(e.target.value)} />
+        </Field>
+        <div style={{ marginTop: 12 }}>
+          <button className="primary" disabled={reason.trim().length < 10}
+                  onClick={() => onDone({ reason: reason.trim() })}>
+            Send it back
+          </button>
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="rowsub" style={{ marginBottom: 10 }}>
+        No route in this system raises an invoice and the table is
+        append-only, so this links the claim to one already on file. For 2025
+        that is exactly right: the invoice exists and what has been missing is
+        the thread from it back to the work underneath.
+      </div>
+      <Field label="Invoice" required>
+        <select value={invoice} onChange={(e) => setInvoice(e.target.value)}>
+          {invoices.map((i) => (
+            <option key={i.invoice_id} value={i.invoice_id}>
+              {i.invoice_number || i.invoice_id.slice(0, 8)} — {i.invoice_date}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <div style={{ marginTop: 12 }}>
+        <button className="primary" disabled={!invoice}
+                onClick={() => onDone({ invoice_id: invoice, note: reason })}>
+          Settle it
+        </button>
       </div>
     </>
   );

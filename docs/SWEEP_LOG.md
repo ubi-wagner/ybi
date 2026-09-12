@@ -994,6 +994,86 @@ real proposals.
 
 ---
 
+## Tying it to the contracts that are live
+
+Three projects on the three America Makes awards that carry an invoice,
+Stephanie as manager of each, the team on each read off the 2025 payroll
+distribution, and the loop that makes the list move on its own.
+
+The fourth award, Digital Engineering, has no invoice — so there is nothing
+yet to thread a claim back to, and the loader says so rather than opening a
+project over a dead end.
+
+### The defect this uncovered on its first line
+
+**Tom has no `employee_key`.** He holds `CONTROLLER` and is not on the payroll
+register, and `todo.assignee` — which I shipped the day before — was an
+employee key. So the single thing this whole mechanism exists to do, hand Tom
+a job to invoice, **could not have reached him**.
+
+An employee key says *whose effort this was*, which is the right identity for
+a timesheet and a 200.430(i) certification. An account says *who is doing the
+work*, which is what a list of jobs wants. `060` moves it, and the test that
+holds it asserts the fixture account has no payroll key — because a fixture
+that drifted onto a payroll person would stop standing for Tom.
+
+### What a claim is, and what it refuses to be
+
+A claim names a project and a span of dates. It keeps **no copy of the work**
+— hours come from `timesheet_entry`, cost from the live decisions over
+`ledger_line`, documents from `attachment`, all through `v_project_work`.
+
+But an approval has to be *of something*, or the record moves underneath it
+and quietly comes to cover something else. So the claim records what the
+manager was looking at, in exactly the sense `decision_set.seal_hash` records
+what a seal covered, and `still_agrees` puts it beside what the record says
+now. It is the seal, applied to a smaller judgment.
+
+And it creates no invoice. No route here does, the table is append-only, and
+for 2025 that is the right shape: invoice 10018 exists and what was missing
+is the thread from it back to the work underneath.
+
+### What the loop said the first time it ran
+
+Stephanie approved the 2025 span on Drive AM and it handed Tom the job. His
+answer was the interesting part, and the system produced the conversation
+faithfully:
+
+> *No ledger line is classified to DRIVE-AM yet, so there is no direct cost
+> to invoice against. The queue has to reach it first.*
+
+The claim recorded 0 hours, $0 classified and 0 documents against $147,310.09
+of distributed wages — which is the true state of the 2025 record and now
+says so on a screen, to the two people who would have to fix it, instead of
+sitting in a view nobody opens.
+
+### Three things caught building it
+
+**A rule fired on the seed and was right.** `load_projects.py` first ran as
+Stephanie and was refused three times — *nobody puts themselves on a charge
+code*. Setting somebody as manager is something another person does, so the
+loader runs as Tom. That is also what the instruction has to mean if the
+record is to be worth anything.
+
+**A drive reported a fault against working code.** It checked
+`audit_log.actor` for an email; the column holds a display name. A value
+recalled rather than read — the defect `scripts/schema.py` exists for, which
+does not stop being that defect because it is in a drive. It derives the name
+from the account now.
+
+**A JSX comment cannot sit in a ternary branch**, where it parses as an object
+literal, and `vite build` reported it thirty lines away. Worth knowing only
+because the build error pointed at the wrong construct.
+
+### And one thing that was not a defect
+
+Three stat tiles rendered as `()` in a screenshot and read `0` in the DOM — a
+font artefact at that resolution, not a bug. Checked before touching it,
+because a fix to correct code is as expensive as a defect and harder to find
+afterwards.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the

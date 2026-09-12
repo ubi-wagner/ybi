@@ -108,6 +108,9 @@ for r in (health, auth, dashboard, imports, chart, classify, lanes,
 # of it is not about a project: "chase NCDMM for a readable agreement" belongs
 # to the engagement and to no charge code.
 app.include_router(projects.todos, prefix="/api")
+# Claims are their own prefix for the same reason: the controller works
+# a list of claims across every project rather than one project at a time.
+app.include_router(projects.claims, prefix="/api")
 
 
 @app.exception_handler(ValueError)

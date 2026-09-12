@@ -94,6 +94,11 @@ step "The books against each other"
 run "agreements and their text" $PY scripts/read_documents.py --write
 run "awards to their agreements" $PY scripts/link_agreements.py
 
+# After the awards and the payroll, because a project hangs off a charge code
+# that exists, names the award it works under, and takes its team from the
+# distribution that actually put people on it.
+run "projects and their managers" $PY scripts/load_projects.py --base "$BASE"
+
 run "eleven control points" $PY scripts/reconcile.py --base "$BASE" --record
 
 if [ "$fail" -eq 0 ]; then

@@ -204,6 +204,13 @@ export const api = {
   changeTodo: (id, body) =>
     req(`/todos/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   todoCovering: (period = "2025") => req(`/todos/covering?period=${period}`),
+  claims: (params = {}) => req("/claims?" + new URLSearchParams(params)),
+  approveClaim: (id, body) =>
+    req(`/projects/${id}/claims`, { method: "POST", body: JSON.stringify(body) }),
+  queryClaim: (id, body) =>
+    req(`/claims/${id}/query`, { method: "POST", body: JSON.stringify(body) }),
+  claimInvoiced: (id, body) =>
+    req(`/claims/${id}/invoiced`, { method: "POST", body: JSON.stringify(body) }),
   lanes: (period = "2025") => req(`/lanes?period=${period}`),
   createLane: (body) => req("/lanes", { method: "POST", body: JSON.stringify(body) }),
   laneBuildup: (id) => req(`/lanes/${id}/buildup`),

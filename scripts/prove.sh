@@ -112,6 +112,9 @@ run "drive_concurrency" $PY scripts/drive_concurrency.py --base "$BASE"
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 
+step "A piece of work set up, approved, and handed on"
+run "drive_projects" $PY scripts/drive_projects.py --base "$BASE"
+
 step "The income side — charge codes, contracts, milestones, money in"
 run "drive_contracts" $PY scripts/drive_contracts.py --base "$BASE"
 

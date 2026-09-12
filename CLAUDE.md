@@ -794,6 +794,73 @@ The seed creates no projects. Who is on each one and what is outstanding on
 it are judgments with a person's name on them, and a foundation that invented
 them would be the thing this whole file argues against.
 
+## The handoff
+
+Migration `060`. `059` gave the system a list a person can write; this is what
+makes the list move on its own — **an act by one person that raises work for
+another, recorded as one act rather than as two people remembering.**
+
+    the manager approves a span   ->  the controller gets a job to invoice
+    the controller sends it back  ->  the manager gets a job to answer
+    the controller settles it     ->  the manager gets one to chase the money
+
+Stephanie manages the three America Makes projects and Tom invoices them,
+which for 2025 was a helper arrangement rather than two departments.
+`scripts/load_projects.py` sets the three up from facts already on the
+record — the charge code, the award it works under, the team read off the
+2025 payroll distribution — and **is signed in as Tom, not as Stephanie**.
+Its first draft ran as her and was refused three times: *nobody puts
+themselves on a charge code.* An assignment is a statement by one person
+about another, so setting Stephanie as manager is something somebody else
+does.
+
+**A todo reaches a person, not a payroll key.** `todo.assignee` was an
+`employee_key` and **Tom holds CONTROLLER and is not on the payroll
+register** — so the one thing the handoff exists to do could never have
+reached him. An employee key says *whose effort this was*, which is right for
+a timesheet and a certification; an account says *who is doing the work*,
+which is what a list of jobs wants. All forty payroll people have accounts,
+so nothing is lost the other way.
+
+**A claim keeps no copy of the work.** It names a project and a span; what
+that span contains is read from the registers that already hold it —
+`timesheet_entry`, the live decisions over `ledger_line`, `attachment` —
+through `v_project_work`. **But an approval has to be of something specific**,
+or the record moves underneath it and the approval silently comes to cover
+something else. So a claim records `saw_hours`, `saw_amount`, `saw_lines` and
+`saw_documents`: **the seal, in exactly the sense `decision_set.seal_hash`
+is one**, and `v_project_claim.still_agrees` puts them beside what the record
+says now. False there is not a defect — it is the thing a controller needs to
+know before invoicing.
+
+**And nothing here creates an invoice.** No route in this system does and the
+table is append-only, so a claim is *linked* to one already on file. For 2025
+that is exactly right: invoice 10018 exists, and what has been missing is the
+thread from it back to the work, the people and the documents underneath.
+Settling against another objective's invoice is a 409 — that is how cost ends
+up charged to the wrong award.
+
+Two smaller rules worth keeping:
+
+- **The manager is a role on the grant**, not a column of its own.
+  `charge_authority.role_on_project` has always been the field for what
+  somebody's role on a code is, and a manager has to be able to charge time
+  to the project anyway. One live manager per code, in the schema, because an
+  amendment supersedes rather than sitting beside — two live managers is two
+  people each believing the other is watching it.
+- **More than one candidate means no candidate, but a person may name one.**
+  Approving hands the job to the sole holder of `CONTROLLER`, or to nobody
+  with the reason on the todo when two hold it. `hand_to` exists because the
+  manager knows who does the invoicing and the system does not, and a person
+  naming a person beats a rule guessing between two.
+
+`scripts/drive_projects.py` walks the whole loop as Stephanie and Tom and
+leaves the record as it found it, against a census of four tables. Its first
+run reported a fault against working code because it checked `audit_log.actor`
+for an **email** and the column holds a **display name** — a value recalled
+rather than read, which does not stop being that defect because it is in a
+drive.
+
 ## A lane is a question; the sealed set is the answer
 
 `lane_decision_override`, `lane_override_line` and `lane_assumption` were
