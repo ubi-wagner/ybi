@@ -410,11 +410,26 @@ def walk_back(tom: httpx.Client, keys: list[str]) -> None:
 
     st = one("SELECT set_id, seal_hash FROM decision_set WHERE period='2025' "
              "ORDER BY set_id DESC LIMIT 1")
+    # Whether there *is* a seal to release depends on which way the last race
+    # went: `race_seal_against_unseal` fires both at once and either order is
+    # legitimate, so the set reaches here sealed or open. That is the other
+    # half of the 16-checks-then-15 mystery — this branch printed nothing at
+    # all when the set was already open.
     if st and st["seal_hash"]:
         r = tom.post("/api/rates/unseal",
                      params={"reason": "Concurrency drive finished; "
                                        "leaving the set as it was found."})
-        ok(f"unsealed ({r.status_code})")
+        # And it was `ok(f"unsealed ({r.status_code})")`, which prints a 409
+        # as a pass. A check whose assertion is the thing it is printing is
+        # not a check — the third instance of that shape in this one file.
+        if r.status_code == 200:
+            ok("unsealed — the set is open again, as it was found")
+        else:
+            finding(f"could not unseal: {r.status_code} {r.text[:160]}")
+    else:
+        note("the set was already open — the seal-against-unseal race ended "
+             "with the unseal, which is one of its two legitimate outcomes, "
+             "so there was nothing here to release")
 
     execute("""UPDATE decision SET reversed_at = now(),
                       reversal_reason = 'Concurrency drive, walked back.'

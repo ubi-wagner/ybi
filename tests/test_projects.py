@@ -101,6 +101,12 @@ def project(cur, code, **kw):
 
 
 def todo(cur, code=None, **kw):
+    # `period` is an argument now. It used to be PERIOD unconditionally, and
+    # two tests below took an item off `v_worklist_owned` — which on a seeded
+    # database is a 2025 item — and hung a 2095 todo on it. They passed
+    # because `v_worklist_covered` joined on kind and entity alone; `062`
+    # matches the period too, which is what identifies the item, and the
+    # tests were asserting the defect.
     cur.execute("""INSERT INTO todo (period, objective_id, title,
                                      assignee_actor, due_on, status,
                                      blocked_reason, done_at, done_by,
@@ -108,7 +114,7 @@ def todo(cur, code=None, **kw):
                                      opened_by)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'test')
                    RETURNING todo_id""",
-                (PERIOD, code, kw.get("title", "Do the thing"),
+                (kw.get("period", PERIOD), code, kw.get("title", "Do the thing"),
                  kw.get("assignee"), kw.get("due_on"),
                  kw.get("status", "OPEN"), kw.get("blocked_reason"),
                  kw.get("done_at"), kw.get("done_by"),
@@ -245,41 +251,59 @@ def test_naming_a_worklist_item_takes_both_halves(cur, proj):
 
 # ── The machine's list and a person's, joined ─────────────────────────
 
+def an_outstanding_item(cur):
+    """One item off the live worklist, **with its period**, and nothing
+    already covering it.
+
+    Ordered, because `LIMIT 1` with no `ORDER BY` picks a different row on a
+    different day and a test that passes intermittently is one people learn
+    to re-run. And the period comes back with it, because the period is part
+    of what identifies the item — joining on the rest of it is what `062`
+    fixed in the view these tests read.
+    """
+    cur.execute("""SELECT w.period, w.kind, w.entity_id
+                     FROM v_worklist_covered w
+                    WHERE NOT w.taken
+                    ORDER BY w.period, w.kind, w.entity_id LIMIT 1""")
+    item = cur.fetchone()
+    if not item:
+        pytest.skip("nothing outstanding on this database to take")
+    return item
+
+
 def test_an_item_nobody_has_taken_is_the_interesting_row(cur, proj, somebody):
     """`v_worklist` has always known *what* is outstanding and
     `v_worklist_owned` added *which portfolio*. Neither could say **who** or
     **by when**, because nothing in the system could write that down."""
-    cur.execute("""SELECT kind, entity_id FROM v_worklist_owned LIMIT 1""")
-    item = cur.fetchone()
-    if not item:
-        pytest.skip("nothing outstanding on this database to take")
+    item = an_outstanding_item(cur)
     cur.execute("""SELECT taken FROM v_worklist_covered
-                    WHERE kind = %s AND entity_id = %s""",
-                (item["kind"], item["entity_id"]))
+                    WHERE period = %s AND kind = %s AND entity_id = %s""",
+                (item["period"], item["kind"], item["entity_id"]))
     assert cur.fetchone()["taken"] is False
-    todo(cur, None, assignee=somebody, worklist_kind=item["kind"],
-         worklist_entity_id=item["entity_id"])
-    cur.execute("""SELECT taken, assignee FROM v_worklist_covered
-                    WHERE kind = %s AND entity_id = %s""",
-                (item["kind"], item["entity_id"]))
+    todo(cur, None, period=item["period"], assignee=somebody,
+         worklist_kind=item["kind"], worklist_entity_id=item["entity_id"])
+    cur.execute("""SELECT taken, assignee, opened_by FROM v_worklist_covered
+                    WHERE period = %s AND kind = %s AND entity_id = %s""",
+                (item["period"], item["kind"], item["entity_id"]))
     row = cur.fetchone()
     assert row["taken"] and row["assignee"] == "Somebody"
+    # Who noticed, beside who is doing it. `audit_log` has always carried the
+    # second and nothing carried the first.
+    assert row["opened_by"] == "test"
 
 
 def test_a_finished_todo_stops_covering_its_item(cur, proj, somebody):
     """Otherwise an item stays "taken" for ever on the strength of work that
     finished without clearing it."""
     import datetime as dt
-    cur.execute("SELECT kind, entity_id FROM v_worklist_owned LIMIT 1")
-    item = cur.fetchone()
-    if not item:
-        pytest.skip("nothing outstanding on this database to take")
-    todo(cur, None, assignee=somebody, worklist_kind=item["kind"],
-         worklist_entity_id=item["entity_id"], status="DONE",
-         done_at=dt.datetime.now(dt.timezone.utc), done_by="Somebody")
+    item = an_outstanding_item(cur)
+    todo(cur, None, period=item["period"], assignee=somebody,
+         worklist_kind=item["kind"], worklist_entity_id=item["entity_id"],
+         status="DONE", done_at=dt.datetime.now(dt.timezone.utc),
+         done_by="Somebody")
     cur.execute("""SELECT taken FROM v_worklist_covered
-                    WHERE kind = %s AND entity_id = %s""",
-                (item["kind"], item["entity_id"]))
+                    WHERE period = %s AND kind = %s AND entity_id = %s""",
+                (item["period"], item["kind"], item["entity_id"]))
     assert cur.fetchone()["taken"] is False
 
 

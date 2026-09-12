@@ -418,6 +418,44 @@ require_project = require_portfolio(Portfolio.PROJECT, Portfolio.CONTROLLER)
 require_facilities = require_portfolio(Portfolio.FACILITIES, Portfolio.CONTROLLER)
 require_office = require_portfolio(Portfolio.OFFICE, Portfolio.CONTROLLER)
 
+#: Any authority over any part of the record. Not a sixth portfolio and not a
+#: way round the five: every route that writes to an *area* still takes that
+#: area's gate. This is for the acts that are about the work rather than
+#: about the cost — recommending an outstanding item to the person who can
+#: clear it. Whichever part of the record you hold, you can see something
+#: nobody has picked up and say so.
+require_any_portfolio = require_portfolio(*Portfolio)
+
+
+def require_own_work(actor: Actor = Depends(current_actor)) -> Actor:
+    """The part of the outstanding list that is *yours to do*.
+
+    Deliberately not `require_reader`. Reading the cost record and being
+    shown your own jobs are different permissions, and `/worklist/mine` had
+    the first — so the endpoint whose docstring is written about Heidi
+    ("Heidi should open the application and see that the buildings have no
+    square footage") would have answered Heidi 403, because a portfolio does
+    not make somebody a reader and `FACILITIES` is not a rank.
+
+    It never showed, because every portfolio holder in the seeded record
+    also holds CONTROLLER rank. That is the shape of a defect masked by
+    data rather than by luck: the day somebody is granted one narrow
+    portfolio and nothing else — which is the 2026 arrangement and arguably
+    the right 2025 one — their own list is the first screen they cannot
+    open.
+
+    What it does *not* loosen: the handler filters to
+    `owner_portfolio = ANY(held)`, so a FACILITIES-only account sees the
+    space items and no ledger. The narrow portfolios reach their own area,
+    which is what they have always meant.
+    """
+    if not (actor.can_read or actor.portfolios):
+        raise HTTPException(
+            403, f"{actor.display_name} holds no portfolio and does not read "
+                 f"the cost record, so there is no list of outstanding work "
+                 f"to show. An administrator can grant a portfolio.")
+    return actor
+
 def _admin_guard(actor: Actor = Depends(current_actor)) -> Actor:
     if actor.role not in ADMINS:
         raise HTTPException(

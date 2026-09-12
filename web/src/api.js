@@ -138,6 +138,11 @@ export const api = {
 
   // What this person owes, rather than what is outstanding in general.
   myWorklist: (period = "2025") => req(`/dashboard/worklist/mine?period=${period}`),
+  // A helper recommends; the controller verifies and seals. Raises a todo
+  // against the outstanding item, never a row in the register it points at.
+  recommend: (body, period = "2025") =>
+    req(`/dashboard/worklist/recommend?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
 
   // Contracts and charge codes — the income side.
   contracts: (period = "2025") => req(`/contracts?period=${period}`),

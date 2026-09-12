@@ -872,6 +872,84 @@ the only thing that knows — a second reading of `decision_set` in the drive
 would be a copy of the rule, free to drift from it, which is the defect it
 was just caught in.
 
+## A helper recommends; the controller verifies and seals
+
+Migration `062`. `060` made an act by one person raise work for another
+inside one project. This is the same move over the whole outstanding list:
+anybody holding any portfolio can say *this one is worth your attention, and
+here is what I noticed* — and nothing else happens.
+
+**A recommendation is a `todo` and never a row in the register it points
+at.** The obvious build was to let a helper write a `PROPOSED` restatement
+for the controller to confirm, and it is the wrong one twice over. `PROPOSED`
+already means *YBI has put this to NCDMM and they have not answered*, so a
+second meaning in one word leaves an auditor unable to tell a position the
+organisation has taken from a colleague's suggestion — and the register would
+stop being a record of what YBI has said to a sponsor. So there is no new
+table and no new column: `todo` already carries `worklist_kind` +
+`worklist_entity_id` to point at the item without copying it, `opened_by` for
+who noticed, `assignee_actor` for who is being asked, and `detail` for why.
+
+**The fact the record could not hold is who *noticed*.** `audit_log` has
+always said who decided. Nothing said who spotted it, so "why was this
+invoice restated and not that one" had a one-name answer. `v_worklist_covered`
+carries `opened_by` beside `assignee` now — and deliberately not a derived
+`handed_on` boolean, which a first draft added and which was wrong on the
+state that matters: a recommendation nobody could be named for is
+*unassigned*, and `opened_by <> assignee` reads false when the assignee is
+NULL. Three states do not fit in a boolean.
+
+Four rules, each one this system already follows somewhere:
+
+- **One live job per outstanding item** (`one_live_job_per_worklist_item`).
+  Two is two people each told to clear it and each assuming the other has —
+  `one_live_manager_per_code` in a new place. Partial on `status <> 'DONE'`,
+  because an item that comes back is a new job.
+- **The item is read inside the turn**, so a recommendation cannot name
+  something that has since been cleared.
+- **You can only recommend what is on your own list**, and **nobody
+  recommends to themselves** — handing yourself a job is *taking* one, which
+  reads differently on the record.
+- **The reason is required.** A recommendation with no reason is the
+  machine's own list with a person's name on it, which is worth less than the
+  machine's list: the reader now has to work out whether a human added
+  anything.
+
+Two defects came out of building it, both masked by data rather than by luck:
+
+**`/worklist/mine` was gated on reading the cost record.** The router carried
+`require_reader` and a router-level dependency cannot be relaxed by a route,
+so the endpoint whose own docstring is written about Heidi — *"Heidi should
+open the application and see that the buildings have no square footage"* —
+would have answered Heidi 403 the day she held `FACILITIES` and nothing else.
+It never showed because every portfolio holder in the seeded record also
+holds `CONTROLLER` **rank**, and a portfolio is not a rank. `require_own_work`
+admits somebody who holds a portfolio *or* reads the record; the handler still
+filters to `owner_portfolio = ANY(held)`, so a narrow portfolio reaches its
+own area and no ledger.
+
+**The two worklist endpoints read different halves of the list.**
+`/worklist` read `v_worklist` and `/worklist/mine` read `v_worklist_owned`,
+which unions in `v_worklist_extra` — so four kinds answered `total = 0` on
+one endpoint while appearing on the other to the same person at the same
+moment, and `/worklist/SPACE_UNATTRIBUTED` reached by URL said there was
+nothing open in a class somebody had just been told about. 13.0% and 2.2% in
+a smaller place.
+
+The screen offers **Recommend** only to somebody who holds a portfolio — the
+auditor reads every one of these rows and holds none, and a button that
+answers 403 is the lesson the Requests screen already learned. It asks for
+*any* portfolio rather than the item's, because which list an item is on is
+the handler's judgment and a second copy of that rule in the screen is one
+free to drift from it.
+
+`tests/test_recommend.py` holds all of it, and every source assertion in it
+was watched failing against a deliberately broken copy. `drive_projects.py`
+walks the act against live rows — recommend, refuse the second, refuse the
+one that is not outstanding, refuse handing it to yourself, refuse the
+auditor — and checks that `restatement`, `decision` and `rate` all stood
+still, because *a recommendation raises work, never a number*.
+
 ## The handoff
 
 Migration `060`. `059` gave the system a list a person can write; this is what
@@ -1408,18 +1486,25 @@ Three rules came out of it:
 
 **A race that goes all one way leaves a guarantee untested, and the drive has
 to say so.** `drive_concurrency` reported 16 checks on one run and 15 on the
-next with nothing explaining the difference: where every judgment beat the
-seal, the branch that reads *whether a refusal names the seal* had no refusal
-to read, so it printed nothing at all. That is the register's `NO DATA` state
-in a drive — not a pass, not a finding — and a check count that moves without
-saying why is how somebody learns to ignore the run that actually lost one.
-It prints a note now and counts them in the summary.
+next with nothing explaining the difference, and the chase found **two**
+silent branches, not one. Where every judgment beat the seal, the branch that
+reads *whether a refusal names the seal* had no refusal to read. And where
+the seal-against-unseal race ended with the unseal — one of its two
+legitimate outcomes — `walk_back` had no seal to release and printed nothing
+at all. Both are the register's `NO DATA` state in a drive: not a pass, not a
+finding. They print a note now and the summary counts them, because a check
+count that moves without saying why is how somebody learns to ignore the run
+that actually lost one.
 
-And **one more test that could not fail**, found in the same file: the
+And **two more checks that could not fail**, both in the same file. The
 summary called `coverage_is_arithmetic()`, bound the answer to `good, how`
-and read neither. `walk_back` checks it properly a few lines up; this one was
-a query run for nothing. The fourth instance of the shape, in the drive whose
-whole job is to catch what nobody would notice.
+and read neither — `walk_back` checks it properly a few lines up, so this one
+was a query run for nothing. And `walk_back`'s own unseal was
+`ok(f"unsealed ({r.status_code})")`, which prints a 409 as a pass: an
+assertion whose entire content is the thing it is printing. The fourth and
+fifth instances of the shape, in the drive whose whole job is to catch what
+nobody would notice — which is the argument for going back through a file
+once you have found one in it.
 
 **Serialising makes the order deterministic; it does not make it
 comprehensible.** Tom judges 5227 at 10:31, Barb's queue was drawn at 10:29,

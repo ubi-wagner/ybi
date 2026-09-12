@@ -1147,7 +1147,52 @@ than rows, because a position taken and then withdrawn is part of the trail.
 
 ---
 
-## The four shapes
+## A helper recommends; the controller verifies and seals
+
+Migration `062`. The rule the system already runs on in three places —
+proposals are never decisions, the classification queue is a suggestion a
+human confirms, `060`'s handoff is an act by one person that raises work for
+another — applied to the whole outstanding list.
+
+**The design decision is where a recommendation lives.** The obvious build
+was a helper writing a `PROPOSED` restatement for the controller to confirm.
+That puts two meanings in one word: `PROPOSED` already means *YBI has put
+this to NCDMM and they have not answered*, so an auditor reading
+`restatement` could not tell a position the organisation has taken from a
+colleague's suggestion, and the register would stop being a record of what
+YBI has said to a sponsor. A recommendation is a `todo` — which already
+carries the item it points at, who noticed, who is being asked, and why. No
+new table, no new column.
+
+**The fact the record could not hold is who *noticed*.** `audit_log` says
+who decided. Nothing said who spotted it.
+
+It found two defects, both **masked by data rather than by luck**, which is
+worth naming as a shape of its own:
+
+- **`/worklist/mine` was gated on reading the cost record.** A router-level
+  `require_reader` covering five routes, one of which is a person's own list
+  of jobs — and a router-level dependency cannot be relaxed by a route. The
+  endpoint whose docstring is written about Heidi would have answered Heidi
+  403 the day she held `FACILITIES` and nothing else. It never showed because
+  every portfolio holder in the seeded record also holds `CONTROLLER` **rank**,
+  and a portfolio is not a rank.
+- **The two worklist endpoints read different halves of the list.**
+  `v_worklist` against `v_worklist_owned`, so four kinds answered `total = 0`
+  on one endpoint while appearing on the other, to the same person, at the
+  same moment.
+
+And one test that was **asserting the defect it was near**:
+`test_an_item_nobody_has_taken_is_the_interesting_row` took an item off the
+live worklist — 2025 on a seeded database — and hung a 2095 todo on it. It
+passed because `v_worklist_covered` joined on kind and entity alone. Fixing
+the view to match the period too, which is what identifies the item, made the
+test fail; the test had been proving that a job in one period covers an item
+in another.
+
+---
+
+## The five shapes
 
 Every item found something the plan did not know about, and they were the
 same few things over and over.
@@ -1183,6 +1228,18 @@ view its bug was found in, one in `test_document_access.py` asserting a
 literal fragment of punctuation. Each was verified afterwards against a
 deliberately broken copy — a test nobody has watched fail is a test nobody
 has tested.
+
+**A defect masked by data rather than by luck.** `/worklist/mine` gated on
+reading the cost record, invisible because every portfolio holder in the
+seeded record also holds CONTROLLER rank. `/worklist` and `/worklist/mine`
+reading different halves of the list, invisible until somebody asked for a
+kind that lives in the half one of them cannot see. `space_partition` tying
+its control while nothing wrote it. The tell is always the same: the code is
+wrong for a case the current rows do not contain, so the test passes, the
+screen looks right, and the day the data changes shape the failure arrives
+with no recent change to blame. The answer is to find the case the rows do
+not cover and write it down — which is what a drive against live rows cannot
+do, and a test making its own rows can.
 
 **A name recalled rather than read.** Eight instances in one week — a column,
 a table, an enum value, a key off a row that never selected it. The one

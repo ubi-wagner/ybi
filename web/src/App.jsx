@@ -234,7 +234,7 @@ export default function App() {
           <Route path="/timesheet" element={<Timesheet actor={actor} />} />
           <Route path="/certify" element={<Certify />} />
           <Route path="/help" element={<Help />} />
-          <Route path="/worklist/:kind" element={<Worklist />} />
+          <Route path="/worklist/:kind" element={<Worklist actor={actor} />} />
           <Route path="/imports" element={<Imports />} />
           <Route path="/reconcile" element={<Reconcile actor={actor} />} />
           <Route path="/chart" element={<Chart />} />

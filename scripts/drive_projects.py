@@ -43,6 +43,10 @@ from app.db import one, open_pool, query                  # noqa: E402
 CHECKS = 0
 FINDINGS: list[str] = []
 CENSUS = ("project", "project_claim", "todo", "charge_authority")
+#: Todos this run raised that hang off no claim, so teardown can
+#: find them: a recommendation points at a worklist item rather
+#: than at a claim, so `from_claim` is NULL on every one.
+MADE_TODOS: list[str] = []
 BEFORE: dict[str, int] = {}
 MADE: list[str] = []
 
@@ -112,6 +116,10 @@ def main() -> int:
         return 2
     open_pool()
     BEFORE = census()
+    # The registers that carry a figure. A recommendation must move none of
+    # them — it raises work, and the whole design turns on the difference.
+    REGISTERS = {t: one(f"SELECT count(*) AS n FROM {t}")["n"]
+                 for t in ("restatement", "decision", "rate")}
 
     steph = sign_in(args.base, "sgaffney@ybi.org", pw)
     tom = sign_in(args.base, "tom@ybi.org", pw)
@@ -237,6 +245,85 @@ def main() -> int:
             else:
                 finding("nothing went back to the manager when it was invoiced")
 
+    step("A helper recommends, and the controller is the one who decides")
+    # Something outstanding that nobody has picked up. Read from the live
+    # record rather than named, because a drive that hard-codes an item is a
+    # drive that starts failing the day the item is cleared — which is the
+    # good outcome.
+    item = one("""SELECT kind, entity_id, label, owner_portfolio
+                    FROM v_worklist_covered
+                   WHERE period = %s AND NOT taken
+                   ORDER BY amount DESC NULLS LAST LIMIT 1""", (args.period,))
+    if not item:
+        ok("nothing is outstanding and unclaimed, so there is nothing to "
+           "recommend — which is the good outcome, not a gap")
+    else:
+        reason = ("Drive: recommended to prove the helper-recommends path. "
+                  "Withdrawn at the end of this run.")
+        rec = call(steph, "POST", "/api/dashboard/worklist/recommend", 201,
+                   f"Stephanie recommends {item['label'][:48]}",
+                   params={"period": args.period},
+                   json={"kind": item["kind"], "entity_id": item["entity_id"],
+                         "reason": reason})
+        if rec.status_code == 201:
+            got = rec.json()
+            MADE_TODOS.append(got["todo_id"])
+            ok(f"and the answer says where it went — "
+               f"{'to ' + got['to_whom'] if got['assigned'] else got['to_whom']}")
+
+            # The whole point, in one row: who noticed is not who decides.
+            row = one("""SELECT taken, assignee, opened_by
+                           FROM v_worklist_covered
+                          WHERE period = %s AND kind = %s AND entity_id = %s""",
+                      (args.period, item["kind"], item["entity_id"]))
+            if row and row["taken"] and row["opened_by"] == "Stephanie Gaffney":
+                ok(f"the list now says who noticed it — opened by "
+                   f"{row['opened_by']}, held by "
+                   f"{row['assignee'] or 'nobody yet'}. audit_log has always "
+                   f"said who decided and nothing said who spotted it")
+            else:
+                finding(f"the item does not read as recommended: {row}")
+
+            call(steph, "POST", "/api/dashboard/worklist/recommend", 409,
+                 "a second recommendation on the same item is refused — two "
+                 "people each told to clear it is two each assuming the other "
+                 "has", params={"period": args.period},
+                 json={"kind": item["kind"], "entity_id": item["entity_id"],
+                       "reason": reason})
+
+        call(steph, "POST", "/api/dashboard/worklist/recommend", 404,
+             "and an item that is not outstanding cannot be recommended",
+             params={"period": args.period},
+             json={"kind": item["kind"], "entity_id": "no-such-entity",
+                   "reason": reason})
+
+        # Nobody recommends to themselves. The rule provisioning, the
+        # portfolios and charge authority already follow — handing yourself a
+        # job is *taking* one, which reads differently on the record and is
+        # the whole reason this act exists separately.
+        spare = one("""SELECT kind, entity_id FROM v_worklist_covered
+                        WHERE period = %s AND NOT taken
+                          AND entity_id <> %s
+                        ORDER BY amount DESC NULLS LAST LIMIT 1""",
+                    (args.period, item["entity_id"]))
+        if spare:
+            call(steph, "POST", "/api/dashboard/worklist/recommend", 422,
+                 "and nobody recommends to themselves — that is taking a job, "
+                 "not asking for one", params={"period": args.period},
+                 json={"kind": spare["kind"], "entity_id": spare["entity_id"],
+                       "reason": reason, "hand_to": "sgaffney@ybi.org"})
+
+    # A recommendation raises work and never a number, so nothing that carries
+    # a figure may have moved. Checked rather than asserted in a comment.
+    moved = [t for t in ("restatement", "decision", "rate")
+             if one(f"SELECT count(*) AS n FROM {t}")["n"] != REGISTERS[t]]
+    if moved:
+        finding(f"recommending moved {', '.join(moved)} — it must raise work "
+                f"and nothing else")
+    else:
+        ok("and no register moved: not a restatement, not a judgment, not a "
+           "rate. A recommendation raises work, never a number")
+
     step("The auditor reads the whole thread and writes none of it")
     call(auditor, "GET", "/api/claims", 200, "every claim",
          params={"period": args.period})
@@ -247,6 +334,13 @@ def main() -> int:
                "note": "an auditor writes nothing"})
     call(auditor, "POST", f"/api/claims/{claim}/query", 403,
          "refused to query one", json={"reason": "an auditor writes nothing"})
+    # No portfolio at all, so the refusal is the portfolio gate rather than a
+    # rule about auditors — and the screen does not offer them the button.
+    call(auditor, "POST", "/api/dashboard/worklist/recommend", 403,
+         "and cannot recommend, holding no portfolio",
+         params={"period": args.period},
+         json={"kind": "UNCLASSIFIED", "entity_id": "anything",
+               "reason": "an auditor writes nothing at all, ever"})
 
     step("A claim cannot be settled against another objective's invoice")
     other = one("""SELECT invoice_id, invoice_number, objective_id FROM invoice
@@ -280,9 +374,10 @@ def teardown() -> int:
     Every statement is attempted even if one fails, because a cleanup that
     stops at the first refusal leaves worse residue than none.
     """
-    if not MADE:
+    if not (MADE or MADE_TODOS):
         return 0
     for sql, params in (
+            ("DELETE FROM todo WHERE todo_id = ANY(%s::uuid[])", (MADE_TODOS,)),
             ("DELETE FROM todo WHERE from_claim = ANY(%s::uuid[])", (MADE,)),
             ("DELETE FROM project_claim WHERE claim_id = ANY(%s::uuid[])", (MADE,))):
         try:

@@ -12,16 +12,26 @@ and one large one are not the same afternoon's work.
 
 from __future__ import annotations
 
+import datetime as dt
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
-from app.auth import Actor, Portfolio, current_actor, require_reader
+from app.auth import (Actor, Portfolio, current_actor, require_any_portfolio,
+                      require_own_work, require_reader)
+from app.audit import record
 from app.db import one, query
 from app.settings import settings
+from app.statelock import turn
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"],
-                   dependencies=[Depends(require_reader)])
+#: No router-level gate, and that is the change. `require_reader` sat here
+#: and covered five routes, four of which read the cost record and one of
+#: which — `/worklist/mine` — is a person's own list of jobs. A router-level
+#: dependency cannot be relaxed by a route, so the one screen written for a
+#: narrow portfolio was gated on a permission a narrow portfolio does not
+#: carry. Each route names what it needs now.
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("")
@@ -93,21 +103,32 @@ def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
 
 @router.get("/worklist")
 def worklist(period: str = None, kind: str = "", limit: int = Query(50, le=500),
-             offset: int = 0) -> dict:
+             offset: int = 0,
+             actor: Actor = Depends(require_reader)) -> dict:
     """One class of open work, largest first.
 
     Returns the true total alongside the page. A page length shown as a count
     tells the controller there are 200 things left when there are 990, which
     is the difference between an afternoon and a fortnight.
     """
+    # `v_worklist_owned`, not `v_worklist`: the second is half the list.
+    # `v_worklist_extra` holds the kinds added after 011 — the space items,
+    # CHARGE_CODE_UNASSIGNED, AWARD_NO_CEILING — and only the owned view
+    # unions them in. So this route answered `total = 0` for four kinds that
+    # `/worklist/mine` was showing the same person at the same moment, and a
+    # page reached by URL said there was nothing open in a class somebody had
+    # just been told about. Two endpoints over one question, disagreeing:
+    # 13.0% and 2.2% in a smaller place. The owned view is a superset with
+    # the routing columns added, so nothing is lost by reading it.
     period = period or settings.period
     total = one("""SELECT count(*) AS n, COALESCE(sum(abs(amount)), 0) AS amount
-                     FROM v_worklist
+                     FROM v_worklist_owned
                     WHERE period = %s AND (%s = '' OR kind = %s)""",
                 (period, kind, kind))
     items = query("""
-        SELECT kind, severity, label, entity, entity_id, amount, detail
-          FROM v_worklist
+        SELECT kind, severity, label, entity, entity_id, amount, detail,
+               owner_portfolio, goes_to
+          FROM v_worklist_owned
          WHERE period = %s AND (%s = '' OR kind = %s)
          ORDER BY COALESCE(abs(amount), 0) DESC
          LIMIT %s OFFSET %s""", (period, kind, kind, limit, offset))
@@ -118,7 +139,8 @@ def worklist(period: str = None, kind: str = "", limit: int = Query(50, le=500),
 
 @router.get("/activity")
 def activity(limit: int = Query(100, le=500), offset: int = 0,
-             entity: str = "", entity_id: str = "") -> list[dict]:
+             entity: str = "", entity_id: str = "",
+             actor: Actor = Depends(require_reader)) -> list[dict]:
     """The audit spine. Filterable to one object, which is how a reviewer
     asks "what happened to this"."""
     return query("""
@@ -134,7 +156,7 @@ def activity(limit: int = Query(100, le=500), offset: int = 0,
 
 @router.get("/refusals")
 def refusals(limit: int = 50, mine: bool = True,
-             actor: Actor = Depends(current_actor)) -> dict:
+             actor: Actor = Depends(require_reader)) -> dict:
     """What the system has refused, and what it said.
 
     Everybody sees their own without any grant: being told why your own
@@ -164,7 +186,7 @@ def refusals(limit: int = 50, mine: bool = True,
 
 @router.get("/worklist/mine")
 def my_worklist(period: str = None,
-                actor: Actor = Depends(current_actor)) -> dict:
+                actor: Actor = Depends(require_own_work)) -> dict:
     """What *this* person owes, rather than what is outstanding in general.
 
     v_worklist has always known what is undone and never whose job it is, so
@@ -243,3 +265,139 @@ def my_worklist(period: str = None,
                                             -float(g["amount"] or 0))),
             "certification_chase": chase,
             "my_certification": mine}
+
+
+class RecommendIn(BaseModel):
+    kind: str
+    entity_id: str
+    #: Required, and long enough to be a sentence. A recommendation with no
+    #: reason is a reprint of the machine's list with a person's name on it,
+    #: which is worth less than the machine's list — the reader now has to
+    #: work out whether a human added anything. Same rule as `rationale` on
+    #: a judgment and `basis` on a restatement.
+    reason: str = Field(min_length=15, max_length=2000)
+    #: Who to ask. A person naming a person beats a rule guessing between
+    #: two — the lesson `060` learned on `hand_to`. Left out, the sole other
+    #: CONTROLLER gets it, or nobody does and the reason says why.
+    hand_to: str | None = None
+    due_in_days: int = Field(default=14, ge=1, le=365)
+
+
+@router.post("/worklist/recommend", status_code=201)
+def recommend(body: RecommendIn, period: str = None,
+              actor: Actor = Depends(require_any_portfolio)) -> dict:
+    """Say that an outstanding item is worth somebody's attention, and whose.
+
+    **The helper recommends; the controller verifies and seals.** Nothing
+    here touches a decision set, a rate or a restatement — a recommendation
+    raises *work*, never a number, so the guarantee the whole system is built
+    on is untouched by it. What it adds is the fact the record could not
+    hold: `audit_log` says who *decided*, and until now nothing said who
+    *noticed*. An auditor asking why this invoice was restated and not that
+    one has an answer with two names on it rather than one.
+
+    Three rules, and each is one this system already follows somewhere:
+
+    * **The item has to be outstanding.** It is looked up in
+      `v_worklist_owned` inside the turn, so a recommendation cannot name
+      something that has since been cleared. "Read what you are about to
+      depend on inside the turn" — the lock rule, in a small place.
+    * **You can only recommend what is on your own list.** Holding the
+      portfolio the item is routed to, or CONTROLLER, which reaches
+      everything. The refusal names whose list it is on, because "403" sends
+      somebody to find an administrator without knowing what to ask for.
+    * **Nobody recommends to themselves.** Handing yourself a job is taking
+      one, which is a different act and reads differently on the record. The
+      same rule as *nobody grants themselves a portfolio* and *nobody
+      assigns themselves a charge code*.
+    """
+    from app.routers.projects import _hand_to
+
+    period = period or settings.period
+    held = {p.value for p in actor.portfolios}
+    is_controller = Portfolio.CONTROLLER in actor.portfolios
+
+    with turn(period) as cur:
+        cur.execute("""SELECT kind, label, entity, entity_id, severity,
+                              amount, detail, owner_portfolio, goes_to
+                         FROM v_worklist_owned
+                        WHERE period = %s AND kind = %s AND entity_id = %s""",
+                    (period, body.kind, body.entity_id))
+        item = cur.fetchone()
+        if not item:
+            raise HTTPException(
+                404, f"{body.kind} on {body.entity_id} is not outstanding in "
+                     f"{period}. Either it has been cleared since the screen "
+                     f"was drawn — which is the good outcome — or the name is "
+                     f"wrong. Reload the list.")
+
+        if not (is_controller or item["owner_portfolio"] in held):
+            raise HTTPException(
+                403, f"{body.kind} is {item['owner_portfolio']}'s to deal "
+                     f"with and {actor.display_name} holds "
+                     f"{', '.join(sorted(held)) or 'none'}. You can only "
+                     f"recommend something that is on your own list.")
+
+        if body.hand_to:
+            # By id or by email, the way `/projects` takes it. A screen has
+            # the id and a person typing has the address, and refusing one of
+            # them makes the field usable from only one of the two places it
+            # is reached from.
+            cur.execute("""SELECT actor_id, display_name FROM actor
+                            WHERE (actor_id::text = %s OR email = %s)
+                              AND is_active""",
+                        (body.hand_to, body.hand_to))
+            who = cur.fetchone()
+            if not who:
+                raise HTTPException(
+                    404, f"No active account matching {body.hand_to!r}. Give "
+                         f"an account id or an email address, or leave it out "
+                         f"and it goes to whoever holds CONTROLLER.")
+            if str(who["actor_id"]) == str(actor.actor_id):
+                raise HTTPException(
+                    422, "Handing yourself a job is taking one, which is a "
+                         "different act. Open a todo on it instead — a "
+                         "recommendation is a thing you ask of somebody "
+                         "else, and the record should read that way.")
+            assignee, to_whom = str(who["actor_id"]), who["display_name"]
+        else:
+            assignee, to_whom = _hand_to(cur, actor, Portfolio.CONTROLLER.value)
+
+        title = str(item["label"])[:200]
+        detail = (f"Recommended by {actor.display_name}: {body.reason.strip()}"
+                  f"\n\nWhat the list says: {item['detail'] or item['label']}"
+                  f"\nDealt with on {item['goes_to']}.")
+        try:
+            cur.execute("""INSERT INTO todo (period, title, detail, due_on,
+                                             status, worklist_kind,
+                                             worklist_entity_id,
+                                             assignee_actor, opened_by)
+                           VALUES (%s,%s,%s,%s,'OPEN',%s,%s,%s::uuid,%s)
+                        RETURNING todo_id""",
+                        (period, title, detail,
+                         dt.date.today() + dt.timedelta(days=body.due_in_days),
+                         item["kind"], item["entity_id"], assignee,
+                         actor.display_name))
+        except Exception as exc:                       # noqa: BLE001
+            if "one_live_job_per_worklist_item" not in str(exc):
+                raise
+            raise HTTPException(
+                409, f"Somebody already has this one. {item['label']} carries "
+                     f"a live job already, and two people each told to clear "
+                     f"it is two people each assuming the other has. Open the "
+                     f"existing one rather than raising a second.") from exc
+
+        todo_id = str(cur.fetchone()["todo_id"])
+        record(actor, "TODO_RECOMMEND", "todo", todo_id,
+               after={"kind": item["kind"], "entity_id": item["entity_id"],
+                      "label": item["label"], "to_whom": to_whom,
+                      "assigned": assignee is not None},
+               reason=body.reason.strip(), cursor=cur)
+
+    return {"todo_id": todo_id, "period": period,
+            "kind": item["kind"], "entity_id": item["entity_id"],
+            "label": item["label"],
+            "recommended_by": actor.display_name,
+            #: Says it rather than leaving it to be inferred: `assigned` false
+            #: with a reason is a real outcome, not a failure.
+            "assigned": assignee is not None, "to_whom": to_whom}
