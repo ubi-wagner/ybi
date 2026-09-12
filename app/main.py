@@ -29,7 +29,7 @@ from app.routers import (auth, awards, certify, chart, classify, contracts,
                          dashboard,
                          documents, evidence, export, facilities, health,
                          imports, lanes, rates, reconcile, restate, review,
-                         requests, timesheet, undo, reports)
+                         requests, timesheet, undo, reports, projects)
 from app.settings import settings
 
 log = logging.getLogger("ybi")
@@ -102,8 +102,12 @@ app.add_middleware(
 for r in (health, auth, dashboard, imports, chart, classify, lanes,
           rates, evidence, documents, awards, facilities, certify,
           timesheet, undo, restate, review, contracts, reconcile,
-          export, reports, requests):
+          export, reports, requests, projects):
     app.include_router(r.router, prefix="/api")
+# The todo list is its own prefix rather than /projects/todos, because most
+# of it is not about a project: "chase NCDMM for a readable agreement" belongs
+# to the engagement and to no charge code.
+app.include_router(projects.todos, prefix="/api")
 
 
 @app.exception_handler(ValueError)

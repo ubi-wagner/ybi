@@ -22,6 +22,7 @@ import FirstPassword from "./components/FirstPassword.jsx";
 import Evidence from "./pages/Evidence.jsx";
 import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
+import Projects from "./pages/Projects.jsx";
 import Lanes from "./pages/Lanes.jsx";
 import Rates from "./pages/Rates.jsx";
 import Review from "./pages/Review.jsx";
@@ -73,6 +74,11 @@ const ALL_TABS = [
   ["/space",     "Space",      "I",   "FACILITIES"],
   ["/inventory", "Inventory",  "I",   "INVENTORY"],
   ["/contracts", "Contracts",  "F",   "PROJECT"],
+  /* Setting a piece of work up, and the list of who is doing what by when.
+     Same gate as Contracts, because it is the same job: a project IS a
+     charge code somebody set up, and the people on it are the people the
+     charge-code routes authorise. */
+  ["/projects",  "Projects",   "F",   "PROJECT"],
   ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
   ["/rates",     "Rates",      "D",   "CONTROLLER"],
   ["/reports",   "Reports",    "G",   "reader"],
@@ -228,6 +234,8 @@ export default function App() {
           <Route path="/evidence" element={<Evidence actor={actor} />} />
           <Route path="/requests" element={<Requests actor={actor} />} />
           <Route path="/space" element={<Facilities actor={actor} />} />
+          <Route path="/projects" element={<Projects actor={actor} />} />
+          <Route path="/projects/:objectiveId" element={<Projects actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />
           <Route path="/review" element={<Review />} />

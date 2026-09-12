@@ -130,6 +130,13 @@ def main() -> int:
             check(heidi2, "GET", f"/api/lanes/{lid}/overrides", 200,
                   "though she may read what a lane has tried — a lane is "
                   "disclosure, and disclosure is for reading")
+        # Setting a project up is the project manager's job and the
+        # controller's, and she still holds PROJECT — so this is the other
+        # direction: a narrow portfolio that *does* reach its own work.
+        check(heidi2, "GET", "/api/projects", 200,
+              "she may still read the projects she manages")
+        check(heidi2, "GET", "/api/todos", 200,
+              "and the list of who is doing what by when")
         check(heidi2, "GET", "/api/facilities", 200,
               "her facilities work is untouched")
         check(heidi2, "GET", "/api/facilities/equipment", 200,

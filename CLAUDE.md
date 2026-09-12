@@ -716,6 +716,84 @@ against $275,000, with $655,190 of labour carrying nothing — and only **LTM**
 budgets a real figure, $81,772.76, whose mirror image is $233,543.12 of
 *unrecovered indirect* sitting in YBI's own cost share.
 
+## Setting a piece of work up
+
+`/projects`, migration `059`. Read across from the RFP pipeline
+(`ubi-wagner/govwin`), which models the other half of the same engagement: it
+wins the work and this system accounts for it.
+
+**Two things were taken from its post-award module and a dozen were
+deliberately not**, and the second half is the design. Its own build log is
+the argument — `docs/PROJECT_MANAGEMENT_DESIGN.md` opens with a superseded
+notice explaining that they built `project_wbs_nodes` *beside*
+`project_milestones`, then collapsed and dropped it, because
+
+> *"the shape below — a node tree beside a milestone list, each with its own
+> dates, costs and CLIN — was two structures describing one thing. It also
+> produced two answers to the same question."*
+
+Which is this repository's own most expensive lesson in somebody else's
+words: `space_partition` beside `space_unit`, 13.0% and 2.2% at the same
+moment, and *the cost objective is the charge code; there is deliberately no
+second register of codes.*
+
+Taken:
+
+| | |
+| --- | --- |
+| `projects` | `project`, **keyed on `objective_id`** — the charge code *is* the project, not a foreign key to one. A project id that could differ from an objective id is two names for one thing. |
+| `project_milestone_tasks` | `todo`, with both its rules: blocked says what is blocking, and done carries when and who. Both were already the house style under other names. |
+
+Not taken, because the register exists: `project_assignments` is
+`charge_authority` (which already carries *nobody assigns themselves*, one
+live grant per person per code, revoked rather than deleted);
+`project_clins` is `award_budget`, and these awards carry no CLIN at all so a
+CLIN table would be `invoice.milestone_id` again; `project_milestones` and
+`project_deliverables` are `milestone`; `project_invoices` is `invoice` and
+`receipt`; `project_time_entries` is `timesheet_entry`;
+`project_modifications` is `award_term`, which cites the clause. The risks,
+reviews, meetings and comments registers are not taken for a plainer reason:
+nothing here would write them, and this schema has had eleven columns and
+tables that looked usable and were filled by nothing.
+`tests/test_projects.py` fails a migration that grows any of them.
+
+**Setting up is one act.** Opening a charge code, saying which contract it
+works under, naming who may charge it and writing down the first things to do
+were four calls in four places — and a code with nobody on it has its
+authority gate switched off, which is right for reconstructing a year already
+worked and wrong for work starting now. `POST /api/projects` does all of it
+inside one `turn(period)`, through every rule the separate routes enforce, and
+the answer says `gate_live` so nobody has to infer it. A refusal partway
+through leaves nothing behind, because the whole setup is one transaction.
+
+**And the half `v_worklist` could never hold.** The worklist has always known
+*what* is outstanding and `v_worklist_owned` added *which portfolio* can act
+on each kind. Neither could say **who** is doing it or **by when**, because
+nothing in the system could write that down — so `FOR_TOM_TO_VERIFY.md`'s
+twenty-one items, `v_certification_chase`, and "obtain a text-bearing copy of
+the Drive AM agreement" all sat on lists with no owner and no date.
+A `todo` carries `worklist_kind` + `worklist_entity_id`, and
+`v_worklist_covered` joins the machine's list to a person's: **1,089
+outstanding, and the interesting column is how few anybody has taken.**
+
+Three things about it worth keeping:
+
+- **No foreign key on the worklist columns, and that is deliberate.** The
+  worklist is a view over eleven derived sources and its entity ids are
+  computed, not stored. A constraint would have to be a trigger re-deriving
+  the whole view on every insert, and the failure it would prevent — a todo
+  naming an item that has since been cleared — is the good outcome.
+- **Unassigned is a state, not a gap.** On the list and nobody has it is a
+  different fact from nobody having written it down. The intake rule, applied
+  to work.
+- **The coverage screen groups by kind.** 998 of the 1,089 are one kind;
+  printing them flat is the defect the evidence screen had when thirty-two
+  unread workbooks buried three real proposals.
+
+The seed creates no projects. Who is on each one and what is outstanding on
+it are judgments with a person's name on them, and a foundation that invented
+them would be the thing this whole file argues against.
+
 ## A lane is a question; the sealed set is the answer
 
 `lane_decision_override`, `lane_override_line` and `lane_assumption` were

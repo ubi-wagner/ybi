@@ -192,6 +192,18 @@ export const api = {
   segment: (body) => req("/classify/segment", { method: "POST", body: JSON.stringify(body) }),
   segments: (period = "2025") => req(`/classify/segments?period=${period}`),
   decide: (body) => req("/classify/decide", { method: "POST", body: JSON.stringify(body) }),
+  projects: (period = "2025") => req(`/projects?period=${period}`),
+  project: (id, period = "2025") => req(`/projects/${id}?period=${period}`),
+  openProject: (body) =>
+    req("/projects", { method: "POST", body: JSON.stringify(body) }),
+  setProjectStatus: (id, body) =>
+    req(`/projects/${id}/status`, { method: "POST", body: JSON.stringify(body) }),
+  todos: (params = {}) => req("/todos?" + new URLSearchParams(params)),
+  openTodo: (body) =>
+    req("/todos", { method: "POST", body: JSON.stringify(body) }),
+  changeTodo: (id, body) =>
+    req(`/todos/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  todoCovering: (period = "2025") => req(`/todos/covering?period=${period}`),
   lanes: (period = "2025") => req(`/lanes?period=${period}`),
   createLane: (body) => req("/lanes", { method: "POST", body: JSON.stringify(body) }),
   laneBuildup: (id) => req(`/lanes/${id}/buildup`),

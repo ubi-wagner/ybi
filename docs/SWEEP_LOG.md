@@ -915,6 +915,85 @@ test, and so is a fix.
 
 ---
 
+## Reading across from the RFP pipeline
+
+Asked to look up the projects and todos on the RFP pipeline and bring them
+over. `ubi-wagner/govwin` is that repository — a govtech proposal platform,
+251 migrations, 139 tables — and it is the other half of this engagement: it
+wins the work and this system accounts for it.
+
+Its post-award module has fourteen registers. **Two were taken and twelve
+were deliberately not**, and the refusals are the design.
+
+The argument for refusing is in their own build log rather than in mine.
+`docs/PROJECT_MANAGEMENT_DESIGN.md` opens with a superseded notice:
+
+> *"the shape below — a node tree beside a milestone list, each with its own
+> dates, costs and CLIN — was two structures describing one thing. It also
+> produced two answers to the same question."*
+
+Migration 228 collapsed the two and 229 dropped the table. That is
+`space_partition` beside `space_unit`, and 13.0% and 2.2% at the same moment,
+described by somebody who had never seen this codebase. Finding the same
+lesson independently in a neighbouring system is the strongest evidence
+either of us has that it is a real one.
+
+So `project_assignments` stayed out, because `charge_authority` already holds
+who may charge a code *and* the three rules a second table would have to
+learn again. `project_clins` stayed out, because all four America Makes
+awards are cost reimbursement invoiced monthly and carry no CLIN — a CLIN
+register would be `invoice.milestone_id` all over again, a table for a
+contract shape YBI does not have. Nine more stayed out for the same kind of
+reason, and four (risks, reviews, meetings, comments) for a plainer one:
+nothing here would write them, and eleven columns and tables in this schema
+have already turned out to be filled by nothing.
+
+### What did come across
+
+**A project is a charge code somebody set up** — keyed on `objective_id`
+rather than carrying a reference to one, so there is no second name for the
+same thing.
+
+**A todo is the list a person can actually write.** Both of
+`project_milestone_tasks`'s rules came with it and both were already the house
+style under other names: blocked says what is blocking it
+(`reversal_needs_reason`), and done carries when and who (`milestone_check`).
+
+**Setting up is one act.** Four calls in four places became one, inside one
+turn, through every rule the separate routes already enforce. A code with
+nobody on it has its authority gate off, so the answer says `gate_live` rather
+than leaving somebody to work it out.
+
+### And the thing that was actually missing
+
+`v_worklist` has known *what* is outstanding since it was written, and
+`v_worklist_owned` added *which portfolio*. **Neither could ever say who is
+doing it or by when**, because nothing in the system could write that down.
+So the twenty-one items on `FOR_TOM_TO_VERIFY.md`, the certification chase
+list, and "obtain a text-bearing copy of the Drive AM agreement" all sat on
+lists with no owner and no date.
+
+`v_worklist_covered` joins the machine's list to a person's. Against the live
+record: **1,089 outstanding and one taken.** That number is the finding — not
+a defect in anything, but the first time the system has been able to state it.
+
+### Two things caught building it
+
+**A test that proves only the refusing direction may be refusing
+everything.** A failed statement aborts its transaction, so the repository's
+existing pattern is one expected failure per test, at the end — which leaves
+the accepting direction untested. A `refused()` helper takes the refusal on a
+savepoint, so one test can prove a constraint refuses the bad case *and*
+accepts the good one. Verified by dropping five constraints on a scratch
+database: exactly the five tests that name them fail.
+
+**The coverage screen was a wall of two hundred rows.** 998 of the 1,089
+items are one kind. It groups by kind now — which is the evidence screen's
+lesson, where thirty-two request-reply workbooks nobody had read buried three
+real proposals.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the
