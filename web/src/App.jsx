@@ -24,6 +24,7 @@ import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
 import Projects from "./pages/Projects.jsx";
 import Lanes from "./pages/Lanes.jsx";
+import Restate from "./pages/Restate.jsx";
 import Rates from "./pages/Rates.jsx";
 import Review from "./pages/Review.jsx";
 import Contracts from "./pages/Contracts.jsx";
@@ -81,6 +82,13 @@ const ALL_TABS = [
   ["/projects",  "Projects",   "F",   "PROJECT"],
   ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
   ["/rates",     "Rates",      "D",   "CONTROLLER"],
+  /* The point of the whole system, and it had no tab for as long as it has
+     existed: five routes, complete, and no page, no route and no call in
+     api.js. Everything upstream — the classification, the seal, the rate,
+     the allocation — exists so that a number put in front of NCDMM can be
+     traced back to a judgment somebody signed their name to, and nobody
+     could reach the screen that puts it there. */
+  ["/restate",   "Restate",    "F",   "CONTROLLER"],
   ["/reports",   "Reports",    "G",   "reader"],
   ["/review",    "Review",     "A-1", "reader"],
   ["/help",      "Help",       "?",   null],
@@ -238,6 +246,8 @@ export default function App() {
           <Route path="/projects/:objectiveId" element={<Projects actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />
+          <Route path="/restate" element={<Restate actor={actor} />} />
+          <Route path="/restate/:restatementId" element={<Restate actor={actor} />} />
           <Route path="/review" element={<Review />} />
           <Route path="/review/:pane" element={<Review />} />
           <Route path="/awards" element={<Awards />} />

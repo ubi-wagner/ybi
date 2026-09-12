@@ -794,6 +794,68 @@ The seed creates no projects. Who is on each one and what is outstanding on
 it are judgments with a person's name on them, and a foundation that invented
 them would be the thing this whole file argues against.
 
+## The restatement, and the door it never had
+
+`/restate`, migration `061`. **The point of the whole system — and for as
+long as it has existed, nobody could reach it.** Five routes complete since
+they were written, and no page, no route in `App.jsx`, no call in `api.js`.
+Everything upstream exists so that a number put in front of NCDMM can be
+traced back to a judgment somebody signed their name to, and the screen that
+puts it there was missing.
+
+The router opens by naming three things it will not do. Two were held. The
+third was not:
+
+> *It will not net an over-collection against an under-recovery. They are two
+> different conversations: one is money to ask for, the other is money to
+> give back, and a single net figure hides both.*
+
+`v_restatement` carried `under_recovered - over_collected AS net_movement` —
+that figure exactly, pre-computed, in a column named as though it were the
+summary. **Nothing read it because nothing could**, and the first screen to
+show a restatement would reasonably have reached for it. Worse than the other
+dead columns here: those were empty and answered nothing, this one answers
+plausibly. $120,000 to ask for and $120,000 to give back is not a quiet year.
+`061` removes it and `tests/test_restate.py` fails a view **or a screen** that
+subtracts one from the other — verified against both spellings, because the
+first regex matched neither.
+
+**The screen carries the router's three rules**, and they are the design:
+
+- **Nothing is computed on it.** Every figure is read from the row the
+  restatement was recorded in, like the review screens. It shows the rate the
+  restatement will actually apply — the first draft took `rates[0]`, which was
+  FRINGE at 0.00% while the restatement measured against INDIRECT_COMBINED at
+  40.64%. A screen showing a different number from the one the server uses is
+  a nav stricter than the API in another shape.
+- **"Not yet, because", never an empty list.** `candidates` answers with the
+  reasons and the reasons are the work.
+- **A proposal is not a position.** Everything is PROPOSED until a sponsor
+  says otherwise in writing.
+
+**And the refusal that matters says what to do.**
+`acceptance_names_its_modification` belongs in the schema — it has to hold
+when a handler is wrong — but its refusal reached the person as *"The
+database refused this write: acceptance_names_its_modification."* in the one
+place the router's own docstring calls **the most likely thing in this whole
+exercise to become a finding**. The handler answers first now, naming §4.4
+and what to supply; the schema still stands behind it.
+
+Against the live record, with classification at 13% and the rate reading
+40.64% — high, which is the honest direction to err — **Drive AM is
+$15,278.16 under-recovered on one invoice that claimed no indirect at all.**
+The engine's own finding line is the case: *"No indirect line. On a
+cost-reimbursement award this forgoes recovery outright."*
+
+`scripts/drive_restate.py` walks it as the controller and the auditor. Two
+things came out of writing it. **`restatement` is append-only** — *correct by
+superseding, never by editing* — so the drive cannot delete what it made and
+should not: a position taken and then withdrawn is part of the trail. Its
+census counts restatements **standing as a claim**, and it withdraws its own
+through the route a person would use. That is the `invoice_no_delete` lesson
+in a second place: a cleanup that assumes it can remove what it made stops
+working the day the table grows a guarantee.
+
 ## The handoff
 
 Migration `060`. `059` gave the system a list a person can write; this is what

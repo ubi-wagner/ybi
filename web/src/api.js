@@ -224,6 +224,13 @@ export const api = {
     req(`/lanes/${id}/assumptions`, { method: "PUT", body: JSON.stringify(body) }),
   compareLanes: (ids, period = "2025") =>
     req(`/lanes/compare?lanes=${ids.join(",")}&period=${period}`),
+  restateCandidates: (period = "2025") => req(`/restate/candidates?period=${period}`),
+  restatements: (period = "2025") => req(`/restate?period=${period}`),
+  restatement: (id) => req(`/restate/${id}`),
+  restate: (body, period = "2025") =>
+    req(`/restate?period=${period}`, { method: "POST", body: JSON.stringify(body) }),
+  restateStatus: (id, body) =>
+    req(`/restate/${id}/status`, { method: "POST", body: JSON.stringify(body) }),
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   imports: (period = "2025") => req(`/imports?period=${period}`),

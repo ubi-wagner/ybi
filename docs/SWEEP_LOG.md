@@ -1074,6 +1074,79 @@ afterwards.
 
 ---
 
+## The last one: the deliverable had no door
+
+Looking for what was genuinely left rather than polish, the answer was the
+thing the whole system is for. `POST /api/restate` and its four siblings have
+been complete since they were written. There was **no page, no route in
+`App.jsx` and no call in `api.js`** — no person could reach the restatement.
+
+That is the shape this sweep has found eleven times: a capability with no
+writer, no reader or no door. This was the most expensive instance, because
+of what was waiting behind the door.
+
+### A column that answers plausibly
+
+The router opens by naming three things it will not do, and the third is:
+
+> *It will not net an over-collection against an under-recovery. They are two
+> different conversations: one is money to ask for, the other is money to
+> give back, and a single net figure hides both.*
+
+`v_restatement` carried `under_recovered - over_collected AS net_movement`.
+
+The handler refuses to produce that figure and the view offered it,
+pre-computed, in a column named as though it were the summary. Every other
+dead column here was empty and answered nothing; this one answers
+**plausibly**, and the first screen to show a restatement would reasonably
+have reached for it. $120,000 to ask NCDMM for and $120,000 to give back is
+not a quiet year.
+
+Migration `061` removes it. `tests/test_restate.py` fails a view **or a
+screen** that subtracts one from the other.
+
+### And the test could not fail for what it named
+
+The first regex allowed only whitespace and brackets between the two names,
+so it matched neither `r.under_recovered - r.over_collected` nor
+`Number(r.under_recovered) - Number(r.over_collected)` — the only two
+spellings the defect actually appears in. **It passed against both.** Caught
+by trying it, which is the only way this class is ever caught: verified
+against a re-broken view and a re-broken screen before it was kept.
+
+### The refusal that said a constraint's name
+
+`acceptance_names_its_modification` is in the schema, where it belongs. What
+it answered was:
+
+    The database refused this write: acceptance_names_its_modification.
+
+in the one place the router's own docstring calls *the most likely thing in
+this whole exercise to become a finding*. The handler answers first now —
+naming §4.4, what the modification is, and that the objective stays a
+proposal until it is supplied — and the schema still stands behind it.
+
+### What it says against the live record
+
+With classification at 13% and the rate reading 40.64% — high, which is the
+honest direction to err while the queue is open — **Drive AM is $15,278.16
+under-recovered on a single invoice that claimed no indirect at all.** The
+engine's own finding line is the case the restatement exists to make:
+
+> *No indirect line. On a cost-reimbursement award this forgoes recovery
+> outright: 15278.16 is supported on an invoiced base of 37593.90.*
+
+### And one more append-only lesson
+
+`restatement` refuses a DELETE. The drive's first teardown tried anyway and
+left a row behind — the `invoice_no_delete` lesson in a second place: **a
+cleanup that assumes it can remove what it made stops working the day the
+table grows a guarantee.** It withdraws its own through the route a person
+would use, and its census counts restatements *standing as a claim* rather
+than rows, because a position taken and then withdrawn is part of the trail.
+
+---
+
 ## The four shapes
 
 Every item found something the plan did not know about, and they were the

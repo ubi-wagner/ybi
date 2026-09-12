@@ -112,6 +112,12 @@ run "drive_concurrency" $PY scripts/drive_concurrency.py --base "$BASE"
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 
+# After drive_state_machine, which seals and computes — a restatement is a
+# consequence of the rate and the rate of the judgments, and a drive that
+# sealed to give itself something to measure would be reading its own writing.
+step "The number walked out to NCDMM"
+run "drive_restate" $PY scripts/drive_restate.py --base "$BASE"
+
 step "A piece of work set up, approved, and handed on"
 run "drive_projects" $PY scripts/drive_projects.py --base "$BASE"
 

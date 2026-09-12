@@ -312,13 +312,33 @@ def decide(restatement_id: str, body: DecideIn,
     """
     if body.status not in ("SUBMITTED", "ACCEPTED", "REJECTED"):
         raise HTTPException(422, f"Unknown status {body.status!r}.")
-    head = one("SELECT status::text AS status FROM restatement "
-               "WHERE restatement_id = %s", (restatement_id,))
+    head = one("""SELECT status::text AS status, modification_ref, objective_id
+                    FROM restatement WHERE restatement_id = %s""",
+               (restatement_id,))
     if not head:
         raise HTTPException(404, "No such restatement.")
     if head["status"] == "SUPERSEDED":
         raise HTTPException(409, "That restatement has been superseded by a "
                                  "later computation.")
+    # `acceptance_names_its_modification` holds this in the schema, which is
+    # where it belongs — it has to hold when a handler is wrong. But the
+    # schema's refusal reaches the person as the constraint's name, and this
+    # is the one place in the whole exercise where that is least affordable:
+    # the docstring above calls the omission the most likely thing here to
+    # become a finding, and what it answered was
+    # "The database refused this write: acceptance_names_its_modification."
+    if (body.status == "ACCEPTED"
+            and not (body.modification_ref.strip()
+                     or (head["modification_ref"] or "").strip())):
+        raise HTTPException(
+            422, f"Accepting this needs the modification that authorised the "
+                 f"change of basis — neither America Makes agreement was "
+                 f"billed under a provisional rate, so moving off the de "
+                 f"minimis election is a §4.4 change of basis rather than a "
+                 f"corrected invoice. Name the modification (its number and "
+                 f"the date it was signed) and try again. Until then "
+                 f"{head['objective_id']} stays a proposal, which is what it "
+                 f"is.")
 
     with transaction() as cur:
         cur.execute("""UPDATE restatement
