@@ -150,11 +150,18 @@ def main() -> int:
     # Read off the live ledger rather than invented, so the proposal is
     # tested against the shapes the record actually has — several lines to a
     # group, a payee written the way QuickBooks writes it.
+    # `v_cost_line`, not the whole P&L. This drive used to pick its
+    # unambiguous group off the largest thing in the ledger, which was
+    # `4015 Program Fees` at 1,211,515.20 — **income**. It then proved that a
+    # vendor invoice could be matched to grant revenue, and passed. `064`
+    # took income out of the candidates and the drive failed, which is the
+    # drive being corrected by the system rather than the other way round:
+    # a document supports a cost, and there is no cost behind program fees.
     groups = query("""SELECT l.account, l.payee, sum(l.amount) AS amount,
                              count(*) AS lines, min(l.txn_date) AS first_day,
                              max(l.txn_date) AS last_day
-                        FROM ledger_line l
-                       WHERE l.period = '2025' AND l.statement = 'P&L'
+                        FROM v_cost_line l
+                       WHERE l.period = '2025'
                          AND l.payee <> ''
                        GROUP BY l.account, l.payee
                       HAVING count(*) > 1 AND sum(l.amount) > 1000

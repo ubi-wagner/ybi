@@ -185,7 +185,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "evidence_id": "EV-b3e05669a68f",
     "invoice_id": "10018",
     "award_id": "AM-DRIVE-AM",
-    "actor_id": "d7254370-c16a-40a6-b092-8c0185043562",
+    "actor_id": "66787855-0e01-4392-aa22-913d1154cc67",
     "employee_key": "EWING",
     "objective_id": "AAMEN",
     "period": "2025",
@@ -375,13 +375,13 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
       "n": 27
     },
     {
-      "actor": "Engagement Auditor",
-      "role": "AUDITOR",
+      "actor": "Heidi Ruby",
+      "role": "CONTROLLER",
       "n": 21
     },
     {
-      "actor": "Heidi Ruby",
-      "role": "CONTROLLER",
+      "actor": "Engagement Auditor",
+      "role": "AUDITOR",
       "n": 21
     },
     {
@@ -466,7 +466,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
     "lines": 45
   },
   "proportion_after": {
-    "classified_dollars": "13.0",
+    "classified_dollars": "21.8",
     "decisions": "1",
     "audit": "235",
     "ledger": "14371299.30",
@@ -476,7 +476,7 @@ Not necessarily wrong — scope may be the group rather than the line — but wo
   "proportion_moved": {
     "classified_dollars": [
       "0.0",
-      "13.0"
+      "21.8"
     ],
     "decisions": [
       "0",

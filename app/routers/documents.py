@@ -486,7 +486,7 @@ def _targets(period: str) -> list[MatchTarget]:
                max(l.txn_date)                         AS last_day,
                count(*)                                AS lines
           FROM ledger_line l
-         WHERE l.period = %s AND l.statement = 'P&L'
+         WHERE l.period = %s AND l.section <> 'Income'
          GROUP BY l.account, l.payee
         HAVING sum(l.amount) <> 0""", ("\x1f", period))
     out = [MatchTarget(target_type="LEDGER_GROUP", target_id=r["target_id"],
@@ -499,7 +499,7 @@ def _targets(period: str) -> list[MatchTarget]:
                l.account || ' · ' || coalesce(l.description, '') AS label,
                l.amount, l.payee, l.txn_date
           FROM ledger_line l
-         WHERE l.period = %s AND l.statement = 'P&L' AND l.amount <> 0""",
+         WHERE l.period = %s AND l.section <> 'Income' AND l.amount <> 0""",
         (period,))
     out.extend(MatchTarget(target_type="LEDGER_LINE", target_id=r["target_id"],
                            label=r["label"], amount=r["amount"],

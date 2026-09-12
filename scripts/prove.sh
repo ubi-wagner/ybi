@@ -109,6 +109,13 @@ step "Two people, one record, the same instant"
 # expect to.
 run "drive_concurrency" $PY scripts/drive_concurrency.py --base "$BASE"
 
+step "The rate build-up, and everything that moves it"
+# With the drives that seal, and before drive_everyone, which expects an open
+# set. It seals, computes, judges, recomputes and unseals, and its last step
+# takes the carve-outs out from under a live rate to prove the tie control
+# can fail — so it must run where it can seal freely and put the record back.
+run "drive_buildup" $PY scripts/drive_buildup.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

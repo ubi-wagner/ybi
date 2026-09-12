@@ -872,6 +872,96 @@ the only thing that knows — a second reading of `decision_set` in the drive
 would be a copy of the rule, free to drift from it, which is the defect it
 was just caught in.
 
+## Cost is not income
+
+Migration `064`. **The controller was being asked to judge $6.9m of
+revenue.**
+
+`039` put the definition of coverage in the schema because the classification
+screen and the auditor's report answered 13.0% and 2.2% at the same moment,
+and it scoped the answer to the P&L. Its comment says why: *"balance sheet
+movements are not cost to classify."* True, and one level too coarse —
+**income is on the P&L.** Measured on the live record:
+
+| section | dollars | groups |
+| --- | --- | --- |
+| Expense | $10,026,369.84 | 748 |
+| Other Income | $116,948.54 | 6 |
+| COGS | $37,323.72 | 3 |
+| **Income** | **$6,876,763.86** | **242** |
+
+242 of 999 groups and 40.3% of the scope was revenue, all of it open,
+because there is no answer: grant income does not go in a cost pool. Four of
+the six largest things on Tom's queue were `3900 Grant Income` and
+`4015 Program Fees`. The screen this file calls *the one that matters* opened
+on work that cannot be done, sorted worst-first because those rows are big.
+
+Two consequences, and the second is the worse one:
+
+- **A quarter of the queue could not be actioned** — 999 groups to look at
+  where 757 is the number.
+- **Coverage read 13.0% where the truth against cost is 21.8%.** That figure
+  is on every workpaper, in the 990's NOT FILEABLE banner, in the rate's
+  working-figure caveat, and it was quoted to the board. Wrong by a factor of
+  1.7, in the pessimistic direction, because its denominator was 41% revenue.
+
+`ledger_line.section` has carried the P&L's own section on every line since
+the first import — Income, COGS, Expense, Other Income, CHECK-constrained on
+`pl_account` — and **nothing had ever used it to decide what is cost**. That
+is the discriminator, not a regex on account numbers.
+
+**Other Income stays in scope on purpose.** 2 CFR 200.406 makes applicable
+credits — refunds, rebates, adjustments — a reduction of cost rather than
+revenue, so somebody has to look at those six groups. Only the Income section
+comes out. A line whose section is blank stays too: not knowing what
+something is is a reason to look at it, which is the intake rule applied to
+scope.
+
+And it is **defined once**, in `v_cost_line`. Four places expressed this
+scope by hand — the coverage view, the worklist, the queue handler and the
+evidence matcher — which is precisely the shape that produced 13.0% and 2.2%.
+`tests/test_review.py` fails a handler that grows a fifth copy.
+
+## The build-up ties to the pool
+
+Migration `065`. `063` gave `carve_out` its writer; this is the control that
+would have caught the defect on its own. **Nothing had ever compared the rate
+to the pool underneath it.** `rate.pool_amount` is what the computation used;
+`v_pool_balance.allocable` is what the ledger says is left after recorded
+carve-outs. They sat $932,254.78 apart, in adjacent columns on the same
+screen, for the life of the system.
+
+`v_rate_buildup` carries `pool_variance` and `ties` now. Two other things it
+could not say, both visible the moment carve-outs started being written:
+
+- **INDIRECT_COMBINED had no pool at all.** The join was `pb.pool = r.kind`
+  and there is no pool of that name — it is OVERHEAD plus G&A. So the rate
+  that is actually applied to a restatement showed blank gross, blank carved,
+  blank allocable and zero carve-outs, while OVERHEAD beside it showed all
+  four. The one figure that leaves the building was the one with nothing
+  behind it. It rolls up the two pools it combines now, expressed as data
+  rather than as a `CASE`.
+- **An empty pool read NULL, not 0.** FRINGE and G&A showed `pool_amount =
+  0.00` from the computation and NULL from the LEFT JOIN, side by side,
+  meaning the same thing in two spellings — and a tie cannot be evaluated
+  against a NULL.
+
+`scripts/drive_buildup.py` walks the whole chain and is the answer to *does
+the rate build up completely as items are classified*:
+
+    classify a group      ->  coverage moves by that group's own dollars,
+                              and the scope does not move at all
+    classify into a pool  ->  that pool's gross, allocable and rate move,
+                              and no other pool's does
+    classify DIRECT       ->  the MTDC base moves, so the indirect rate does
+                          ->  and the wage-based fringe base does not
+    compute               ->  carve-outs recorded, every objective allocated
+    at every step         ->  rate.pool_amount = v_pool_balance.allocable
+
+Its last step takes the carve-outs out from under a live rate and checks that
+the build-up **reports two rates not tying, by -$932,254.78** — because a
+control nobody has watched fail is a control nobody has tested.
+
 ## Five registers with no writer, found by sweeping rather than by reading
 
 Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to
@@ -1760,6 +1850,7 @@ are tested at.
 | `scripts/drive_requests.py` | the ask, the imperfect answer, and what it writes |
 | `scripts/drive_evidence.py` | a folder of documents, what it proposes, and what it refuses to |
 | `scripts/drive_concurrency.py` | two controllers acting at the same instant, four races |
+| `scripts/drive_buildup.py` | the rate build-up, and everything that moves it |
 | `scripts/walk_manuals.py` | re-photographs the manual's screens |
 
 `drive_everyone` is the one that answers "does each kind of person have a

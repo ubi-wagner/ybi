@@ -4,15 +4,20 @@ Classification queue.
 This is the screen that decides whether the project succeeds. Everything else
 is reporting. Three rules shape the API:
 
-  1. Work at group grain. The 5,096 P&L lines collapse to 999 account x payee
-     groups, and the top 200 carry 93.3% of the dollars — the top 100 carry
-     84.4%. A row-by-row queue is a workload that does not need to exist and
-     will not finish by November.
+  1. Work at group grain. The 4,038 lines of cost collapse to 757 account x
+     payee groups, and the top 200 carry 95.4% of the dollars — the top 100
+     carry 85.9%. A row-by-row queue is a workload that does not need to
+     exist and will not finish by November.
 
      Those figures are read off `v_classification_coverage` and the queue
      itself; the ones here were written against a 4,020-line extract that
      predates the full ledger, said 751 groups and 94.7%, and were quoted
-     into a status memo for the board before anybody checked them.
+     into a status memo for the board before anybody checked them. They were
+     then wrong a second time — 5,096 lines and 999 groups — because the
+     scope counted the whole P&L, and 242 of those groups and 40% of those
+     dollars were **income**, which is not cost and has no answer in a cost
+     pool. `064`. A figure in a comment is read from the record or it is
+     recalled, and this one has now been recalled twice.
 
   2. Propose, never ask blind. Every group arrives pre-filled from the QBO
      Customer:Job segment, the account name, or a prior-year decision. Tom
@@ -193,7 +198,14 @@ def queue(period: str = "2025",
                max(d.decided_by)                     AS decided_by,
                count(DISTINCT att.attachment_id)     AS evidence_count,
                count(DISTINCT n.note_id)             AS note_count
-          FROM ledger_line l
+          -- `v_cost_line`, not `ledger_line`: the P&L less its Income
+          -- section. 242 of the 999 groups this used to offer were revenue
+          -- — `3900 Grant Income`, `4015 Program Fees` — four of them among
+          -- the six largest things on the screen, and not one has an answer,
+          -- because grant income does not go in a cost pool. A quarter of
+          -- the queue could not be actioned and the biggest rows were the
+          -- ones that could not.
+          FROM v_cost_line l
           -- `dl.live` is load-bearing. Without it a line that has been
           -- reclassified joins once per judgment it has ever carried, and
           -- every sum in this query multiplies: a group judged four times
@@ -206,7 +218,6 @@ def queue(period: str = "2025",
                                   AND att.detached_at IS NULL
           LEFT JOIN note n ON n.target_type = 'LEDGER_LINE' AND n.target_id = l.line_id
          WHERE l.period = %(period)s
-           AND l.statement = 'P&L'
            AND (%(search)s = '' OR l.account ILIKE %(like)s OR l.payee ILIKE %(like)s)
          GROUP BY l.account, l.payee
         HAVING CASE %(status)s

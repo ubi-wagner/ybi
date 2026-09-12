@@ -181,10 +181,18 @@ def test_coverage_is_defined_once():
     in the view; the handler reads it.
     """
     body = _view("v_classification_coverage")
-    assert "l.statement = 'P&L'" in body, (
-        "coverage no longer scopes to the P&L. Balance sheet movements are "
-        "not cost to classify, and counting both sides of a transfer makes "
-        "the measure that gates sealing meaningless.")
+    # Asserted as a property rather than as a spelling. This used to require
+    # the literal `l.statement = 'P&L'` in the body, which `064` broke while
+    # making the scope *more* correct — the predicate moved into
+    # `v_cost_line` so four places could stop each keeping their own copy of
+    # it. A test that pins the wording argues with a correct change; the
+    # thing that actually matters is which lines are counted.
+    assert "v_cost_line" in body or "statement" in body, (
+        "coverage no longer says what it is scoped to at all")
+    assert "balance_sheet" not in body.lower(), (
+        "balance sheet movements are not cost to classify, and counting "
+        "both sides of a transfer makes the measure that gates sealing "
+        "meaningless")
 
     handler = (ROOT / "app" / "routers" / "classify.py").read_text()
     m = re.search(r"def coverage\(.*?\n(?=\n@router)", handler, re.S)
@@ -215,3 +223,63 @@ def test_the_coverage_row_can_be_checked_by_hand():
     assert money and all(m == "abs(" for m in money), (
         "a coverage column is summing net amounts again; the columns beside "
         "it are absolute and the row will not add up")
+
+
+def test_coverage_counts_cost_and_not_income():
+    """A cost pool is for cost, and grant income has no answer in one.
+
+    `039` scoped coverage to the P&L because balance-sheet movements are not
+    cost. True, and one level too coarse: **income is on the P&L**. 242 of
+    the 999 groups the controller was being asked to judge were revenue —
+    `3900 Grant Income`, `4015 Program Fees` — $6,876,763.86, 40.3% of the
+    scope, four of them at the very top of the queue by size, and not one of
+    them answerable.
+
+    Two things came off that. A quarter of the queue could not be actioned,
+    with the unanswerable rows sorted to the top because they were large; and
+    coverage read 13.0% where the truth against cost was 21.8% — the figure
+    on every workpaper, in the 990's NOT FILEABLE banner and in the rate's
+    working-figure caveat, wrong by a factor of 1.7 in the pessimistic
+    direction.
+
+    Asserted against the definition rather than against row counts, because
+    on the empty database CI builds from the migrations every count is zero
+    and a count test would pass without proving anything.
+    """
+    body = _view("v_cost_line")
+    assert "Income" in body and "section" in body, (
+        "v_cost_line no longer excludes the P&L's Income section")
+    assert "'P&L'" in body, (
+        "v_cost_line no longer excludes balance sheet movements")
+    # Other Income stays: 2 CFR 200.406 applicable credits — refunds,
+    # rebates, adjustments — reduce cost rather than being revenue, so
+    # somebody has to judge them. The cut is the Income *section*, which is
+    # why this is `<> 'Income'` and not `amount > 0` or `NOT IN (...)`.
+    assert "Other Income" not in body.replace("-- ", ""), (
+        "Other Income was cut from the scope. 200.406 applicable credits "
+        "reduce cost and need a judgment")
+
+    # And nothing may keep a second copy of the scope. Four places did.
+    for f in ("app/routers/classify.py", "app/routers/documents.py"):
+        src = (ROOT / f).read_text()
+        assert "statement = 'P&L'" not in src, (
+            f"{f} keeps its own copy of the classification scope, which is "
+            f"how 13.0% and 2.2% happened")
+
+
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="needs a database")
+def test_no_income_reaches_the_scope_on_a_loaded_ledger():
+    """The same rule, against real rows.
+
+    Skips rather than passing vacuously where no ledger is loaded — nought
+    income lines out of nought is the empty case satisfying the assertion,
+    not the guarantee holding. `scripts/drive_buildup.py` covers it against
+    the seeded record.
+    """
+    from app.db import one
+    loaded = one("SELECT count(*) AS n FROM ledger_line WHERE statement = 'P&L'")
+    if not loaded or not loaded["n"]:
+        pytest.skip("no P&L loaded; drive_buildup covers the loaded case")
+    bad = one("SELECT count(*) AS n FROM v_cost_line WHERE section = 'Income'")
+    assert bad["n"] == 0, (
+        f"{bad['n']} income lines are being offered as cost to classify")
