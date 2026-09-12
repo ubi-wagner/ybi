@@ -1031,36 +1031,118 @@ share on top of a figure already net of recovery removes the same money twice.
 
 ### The rate that falls out
 
-Applied end to end on a development rig — 572 judgments recorded through the
-API as Tom, then sealed and computed — coverage goes **21.8% → 61.3%** and:
+Applied end to end — recorded through the API as Tom, then sealed and
+computed — against a **freshly seeded** record:
 
 | | | |
 | --- | --- | --- |
 | FRINGE | **21.90%** | $401,783.60 over the register's $1,835,047.18 |
-| OVERHEAD | 24.94% | after a $1,249,877.40 carve-out |
-| G&A | 4.53% | |
-| **INDIRECT_COMBINED** | **29.47%** | $1,181,353.73 over $4,009,264.44 MTDC |
+| OVERHEAD | 14.71% | |
+| G&A | 6.57% | |
+| **INDIRECT_COMBINED** | **21.28%** | $853,417.46 over $4,011,243.53 MTDC |
 
 **Every pool ties: `pool_variance` 0.00 and `pool_state` TIES on all four,
 and all four rows of `v_rate_anchor` tie.** Nothing was tuned to reach that.
 The fringe pool is the six accounts the P&L names as fringe and the
-denominator is the payroll register, so **0.2190 falls out** — arrived at from
-the judgments and checked against the documents, which is the only way a
-sealed rate is worth anything.
+denominator is the payroll register, so **0.2190 falls out** — arrived at
+from the judgments and checked against the documents, which is the only way
+a sealed rate is worth anything.
 
-And the thing worth knowing about the direction: at 21.8% coverage the
-combined rate read **40.64%**; at 61.3% it reads **29.47%**. **As
-classification completes the rate falls**, because the MTDC base grows faster
-than the pools do. That is *unclassified cost is never defaulted into a pool*
-with numbers on it — the rate reads high while work is unfinished, which is
-the honest direction to err, and the restatement moves with it: Drive AM is
-$15,278.16 under-recovered at 40.64% and **$11,078.92 at 29.47%**, on the one
-invoice that claimed no indirect at all.
+**And the first version of this section reported 29.47% over a record a
+drive had written.** `facility` and `space_unit` are *empty on a seeded
+foundation*, so the $1,249,877.40 carve-out quoted here came from space rows
+`drive_everyone` had created, and the wage distribution counted in that
+run's coverage had been classified by a drive too. A rate measured on a
+database carrying test artefacts is a review reading its own writing — the
+defect `review_system.py` was fixed for — and it is easy to walk into
+because the artefacts look exactly like data. **Re-seed before measuring
+anything you intend to quote.**
 
-**Do not read 29.47% as the answer.** It is a rate over a 61.3% complete
-classification, and the $850,383 of depreciation still outside the pools is
-the single largest thing that will move it. `PROJECT_CONTEXT.md`'s 31.78% is
-the modelled figure and neither supersedes the other yet.
+### The carve-out that cannot fire, and says nothing
+
+Which is how the correction turned up something worse. `v_facility_occupancy`
+inner-joins to its space totals, and on a record with **no buildings at all**
+it returns nothing — so `POST /api/rates/compute` computes **no 200.465
+carve-out**, `carve_out` stays empty, `pool_carved` reads 0.00, and
+`v_rate_buildup` reports TIES because the pool does tie to itself.
+
+Nothing distinguishes *there is no tenant space* from *nobody has measured
+any*. `029`'s lesson — an empty set matching an empty set perfectly — in the
+one adjustment this file calls **the single largest in the rate model**. And
+the worklist is silent too: `SPACE_UNMEASURED` fires per building, and a
+record with no buildings has none to fire on, so the gap raises nothing
+anywhere.
+
+`scripts/classification_log.py` reports it as a three-state anchor rather
+than letting it pass: *not evaluable — no building is on the record, so
+every dollar of tenant and vacant occupancy cost is in the federal pool.*
+That is a read-side report, not a fix; the fix is a control that refuses to
+call a rate complete while the carve-out has never been evaluated, and it
+belongs in the schema.
+
+
+### Read it backwards, and it has to say the same thing
+
+`scripts/classification_log.py --reverse` walks December back to January.
+**It must change the order and nothing else** — `judge()` is a pure function
+of one group, so the same ledger has to produce the same judgments read
+either way, and a log whose recommendations depended on the direction of the
+read would be one where the order of the books decided the rate. Nobody
+would find that by looking at either run alone. Every run now walks both
+directions and compares, by group key rather than by position: comparing
+elementwise would report 757 differences on a correct run, which is a test
+arguing against working code.
+
+All 757 agree. What the second pass found was not in the ordering.
+
+**$986,592.77 was marked federally allowable on non-federal objectives.**
+The first version dressed every DIRECT judgment `ALLOWABLE`, which is an
+assertion about a federal award, and Rising Tides ($582,086), ESP
+($284,824), the Hub, MBAC, Youth, Xjet and VGV have no award behind them.
+Rising Tides is the one that stings: whether it is federally funded is an
+open question in this engagement, the objective master says it is not, and
+the log took a side on it in 33 places without saying so. The treatment
+follows `cost_objective.is_federal` now — read from the record, not copied
+into the module — and where it answers no the rationale says which objective
+and why.
+
+**And the parent of an account names the function.** Six accounts were
+blocked as cross-pool splits while sitting under
+`Management & Administrative Expenses` or `5080 Fundraising`, which is the
+bookkeeper saying what kind of activity it is. Using the path for the
+objective and refusing it for the function held one signal to two standards.
+It only settles a split whose branches *differ in function*: insurance
+divides 7300 from 8300 and both are indirect, so the parent cannot tell them
+apart and it stays blocked.
+
+**`5215 Dues and Subscriptions` was blocked on a misreading of 200.454.**
+The crosswalk's note says civic and community memberships are unallowable.
+The rule says otherwise: (a) allows business, technical and professional
+organisations, (b) allows business periodicals, (c) makes civic membership
+allowable **with prior approval**, and only (d) — a country, social or
+dining club — is refused outright. Sixty payees, not one of them a club:
+Mailchimp, LinkedIn, Zoom, Adobe, chambers of commerce, the Better Business
+Bureau, one newspaper. The split does not arise on these facts.
+
+671 of 757 groups now, up from 572, and coverage from the log alone goes
+0% → **40.5%**. The 86 still open name something findable — and two of them
+are new: `5001 Cost of Goods Sold` waits on an inventory journal entry its
+own description points at (*"Used Inventory (See JE for breakdown)"*), which
+makes it the cheapest $37,261.00 on the list; and `SBA Growth Accelerator`
+waits on a `cost_objective` row that has never been opened, so the block
+names the objective to open rather than reporting a gap.
+
+**Three of the new assertions did not fail when I broke the code, and each
+said something.** A break that alternated on index was neutralised by
+arithmetic — reversing an odd-length list preserves every element's parity.
+A genuinely stateful walk still passed, because the fixture had one group
+per account and the live ledger has 757 groups over 87 accounts, so the
+fixture could not express the collision. And the "more than one candidate"
+guard was tested through insurance, which a named rule catches several
+branches earlier — the same defect as the cross-pool test before it, found
+the same way. The guard is `pick_branch()` now, tested directly, because
+**no live crosswalk entry divides two indirect branches** and nothing
+exercises it through `judge()` at all.
 
 
 ## The build-up ties to the pool

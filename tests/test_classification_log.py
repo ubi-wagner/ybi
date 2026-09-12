@@ -26,8 +26,9 @@ import pytest
 
 from app.domain.chart import pool_for
 from app.domain.classification_log import (
-    ANALYSIS, BLOCKED, CROSSWALK_ONE_POOL, OBJECTIVE_BY_PATH, RECORDED,
-    Group, judge, objective_for, summarise, walk)
+    ANALYSIS, BLOCKED, CROSSWALK_ONE_POOL, OBJECTIVE_BY_PATH, OCCUPANCY,
+    RECORDED, Group, disagreements, judge, objective_for, parent_function,
+    pick_branch, summarise, walk)
 from app.domain.crosswalk import CROSSWALK
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -140,56 +141,125 @@ def _cross_pool_leaves() -> list[str]:
     return out
 
 
-#: Cross-pool splits that are proposed anyway, each because the split does
-#: not exist in the year being classified. Written down here rather than left
-#: implicit in `judge()`: this test found every one of them by refusing to
-#: accept the exception silently, which is what an allowlist is for.
-#:
-#: 2025 has no rental pool. The 2026 chart books tenant occupancy straight to
-#: 93xx, so there the OVERHEAD/RENTAL_DIRECT division is a classification
-#: question; in 2025 occupancy goes to OVERHEAD and the tenant share comes
-#: out at rate time as a 200.465 carve-out. Depreciation is *not* on this
-#: list, because its second split — funded versus private basis under
-#: 200.436(b) — is one no carve-out can make.
-DELIBERATE = {
-    "5035 Maintenance", "5043 Boardman Street Electric", "5055 Electric",
-    "5041 Semple Electric", "5060 Heating/Cooling", "5044 Boardman St. Gas",
-    "5042 Semple Gas", "5070 Water", "5200 Real Estate Tax",
-    "5027 TTC Utilities",   # rebilled in full; EXCLUDED, evidenced per line
+#: Cross-pool splits that a *named rule* resolves before the crosswalk
+#: branch is ever reached, so they resolve from the leaf alone with no parent
+#: in the path. Each carries its reason: an allowlist entry with no reason is
+#: the defect wearing a permission slip, and this list can only shrink by
+#: somebody noticing.
+#: The nine occupancy accounts share one reason, so it is written once and
+#: they are read from the module rather than copied nine times — nine copies
+#: of one sentence is a hand-kept map, and the day one of them stops being
+#: occupancy the list would still claim it was.
+DELIBERATE: dict[str, str] = {
+    **{leaf: ("occupancy: 2025 has no rental pool, so it goes to OVERHEAD and "
+              "the tenant share comes out as a 200.465 carve-out at rate time")
+       for leaf in OCCUPANCY},
+    "5027 TTC Utilities": "rebilled to Steelite International in full and "
+                          "evidenced line for line, so it is EXCLUDED rather "
+                          "than split at all",
+    "5215 Dues and Subscriptions": "200.454 as it actually reads: (a) and (b) "
+                                   "allow business and professional bodies "
+                                   "and periodicals, (c) makes civic "
+                                   "membership allowable with prior approval "
+                                   "rather than unallowable, and only (d) — a "
+                                   "country, social or dining club — is "
+                                   "refused outright. No payee is a club.",
 }
 
 
 def test_the_deliberate_exceptions_are_still_needed():
     """An allowlist that outlives its entries is the defect wearing a
     permission slip. Every name here must still be a cross-pool split that
-    `judge()` still proposes."""
+    `judge()` still resolves, and must still say why."""
     cross = set(_cross_pool_leaves())
-    for leaf in DELIBERATE:
+    for leaf, reason in DELIBERATE.items():
         assert leaf in cross, (
             f"{leaf} is no longer a cross-pool split — drop it from "
             f"DELIBERATE rather than leaving a stale exemption")
         assert not judge(g(leaf)).blocked, (
             f"{leaf} is now blocked, so it does not need an exemption")
+        assert len(reason) > 25, f"{leaf} is exempted with no real reason"
 
 
-def test_a_split_across_pools_is_still_refused():
-    """And the rule it must not become.
+def test_a_split_across_pools_is_refused_when_nothing_names_the_function():
+    """The guarantee, stated the way the code actually holds it.
 
-    Proposing one side of a genuine split would be inventing the driver,
-    which is the thing the original refusal was right about.
+    A bare leaf carries no parent, so there is no signal for *whose activity
+    this is*. Without one, a cross-pool split proposes nothing — proposing a
+    side would be inventing the driver, which is what the original refusal
+    was right about.
     """
     leaves = [x for x in _cross_pool_leaves() if x not in DELIBERATE]
     assert len(leaves) > 5, "no cross-pool splits left to check"
     reached = 0
     for leaf in leaves:
         j = judge(g(leaf))
-        assert j.blocked, f"{leaf} is a cross-pool split and was proposed"
+        assert j.blocked, (
+            f"{leaf} divides across pools and nothing in a bare leaf says "
+            f"which side it belongs on, yet {j.pool} was proposed")
         assert j.blocked_on, "a blocked group must say what it waits for"
         if j.blocked_on == "a documented driver":
             reached += 1
     assert reached > 3, (
         "every cross-pool split is caught by an earlier named rule, so this "
         "test never exercises the crosswalk branch it is written about")
+
+
+def test_the_parent_of_the_account_settles_a_split_of_function():
+    """And the signal that does exist, when the path carries it.
+
+    2025 files every account under a parent that says what kind of activity
+    it is, and where a split turns on *whose activity is this* the parent
+    answers it. Travel under Management & Administrative Expenses is the
+    bookkeeper saying the trip was administrative — weaker than a timesheet,
+    and not nothing. Refusing it while using the same path for the objective
+    would hold one signal to two standards.
+    """
+    admin = judge(g("Management & Administrative Expenses:5205 Travel:5206 Travel"))
+    assert admin.pool == "G&A", (
+        "travel filed under administration is not being read as "
+        "administrative")
+    assert "filed by the bookkeeper" in admin.rationale
+
+    fund = judge(g("5080 Fundraising:5095 Workshops/Seminars"))
+    assert fund.pool == "FUNDRAISING"
+
+    bare = judge(g("5206 Travel"))
+    assert bare.blocked, (
+        "the same account with no parent in the path resolves anyway, so the "
+        "rule is guessing rather than reading a signal")
+
+
+def test_insurance_stays_blocked_on_its_own_named_rule():
+    """Not the parent rule — insurance never reaches it.
+
+    The first version of this test said insurance exercised the
+    "more than one candidate" guard. It does not: a named rule several
+    branches earlier catches it, so the test passed with that guard deleted.
+    The same shape as the cross-pool test before it, found the same way.
+    """
+    j = judge(g("Management & Administrative Expenses:5075 Insurance"))
+    assert j.blocked and j.blocked_on == "the policy schedule"
+    assert "combined indirect rate" in j.rationale
+
+
+def test_more_than_one_candidate_means_no_candidate():
+    """The guard, tested where it can actually be reached.
+
+    No cross-pool split in the live crosswalk divides two *indirect*
+    branches, so nothing exercises this through `judge()` — which is exactly
+    why it is tested on the function directly. The day somebody adds a split
+    between OVERHEAD and G&A, the alternative to this guard is silently
+    picking whichever came first.
+    """
+    assert pick_branch("INDIRECT", {"G&A": "8600", "DIRECT": "5500"}) == "G&A"
+    assert pick_branch("INDIRECT", {"OVERHEAD": "7300", "G&A": "8300"}) is None
+    assert pick_branch("DIRECT", {"DIRECT": "5500", "G&A": "8600"}) == "DIRECT"
+    assert pick_branch("FUNDRAISING", {"FUNDRAISING": "9110", "G&A": "8500"}) \
+        == "FUNDRAISING"
+    assert pick_branch(None, {"DIRECT": "5500", "G&A": "8600"}) is None, (
+        "an account whose path names no parent function gets a side picked "
+        "for it anyway")
 
 
 def test_a_blocked_group_says_what_would_unblock_it():
@@ -278,3 +348,78 @@ def test_the_queue_no_longer_proposes_what_it_cannot_accept():
     assert '"/" not in mapped[0]' not in body, (
         "propose() is back to testing for a slash rather than for the pools, "
         "which refuses $1,382,737 of the queue on punctuation")
+
+
+def test_the_walk_is_the_same_read_either_way():
+    """December back to January must change the order and nothing else.
+
+    `judge()` is a pure function of one group and holds no state between
+    calls, so the same ledger has to produce the same judgments read in
+    either direction. That is a claim, and a claim here is a thing to check:
+    a log whose recommendations depended on the direction of the read would
+    be one where the order of the books decided the rate, and nobody would
+    find that by looking at either run on its own.
+
+    Compared by group key, not by position — the positions are *supposed* to
+    differ, and an elementwise comparison would report 757 differences on a
+    correct run, which is a test arguing against working code.
+    """
+    # Three payees per account, because the live ledger is 757 groups over
+    # 87 accounts and an account repeats across payees. A fixture of
+    # distinct accounts cannot catch the order-dependence that matters —
+    # a walk that remembered which accounts it had already seen passed this
+    # test with one group per account and would have mangled the real
+    # ledger. Found by breaking it on purpose and watching it not fail.
+    groups = [g(a, payee=f"payee-{k}", month=f"2025-{i % 12 + 1:02d}",
+                net=str(100 * (i + 1) + k))
+              for i, a in enumerate(ACCOUNTS) for k in range(3)]
+    assert len({x.account for x in groups}) < len(groups), (
+        "the fixture has one group per account, so a walk that carried state "
+        "between groups of the same account would pass this test")
+    fed = frozenset({"DRIVE-AM", "LTM", "AAMEN", "DIG-ENG", "HYBRID-II", "DLA"})
+    forward = walk(groups, federal_objectives=fed)
+    backward = walk(groups, reverse=True, federal_objectives=fed)
+
+    assert [x[0].key for x in forward] != [x[0].key for x in backward], (
+        "reverse=True did not change the order, so this test cannot fail "
+        "for the thing it names")
+    assert not disagreements(forward, backward)
+
+    # And it has to catch a real difference, not just agree with itself.
+    poisoned = [(gg, jj) for gg, jj in backward]
+    poisoned[0] = (poisoned[0][0],
+                   judge(g("Grant Expenses:Drive AM"), frozenset({"DRIVE-AM"})))
+    assert disagreements(forward, poisoned), (
+        "disagreements() reports nothing when two walks genuinely differ")
+
+
+def test_a_non_federal_objective_is_not_federally_allowable():
+    """ALLOWABLE is an assertion about a federal award.
+
+    The first version of this log wrote it for every DIRECT judgment, which
+    put $986,592.77 of cost on non-federal objectives — Rising Tides, ESP,
+    the Hub, MBAC — down as claimable against a federal award. Rising Tides
+    is the one that matters: whether it is federally funded is an open
+    question in the engagement, the objective master says it is not, and a
+    log asserting ALLOWABLE would have taken a side on it in 33 places
+    without saying so.
+    """
+    federal = judge(g("Grant Expenses:Drive AM"), frozenset({"DRIVE-AM"}))
+    assert federal.pool == "DIRECT" and federal.federal == "ALLOWABLE"
+
+    not_federal = judge(g("Grant Expenses:Rising Tides Expense"),
+                        frozenset({"DRIVE-AM"}))
+    assert not_federal.pool == "DIRECT"
+    assert not_federal.federal == "NOT_APPLICABLE", (
+        "cost on an objective the record does not call federal is being "
+        "reported as federally allowable")
+    assert "not a federal objective" in not_federal.rationale, (
+        "the judgment says NOT_APPLICABLE and does not say why, so a reader "
+        "cannot tell it from an oversight")
+
+
+def test_the_safe_default_is_not_federal():
+    """A caller that forgets to pass the federal set gets the conservative
+    answer rather than the flattering one."""
+    j = judge(g("Grant Expenses:Drive AM"))
+    assert j.federal == "NOT_APPLICABLE"

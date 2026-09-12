@@ -85,6 +85,88 @@ OBJECTIVE_BY_PATH: list[tuple[str, str]] = [
     ("ESP", "ESP"),
 ]
 
+#: The 2025 chart files every account under a parent that says what kind of
+#: activity it is, and that is a judgment somebody already made and wrote
+#: down. Where the crosswalk's split crosses pools because the question is
+#: *whose activity is this* — direct programme work, administration, or
+#: fundraising — the parent answers it.
+#:
+#: It is weaker evidence than a timesheet and it is not nothing: travel filed
+#: under `Management & Administrative Expenses` is the bookkeeper saying this
+#: trip was administrative. Using the path for the objective and refusing it
+#: for the function would be holding one signal to two standards.
+#:
+#: **It only decides a split whose branches differ in function.** Insurance
+#: divides 8300 from 7300 and both are indirect, so the parent cannot
+#: discriminate and its own named rule keeps it blocked; depreciation divides
+#: on an attribute of the asset, not on whose activity it is. Both stay out
+#: of this by being caught earlier.
+PARENT_FUNCTION: list[tuple[str, str]] = [
+    ("5080 Fundraising", "FUNDRAISING"),
+    ("Management & Administrative Expenses", "INDIRECT"),
+    ("Grant Expenses", "DIRECT"),
+    ("Program Expenses", "DIRECT"),
+]
+
+
+def pick_branch(function: str | None, branches: dict[str, str]) -> str | None:
+    """Which side of a cross-pool split the parent's function points at.
+
+    Pulled out of `judge()` so it can be tested on branch sets the live
+    crosswalk does not currently contain — and it does not contain one, which
+    is the point. Every cross-pool split that reaches this today has exactly
+    one indirect branch, so the *more than one candidate means no candidate*
+    guard below never actually bites on live data. It is kept, and tested
+    here directly, because the day somebody adds a split dividing OVERHEAD
+    from G&A the alternative is silently picking whichever came first.
+    """
+    if function == "FUNDRAISING" and "FUNDRAISING" in branches:
+        return "FUNDRAISING"
+    if function == "DIRECT" and "DIRECT" in branches:
+        return "DIRECT"
+    if function == "INDIRECT":
+        indirect = sorted(b for b in branches
+                          if b in ("OVERHEAD", "G&A", "UNALLOWABLE"))
+        if len(indirect) == 1:
+            return indirect[0]
+    return None
+
+
+def parent_function(account: str) -> str | None:
+    """What the account's own parent says this activity is."""
+    head = account.split(":", 1)[0].strip()
+    for prefix, function in PARENT_FUNCTION:
+        if head == prefix:
+            return function
+    return None
+
+
+#: Accounts the 2026 crosswalk moves *into* the direct pool, which in 2025
+#: are filed under Management & Administrative Expenses and have no objective
+#: in their path. The crosswalk describes where these should go next year —
+#: `5226 Manuf. support` carries the note "reclassified from G&A" in so many
+#: words — and this log is classifying the year that was actually worked, in
+#: which they sat in administration. Three of them, each named with the pool
+#: the 2026 chart would use for that nature of cost, because a rule clever
+#: enough to infer it from three examples would be guessing.
+STAYED_INDIRECT: dict[str, tuple[str, str]] = {
+    "5226 Manuf. support - factory manage": (
+        "G&A",
+        "Twelve monthly payments to one contractor, filed under "
+        "administration all year. The crosswalk's own note says "
+        "'reclassified from G&A' — that is a change for 2026, and 2025 is "
+        "the year where it had not happened yet."),
+    "5015 Equipment Expenses": (
+        "OVERHEAD",
+        "Equipment filed under administration rather than against an award: "
+        "used in common, so it belongs with the occupancy pool the way "
+        "7400 takes equipment in the 2026 chart."),
+    "5016 Equipment Purchases": (
+        "OVERHEAD",
+        "As above, and below the capitalisation threshold — a purchase over "
+        "it would be an asset, not a 2025 cost."),
+}
+
 #: Accounts that net to nothing because a third party repaid them in full.
 #: Each is evidenced by paired lines, not inferred from the total: the
 #: reimbursing payee is named on the offsetting line.
@@ -195,7 +277,8 @@ def _block(on: str, why: str) -> Judgment:
 RECORDED = "already recorded"
 
 
-def judge(g: Group) -> Judgment:
+def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
+          ) -> Judgment:
     """The recommended treatment for one group, or the reason there is none.
 
     Ordered by strength of signal, the way `propose()` is: what the lines
@@ -207,6 +290,7 @@ def judge(g: Group) -> Judgment:
                         f"{g.judged} line(s) already carry a live decision.",
                         RECORDED, blocked_on=None)
     leaf, account = g.leaf, g.account
+    fed = frozenset(federal_objectives)
 
     # ---- 1. The lines themselves -------------------------------------
     #
@@ -280,7 +364,46 @@ def judge(g: Group) -> Judgment:
                      "credits, so part of the tenant share is booked rather "
                      "than estimated — carving a square-footage share on top "
                      "of a figure already net of recovery removes it twice")
-        return _dress(g, "OVERHEAD", ANALYSIS, CROSSWALK[leaf][0], warn)
+        return _dress(g, "OVERHEAD", ANALYSIS, CROSSWALK[leaf][0], warn, fed)
+
+    if leaf == "5215 Dues and Subscriptions":
+        # The crosswalk's note — "civic and community memberships are
+        # unallowable" — overstates the rule, and the rule is worth reading
+        # rather than recalling. 200.454(a) allows membership of business,
+        # technical and professional organisations; (b) allows subscriptions
+        # to business, professional and technical periodicals; (c) makes
+        # civic and community membership allowable *with prior approval*,
+        # which is a condition rather than a prohibition; and only (d) — a
+        # country, social or dining club — is unallowable outright.
+        #
+        # Sixty payees and not one of them is a club. They are software
+        # subscriptions (Mailchimp, LinkedIn, Zoom, Adobe, Hubspot, Dropbox,
+        # Calendly), chambers of commerce and professional bodies (Ohio
+        # Chamber, Pittsburgh Technology Council, American Foundry Society,
+        # the Better Business Bureau, the Center for Nonprofit Leadership)
+        # and one business periodical. Every one is allowable, so the split
+        # this account was blocked on does not arise on these facts.
+        return _dress(
+            g, "G&A", ANALYSIS, "8230",
+            "Every payee in this account is a software subscription, a "
+            "business or professional organisation, or a business "
+            "periodical — 200.454(a) and (b). None is a country, social or "
+            "dining club, which is the only category 200.454(d) makes "
+            "unallowable outright; the crosswalk's note that civic "
+            "membership is unallowable overstates (c), which makes it "
+            "allowable with prior approval. The one thing worth a look is "
+            "$961 to the Association of Fundraising Professionals, which "
+            "supports fundraising rather than administration", fed)
+
+    if leaf == "5001 Cost of Goods Sold":
+        return _block(
+            "the inventory journal entry",
+            "Two entries, 31 October and 31 December, both described "
+            "'Used Inventory (See JE for breakdown)' and both with no payee. "
+            "The breakdown exists and says what was consumed and for whom — "
+            "nobody has read it. That is a findable document rather than a "
+            "missing one, which makes this the cheapest $37,261.00 on this "
+            "list to settle.")
 
     if leaf == "5075 Insurance":
         return _block(
@@ -311,6 +434,11 @@ def judge(g: Group) -> Judgment:
     # mapping somebody already built and reviewed is a stronger claim than
     # anything this module could reason out, so it is preferred wherever it
     # speaks.
+    if leaf in STAYED_INDIRECT:
+        pool, why = STAYED_INDIRECT[leaf]
+        return _dress(g, pool, ANALYSIS, CROSSWALK.get(leaf, ("", ""))[0],
+                      why, fed)
+
     mapped = CROSSWALK.get(leaf)
     if mapped:
         target, note = mapped
@@ -320,14 +448,32 @@ def judge(g: Group) -> Judgment:
         if len(pools) == 1:
             pool = pools.pop().value
             basis = CROSSWALK_DIRECT if len(parts) == 1 else CROSSWALK_ONE_POOL
-            return _dress(g, pool, basis, target, note)
-        # A split that genuinely crosses pools, and not one of the named
-        # cases above. Blocked, with both readings stated.
+            return _dress(g, pool, basis, target, note, fed)
+
+        # A split that crosses pools. Before refusing it, ask what the
+        # account's own parent says — the bookkeeper filed it somewhere, and
+        # where they filed it is a driver already on the record.
+        function = parent_function(account)
+        branches = {pool_for(x).value: x for x in parts if pool_for(x)}
+        pick = pick_branch(function, branches)
+        if pick:
+            return _dress(
+                g, pick, ANALYSIS, branches[pick],
+                f"filed by the bookkeeper under "
+                f"{account.split(':', 1)[0].strip()}, which is the driver "
+                f"for a split between {' and '.join(sorted(branches))} — "
+                f"whose activity this is, answered by where it was booked"
+                + (f". The 2026 note reads: {note}" if note else ""), fed)
+
         return _block(
             "a documented driver",
             f"Splits across pools in the 2026 chart ({target}"
             + (f": {note}" if note else "")
-            + "). A split needs a driver with a person's name on it, and "
+            + f"), and the account's parent does not settle it: "
+            + (f"{', '.join(sorted(branches))} are not told apart by where "
+               f"it was filed" if function else
+               "the path names no parent function")
+            + ". A split needs a driver with a person's name on it, and "
               "proposing one side would be inventing it.")
 
     # ---- 3. A general rule -------------------------------------------
@@ -359,7 +505,8 @@ def judge(g: Group) -> Judgment:
         "defaulted into a pool.")
 
 
-def _dress(g: Group, pool: str, basis: str, target: str, note: str) -> Judgment:
+def _dress(g: Group, pool: str, basis: str, target: str, note: str,
+           federal_objectives: frozenset[str] = frozenset()) -> Judgment:
     """Fill in the function, the federal treatment and the objective.
 
     The pool comes off the crosswalk. These three do not, because an account
@@ -372,15 +519,39 @@ def _dress(g: Group, pool: str, basis: str, target: str, note: str) -> Judgment:
     if pool == "DIRECT":
         objective = objective_for(g.account)
         if objective is None:
+            # The account names a programme the objective register has never
+            # heard of. That is not the same as having no signal: the work is
+            # identified, there is simply no row to charge it to, and opening
+            # one is a short act by a person rather than a document to go and
+            # find. So the block names the objective to open rather than
+            # reporting a gap.
+            suggested = g.account.rsplit(":", 1)[-1].strip()
             return _block(
-                "a cost objective",
+                f"a cost objective for {suggested}",
                 f"Direct cost by its 2026 mapping ({target}) and the account "
-                "path names no objective, so there is nothing to charge it "
-                "to. `direct_needs_objective` refuses a DIRECT decision with "
-                "no objective, and that is the right refusal: cost charged "
-                "to an objective nobody chose is worse than cost nobody has "
-                "judged.")
-        return Judgment(pool, "PROGRAM", "ALLOWABLE", objective,
+                f"names {suggested}, which has no row in the objective "
+                f"register — so there is nothing to charge it to. "
+                f"`direct_needs_objective` refuses a DIRECT decision with no "
+                f"objective, and that is the right refusal: cost charged to "
+                f"an objective nobody chose is worse than cost nobody has "
+                f"judged. Open the objective and this classifies itself.")
+        # **The federal treatment follows the objective, not the pool.**
+        # This read ALLOWABLE for every DIRECT judgment in the first version
+        # of this log, which put $986,592.77 of cost on non-federal
+        # objectives — Rising Tides, ESP, the Hub, MBAC — down as claimable
+        # against a federal award. ALLOWABLE is an assertion about a federal
+        # award and there is no award behind a non-federal objective to make
+        # it about. Rising Tides is the one that matters: whether it is
+        # federally funded is an open question in the engagement, the
+        # objective master says it is not, and a log that wrote ALLOWABLE
+        # would have taken a side on it in 33 places without saying so.
+        federal = ("ALLOWABLE" if objective in federal_objectives
+                   else "NOT_APPLICABLE")
+        if objective not in federal_objectives:
+            rationale += (f". {objective} is not a federal objective on the "
+                          f"record, so the federal treatment is not "
+                          f"applicable rather than allowable")
+        return Judgment(pool, "PROGRAM", federal, objective,
                         "MANAGEMENT_RECONSTRUCTION", citation, rationale, basis)
 
     function = {
@@ -427,14 +598,58 @@ def _why(pool: str, note: str) -> tuple[str, str]:
     return base[0], base[1] + (f". {note}" if note else "")
 
 
-def walk(groups: list[Group]) -> list[tuple[Group, Judgment]]:
+def walk(groups: list[Group], *, reverse: bool = False,
+         federal_objectives: frozenset[str] = frozenset()
+         ) -> list[tuple[Group, Judgment]]:
     """Every group in ledger order — by the month it first appears, then by
     what it moved. A walk that jumped about would be impossible to check
     against the books a month at a time, which is how a controller reads
     them.
+
+    `reverse=True` runs December back to January. **It must change the order
+    and nothing else.** `judge()` is a pure function of one group and holds no
+    state between calls, so the same ledger has to produce the same set of
+    judgments read either way — and that is a claim, which in this repository
+    is a thing to check rather than assert. A log whose recommendations
+    depended on the direction of the read would be one where the order of the
+    books decided the rate, and nobody would find that by looking at either
+    run on its own.
+
+    `tests/test_classification_log.py::test_the_walk_is_the_same_read_either_way`
+    holds it, and `scripts/classification_log.py --reverse` runs it against
+    the live ledger.
     """
-    ordered = sorted(groups, key=lambda g: (g.first_month, -g.gross, g.account))
-    return [(g, judge(g)) for g in ordered]
+    ordered = sorted(groups, key=lambda g: (g.first_month, -g.gross, g.account),
+                     reverse=reverse)
+    return [(g, judge(g, federal_objectives)) for g in ordered]
+
+
+def disagreements(forward: list[tuple[Group, Judgment]],
+                  backward: list[tuple[Group, Judgment]]) -> list[str]:
+    """Where two walks of the same ledger judged the same group differently.
+
+    Compared on the group key rather than on position, because the positions
+    are *supposed* to differ — comparing the lists elementwise would report
+    757 differences on a correct run, which is the "test that argues against
+    correct code" this file warns about.
+    """
+    def by_key(w):
+        return {g.key: j for g, j in w}
+    a, b = by_key(forward), by_key(backward)
+    out = []
+    for key in sorted(set(a) | set(b)):
+        if key not in a or key not in b:
+            out.append(f"{key.replace(chr(31), ' / ')}: in one walk only")
+            continue
+        x, y = a[key], b[key]
+        if (x.pool, x.function_990, x.federal, x.objective_id,
+                x.grade, x.basis, x.blocked_on) != (
+                y.pool, y.function_990, y.federal, y.objective_id,
+                y.grade, y.basis, y.blocked_on):
+            out.append(f"{key.replace(chr(31), ' / ')}: "
+                       f"{x.pool or x.blocked_on} forward, "
+                       f"{y.pool or y.blocked_on} backward")
+    return out
 
 
 def summarise(walked: list[tuple[Group, Judgment]]) -> dict:

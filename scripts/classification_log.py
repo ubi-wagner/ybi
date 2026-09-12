@@ -42,7 +42,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx
 
 from app.db import one, open_pool, query
-from app.domain.classification_log import Group, judge, summarise, walk
+from app.domain.classification_log import (
+    Group, disagreements, judge, summarise, walk)
 from app.domain.core import money
 
 BOLD, DIM, OK, WARN, FAIL, END = (
@@ -76,6 +77,18 @@ def rows_for(period: str) -> list[Group]:
                   debits=money(r["debits"] or 0), credits=money(r["credits"] or 0),
                   first_month=r["first_month"], judged=r["judged"])
             for r in got]
+
+
+def federal_objectives() -> frozenset[str]:
+    """Which objectives carry federal money, read from the record.
+
+    Not a constant in the domain module: `cost_objective.is_federal` is the
+    answer and a second copy of it here would be the hand-kept map again —
+    free to drift from the row the SEFA is built off.
+    """
+    return frozenset(r["objective_id"] for r in
+                     query("SELECT objective_id FROM cost_objective "
+                           "WHERE is_federal"))
 
 
 def already_judged(period: str) -> dict:
@@ -192,6 +205,37 @@ def anchors(period: str) -> list[tuple[str, bool | None, str]]:
                 == money(cov["scope_dollars"]),
                 f"{cov['classified']:,.2f} + {cov['unclassified']:,.2f} "
                 f"= {money(cov['classified'] + cov['unclassified']):,.2f}"))
+
+    # The 200.465 carve-out, and whether it was in a position to fire.
+    #
+    # On a freshly seeded record `facility` and `space_unit` are both empty,
+    # `v_facility_occupancy` inner-joins to its space totals and returns
+    # nothing, and **no carve-out is computed at all** — silently. The pool
+    # then ties to itself perfectly, `pool_carved` reads 0.00, and nothing on
+    # the build-up distinguishes "there is no tenant space" from "nobody has
+    # measured any". That is `029`'s lesson in the one adjustment this file
+    # calls the largest in the rate model: an empty set matching an empty set.
+    #
+    # It is not raised on the worklist either. `SPACE_UNMEASURED` fires per
+    # building, and a record with no buildings has none to fire on.
+    space = one("""SELECT (SELECT count(*) FROM facility)    AS facilities,
+                          (SELECT count(*) FROM space_unit)  AS units""")
+    carved = one("""SELECT count(*) AS n, COALESCE(sum(amount), 0) AS amount
+                      FROM carve_out WHERE period = %s""", (period,))
+    if not space["facilities"]:
+        out.append(("the 200.465 facilities carve-out", None,
+                    "not evaluable — no building is on the record, so "
+                    "v_facility_occupancy is empty and no carve-out was "
+                    "computed. Every dollar of tenant and vacant occupancy "
+                    "cost is in the federal pool"))
+    elif not space["units"]:
+        out.append(("the 200.465 facilities carve-out", None,
+                    f"not evaluable — {space['facilities']} building(s) and "
+                    f"no square footage against any of them "
+                    f"(SPACE_UNMEASURED)"))
+    else:
+        out.append(("the 200.465 facilities carve-out", bool(carved["n"]),
+                    f"{carved['n']} recorded, ${carved['amount']:,.2f}"))
 
     build = query("""SELECT kind, pool_amount, pool_allocable, pool_variance,
                             pool_state FROM v_rate_buildup WHERE period = %s""",
@@ -334,6 +378,8 @@ def apply(walked, base: str, email: str, password: str, period: str) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--period", default="2025")
+    ap.add_argument("--reverse", action="store_true",
+                    help="walk December back to January instead")
     ap.add_argument("--write", action="store_true", help="write docs/CLASSIFICATION_LOG.md")
     ap.add_argument("--apply", action="store_true", help="record through the API")
     ap.add_argument("--base", default=os.environ.get("BASE", "http://127.0.0.1:8000"))
@@ -348,7 +394,27 @@ def main() -> int:
 
     groups = rows_for(a.period)
     done = already_judged(a.period)
-    walked = walk(groups)
+    federal = federal_objectives()
+    walked = walk(groups, reverse=a.reverse, federal_objectives=federal)
+
+    # Both directions, every run. The check costs one more pass over a list
+    # already in memory, and what it proves is the thing nobody would find by
+    # reading either run alone: that the order of the books does not decide
+    # the judgments. A difference here is a defect in `judge()`, not in the
+    # ledger.
+    other = walk(groups, reverse=not a.reverse, federal_objectives=federal)
+    differ = disagreements(walked, other)
+    print(f"\n{BOLD}Read {'December back to January' if a.reverse else 'January forward'}"
+          f"{END}  {DIM}— and checked against the other direction{END}")
+    if differ:
+        print(f"  {FAIL}{len(differ)} group(s) judged differently depending on "
+              f"the direction of the read:{END}")
+        for line in differ[:20]:
+            print(f"    {line}")
+        return 1
+    print(f"  {OK}all {len(walked)} group(s) judge the same read either way"
+          f"{END}")
+
     s = report(walked, done, a.period)
 
     if a.write:
