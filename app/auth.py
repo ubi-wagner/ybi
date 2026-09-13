@@ -38,6 +38,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import secrets
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -202,6 +203,61 @@ def jwt_secret() -> str:
             f"'import secrets; print(secrets.token_urlsafe(48))'"
         )
     return secret
+
+
+#: The shortest organisational default worth having. A six-character shared
+#: password reads as a control and is not one, so a value below this is
+#: ignored entirely rather than honoured — the door is shut, not ajar.
+MIN_PASSWORD = 12
+
+
+def shared_initial_password() -> str:
+    """The organisation's first-login password, or "" if there is not one.
+
+    Read from the setting on every call rather than captured at import, so
+    clearing the Railway variable takes effect on the next request instead of
+    on the next deploy.
+    """
+    candidate = (settings.initial_password or "").strip()
+    return candidate if len(candidate) >= MIN_PASSWORD else ""
+
+
+def unusable_password_hash() -> str:
+    """A hash for an account opened on the shared password.
+
+    The shared value is deliberately **not** what is stored. Writing it into
+    every row would put one secret at rest in forty places, make withdrawing
+    it forty resets, and leave a copy of the database a copy of the
+    credential. The row gets a random nobody holds; `check_credential` is
+    what lets the setting through.
+    """
+    return hash_password(secrets.token_urlsafe(32))
+
+
+def check_credential(candidate: str, password_hash: str,
+                     password_set_by: str) -> str | None:
+    """Which credential was presented: the account's own, the shared one, or
+    neither.
+
+    `OWN` and `SHARED` are different facts and the trail records them
+    differently: a sign-in on a password the whole organisation holds does not
+    identify one person, which is the same reason `refuse_issued_password`
+    will not let that session write anything but its own new password.
+
+    Two rules keep it from becoming an oracle. The stored hash is always
+    verified first, so a present and an absent account cost the same; and the
+    shared value is offered only where `password_set_by` is not `SELF`, which
+    the caller passes as `SELF` for an account that does not exist. So a
+    guess against an unknown address is refused on the same path as a wrong
+    password against a known one.
+    """
+    if verify_password(candidate, password_hash):
+        return "OWN"
+    shared = shared_initial_password()
+    if shared and password_set_by != "SELF" and \
+            secrets.compare_digest(candidate, shared):
+        return "SHARED"
+    return None
 
 
 def hash_password(password: str) -> str:

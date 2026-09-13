@@ -40,15 +40,29 @@ export default function FirstPassword({ actor, onDone, onSignOut }) {
       <form className="card raised signin" onSubmit={submit}>
         <div className="signin-mark">Youngstown Business Incubator</div>
         <h1>Choose your own password</h1>
+        {/* Two different facts, and the stronger one must not be softened
+            into the weaker. A password an administrator picked for one person
+            is known to two; the organisation's shared first-login password is
+            known to everybody who was sent it. `holds_bootstrap_password`
+            comes off the record rather than being inferred here. */}
         <p className="quiet">
-          Welcome, {actor.display_name}. The password you signed in with was
-          issued to you, so two people know it. Everything you record here
+          Welcome, {actor.display_name}.{" "}
+          {actor.holds_bootstrap_password
+            ? "You signed in with the password the whole organisation was " +
+              "given, so it says nothing about who you are."
+            : "The password you signed in with was issued to you, so two " +
+              "people know it."}{" "}
+          Everything you record here
           carries your name — a classification, a timesheet, a certification —
           and until the password is yours alone your name on a record would not
           mean much. This is the only step.
         </p>
 
-        <label htmlFor="cur">The password you were given</label>
+        <label htmlFor="cur">
+          {actor.holds_bootstrap_password
+            ? "The password you were sent"
+            : "The password you were given"}
+        </label>
         <input id="cur" type="password" autoComplete="current-password" autoFocus
                value={current} onChange={(e) => setCurrent(e.target.value)} required />
 
