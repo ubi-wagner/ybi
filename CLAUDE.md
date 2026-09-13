@@ -1984,6 +1984,60 @@ invoices bill April 2026 — and **no payment is recorded against any invoice**,
 which decides whether a restatement is an additional claim or a correction to
 a settled one.
 
+### The invoice register is not the invoicing
+
+`docs/WP_AM_2025_PL_RESTATED.md`. Four figures in two documents were computed
+against `invoice` as though it held YBI's billing. It holds **three invoices,
+one month, transcribed from `YBI_Invoices_1.pdf`** — and `load_invoices.py`
+says so in its first line. The 2025 P&L carries the year:
+
+| | |
+| --- | ---: |
+| `3900 Grant Income:Drive AM` | 579,240.87 (60 lines) |
+| `3900 Grant Income:Last Tactical Mile` | 368,222.24 (72 lines) |
+| `3900 Grant Income:Hybrid Energy` | 191,638.05 (39 lines) |
+| **billed on the three America Makes contracts in 2025** | **1,139,101.16** |
+
+**Thirty-six monthly postings, each carrying its invoice category in the
+description** — `Labor:`, `ODCs:`, `Materials:`, `Travel:`, `Consultant:`. The
+billing was in the ledger the entire time, one join away from every figure
+that was computed without it.
+
+What it says reverses the conclusion of both documents. **YBI recovered
+100.9% of its fully burdened cost on these three contracts in 2025 and
+recorded 4.06% of it as indirect**, because the recovery is inside the labour
+rate: $566,821.99 billed against $320,488.02 of wages and fringe — **1.77×**,
+where the full burden the sealed classification computes is 1.44×. Restating
+on top of that would claim indirect twice and consume 62.7% of all three
+ceilings in one year.
+
+So the finding is a **disclosure question, not a recovery** — 200.414(f)
+charges the de minimis as a rate on MTDC and does not contemplate indirect
+embedded in an undisclosed loaded labour rate, which is what `RATE_METHOD`
+failing on all four awards has been saying. And the two positions are kept
+apart the way `v_restatement` insists: **LTM is $107,683.52 under-recovered**
+— the one contract whose schedule budgets indirect, at exactly 10.00% of its
+direct — while **Drive AM and Hybrid are $118,258.63 over**. The $10,575.11
+net is the least informative figure available.
+
+Three things worth carrying:
+
+- **A register loaded from one document is a sample until something says
+  otherwise.** `load_invoices.py` opens *"Load the three America Makes
+  invoices"*; nothing downstream asked how many there were, and four figures
+  were published off it — including *"$936,190.52 of cost never invoiced"*,
+  where billed direct in fact **exceeds** MTDC by $310,948.09.
+- **`064` took Income out of the classification scope and out of view.**
+  Correctly — grant income is not cost to classify — but the same section is
+  where the billing lives, and taking it out of scope became taking it out of
+  mind.
+- **The P&L's apparent margin on these contracts is $675,836.11 and is not
+  margin.** The three `Grant Expenses` accounts carry only non-labour; the
+  labour sits in `5140` undifferentiated by contract and the indirect sits in
+  the occupancy and administrative accounts. A contract's real position
+  cannot be read off the face of this P&L at all, which is the structural
+  argument for the 2026 chart in one sentence.
+
 ### A rate computed under a policy nobody chose
 
 `POST /api/rates/compute` takes `admin_labour`; the column it lands in is

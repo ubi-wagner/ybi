@@ -1,5 +1,12 @@
 # Where the invoicing and the record disagree, and what restating does to each
 
+> **Superseded in its conclusion by `docs/WP_AM_2025_PL_RESTATED.md`.**
+> This document was built on the three invoices in the register — one
+> month, from `YBI_Invoices_1.pdf`. The 2025 P&L carries **$1,139,101.16**
+> of billing on these contracts and says YBI already recovered 100.9% of
+> its fully burdened cost, through a 1.77× loaded labour rate rather than
+> an indirect line. The arithmetic below stands; the conclusion does not.
+
 Every figure read off the live 2025 record at the sealed rate — **21.90%
 fringe, 43.99% combined indirect** (general administration in the G&A pool,
 5227 in the base, no facilities carve-out). The "flagged" column is what the

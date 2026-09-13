@@ -1,5 +1,12 @@
 # Restating the America Makes invoices
 
+> **Superseded in its conclusion by `docs/WP_AM_2025_PL_RESTATED.md`.**
+> This document was built on the three invoices in the register — one
+> month, from `YBI_Invoices_1.pdf`. The 2025 P&L carries **$1,139,101.16**
+> of billing on these contracts and says YBI already recovered 100.9% of
+> its fully burdened cost, through a 1.77× loaded labour rate rather than
+> an indirect line. The arithmetic below stands; the conclusion does not.
+
 **What was decided, and what falls out of it.** Two of the five open questions in
 `docs/RATE_RECOMMENDATION.md` are now settled by instruction:
 
