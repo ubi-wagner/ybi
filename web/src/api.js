@@ -279,6 +279,19 @@ export const api = {
     req(`/restate/${id}/status`, { method: "POST", body: JSON.stringify(body) }),
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
+  // The rate itself. `POST /api/rates/compute` was complete on the server and
+  // named in a comment on Rates.jsx, and **nothing in the SPA had ever called
+  // it** — so the one figure the whole engagement produces could only be made
+  // by a script. The restatement's defect and the timesheet draft's, in the
+  // place it costs most. Found by walking the runbook rather than by reading.
+  //
+  // `{}` is deliberately the whole body: every field on ComputeIn is a policy
+  // with a default, and that body is the only one in this API that refuses an
+  // unknown key. A screen inventing a field name here would be refused, which
+  // is the behaviour that is wanted.
+  computeRate: (body = {}, period = "2025") =>
+    req(`/rates/compute?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
   imports: (period = "2025") => req(`/imports?period=${period}`),
   evidenceCoverage: (period = "2025") => req(`/evidence/coverage?period=${period}`),
   evidenceRegister: (period = "2025") => req(`/evidence?period=${period}`),

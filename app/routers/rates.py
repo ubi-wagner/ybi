@@ -540,11 +540,26 @@ def compute(body: ComputeIn, period: str = "2025",
 
 @router.get("/current")
 def current(period: str = "2025") -> dict:
+    """The rates on file, and whether the set behind them is sealed.
+
+    `sealed` is here because the screen has to know and **must not remember**.
+    Sealing unlocks computing, so the rate screen offers that action only
+    against a sealed set — and a flag set when the seal call returns is wrong
+    the moment somebody reloads, or the moment the other controller unseals.
+    It is the same rule the timesheet draft card follows for `adopted`: the
+    answer is already on the record, so read it.
+    """
     rates = query("""SELECT kind, pool_amount, base_type, base_amount, rate, status,
                             seal_hash, computed_at
                        FROM rate WHERE period=%s AND status<>'SUPERSEDED'
                       ORDER BY computed_at DESC""", (period,))
-    return {"period": period, "rates": rates}
+    state = one("""SELECT seal_hash IS NOT NULL AS sealed, sealed_at, sealed_by
+                     FROM decision_set WHERE period = %s
+                    ORDER BY sealed_at DESC NULLS LAST LIMIT 1""", (period,))
+    return {"period": period, "rates": rates,
+            "sealed": bool(state and state["sealed"]),
+            "sealed_at": state.get("sealed_at") if state else None,
+            "sealed_by": state.get("sealed_by") if state else None}
 
 
 @router.get("/allocation")

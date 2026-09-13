@@ -8,9 +8,14 @@ those signatures are worth.
 Pre-flight, the night before or first thing:
 
 ```bash
-DATABASE_URL=... ./scripts/monday.sh          # read-only checks
-YBI_SEED_PASSWORD=... ./scripts/monday.sh --full   # and the sandbox test
+DATABASE_URL=... ./scripts/monday.sh                # read-only checks
+YBI_SEED_PASSWORD=... ./scripts/monday.sh --full    # and the sandbox test
 ```
+
+**Illustrated:** `docs/MONDAY_GUIDEBOOK.html` walks every step below in the
+real screens, photographed by `scripts/walk_runbook.py` against a sandbox
+built from empty. It fails on a step that cannot be performed — which is how
+step 4 turned out to have no door.
 
 `readiness.py` writes nothing. `monday.sh --full` builds a **throwaway
 database** and proves the whole path there, so if the machinery is going to
@@ -67,13 +72,18 @@ No rate is computed or displayed before this point. That is the guarantee.
 
 ### 4 · Compute the rate — Tom
 
-```
-POST /api/rates/compute   { }
-```
+**On `/rates`, under the seal: *Compute the rate*.** The button exists because
+walking this runbook found that it did not: `POST /api/rates/compute` was
+complete on the server, named in a comment on that screen, and called by
+nothing in the application, so this step could only be taken by running a
+script. See `docs/MONDAY_GUIDEBOOK.html`.
 
-Defaults are what every rate before migration 068 used. The two settled
-decisions are `admin_labour = POOL` (administrative salaries into the G&A pool)
-and 5227 consultants in the base as contractor cost under 200.331.
+**Choose the administrative-labour basis on the screen.** It is worth about
+nine points of combined rate on the same judgments and it is recorded on the
+rate. The settled position is **in the G&A pool** (`POOL`) — 43.99% combined;
+the default is `OBJECTIVE` at 34.82%, which is what every rate before
+migration 068 used. The other settled decision, 5227 consultants in the base
+as contractor cost under 200.331, is already in the classification.
 
 The rate carries the seal hash. A database trigger refuses one whose seal does
 not match a sealed set.
