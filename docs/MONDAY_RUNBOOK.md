@@ -19,6 +19,14 @@ driven by `scripts/walk_runbook.py`. It walks a sandbox **from empty**, so it
 shows what each screen looks like and what each step *means* — the record you
 will open on Monday is further along, per §0.
 
+**In hand while you work:** `docs/MONDAY_ANCHOR.pdf` — every current
+recommendation from every document in `docs/`, dealt into the sequence below,
+with the screen each one is visible on and a tick box. Nine documents carry
+these and none of them is ordered the way the work is done, so a
+recommendation nobody can find at the moment it applies is one nobody checks.
+Its figures are read from the live record by `scripts/monday_anchor.py` rather
+than recalled; regenerate it if the record moves.
+
 ---
 
 ## 0 · Where the record actually stands
