@@ -289,6 +289,20 @@ export const api = {
   // with a default, and that body is the only one in this API that refuses an
   // unknown key. A screen inventing a field name here would be refused, which
   // is the behaviour that is wanted.
+  // The way back. The runbook's own recovery step — "a judgment was wrong
+  // after sealing: unseal with a written reason, which supersedes the rate"
+  // — could not be performed in the application at all. The reason is a
+  // query parameter because the route takes it as one; it is required, and
+  // the handler refuses a blank.
+  unseal: (reason, period = "2025") =>
+    req(`/rates/unseal?period=${period}&reason=${encodeURIComponent(reason)}`,
+        { method: "POST" }),
+  // What the system refused, and what it said. `audit_log` means "this
+  // changed", so by construction it says nothing when a change does not
+  // happen; `refusal` is the other half, and nothing in the application
+  // could read it.
+  refusals: (limit = 50, mine = true) =>
+    req(`/dashboard/refusals?limit=${limit}&mine=${mine}`),
   computeRate: (body = {}, period = "2025") =>
     req(`/rates/compute?period=${period}`,
         { method: "POST", body: JSON.stringify(body) }),

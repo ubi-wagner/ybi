@@ -620,6 +620,10 @@ tbody td.trunc { max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
 /* The rationale behind each line of the reconstruction, folded away: it is
    what a reviewer asks for and not what the person adopting reads first. */
 /* Two actions that belong to one decision, on one line. */
+.failsection { font-weight: 700; font-size: 12px; letter-spacing: .04em;
+               text-transform: uppercase; margin: 16px 0 6px;
+               padding-top: 12px; border-top: 1px solid var(--rule, #d8d8d8); }
+
 .row-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .ts-basis { display: inline-flex; gap: 8px; align-items: center; }
 .ts-basis select { padding: 4px 6px; font: inherit; }

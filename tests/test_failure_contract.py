@@ -119,10 +119,30 @@ def test_the_shell_surfaces_what_the_screens_swallowed():
     assert "FailureBell" in app, (
         "nothing in the shell shows the failures the request layer recorded")
     bell = (SRC / "components" / "FailureBell.jsx").read_text()
-    assert "if (!items.length) return null;" in bell, (
-        "the failure indicator shows when there is nothing to say. A "
-        "permanent status light that is green all day is one nobody looks at "
-        "on the day it turns red.")
+    # **The rule, not the line.** This asserted the literal
+    # `if (!items.length) return null;` and failed the day the panel grew a
+    # second source — the server's own `refusal` register — while still
+    # obeying the rule perfectly. Same defect as
+    # `test_the_crosswalk_refuses_to_guess_a_split` asserting the punctuation
+    # of the source it was written about: a test that argues against working
+    # code is worse than no test.
+    guard = re.search(r"if \(([^)]*)\)\s*return null;", bell)
+    assert guard, (
+        "the failure indicator must return null when it has nothing to say. "
+        "A permanent status light that is green all day is one nobody looks "
+        "at on the day it turns red.")
+    sources = re.findall(r"!(\w+)\.length", guard.group(1))
+    assert sources, "the guard must be on emptiness, not on a flag"
+    for name in sources:
+        assert re.search(rf"const \[{name}, set", bell), (
+            f"the guard reads {name}, which is not state this component holds")
+    # Every list it renders has to be in the guard, or the bell can hide a
+    # record it is holding.
+    rendered = set(re.findall(r"\{(\w+)\.map\(", bell))
+    assert rendered <= set(sources), (
+        "these are rendered in the panel and not in the emptiness guard, so "
+        "the bell can hide something it is holding: "
+        + ", ".join(sorted(rendered - set(sources))))
 
 
 def test_a_refused_write_is_on_the_record():

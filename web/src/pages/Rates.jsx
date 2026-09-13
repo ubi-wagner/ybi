@@ -34,6 +34,26 @@ export default function Rates() {
      It sends `{}`. Every field on the body is a policy with a default, and
      a screen that invented one would be refused — which is the behaviour
      that is wanted, not a thing to work around. */
+  const unseal = async () => {
+    const reason = window.prompt(
+      "Unsealing supersedes every rate computed against this seal, and the "
+      + "reason goes on the audit trail. Why is it being reopened?");
+    if (reason === null) return;               // cancelled, not a blank
+    try {
+      const r = await api.unseal(reason);
+      const n = r?.superseded ?? 0;
+      toast(`Unsealed — ${n} rate${n === 1 ? "" : "s"} superseded`,
+            { tone: "warn", sticky: true });
+      load();
+    } catch (e) {
+      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
+      let detail = msg;
+      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
+      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+            { tone: "fail", sticky: true });
+    }
+  };
+
   const [computing, setComputing] = useState(false);
   /* **The basis is a choice and the screen has to make it.** Migration 068
      records it on the rate, the way `base_type` records which base a rate was
@@ -155,7 +175,18 @@ export default function Rates() {
         )}
 
         <div className="row-actions">
-          <button className="primary" onClick={seal}>Seal decision set</button>
+          {!sealed && (
+            <button className="primary" onClick={seal}>Seal decision set</button>
+          )}
+          {/* **The way back had no door either.** The runbook's own recovery
+              step — a judgment turns out to be wrong after sealing — says
+              unseal with a written reason, and nothing in the application
+              could. The reason is required and the handler refuses a blank,
+              because an unseal with no reason is a hole in the trail the
+              seal exists to make. */}
+          {sealed && (
+            <button className="btn" onClick={unseal}>Unseal…</button>
+          )}
           {/* Offered only once something is sealed. Computing against an open
               set is refused by the trigger, and a button that answers a
               constraint violation is the nav-stricter-than-the-API defect
