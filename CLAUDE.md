@@ -2038,6 +2038,49 @@ Three things worth carrying:
   cannot be read off the face of this P&L at all, which is the structural
   argument for the 2026 chart in one sentence.
 
+### And if NCDMM accepts the rate
+
+`docs/WP_AM_RESTATEMENT_IF_ACCEPTED.md`. The scenario asked for: the rate
+accepted, restatement permitted. **It is a net give-back of $10,575.11, not a
+windfall** — LTM claims $107,683.52, Drive AM and Hybrid return $118,258.63
+between them, and the three stay three transactions because a net figure of
+$10,575.11 tells a sponsor nothing.
+
+**Restating is a rebuild, not an addition**, and that is the whole of it. The
+loaded labour rate is already carrying the indirect, so a restated invoice
+takes the labour line **down** to wages plus fringe — $566,821.99 to
+$320,488.02 — before the indirect line goes on. Keeping both would charge
+indirect twice, which is the mistake the first three documents in this
+sequence were heading towards.
+
+Three things the scenario turns up that the arithmetic alone does not:
+
+- **The ceiling is the negotiation, not the rate.** A ceiling caps direct and
+  indirect together and today's budgets allocate almost all of it to direct.
+  Accepting 43.99% inside unchanged ceilings shrinks the direct budget from
+  $2,421,365 to $1,746,998 — **$674,366.59, 28% less programme for the same
+  money.** So the ask is *accept the rate and move the ceilings*, or accept
+  that scope reduces. Accepting the rate and quietly delivering the original
+  scope is the current position in a different costume.
+- **The recurring value is indirect on non-labour**, which a loaded labour
+  rate cannot reach: **$203,790.29 a year** at 2025 volumes, nineteen times
+  the one-off. It also explains the pattern — LTM gains because it is 81%
+  non-labour, and the two labour-heavy contracts lose.
+- **$92,876.19 blocks the largest credit.** Drive AM billed that much more in
+  ODCs than the ledger classifies as Drive AM cost. Either the classification
+  under-attributes (the credit is overstated) or the billing over-claimed (it
+  is understated). **Restating to cost only works if the cost record is
+  complete**, and on the contract with the biggest credit it may not be.
+
+And the timing rule: **do not restate before the square footage is measured.**
+At the provisional 20% carve-out the rate is 37.67%, the give-back grows to
+$60,108.31 and LTM's claim falls to $86,795.09. Restating at 43.99% and then
+discovering 37.67% means over-claiming on a rate YBI proposed itself.
+
+Carried, and nobody has looked: **the awards began in 2023 and 2024, and this
+covers 2025 only.** If 2024 was billed the same way, the same exercise applies
+to it.
+
 ### A rate computed under a policy nobody chose
 
 `POST /api/rates/compute` takes `admin_labour`; the column it lands in is
