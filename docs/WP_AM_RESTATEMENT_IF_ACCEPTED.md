@@ -287,3 +287,112 @@ proposed itself, which is worse than not having restated.
 forward and costs about $10,000 in one-off adjustments to 2025 — but only if
 the contract ceilings move with it; inside today's ceilings it would cost
 $674,000 of delivered programme.*
+
+---
+
+## Appendix — the alternative that was computed, and why it was rejected
+
+The question a reviewer will ask, and the reason this appendix exists: *the
+base is more than half pass-through and purchased services — did you consider
+a separate, lower rate for that half rather than one rate over everything?*
+
+Yes. It was computed against the same sealed set, and it is not recommended.
+
+### The structure
+
+One pool spread over labour, one over everything — the 2 CFR 200 Appendix IV
+B.3 **multiple allocation base method**, against the B.2 simplified method the
+recommendation uses:
+
+| | pool | base | base amount | rate |
+| --- | ---: | --- | ---: | ---: |
+| OVERHEAD | 1,497,879.12 | direct labour + fringe | 1,914,564.18 | **78.24%** |
+| G&A | 585,875.91 | MTDC | 4,736,602.11 | **12.37%** |
+| *against* | | | | |
+| INDIRECT_COMBINED | 2,083,755.03 | MTDC | 4,736,602.11 | **43.99%** |
+
+The overhead base is the payroll register less the administrative labour that
+the POOL basis moves *into* the G&A pool — $1,835,047.17 − $264,444.90 =
+$1,570,602.27, plus fringe at 21.90%. The G&A pool and its base are unchanged,
+because general administration genuinely does serve every dollar.
+
+### What it does to the three contracts
+
+At the stated rates, on 2025 cost:
+
+| | labour + fringe | non-labour | OH @ 78.24% | G&A @ 12.37% | two-tier | combined @ 43.99% | difference |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Drive AM | 179,571.00 | 181,880.88 | 140,496.35 | 44,711.60 | 185,207.95 | 159,002.68 | **+26,205.27** |
+| Last Tactical Mile | 64,128.99 | 266,384.07 | 50,174.52 | 40,884.47 | 91,058.99 | 145,392.70 | **−54,333.71** |
+| Hybrid Phase 2 | 76,788.03 | 15,000.10 | 60,078.95 | 11,354.19 | 71,433.14 | 40,377.60 | **+31,055.54** |
+| **total** | **320,488.02** | **463,265.05** | | | **347,700.08** | **344,772.98** | **+2,927.10** |
+
+### Why it was rejected
+
+**1. MTDC already solves the problem the split is aimed at.** The worry behind
+the question is that a rate over pass-through recovers overhead on money that
+takes no overhead. 2 CFR 200.1 answers that in the definition of the base:
+only **the first $25,000 of each subaward** is in MTDC, and equipment, rental
+and participant support are out entirely. The base is not "everything". A
+second structure to solve it again is a second answer to one question — the
+shape this engagement has paid for repeatedly.
+
+The consultants at issue are the 5227 population, and §2 of
+`AMERICA_MAKES_RESTATEMENT.md` records why they are **contractors** under
+200.331 rather than subrecipients: they deliver into YBI's own programme,
+against YBI's scope, selected and administered by YBI. Contractor cost is in
+MTDC in full **because the administration is what the G&A pool recovers on**.
+Splitting the rate to recover less on it gives back the recovery the
+classification was made to obtain.
+
+**2. It takes half off the only real claim, and gives it back in the two
+places YBI has the least standing to ask.** LTM is the one contract where YBI
+is under-recovered, the one whose Schedule B budgets indirect at all (10.00%
+of direct, to four decimal places), and the one whose claim stands on its own
+merits. It is also 81% non-labour, so it is exactly the contract a
+labour-weighted overhead rate penalises: the claim falls from **$107,683.52 to
+$53,349.81**.
+
+The $57,260.81 that comes back does so as *smaller credits* on Drive AM and
+Hybrid — $58,786.31 down to $32,581.04 and $59,472.32 down to $28,416.78. That
+is not an improvement. Those two contracts were **over-recovered**; a structure
+whose effect is to hand back less on the contracts YBI over-billed, in order to
+claim less on the one it under-billed, is the hardest version of this
+conversation to have with a sponsor. The credits are what make the claim
+credible (§8, step 8). Shrinking them is not a feature.
+
+**3. Total recovery is not improved; it is redistributed — and not evenly.**
+Both structures spread the same two pools over the same cost, so across the
+whole organisation the recovery is identical by construction. Across *these
+three* it is $2,927.10 higher under the two-tier, which is not a reason to do
+anything: it is the residue of these contracts being slightly more
+labour-intensive than the organisation's average, and it would point the other
+way on a different three.
+
+**4. YBI has no negotiated rate at all.** The ask on the table is to move from
+a de minimis election to a first negotiated rate. Appendix IV B.2 permits the
+simplified method where an organisation's major functions benefit from
+indirect cost in approximately the same degree — which is the ordinary case
+for an incubator of this size — and it is a materially easier proposal to
+support than B.3, which requires demonstrating that the bases chosen actually
+measure the benefit. **Proposing the harder method, for no gain, on the first
+rate YBI has ever negotiated, is a self-inflicted wound.**
+
+### The one real vulnerability, and what answers it
+
+**59.6% of the base is non-labour** — $2,822,037.93 of $4,736,602.11 — so
+$1,241,214.49 of the combined allocation lands on non-labour cost. A reviewer
+may well test whether overhead genuinely benefits it in the same degree.
+
+The answer to that challenge is **not** a restructure. It is the 200.465
+facilities carve-out, which is the largest single adjustment in the rate model
+and **has never been evaluated**, because no building on the record carries
+square footage. Occupancy is the part of overhead least plausibly attributable
+to a consultant invoice, and carving the tenant and vacant share out takes the
+combined rate from 43.99% to 37.67% at a provisional 20% share — a bigger
+movement than the entire two-tier exercise produces, in the direction the
+challenge points, off a measurement YBI is already waiting on.
+
+So: get the square footage, compute the carve-out, and propose one rate. The
+two-tier structure is on file here, computed, and is the fallback if a
+reviewer rejects the simplified method outright — not the opening position.
