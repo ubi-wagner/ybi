@@ -2272,6 +2272,91 @@ recorded · analysis of the lines` with the full citation beside it. Two
 documents out of one walk, rather than one document that stops working the
 day it is used.
 
+## Every capability has a door, and the fourth one did not
+
+`tests/test_every_capability_has_a_door.py`, `scripts/drive_ui.py`,
+`docs/VERIFICATION.md`. **This is the answer to the shape, not the fifth
+instance of it.**
+
+`POST /api/rates/compute` was complete on the server, named in a comment on
+the screen that should have called it, and **called by nothing in the SPA** —
+so the one figure this whole system exists to produce could only be made by
+somebody running a script. It shipped that way for the life of the rate
+engine, and the Monday runbook listed the raw HTTP call as though it were a
+step a controller takes.
+
+It is the fourth: the restatement had five complete routes and no page, the
+timesheet draft had two and no card, the lane comparison had an API that
+could only ever answer zeroes. Every one was found by somebody reading one
+area closely — which is the hand-kept map applied to defects.
+
+The sweep derives the routes from the running application and the calls from
+the SPA, and keeps **no list of either**. It found fourteen more. Two were on
+the Monday path and were given doors rather than written down:
+`POST /api/rates/unseal`, which is the runbook's own recovery step, and
+`GET /api/dashboard/refusals`, which the failure panel has always claimed to
+carry — *"every one of these is also on the record server-side"* — with no
+way to show it.
+
+**Two allowlists, because two different facts.** `NO_DOOR_ON_PURPOSE` is
+FastAPI's own healthcheck and schema; `NO_DOOR_YET` is twelve real gaps with
+the screen each belongs on. Conflating them is how an allowlist stops meaning
+anything: *this will never have a screen* and *nobody has built the screen
+yet* lead to different work, and one list reads as the first while filling up
+with the second. An entry that gains a door fails the test until it is
+removed.
+
+### What a screen does, not what a route answers
+
+`review_system.py` asks whether every route answers, as everybody, at the
+**API** level. `walk_manuals.py` photographs screens. Neither watches what a
+screen *does* when a person opens it, and that is where the last three
+defects lived.
+
+`scripts/drive_ui.py` opens every screen as every person — read from
+`v_actor_access`, because the first version's hand-kept roster named an
+account that does not exist and called a controller an employee — and records
+every request the page made and what came back, every console error, and
+whether anything was drawn. 23 screens × 7 people, **161 visits, no 404, no
+5xx, no unexpected console error**, and **no screen offered in the nav that
+refuses the person it is offered to**, which nothing had ever checked from a
+browser. Watched failing against a deliberate typo in one route.
+
+**A 403 is not a fault and a 401 signed out is not a fault.** Counting them
+made twenty-three correct refusals look like defects on the first run — and a
+sweep that cries wolf is worse than no sweep, because it teaches the reader
+the list is wrong and the next real one they dismiss. A **404 or a 5xx is
+always** one: no screen should ask for a route that is not there.
+
+### Three more, and four in the instruments
+
+- **`prove.sh` ran the manual tests before the step that produces what they
+  assert on.** `pytest -q` includes `test_manual.py`, and `walk_manuals.py`
+  writes the manifest it reads three steps later — so a run whose previous
+  walk had been interrupted failed on an artefact the same script was about
+  to regenerate. A test arguing against working code, in the one place a
+  reviewer looks to decide whether the system holds.
+- **A test pinned to a literal line rather than the rule it describes.** The
+  failure panel's guard was asserted as `if (!items.length) return null;`, so
+  growing a second source broke it while the rule — absent when there is
+  nothing to say — was obeyed perfectly. The same defect as
+  `test_the_crosswalk_refuses_to_guess_a_split` asserting punctuation. It
+  holds the rule now and additionally fails if the panel renders a list the
+  guard does not cover, so the bell cannot hide a record it is holding.
+- **The rate screen said "Before sealing" over a sealed set** carrying four
+  rates — and could not have known better, because `/rates/current` returned
+  only rates. `sealed` is on the endpoint now and read from the record, not
+  remembered from the seal call returning: a flag set on success is wrong the
+  moment somebody reloads or the other controller unseals.
+
+And the instruments were wrong four times before they were worth trusting.
+The matcher substituted `{...}` before `${...}` and reported sixty live
+routes as orphans; it was not brace-aware and read the Library as
+unreachable; it scanned only `api.js` and read every CSV export as
+unreachable, when a download link is a door too. **Finding one of these in a
+file is the argument for reading the rest of it** — which is how the other
+three were found.
+
 ## Five registers with no writer, found by sweeping rather than by reading
 
 Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to

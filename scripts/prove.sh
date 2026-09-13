@@ -53,7 +53,14 @@ then
 fi
 
 step "The engine, and the structure of the code"
-run "unit and domain tests" $PY -m pytest -q
+# `tests/test_manual.py` is deliberately excluded here and run on its own
+# below, **after** the walk that produces what it asserts on. Running it
+# twice was not the problem; running it first was: it reads the manifest
+# `walk_manuals.py` writes three steps later, so a run whose previous walk
+# had been interrupted failed on an artefact this same script was about to
+# regenerate — a test arguing against working code, in the one place a
+# reviewer looks to decide whether the system holds.
+run "unit and domain tests" $PY -m pytest -q --ignore=tests/test_manual.py
 
 if ! curl -fsS "$BASE/api/health" >/dev/null 2>&1; then
   printf '\n  nothing serving at %s — start the API and run again\n' "$BASE"
