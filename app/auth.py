@@ -244,19 +244,46 @@ def check_credential(candidate: str, password_hash: str,
     identify one person, which is the same reason `refuse_issued_password`
     will not let that session write anything but its own new password.
 
-    Two rules keep it from becoming an oracle. The stored hash is always
-    verified first, so a present and an absent account cost the same; and the
-    shared value is offered only where `password_set_by` is not `SELF`, which
-    the caller passes as `SELF` for an account that does not exist. So a
-    guess against an unknown address is refused on the same path as a wrong
-    password against a known one.
+    **Only `SEED`.** `password_origin` has three values and the first draft
+    admitted everything that was not `SELF`, which swept in `ADMIN` — a
+    password an administrator deliberately chose for one named person, and
+    the origin `reset_password` writes when *"the account may be in the wrong
+    hands"*. Admitting the organisation's value there meant a reset no longer
+    restored exclusive control: anybody holding the shared password could
+    sign into the reset account, and `change_password` — the documented exit
+    from the write gate — would hand it over and revoke the owner's sessions.
+    `SEED` is the origin that means *shared, identifies nobody*, which is
+    exactly and only what this is for. An `ADMIN` account has a usable
+    password of its own, so nothing is locked out by the narrowing.
+
+    Three rules keep it from becoming an oracle, and the third was missing.
+    The stored hash is always verified first, so a present and an absent
+    account cost the same; the shared value is offered only against `SEED`,
+    which the caller passes as `SELF` for an account that does not exist; and
+    **the comparison cannot raise.** `secrets.compare_digest` refuses two
+    `str` arguments where either is non-ASCII — it raises `TypeError` — and
+    nothing above catches it, so a password with an umlaut in it answered
+    *500 where an account was unclaimed and 401 everywhere else*. That is a
+    sharper oracle than the one this was written to avoid: it named the
+    accounts still claimable rather than merely the ones that exist, and it
+    raised before `login` records the failed attempt, so the lockout never
+    counted it and the sweep was unmetered. Comparing bytes has no such
+    restriction, and the blanket guard is the same fail-closed rule
+    `verify_password` already applies a few lines down.
     """
     if verify_password(candidate, password_hash):
         return "OWN"
     shared = shared_initial_password()
-    if shared and password_set_by != "SELF" and \
-            secrets.compare_digest(candidate, shared):
-        return "SHARED"
+    if not shared or password_set_by != "SEED":
+        return None
+    try:
+        if secrets.compare_digest(candidate.encode("utf-8"),
+                                  shared.encode("utf-8")):
+            return "SHARED"
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException:
+        log.exception("the shared-password comparison refused its arguments")
     return None
 
 

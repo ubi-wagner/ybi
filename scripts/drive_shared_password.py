@@ -220,6 +220,50 @@ def main() -> int:
         else:
             ok("an address with no account answers 401, like a wrong password")
 
+        # The sharper oracle, found by a security review of this very commit:
+        # secrets.compare_digest refuses two non-ASCII str arguments, and
+        # unhandled that answered 500 for an account still on the shared
+        # password and 401 for everything else — naming which accounts are
+        # still claimable, and doing it before login records the attempt, so
+        # the lockout never counted it. Driven here against all three states.
+        seen = set()
+        for label, addr in (("an unclaimed account", email),
+                            ("a claimed account", args.admin),
+                            ("no account at all", f"nobody-{stamp}@ybi.org")):
+            r = client(args.base).post(
+                "/api/auth/login",
+                json={"email": addr, "password": "pässwort-mit-umlaut"})
+            seen.add(r.status_code)
+            if r.status_code >= 500:
+                finding(f"a non-ASCII password against {label} answered "
+                        f"{r.status_code} — an unmetered oracle for which "
+                        f"accounts are still claimable")
+        if len(seen) > 1:
+            finding(f"a non-ASCII password answers differently by account "
+                    f"state ({sorted(seen)}) — that difference is the oracle")
+        elif seen == {401}:
+            ok("a non-ASCII password answers 401 in all three account states")
+
+        # ── an administrator's reset takes the account out of the round ────
+        # `reset_password` writes ADMIN, and its own docstring says a reset is
+        # for when the account may be in the wrong hands. If the shared value
+        # still opened it, a reset would not restore exclusive control.
+        reset = admin.post(f"/api/auth/actors/{actor_id}/password",
+                           json={"new_password": f"admin-issued-{stamp}"})
+        if reset.status_code != 200:
+            print(f"  note     could not reset the probe's password "
+                  f"({reset.status_code}); the ADMIN case was not driven")
+        else:
+            after_reset = client(args.base).post(
+                "/api/auth/login", json={"email": email, "password": shared})
+            if after_reset.status_code == 200:
+                finding("the shared password opens an account an "
+                        "administrator has just reset — a reset does not "
+                        "restore exclusive control while a round is running")
+            else:
+                ok("an administrator's reset closes the shared door "
+                   f"({after_reset.status_code})")
+
         # ── the trail says which credential it was ─────────────────────────
         # /activity, not /audit — the first draft of this drive asked for a
         # route that has never existed, and the 404 read as "could not

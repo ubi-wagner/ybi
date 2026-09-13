@@ -54,10 +54,30 @@ that have not set their own. Three things follow:
 chosen its own password stops accepting the shared one immediately — so the
 window narrows on its own as people sign in, without anybody tracking it.
 
+**Only accounts opened for the round.** The shared value works against
+`password_set_by = 'SEED'` and nothing else. In particular it does **not**
+open an account whose password an administrator chose for one named person —
+including one that has just been reset, which is what you do when an account
+may be in the wrong hands. So a reset restores exclusive control even while a
+round is running. (The first version of this admitted anything that was not
+self-chosen, which swept in resets; a security review of the commit caught
+it.)
+
 **It is not an account-enumeration oracle.** The shared password against an
 address with no account answers exactly what a wrong password against a real
 one answers: 401. This system knows the names of everyone at the organisation,
 so a credential that distinguished the two would hand over the roster.
+
+That claim was false when it was first written, and the way it was false is
+worth carrying. `secrets.compare_digest` refuses two `str` arguments where
+either is non-ASCII — it raises — so a password with an umlaut in it answered
+**500 for an account still on the shared password and 401 for everything
+else.** A sharper oracle than the one being guarded against: it named not
+merely which addresses have accounts but which are still *claimable*. And it
+raised before the failed attempt was recorded, so the lockout never counted it
+and the sweep was unmetered. The comparison is on bytes now and cannot raise.
+The test that was supposed to hold this property passed throughout, because
+its password was ASCII — a test that cannot fail for the thing it names.
 
 ## The exposure, stated plainly
 
