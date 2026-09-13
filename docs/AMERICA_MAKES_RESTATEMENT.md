@@ -56,6 +56,13 @@ election.** Two carry no indirect line at all. The third carries a round
 $3,000 — not 10% of anything on the page. That is the first finding, and it
 sits underneath everything below:
 
+> **Since confirmed, and it is worse than a wrong rate.** The 2025 income
+> postings show LTM billed **exactly $3,000.00 of indirect in eleven of the
+> twelve months** and $11,400.00 in February. So 18.76% is what a flat monthly
+> figure happened to come to on *this* invoice's base; February's identical
+> method came to 20.54%. There is no rate — there is a monthly amount that
+> moves with nothing. `WP_AM_2025_RESTATED_INVOICES.md` §3.3.
+
 - 10018 and 10023 **forgo recovery outright**. On a cost-reimbursement award
   there is no mechanism that gives it back later.
 - 10039 is **$1,400.65 above** what the elected de minimis rate would have

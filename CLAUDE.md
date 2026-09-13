@@ -2123,6 +2123,78 @@ the $181,276.15 of T1 access, telephone, insurance and equipment sitting in
 the same pool. Fix it before the square footage arrives, so the first real
 measurement produces the right answer.
 
+### Thirty-six invoices, so the year's figure can be traced to a month
+
+`scripts/restate_2025_invoices.py`, `docs/restated-2025/`,
+`docs/WP_AM_2025_RESTATED_INVOICES.md`. The three contracts rebuilt on the
+negotiated rate, twelve months each, on the face NCDMM's payables recognises
+— a **bookmark** to lay beside a QuickBooks export, not a filing. Nothing is
+written to `invoice`, which is append-only and which no route creates a row
+in. Rendering is deterministic, so the manifest's digests reproduce and **a
+digest that moves means a figure moved.**
+
+The annual figures do not move: Drive AM $(58,786.31), LTM $107,683.52,
+Hybrid $(59,472.32), net $(10,575.11). The months add back to the recorded
+allocation to the cent, and the script refuses to write anything if they do
+not.
+
+**The indirect on each invoice is the allocation the rate computation
+persisted, distributed — not a rate re-applied to a base rebuilt in the
+script.** A second derivation would be free to disagree with the first, which
+is the review screens' rule in a new place. Fringe and the indirect are spread
+by **largest remainder against the annual figure**: rounding each month
+independently drifted one and two cents against the engine on all three
+contracts the first time it ran, which is `069` reproduced by somebody who had
+read `069`.
+
+Four things the monthly split shows that a year cannot:
+
+- **Billing and cost do not fall in the same month**, by five and six figures.
+  Drive AM billed $150,719.52 in May against $39,960.70 of cost and $62,615.64
+  in October against $180,997.76. So **restate the year, not the months** —
+  thirty-six transactions swinging six figures in both directions to net
+  $10,575.11 is the same economics presented in the way most likely to trigger
+  a desk audit. The documents exist so the year's figure can be *traced*.
+- **Two of the three billed labour at an identical figure every month** —
+  $25,373.65 and $7,493.52, twelve times — against wages that vary 34%. A rate
+  times assumed hours, on awards that are cost reimbursement invoiced monthly.
+- **The loading is not one number**: 1.70x on Drive AM, 1.40x on LTM, **2.25x
+  on Hybrid**, against a fully burdened 1.44x. Three embedded rates under one
+  election and none of them 10% — and Hybrid's labour billed at half as much
+  again as full burden.
+- **LTM's indirect is a flat $3,000 a month**, eleven months of twelve. The
+  earlier reading of invoice 10039's $3,000 as *18.76%* is right about that
+  invoice and wrong as a description of the method: February's identical
+  $3,000 came to 20.54%. There is no rate, there is an amount.
+
+And **Hybrid was worked for a quarter after the billing stopped** — $18,137.41
+of cost against $4,222.00, within term under Modification 001, simply never
+invoiced.
+
+**The non-labour is one line, and says so on its face.** The ledger carries an
+account and a payee — `Grant Expenses:LTM Grant`, `Humtown Products` — and not
+an invoice category, so nothing can say whether $5,500 to a foundry was
+MATERIALS or CONSULTANT. Guessing from a payee name would be inventing a
+judgment. Naming the gap precisely is more use than a plausible split: it is
+exactly the column the export supplies, and the totals do not move when it
+lands. The workbook leaves those columns **empty** — *a blank is unanswered,
+and unanswered is a value.*
+
+Two defects from building it, both found by looking:
+
+- **The RATE column formats to the cent**, so 21.90% printed as `0.22` and
+  43.99% as `0.44` on a document a payables clerk checks. Found by reading a
+  rendered PDF back with `pypdf` — the same move `drive_reverse` needed,
+  because PDF text is compressed and searching the bytes finds nothing. The
+  rate goes in the description, which also matches the originals' own shape.
+- **The first draft reached the database through a local helper called `q`**,
+  and `tests/test_sql_is_real.py` finds statements by the name of the function
+  they are passed to. Six statements the schema had never checked, in a file
+  written the same week as the note about reading the schema rather than
+  recalling it. It goes through `app.db.query` now, like every other script:
+  **there is one door**, which is what
+  `test_no_screen_reaches_past_the_request_layer` holds for the SPA.
+
 ## Five registers with no writer, found by sweeping rather than by reading
 
 Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to
