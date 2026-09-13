@@ -1,125 +1,166 @@
 # Monday — the run sheet
 
-Everything in the system is staged and waiting. **Nothing below has been done
-for anybody**, and that is deliberate: every step here is a judgment with a
-person's name on it, and a machine that performed them would destroy the thing
-those signatures are worth.
+**Read §0 first.** The first version of this document described building the
+year from nothing, and the record is already at the end of that path — every
+step below is **verification, not construction**. Following the old version
+literally would have had the controller press *Seal* on a sealed set and
+recompute a rate that is already current.
 
 Pre-flight, the night before or first thing:
 
 ```bash
-DATABASE_URL=... ./scripts/monday.sh                # read-only checks
-YBI_SEED_PASSWORD=... ./scripts/monday.sh --full    # and the sandbox test
+DATABASE_URL=... ./scripts/readiness.py              # read-only, writes nothing
+DATABASE_URL=... ./scripts/monday.sh                 # read-only checks
+YBI_SEED_PASSWORD=... ./scripts/monday.sh --full     # and the sandbox test
 ```
 
-**Illustrated:** `docs/MONDAY_GUIDEBOOK.html` walks every step below in the
-real screens, photographed by `scripts/walk_runbook.py` against a sandbox
-built from empty. It fails on a step that cannot be performed — which is how
-step 4 turned out to have no door.
-
-`readiness.py` writes nothing. `monday.sh --full` builds a **throwaway
-database** and proves the whole path there, so if the machinery is going to
-fail it fails on Sunday rather than in front of the controller. The live
-record is read and never written by either.
+**Illustrated:** `docs/MONDAY_GUIDEBOOK.html` photographs every screen below,
+driven by `scripts/walk_runbook.py`. It walks a sandbox **from empty**, so it
+shows what each screen looks like and what each step *means* — the record you
+will open on Monday is further along, per §0.
 
 ---
 
-## Order of operations
+## 0 · Where the record actually stands
 
-The order is not a preference. Each step is refused until the one before it is
-done, by the schema rather than by anybody remembering.
+Read from the live record, 13 September 2026. Re-read it any time with
+`scripts/readiness.py`, which writes nothing.
 
-### 1 · Reconcile the books — Tom
+| | | |
+| --- | --- | --- |
+| the eleven control points | **11 tie**, 0 open, 0 unevaluable | 6 reconciling items recorded |
+| the classification | **757 of 757 groups**, 100.0% | $0.00 unclassified |
+| the seal | **sealed by Tom Metzinger**, 12 Sep 22:50 | covers all 757, no drift |
+| the rate | FRINGE **21.90%** · OVERHEAD 31.62% · G&A 12.37% · **INDIRECT_COMBINED 43.99%** | administrative labour on the **POOL** basis |
+| the anchors | **4 of 4 tie** | every pool at `pool_variance` 0.00 |
+
+**So Monday is a review, not a build.** The 757 judgments were recorded
+through the API under Tom's name by `scripts/classification_log.py --apply`,
+with `docs/CLASSIFICATION_LOG.md` as the written rationale beside each one.
+What has *not* happened is a person reading them and affirming that they
+stand. That is the substantive human step and it is step 2 below.
+
+Three things are genuinely outstanding and none of them is classification:
+the roster reply, the certifications, and the square footage. They are in
+§P and they all belong to somebody other than the controller.
+
+---
+
+## 1 · Confirm the books still agree — Tom
 
 **Gate: `POST /api/rates/compute` returns 409 while any of the eleven control
-points is open.** A rate over books that do not agree with themselves is a rate
-over the wrong numbers.
+points is open.** All eleven tie today. This step is to confirm they still do.
+
+`/reconcile` in the application, or:
 
 ```bash
-python3 scripts/reconcile.py --base http://… --record
+python3 scripts/reconcile.py --base http://… # add --record only if it moves
 ```
 
-Eleven points where the general ledger, the P&L, the balance sheet and the
-payroll register have to agree. A difference is closed by **naming** it — a
-reconciling item carrying the specific ledger lines it consists of — never by
-netting it. `/api/reconcile/propose` will find the lines when exactly one
+**The one thing likely to have changed over the weekend** is the Bacon
+$45,053.23 donor credit sitting in an intern wage account. When it is
+reposted in QuickBooks the eleventh control moves — and the reconciling item
+naming it has to come off with it, or the correction counts twice.
+
+If a control has opened: close it by **naming** the difference, never by
+netting it. `/api/reconcile/propose` finds the lines when exactly one
 combination adds up, and proposes nothing at all when more than one would.
+Then go to §C, because a reposting changes the ledger under a sealed set.
 
-*Today all eleven tie. If a QuickBooks reposting has landed since, they may
-not, and this is where that shows.*
+*Read `state`, never a variance of zero. Both sides of most controls are
+`COALESCE(..., 0)`, so an empty period compares zero against zero and looks
+green.*
 
-### 2 · Review the recommendations — the controller team
+## 2 · Review what stands — the controller team
 
-`/classify`, and `docs/CLASSIFICATION_LOG.md` beside it — a reasoned treatment
-for every one of the 757 cost groups, with a citation and a rationale on each,
-and a named reason where there is none.
+**This is the work.** `/classify` is empty because the queue is finished; the
+review happens against `docs/CLASSIFICATION_LOG.md`, which carries a reasoned
+treatment for every one of the 757 groups with a citation and a rationale —
+and now reads `already recorded · analysis of the lines` on each, so it says
+both what was decided and why.
 
-**The log proposes and does not decide.** Run without `--apply` it writes
-nothing to the cost record at all. Nothing is pre-accepted; the queue carries
-each group's proposal and a person presses Enter on it or does not.
+Start where the money is. Four judgments carry most of the weight:
 
-Work the queue in Sweep for the obvious ones and Focus for the ones that need
-thought. `j`/`k` move, `Enter` accepts, `1`–`8` jump to a pool, `e` edits.
+| | | |
+| --- | ---: | --- |
+| `5227 Portfolio consulting` | $588,538.89 | in the base as **contractor** cost under 200.331, not a subrecipient. Reading it the other way takes the combined rate *up* to 50.23%. |
+| `5010 Depreciation` | $850,382.89 | OVERHEAD, federal treatment **PENDING** — 200.436(b) cannot be answered until the asset register carries a funding source. |
+| the wage accounts | $1,789,993.94 | **EXCLUDED**, deliberately: `compute` already feeds the payroll register into the base, so a DIRECT judgment here would count the labour twice. |
+| `5108 Other Income` | $110,182.87 | EXCLUDED — $105,865.41 of it is a Q1 **2020** ERTC owed back under 200.406(b). |
 
-### 3 · Seal — Tom, and only Tom
+If every judgment stands, nothing is required: the seal is current and so is
+the rate. **Skip to §5.** If any judgment is wrong, go to §C.
 
-**This is the judgment the whole system rests on.** Sealing says *these
-classifications are final*, and the hash it writes is what lets a reviewer be
-told the rate was not reverse-engineered. Only `CONTROLLER` may do it, and
-nothing automated may do it at all.
+## 3 · The seal — already held, and only Tom may move it
 
-No rate is computed or displayed before this point. That is the guarantee.
+Sealed 12 September, covering all 757 live judgments, written 11 seconds
+after the last one. `/rates` reads *Sealed by Tom Metzinger* from the record.
 
-### 4 · Compute the rate — Tom
+**Nothing to do unless something changes.** Sealing is the assertion that the
+rate was not reverse-engineered; only `CONTROLLER` may seal or unseal and
+nothing automated may do either.
 
-**On `/rates`, under the seal: *Compute the rate*.** The button exists because
-walking this runbook found that it did not: `POST /api/rates/compute` was
-complete on the server, named in a comment on that screen, and called by
-nothing in the application, so this step could only be taken by running a
-script. See `docs/MONDAY_GUIDEBOOK.html`.
+## 4 · The rate — already computed, on the basis that was chosen
 
-**Choose the administrative-labour basis on the screen.** It is worth about
-nine points of combined rate on the same judgments and it is recorded on the
-rate. The settled position is **in the G&A pool** (`POOL`) — 43.99% combined;
-the default is `OBJECTIVE` at 34.82%, which is what every rate before
-migration 068 used. The other settled decision, 5227 consultants in the base
-as contractor cost under 200.331, is already in the classification.
+Four rates on file, all carrying the seal hash, all on the **POOL** basis.
 
-The rate carries the seal hash. A database trigger refuses one whose seal does
-not match a sealed set.
+**If you recompute for any reason, choose POOL again.** The screen defaults to
+`OBJECTIVE`, which is what every rate before migration 068 used and gives
+**34.82%** instead of 43.99% — nine points, on the same sealed judgments.
+The basis is a choice on the screen under the seal, and it is recorded on the
+rate so the workpaper says which was used.
 
-### 5 · Check the stack — Tom
+## 5 · Check the stack — Tom
 
 `/review/rate`. Every pool at `pool_variance` 0.00, all four `v_rate_anchor`
-rows tying. **A control that cannot be evaluated has not passed** — read
-`state`, never `variance = 0` alone.
+rows tying. **Nothing on that screen is computed** — every figure is read from
+the row it was recorded in.
+
+And read what it says above the figures: **no 200.465 facilities carve-out is
+in this rate**, because no facility on the record carries measured space, so
+every dollar of tenant and vacant occupancy cost sits in the federal pool.
+43.99% reads high, which is the honest direction to err.
 
 ---
 
-## Running in parallel, at their own pace
+## C · If something has to change
 
-These do not block steps 1–5 and must not be chased into them.
+The path the first version of this document did not have, and the one most
+likely to be needed. Every step has a door in the application now.
+
+1. **Unseal** — `/rates`, *Unseal…*, with a written reason. It supersedes
+   every rate computed against that seal. The reason is required, because an
+   unseal with no reason is a hole in the trail the seal exists to make.
+2. **Correct the judgment** — `/classify`. Reclassifying supersedes rather
+   than editing; the prior judgment is reversed and stays on the record.
+3. **Re-seal** — the same act as before, over the corrected set.
+4. **Recompute** — and choose **POOL** again (§4).
+5. **Re-check** — §5. Then tell whoever has quoted the old figure, because
+   43.99% is on every workpaper in `docs/`.
+
+*Correct by superseding, never by editing. The record is append-only and a
+position taken and then withdrawn is part of the trail.*
+
+---
+
+## P · Running in parallel, and none of it blocks the above
 
 ### The forty-three — their own timesheets
 
 `/timesheet` offers each person the controller's reconstruction of their year,
 pre-filled. **It is a convenience they may decline**, and the screen says so
-before it says anything else. Three answers are all complete:
-
-- type your own days and ignore the draft — a sheet somebody types is the
-  stronger record, not the weaker one;
-- adopt it and then correct any day that is wrong;
-- leave it. Nothing expires.
+before it says anything else. Three answers are all complete: type your own
+days and ignore it; adopt it and correct any day that is wrong; or leave it.
 
 **Adopting is not certifying.** Adopting puts hours on a sheet; signing says
-the sheet is true, and that happens separately under `/certify`. Nobody can
-sign for anybody else — 2 CFR 200.430(i) wants the record of the person whose
-effort it was, and a manager cannot sign on their behalf. `v_certification_chase`
-is a list to go and ask, never an action.
+the sheet is true, and that happens separately under `/certify`. Nobody signs
+for anybody else — 200.430(i) wants the record of the person whose effort it
+was, and a manager cannot sign on their behalf. `v_certification_chase` is a
+list to go and ask, never an action.
 
-**Blocked today:** no employment terms are on the record for any of the 43, so
-no draft can be built for anyone. That is the roster reply coming back, not a
-fault in the system — it is the thing to go and get.
+**Blocked today: 0 of 43 certified, and no employment terms are on the record
+for anyone**, so no draft can be built for anybody. That is the roster reply
+coming back — the thing to go and get, not a fault in the system.
 
 **Submitting does not move the rate.** Adopting the reconstruction faithfully
 reproduces its shares, so the figures hold. If it did not, the rate would
@@ -127,13 +168,13 @@ depend on who had got round to signing.
 
 ### Kelly — the square footage
 
-The single largest open item. No facility on the record carries measured space,
-so **no 200.465 carve-out has ever been evaluated** and every dollar of tenant
-and vacant occupancy cost sits in the federal pool. The rate reads high, which
-is the honest direction to err.
+The single largest open item, and **it does not gate any classification**. In
+the 2025 chart occupancy goes to OVERHEAD full stop; the tenant share comes
+out at rate time as a 200.465 carve-out. `carved` reads 0.00 on a
+$1,497,879.12 pool because no facility is measured.
 
-At a realistic tenant share the combined rate is **37.67%** rather than 43.99%.
-Nothing should go to NCDMM before this lands.
+At a realistic tenant share the combined rate is about **37.67%** rather than
+43.99%. Nothing should go to NCDMM before this lands.
 
 ### Barb — the four decisions
 
@@ -153,18 +194,14 @@ whether anybody looks at 2024.
 | **A reconciling item** | A difference is closed by naming the lines behind it. A tolerance that quietly swallows a residual is how a system starts lying. |
 | **Sending anything to NCDMM** | A position YBI takes with a sponsor, in writing. |
 
----
+## If something goes wrong
 
-## If something is wrong
-
-- **A control is OPEN.** Name the difference; do not net it. `ROUNDING` takes
-  no lines only if it says in sixty characters or more why it cannot be
-  attributed, and never above a thousand dollars.
-- **A judgment was wrong after sealing.** Unseal with a written reason. That
-  supersedes the rate, and recomputing is step 4 again. The record stays
-  append-only: correct by superseding, never by editing.
 - **Something was recorded by mistake.** `/api/undo` walks newest first. An
-  undo that walked nothing back answers 409 with the reason.
-- **A screen reported success and nothing happened.** Check `FailureBell` in
-  the shell and the `refusal` register — a refused write is recorded even
-  though `audit_log` by construction says nothing when nothing changed.
+  undo that walked nothing back answers 409 with the reason. A sealed set
+  refuses it — unseal first, per §C.
+- **A screen reported success and nothing happened.** The failure panel in the
+  shell now shows two records: what this browser saw fail, and what the
+  *server* wrote down in `refusal`. They are not the same list — the second
+  carries refusals from other sessions and other people.
+- **A control cannot be evaluated.** `NO DATA` is not a pass. Say what it
+  needs in order to mean anything.
