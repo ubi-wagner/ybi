@@ -550,6 +550,25 @@ function DraftCard({ draft, onDone }) {
   return (
     <Card title="The reconstruction of your year" variant="raised"
           aside={`${hours(draft.expected_hours)} contracted hours · ${draft.working_days} working days`}>
+      {/* **Optional, and it says so before it says anything else.** The one
+          way this exercise produces forty-three worthless signatures is a
+          convenience that reads as an instruction, so the alternatives come
+          from the server (`instead`) rather than being written here — a
+          second copy of what the routes allow is one free to drift from
+          them. */}
+      {draft.optional && (
+        <p className="caveat">
+          <strong>This is optional.</strong> It is a starting point offered to
+          save you rebuilding a year from memory — not a form you have to
+          accept. Any of these is a complete answer:
+        </p>
+      )}
+      {(draft.instead || []).length > 0 && (
+        <ul className="quiet small ts-instead">
+          {draft.instead.map((t, i) => <li key={i}>{t}</li>)}
+        </ul>
+      )}
+
       <p className="quiet small">{draft.because}</p>
 
       {adopted && (
@@ -665,6 +684,14 @@ function DraftCard({ draft, onDone }) {
           <button className="btn primary" disabled={!ack || busy} onClick={adopt}>
             {busy ? "Adopting…" : "Adopt this as my sheet"}
           </button>
+          {/* Adopting and certifying are two acts and live on two screens.
+              Collapsing them into one button would take a signature from
+              somebody who had only meant to accept a starting point. */}
+          <p className="quiet small">
+            This does not certify anything. It puts the hours on your sheet so
+            you can correct them. Signing happens later and separately, under
+            <strong> My effort</strong>, once the sheet says what you mean.
+          </p>
         </>
       )}
     </Card>

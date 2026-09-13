@@ -619,6 +619,9 @@ tbody td.trunc { max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
 .ts-note { margin: -6px 0 0; max-width: 80ch; }
 /* The rationale behind each line of the reconstruction, folded away: it is
    what a reviewer asks for and not what the person adopting reads first. */
+.ts-instead { margin: 4px 0 10px; padding-left: 20px; }
+.ts-instead li { margin-bottom: 4px; max-width: 80ch; }
+
 .ts-draft-why { margin: 8px 0 4px; padding-left: 12px;
                 border-left: 2px solid var(--rule); }
 .ts-draft-why p { margin: 0 0 6px; max-width: 80ch; }

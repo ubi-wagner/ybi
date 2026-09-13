@@ -474,3 +474,45 @@ def test_the_safe_default_is_not_federal():
     answer rather than the flattering one."""
     j = judge(g("Grant Expenses:Drive AM"))
     assert j.federal == "NOT_APPLICABLE"
+
+
+# ── the log has to be readable after it has been acted on ────────────
+
+def test_a_judged_group_still_carries_its_reasoning():
+    """`judge` refuses to re-propose a group somebody has already decided —
+    right, because a second answer would be this log taking credit for
+    another person's judgment, and `--apply` would try to record over a live
+    decision.
+
+    But the log is read *after* the judgments land, and that is the only time
+    anybody needs it: to check what stands against the reasoning for it.
+    Regenerated against an applied record, every rationale had become "45
+    line(s) already carry a live decision". It had not emptied itself of
+    rows, which is what it was built to avoid; it had emptied itself of
+    **reasoning**. `judge_on_merits` answers from the group alone.
+    """
+    from app.domain.classification_log import (RECORDED, judge,
+                                               judge_on_merits)
+    account = "Program Expenses:ESP:5227 Portfolio consulting"
+    fresh = judge(g(account, net="88804.99", lines=77))
+    assert fresh.basis != RECORDED and fresh.pool, "a fresh group is proposed"
+
+    decided = g(account, net="88804.99", lines=77, judged=77)
+    assert judge(decided).basis == RECORDED, (
+        "a judged group must not be re-proposed")
+    merits = judge_on_merits(decided)
+    assert merits.basis == fresh.basis and merits.pool == fresh.pool, (
+        "the reasoning must not depend on whether somebody has acted on it")
+    assert merits.rationale == fresh.rationale
+    assert "already carry a live decision" not in merits.rationale
+
+
+def test_the_written_log_shows_both_what_stands_and_why():
+    """The row carries the recorded state *and* the reasoning behind it —
+    `already recorded · analysis of the lines` — rather than one or the
+    other. A reviewer checking a sealed set needs both on one line."""
+    source = (ROOT / "scripts" / "classification_log.py").read_text()
+    assert "judge_on_merits" in source, (
+        "the writer must fill a judged row's reasoning from judge_on_merits")
+    assert 'f"{RECORDED} · {shown.basis}"' in source, (
+        "the basis column must say it is recorded and say how it was reached")

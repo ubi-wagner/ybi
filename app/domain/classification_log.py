@@ -293,14 +293,45 @@ def judge(g: Group, federal_objectives: frozenset[str] = frozenset()
           ) -> Judgment:
     """The recommended treatment for one group, or the reason there is none.
 
-    Ordered by strength of signal, the way `propose()` is: what the lines
-    themselves show beats what the account is called, and what the account is
-    called beats a general rule.
+    A group the controller has already judged is **not re-proposed**:
+    recommending what is on the record would let this log take credit for
+    somebody else's judgment, and `--apply` would try to record a decision
+    over a live one.
+
+    Use `judge_on_merits` where the *reasoning* is wanted for a group
+    whatever its state — reviewing what stands, rather than proposing what to
+    do next. See its docstring for why the two are separate.
     """
     if g.judged:
         return Judgment(None, None, None, None, "UNSUPPORTED", "",
                         f"{g.judged} line(s) already carry a live decision.",
                         RECORDED, blocked_on=None)
+    return judge_on_merits(g, federal_objectives)
+
+
+def judge_on_merits(g: Group, federal_objectives: frozenset[str] = frozenset()
+                    ) -> Judgment:
+    """What this group deserves, read from the group alone.
+
+    Identical to `judge` except that it does not care whether somebody has
+    already decided. That distinction is the difference between two
+    documents, and the log needs both:
+
+    - **proposing** skips a judged group, because the record already has an
+      answer and a second one would be this log taking credit for it;
+    - **reviewing** needs the reasoning on every group, including the judged
+      ones — that is the whole of what a reviewer is checking.
+
+    The log read the same number of rows after its recommendations were
+    accepted and every rationale had become *"45 line(s) already carry a live
+    decision"*. It had not emptied itself of rows, which is what it was built
+    to avoid; it had emptied itself of **reasoning**, which is the only
+    reason anybody opens it afterwards. Found by regenerating it against a
+    record where the judgments had been applied.
+
+    Pure, and a function of one group: the same ledger produces the same
+    judgment read in either direction.
+    """
     leaf, account = g.leaf, g.account
     fed = frozenset(federal_objectives)
 

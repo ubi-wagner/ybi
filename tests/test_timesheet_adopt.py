@@ -360,3 +360,60 @@ def test_the_draft_says_what_their_calendar_does_not_separate():
     draft = body_of("draft")
     assert "not_known" in draft
     assert "vacation" in draft.lower() and "sick" in draft.lower()
+
+
+# ── it is a convenience, not an instruction ──────────────────────────
+
+SCREEN = (ROOT / "web" / "src" / "pages" / "Timesheet.jsx").read_text()
+
+
+def test_the_draft_declares_itself_optional():
+    """The one way this exercise produces forty-three worthless signatures is
+    a convenience that reads as an instruction. 200.430(i) wants the record
+    of the person whose effort it was, so the answer has to say out loud that
+    adopting is a choice rather than leaving the screen to imply it."""
+    draft = body_of("draft")
+    assert '"optional": True' in draft, (
+        "every draft must declare itself optional — a pre-filled sheet that "
+        "reads as the only route takes a signature on somebody else's "
+        "account of the year")
+
+
+def test_the_draft_names_what_somebody_may_do_instead():
+    """"Optional" on its own is the dead end this repository keeps finding:
+    true, and it does not tell anybody what the alternatives are. Three are
+    legitimate — type your own days, adopt and then correct, or leave it —
+    and each has to be named."""
+    draft = body_of("draft")
+    instead = re.search(r'"instead": \[(.*?)\n\s*\],', draft, re.S)
+    assert instead, "the draft must name the alternatives in `instead`"
+    assert instead.group(1).count('"') >= 6, (
+        "one alternative is not a choice; name the routes somebody may take")
+
+
+def test_the_screen_reads_the_alternatives_from_the_server():
+    """A second copy of what the routes allow is one free to drift from them
+    — the defect that produced a nav stricter than the API. The card renders
+    `instead` rather than keeping its own list."""
+    assert "draft.instead" in SCREEN, (
+        "the card must render the server's alternatives, not its own")
+    assert "draft.optional" in SCREEN
+
+
+def test_adopting_is_not_certifying():
+    """Two acts, two routes, two gates, and on two screens. Adopting puts
+    hours on a sheet; signing says the sheet is true. One button doing both
+    would take a signature from somebody who had only meant to accept a
+    starting point — which is the whole thing 200.430(i) is written
+    against."""
+    adopt = body_of("adopt")
+    # On the write, not on the prose. The first version of this asserted
+    # that the word did not appear anywhere in the handler and failed
+    # against correct code, because the docstring explains at length why
+    # `v_certification_status` reads from the basis it sets. A test that
+    # argues with a comment is worse than no test.
+    assert "labor_certification" not in adopt, (
+        "adopt must not write a certification — signing is "
+        "/api/certify/sign, performed separately by the person themselves")
+    assert re.search(r"does not certify", SCREEN), (
+        "the card must say that adopting does not certify")

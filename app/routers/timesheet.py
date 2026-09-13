@@ -531,6 +531,20 @@ def draft(period: str = None,
     where those are missing this answers with what is missing rather than
     with a guess — a year of hours invented against an unknown denominator
     is the thing the coverage check exists to refuse.
+
+    **Adopting it is optional, and the answer says so.** `optional` is on
+    every draft and it is not decoration: 200.430(i) wants the record of the
+    person whose effort it was, so a convenience that reads as an
+    instruction is the one way this exercise produces forty-three signatures
+    worth nothing. Somebody who would rather enter their own days, correct
+    half of these and leave the rest, or do nothing today, has taken a
+    legitimate route in each case — `instead` names them on the answer so a
+    screen cannot present adoption as the only door.
+
+    Certifying is a **separate, later act** on `/api/certify/sign`, and it is
+    theirs too. Adopting puts hours on a sheet; signing says the sheet is
+    true. Collapsing the two into one button would take a signature from
+    somebody who had only meant to accept a starting point.
     """
     period = period or settings.period
     if not actor.employee_key:
@@ -672,6 +686,20 @@ def draft(period: str = None,
                 Decimal("0.01")) if all_days else Decimal(0)),
             "already_entered": str(cover["entered_hours"] or 0) if cover else "0",
             "adoptable": True,
+            #: A convenience, never an instruction. See the docstring: a
+            #: pre-filled sheet that reads as the only route produces
+            #: signatures on somebody else's account of the year, which is
+            #: the one outcome 200.430(i) is written against.
+            "optional": True,
+            "instead": [
+                "Enter your own days on the sheet above and ignore this "
+                "entirely — a sheet you type yourself is the stronger record, "
+                "not the weaker one.",
+                "Adopt it and then change any day that is wrong. What you "
+                "certify is the corrected sheet, not what was proposed here.",
+                "Leave it for now. Nothing here expires, and an unadopted "
+                "draft costs the record nothing.",
+            ],
             "because": ("This is your own hours log, month by month, as the "
                         "controller keeps it — not a figure spread evenly "
                         "over the year. Adopting records it under your name; "

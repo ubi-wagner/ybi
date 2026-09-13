@@ -2195,6 +2195,83 @@ Two defects from building it, both found by looking:
   **there is one door**, which is what
   `test_no_screen_reaches_past_the_request_layer` holds for the SPA.
 
+## Staged for a human, and nothing else
+
+`scripts/readiness.py`, `scripts/monday.sh`, `docs/MONDAY_RUNBOOK.md`. The
+whole system set up so that a person can walk in and do their part — and
+**nothing done on their behalf.**
+
+Four acts are staged and deliberately not performed. Each is a judgment with
+somebody's name on it, and a machine that performed it would destroy what the
+signature is worth: the **seal** (it is the assertion the rate was not
+reverse-engineered), a **certification** (200.430(i) wants the person whose
+effort it was), **adopting a draft** (theirs to decline), and **anything sent
+to a sponsor**. The rate is the interesting one — it is arithmetic and *could*
+be computed, and is not, because computing before the books reconcile is a
+rate over the wrong numbers and reconciliation is Monday's first job.
+
+**`readiness.py` writes nothing and says so in its exit code.** Two states,
+kept apart: `blocked` is the machinery being wrong and fails the run;
+`waiting` is a person not having acted yet, which is the normal state of an
+engagement in progress. A report that failed on outstanding work is one
+nobody reads twice — `FACILITY_UNPARTITIONED` applied to a status report. On
+the live record it says *the machinery is sound* and names three things
+waiting on people, which are the same three the memo for the administrator
+names: the roster reply, the certifications, and the square footage.
+
+**The pre-flight builds a sandbox from empty rather than touching the live
+record**, which is sealed at 100% classified. `monday.sh --full` creates a
+throwaway database, seeds it, and walks the whole path there. If the
+machinery is going to fail it fails on Sunday rather than in front of the
+controller.
+
+Three things came out of building it, and all three were the order or the
+naming rather than the logic:
+
+- **`drive_buildup` has to run before the recommendations are applied.** It
+  classifies a group and watches coverage, the pool, the base and the rate
+  each move by the right amount — so on a record where everything is already
+  judged it has nothing to classify and reports `COULD NOT RUN`. The first
+  version applied the 757 recommendations one step earlier. The drive was
+  right and the script was wrong, which is the same shape as
+  `drive_propagation` needing to run before anything seals.
+- **The report called `scripts/reconcile.py` for figures it had already
+  read.** The eleven control points come from `v_statement_reconciliation`,
+  and calling the script as well is a second reading of one thing — free to
+  disagree with the first — that also needs a running API for what is a pure
+  read. Removed. The half of `reconcile.py` this cannot replace is
+  `--record`, which writes, and writing is Monday's job.
+- **`building` is not a table.** The carve-out check was written from memory
+  and failed on the one adjustment it exists to watch. `facility`, and
+  `v_space_unit_control` for whether the space accounts for itself. *Read the
+  schema, never recall it*, in a file written the same week as the last time.
+
+### The log emptied itself of its reasoning
+
+And the worst of them, found by regenerating the classification log against a
+record where its recommendations had been applied. This file has claimed:
+
+> *the log covers the whole ledger rather than what is open, so it reads the
+> same after its recommendations are accepted: a log that empties itself when
+> acted on cannot be checked against the books afterwards, which is the one
+> time anybody will want to.*
+
+Half true, and the wrong half. It kept all 757 rows — and every rationale had
+become *"45 line(s) already carry a live decision"*, with the pool, the 990
+function, the federal treatment and the objective all blank. It had not
+emptied itself of **rows**; it had emptied itself of **reasoning**, which is
+the only thing a reviewer opens it for. The one time anybody wants it is
+exactly the state that hollowed it out.
+
+`judge()` short-circuits on `g.judged` and that is correct — re-proposing a
+decided group would be this log taking credit for somebody else's judgment,
+and `--apply` would try to record over a live decision. The fix is that
+**proposing and reviewing are two questions**: `judge_on_merits()` answers
+from the group alone, whatever its state, and the row now reads `already
+recorded · analysis of the lines` with the full citation beside it. Two
+documents out of one walk, rather than one document that stops working the
+day it is used.
+
 ## Five registers with no writer, found by sweeping rather than by reading
 
 Migration `063`, `tests/test_no_register_is_dead.py`. **This is the answer to

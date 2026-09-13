@@ -43,7 +43,8 @@ import httpx
 
 from app.db import one, open_pool, query
 from app.domain.classification_log import (
-    OBJECTIVES_TO_OPEN, Group, disagreements, judge, summarise, walk)
+    OBJECTIVES_TO_OPEN, RECORDED, Group, disagreements, judge,
+    judge_on_merits, summarise, walk)
 from app.domain.core import money
 
 BOLD, DIM, OK, WARN, FAIL, END = (
@@ -275,7 +276,8 @@ def show_anchors(period: str) -> int:
 
 # ----------------------------------------------------------------- the log
 
-def write_log(walked, s, period: str, path: Path) -> None:
+def write_log(walked, s, period: str, path: Path,
+              federal: frozenset[str] = frozenset()) -> None:
     lines: list[str] = []
     w = lines.append
     w(f"# Classification log — {period}\n")
@@ -321,6 +323,16 @@ def write_log(walked, s, period: str, path: Path) -> None:
       "objective | basis | why |")
     w("| --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- |")
     for g, j in walked:
+        # **A judged group still gets its reasoning.** `judge` refuses to
+        # re-propose one — that would be this log taking credit for somebody
+        # else's judgment — and returns the bare "already carries a live
+        # decision". That is right for proposing and useless for reviewing,
+        # which is what anybody opens this file to do once the judgments are
+        # on the record. `judge_on_merits` answers from the group alone, so
+        # the row shows what the treatment is *and* that it already stands.
+        shown = j if j.basis != RECORDED else judge_on_merits(g, federal)
+        basis = j.basis if j.basis != RECORDED else f"{RECORDED} · {shown.basis}"
+        j = shown
         why = (j.rationale if j.blocked else f"{j.citation} — {j.rationale}")
         # `<vendor>` in a markdown cell renders as an HTML tag and vanishes.
         why = (why.replace("|", "\\|").replace("\n", " ")
@@ -328,7 +340,7 @@ def write_log(walked, s, period: str, path: Path) -> None:
         w(f"| {g.first_month} | {g.account.replace('|', '')} | "
           f"{g.payee.replace('|', '') or '—'} | {g.lines} | {g.net:,.2f} | "
           f"{j.pool or '**open**'} | {j.function_990 or '—'} | "
-          f"{j.federal or '—'} | {j.objective_id or '—'} | {j.basis} | {why} |")
+          f"{j.federal or '—'} | {j.objective_id or '—'} | {basis} | {why} |")
 
     path.write_text("\n".join(lines) + "\n")
     print(f"\n  wrote {path} — {len(walked)} group(s)")
@@ -442,7 +454,7 @@ def main() -> int:
     if a.write:
         write_log(walked, s, a.period,
                   Path(__file__).resolve().parent.parent / "docs"
-                  / "CLASSIFICATION_LOG.md")
+                  / "CLASSIFICATION_LOG.md", federal)
 
     rc = 0
     if a.apply:
