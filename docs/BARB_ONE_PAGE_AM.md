@@ -1,6 +1,6 @@
 # America Makes — where we stand, and what we need from you
 
-**For Barb Ewing · Monday 14 September 2026 · one page**
+**For Barb Ewing · Monday 14 September 2026 · two pages**
 Printable version: `BARB_ONE_PAGE_AM.pdf`. Detail:
 `WP_AM_RESTATEMENT_IF_ACCEPTED.md`. Every figure below is computed from the
 2025 ledger, not estimated.
@@ -16,6 +16,7 @@ agreements elect the **10% de minimis** indirect rate, which is charged
 separately and openly.
 
 So the numbers are broadly fine; **the disclosure is not.** That is the finding.
+The rate we would propose instead is on page 2.
 
 ## The money, if we restate 2025
 
@@ -75,3 +76,89 @@ quietly and delivering the original scope is where we are now, in a new costume.
 forward and costs about $10,000 in one-off 2025 adjustments — but only if the
 ceilings move with it, and only after we measure the buildings and get the
 timesheets signed.*
+
+---
+
+# Page 2 — the rate we would propose, and what it rests on
+
+From the same sealed 2025 classification as page 1. Classifications were locked
+*before* any rate was calculated, so the rate cannot have been worked backwards
+from a desired answer.
+
+## How the 43.99% is built
+
+Four rates, two numbers each — a **pool** of cost and a **base** it spreads
+across. Every pool is the sum of classified ledger lines.
+
+| rate | pool of cost | what is in it | spread across | rate |
+| --- | ---: | --- | ---: | ---: |
+| Fringe | 401,784 | Benefits, payroll taxes, 401k, BWC | 1,835,047 payroll register | **21.90%** |
+| Overhead | 1,497,879 | Occupancy, facilities, shared services | 4,736,602 modified total direct cost | **31.62%** |
+| G&A | 585,876 | Administration, incl. admin salaries | the same 4,736,602 | **12.37%** |
+| **Combined indirect** | **2,083,755** | Overhead + G&A | the same 4,736,602 | **43.99%** |
+
+**43.99% combined is the single number we would quote NCDMM.** Fringe is quoted
+separately at 21.90%, because it is charged on salaries rather than on total
+cost.
+
+## What the $4,736,602 base is made of
+
+| component of modified total direct cost (MTDC) | amount |
+| --- | ---: |
+| Direct programme cost — consultants, subcontracts, materials, travel | 2,425,193 |
+| Direct salaries, and the fringe on them | 1,914,564 |
+| Fundraising activity | 281,204 |
+| Unallowable activity | 115,641 |
+| **Total base** | **4,736,602** |
+
+Fundraising and unallowable activity are in the base on purpose: they must carry
+a fair share of overhead even though no sponsor pays for them. Leaving them out
+would spread the same overhead across fewer dollars and push the rate *up*.
+
+**Both judgments you agreed are visible here.** Administrative salaries —
+$264,445, or $322,358 with fringe — are excluded from the base and sit in the
+**G&A pool** instead of being their own project. And consultants are in the base
+as direct cost, below.
+
+## Consultants are direct cost, and that is what recovers
+
+**The label matters in front of a sponsor: this is direct *contractor* cost, not
+direct labour.** Labour is our payroll; consultants are purchased services.
+2 CFR 200.331 allows two readings:
+
+| reading | what it means | counts in the base | our combined rate |
+| --- | --- | --- | ---: |
+| **Contractor** — our position | They deliver into YBI's programme, against YBI's scope. We select, scope and administer. | **in full** | **43.99%** |
+| Subrecipient | They carry out part of a federal programme in their own right. | first $25,000 each | 50.23% |
+
+The largest instance is **5227 Portfolio consulting — $588,539 net over 442
+transactions and 72 providers**, where YBI pays a provider for a portfolio
+company and bills half back. On the America Makes contracts, consultants were
+**$233,900 on LTM** and **$15,000 on Hybrid** in 2025.
+
+> **The direction is the opposite of what it sounds like.** Treating consultants
+> as direct cost makes the base *bigger*, which makes our rate *lower* — 43.99%
+> rather than 50.23%. It is the more conservative of the two readings, not the
+> aggressive one.
+>
+> **And it is the treatment that recovers.** Selecting a consultant, scoping the
+> engagement, administering payment and carrying half the cost is real
+> administrative work — and that work is exactly what the G&A pool pays for.
+> Calling the money a "pass-through" and taking it out of the base would forgo
+> recovery on the very activity the administration exists to perform.
+
+## What is not yet in this rate
+
+**The carve-out comes off it.** 43.99% still includes occupancy cost for space
+our tenants use, because no building is measured. Once Kelly's numbers arrive
+that share comes out and the rate falls to about **37.67%**. Largest open item,
+and it moves the rate *down*.
+
+**Depreciation is the other one.** Federally funded assets cannot be depreciated
+against federal awards and our asset register has no funding-source column. At
+the outer bound — all of it unallowable — the rate falls to 22.08%.
+
+**Fringe does not move.** 21.90% is anchored at both ends — the P&L's six
+benefit accounts over the payroll register — so none of the above touches it.
+
+Full band and every scenario, each engine-computed: `RATE_RECOMMENDATION.md`.
