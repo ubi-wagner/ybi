@@ -134,6 +134,17 @@ def facts() -> dict:
     f["people"] = query(
         """select count(distinct employee_key) n from labor_allocation
             where period = %s""", (PERIOD,))[0]["n"]
+    # An account is the second gate on a certification and nothing had said so:
+    # the roster reply supplies the terms *and* the addresses these are opened
+    # against, so it is still one ask — but it is two acts, and a materials
+    # set that names only the terms reads as though the reply alone unblocks
+    # somebody signing.
+    f["no_account"] = query(
+        """select count(*) n from (select distinct employee_key k
+                                     from labor_allocation where period = %s) p
+            where not exists (select 1 from actor a
+                               where a.employee_key = p.k)""",
+        (PERIOD,))[0]["n"]
 
     f["constraints"] = query("""
         select distinct on (award_id, code) award_id, code, passed, evaluable,
@@ -548,6 +559,9 @@ def recommendations(f: dict) -> list[dict]:
             "full-time one, and nothing on the record can tell which.",
         record=[("employment rows", f"{f['employment']} — for "
                  f"{f['people']} people in the distribution"),
+                ("and without an account at all",
+                 f"{f['no_account']} of {f['people']} — the reply carries the "
+                 "addresses these are opened against"),
                 ("outstanding", f"{wl.get('EMPLOYMENT_UNKNOWN', 0)} "
                  "EMPLOYMENT_UNKNOWN")],
         cite=None,
@@ -567,6 +581,11 @@ def recommendations(f: dict) -> list[dict]:
             "(`v_certification_chase`) is a list to go and ask, never an action.",
         record=[("certifications", f"{f['certs']} of {f['people']}"),
                 ("timesheet entries", f"{f['timesheets']}"),
+                ("two gates, not one",
+                 f"{f['no_account']} of {f['people']} have no account to sign "
+                 "in with, and nobody has employment terms — **both** come out "
+                 "of the one roster reply, and the accounts are Barb's to open "
+                 "after it lands"),
                 ("outstanding", f"{wl.get('NEEDS_CERTIFICATION', 0)} "
                  "NEEDS_CERTIFICATION")],
         cite="2 CFR 200.430(i)",

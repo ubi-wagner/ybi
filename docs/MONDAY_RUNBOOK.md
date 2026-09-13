@@ -170,6 +170,15 @@ list to go and ask, never an action.
 for anyone**, so no draft can be built for anybody. That is the roster reply
 coming back — the thing to go and get, not a fault in the system.
 
+**And there are two gates here, not one.** 40 of the 43 people in the payroll
+distribution have **no account to sign in with** — only Barb, Heidi and
+Stephanie are on the register as well as the payroll. Both gates come out of
+the same roster reply, so it is still one ask: it carries the terms *and* the
+addresses the accounts are opened against. But opening them is a second act,
+it is Barb's (`ORG_ADMIN` provisions employees, nobody provisions a peer), and
+it has to happen before the first person can reach their own sheet. Worth
+knowing before somebody assumes the reply alone unblocks a signature.
+
 **Submitting does not move the rate.** Adopting the reconstruction faithfully
 reproduces its shares, so the figures hold. If it did not, the rate would
 depend on who had got round to signing.
