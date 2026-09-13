@@ -1,8 +1,9 @@
 # America Makes — where we stand, and what we need from you
 
-**For Barb Ewing · 14 September 2026 · one page**
-Full detail: `WP_AM_RESTATEMENT_IF_ACCEPTED.md`. Every figure below is computed
-from the 2025 ledger, not estimated.
+**For Barb Ewing · Monday 14 September 2026 · one page**
+Printable version: `BARB_ONE_PAGE_AM.pdf`. Detail:
+`WP_AM_RESTATEMENT_IF_ACCEPTED.md`. Every figure below is computed from the
+2025 ledger, not estimated.
 
 ---
 
@@ -25,18 +26,17 @@ So the numbers are broadly fine; **the disclosure is not.** That is the finding.
 | Hybrid Phase 2 | 512,409 | 191,638 | 132,166 | **(59,472)** we owe back |
 | **total** | | **1,139,101** | **1,128,526** | **(10,575)** net give-back |
 
-**We recovered 100.9% of our full cost in 2025.** There is no windfall here.
-Two contracts over-collected, one under-collected, and they roughly cancel.
-
-They stay three separate conversations. A single "$10,575" number tells NCDMM
-nothing and looks like we are hiding both halves.
+**We recovered 100.9% of our full cost in 2025** — no windfall. Two contracts
+over-collected, one under-collected, and they roughly cancel. They stay three
+separate conversations: a single "$10,575" tells NCDMM nothing and looks like we
+are hiding both halves.
 
 ## Why it is still worth doing
 
-**$203,790 a year.** A loaded labour rate can only recover indirect on labour.
-It cannot touch subcontracts, consultants, materials or travel — and that is
-where most of our award spending sits. A proper rate reaches it. The one-off
-2025 adjustment is small; the recurring value is roughly twenty times larger.
+**$203,790 a year.** A loaded labour rate recovers indirect only on labour. It
+cannot touch subcontracts, consultants, materials or travel — where most of our
+award spending sits. A proper rate reaches it, so **the recurring value is
+roughly twenty times the one-off.**
 
 ## The catch, and it is the real negotiation
 
@@ -52,7 +52,7 @@ quietly and delivering the original scope is where we are now, in a new costume.
 
 | | |
 | --- | --- |
-| **1. Kelly's square footage** | Our rate reads 43.99% only because no building is measured. At a realistic tenant share it is **37.67%**, and the give-back grows to $60,108. Restating at 43.99% and then discovering 37.67% means over-claiming on a rate *we proposed*. |
+| **1. Kelly's square footage** | Our rate reads 43.99% only because no building is measured. At a realistic tenant share it is **37.67%** and the give-back grows to $60,108 — so restating first would mean over-claiming on a rate *we proposed ourselves*. |
 | **2. Effort certifications — 0 of 43 signed** | Restating makes labour the audited cost rather than a rate, so we lean *harder* on it. The pre-filled timesheets are ready for people to review and sign. |
 | **3. Drive AM's $92,876** | We billed that much more in materials and travel than the ledger supports. Either our cost record is short or the billing over-claimed. This sits underneath our largest credit. |
 
@@ -60,8 +60,8 @@ quietly and delivering the original scope is where we are now, in a new costume.
 
 ## What we need from you on Monday
 
-1. **Do we raise the two credits ourselves?** My recommendation is yes, first
-   and unprompted. An organisation that brings its own over-recovery to the
+1. **Do we raise the two credits ourselves?** Yes, I recommend — first and
+   unprompted. An organisation that brings its own over-recovery to the
    table is one whose $107,684 claim gets read generously. Finding it for us is
    the bad version.
 2. **Who opens the conversation with NCDMM, and when?** Nothing should go out
