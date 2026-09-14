@@ -103,6 +103,12 @@ FOUNDATION_KINDS = {
     "closeout-letter": "awards",
     "asset-register": "asset-register",
     "lease-schedule": "leases",
+    # Not a document about cost at all — the manuals and the generated PDFs,
+    # filed so they can be read in the library rather than only on somebody's
+    # laptop. Foundational in the sense that matters for the tree: a manual
+    # describes the engagement rather than supporting one period's figure, so
+    # filing it under a year would be filing it under the wrong question.
+    "guide": "guides",
 }
 
 #: The folders `foundation/` opens with — exactly the categories above, so

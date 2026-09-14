@@ -607,6 +607,85 @@ dead end. `scripts/load_contract_terms.py` is the fix.
 Set `YBI_DEV_SEED=1` to give every account the same password so the drives
 can sign in; provisioning refuses that outside a development environment.
 
+## The deployment brings itself back
+
+`app/foundation.py`, migration `077`, called from the boot beside
+`run_migrations()`. **A Postgres service was rebuilt, every table came back
+on the first boot, and nobody could sign in.**
+
+The schema survives a recovery because migrations run on startup. Nothing
+else did, because everything else is a script somebody runs: the six
+accounts are `scripts/provision.py`, the eighteen documents are
+`scripts/seed_documents.py`, and `scripts/seed.sh` — written for exactly this
+lesson, after *the twenty-six contract provisions read out of the executed
+agreements lived in one developer's database and in no script* — writes the
+seven steps down and still waits for a person to run them. **Anything that
+only exists because somebody remembered to run it does not survive a
+recovery.** It is the dead-register shape pointed at the deployment: the
+mechanism is there, and nothing calls it.
+
+So the boot opens what is missing. Four rules, and the first is the whole of
+it:
+
+- **It never overwrites.** An account that exists is left exactly as it is —
+  password, name, rank, portfolios; a document whose SHA-256 is on file is
+  skipped. A deploy happens far more often than a recovery, so a boot that
+  reset a password would take an account away from the person using it on an
+  ordinary Tuesday. The one permitted update is the engagement lead's
+  `record_access`, and only where it is not already granted.
+- **It opens an account on the organisation's password and never on one of
+  its own.** `password_set_by = 'SEED'` and the random hash nobody holds, so
+  the only way in is `YBI_INITIAL_PASSWORD` and `refuse_issued_password`
+  still stops that session writing anything but its own new password. No
+  credential is in the image and none is at rest in the database.
+- **It does nothing without that variable.** Opening accounts nobody can
+  sign into is not a recovery, it is a row. The gate is also what keeps it
+  out of `provision.py`'s way on a development machine.
+- **The roster and the document list live in one place and are read from
+  there.** `provision.py` and `seed_documents.py` import them. Two lists of
+  the same six people is the defect this module is named after, one level up.
+
+It restores **nothing that is a judgment** — no ledger, no classification,
+no seal, no rate. A boot that classified would be the machine putting its
+name on the seal.
+
+Three things came out of building it:
+
+- **The image did not contain the documents.** The Dockerfile copies
+  `app/`, `scripts/` and `web/dist`, with a comment saying the scripts ship
+  *"so seeding runs inside the deployment"* — and `docs/source-documents/`
+  did not ship, so `seed_documents.py` was in the container and the eighteen
+  documents it files were not. A bootstrap script with nothing to bootstrap
+  from. `docs/` ships now, which also makes the run sheet's own links
+  resolve where the run sheet is.
+- **A deployment with no signing secret booted green and answered 500 to
+  every sign-in.** `app/auth.py` opens on *"fail closed"* and says a service
+  that refuses to start is cheaper than one that does not — and
+  `jwt_secret()` is called when a token is issued, not at boot, so a missing
+  `YBI_JWT_SECRET` passed the healthcheck, served every screen, and broke
+  for every person, with nothing anywhere naming the variable. The worst
+  shape a configuration fault can take: healthy to everything watching.
+  `check_deployment()` holds it now, on Railway only. Found by standing a
+  recovered deployment up and signing in as all six people, which is the
+  only way anybody was going to find it.
+- **The two doors collided, and one of them left the root account
+  stranded.** `provision.py` reset the system administrator's password,
+  printed nothing — the sheet is printed at the end — and then exited on the
+  organisation's administrator already existing, telling the operator to set
+  a variable when the answer was a variable already set. It recognises a
+  SEED-origin account now and signs in on the organisation's password.
+  **Only on SEED**: an `ADMIN` or `SELF` password is one somebody chose for
+  one named person, which is exactly what `check_credential` narrowed to.
+
+**And the guides are documents.** The manuals and the three generated PDFs
+are filed as `GENERATED` and read in the library like anything else — but
+they must not reach `v_evidence_inbox`, which is *what nobody has filed
+yet*. Nobody is ever going to attach the controller's manual to a ledger
+line, so eight guides at the top of that queue is the defect the evidence
+screen already learned: *thirty-two unread workbooks buried three real
+proposals*. `077` filters the inbox on the channel rather than the kind,
+because a regenerated invoice is the same case and was already in it.
+
 ## Reviewing it
 
 `scripts/review_system.py` drives the whole system as all six people across

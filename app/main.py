@@ -21,7 +21,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import storage
+from app import foundation, storage
+# Not `from app.routers import auth` — that name is taken below by the
+# router of the same name, and the one wanted here is the module the router
+# depends on.
+from app.auth import AuthNotConfigured, jwt_secret
 from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
 from app.refusals import RecordRefusals
@@ -48,11 +52,32 @@ def check_deployment() -> None:
     RAILWAY_ENVIRONMENT_NAME on every service, so the mismatch is detectable,
     and a boot that stops is cheaper than one that does not.
     """
-    if os.getenv("RAILWAY_ENVIRONMENT_NAME") and settings.env == "dev":
+    if not os.getenv("RAILWAY_ENVIRONMENT_NAME"):
+        return
+    if settings.env == "dev":
         raise RuntimeError(
             "YBI_ENV is 'dev' on a Railway deployment. Session cookies would "
             "be issued without the Secure flag and CORS would admit "
             "localhost:5173. Set YBI_ENV=prod on the service and redeploy.")
+    # `app/auth.py` opens on "fail closed: with no signing secret configured
+    # the service authenticates nobody, rather than falling open to a
+    # default", and adds that a deployment which refuses to start is cheaper
+    # than one that does not. It did not refuse to start. `jwt_secret()` is
+    # called when a token is issued, so a service missing the variable booted
+    # green, passed the healthcheck, served every screen — and answered 500
+    # to every single sign-in, with an unhandled AuthNotConfigured in the log
+    # and nothing anywhere saying which variable was absent.
+    #
+    # That is the worst shape a configuration fault can take: healthy to
+    # everything watching, broken for every person. It was found by standing
+    # a recovered deployment up and signing in as all six people, which is
+    # the only way anybody was ever going to find it.
+    try:
+        jwt_secret()
+    except AuthNotConfigured as exc:
+        raise RuntimeError(
+            f"{exc} Refusing to start: without it every sign-in answers 500 "
+            f"while the healthcheck stays green.") from exc
 
 
 @asynccontextmanager
@@ -70,6 +95,19 @@ async def lifespan(app: FastAPI):
     made = storage.ensure_skeleton()
     log.info("storage at %s%s", storage.ROOT,
              f" — created {len(made)} directories" if made else "")
+
+    # After the migrations and after the volume, because it writes rows that
+    # the migrations create tables for and bytes that the skeleton holds.
+    #
+    # A Postgres service was rebuilt and every table came back and nobody
+    # could sign in, because the accounts were made by a script somebody runs
+    # rather than by anything the deployment does. This opens whatever is
+    # missing — the six accounts on the organisation's password, the
+    # foundational documents, the guides — and touches nothing that is
+    # already there. It stands down entirely unless YBI_INITIAL_PASSWORD is
+    # set, so a development machine is unaffected and scripts/provision.py
+    # remains the door there.
+    foundation.restore()
 
     log.info("ready — period %s, env %s", settings.period, settings.env)
     yield
