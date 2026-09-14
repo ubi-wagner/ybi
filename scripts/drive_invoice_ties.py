@@ -26,6 +26,8 @@ It writes nothing.
 
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -38,6 +40,13 @@ PERIOD = "2025"
 CENT = Decimal("0.01")
 FINDINGS: list[str] = []
 NOTES: list[str] = []
+
+#: Everything the walk established, as data. `scripts/runbook.py` builds the
+#: run sheet from this rather than from figures somebody typed beside it — a
+#: runbook whose state is written by hand is a hand-kept map of the record,
+#: and this repository has been wrong four times that way in one week.
+RESULT: dict = {"ties": [], "cost": [], "backward": [], "upstream": {},
+                "register": {}}
 
 
 def ok(msg: str) -> None:
@@ -102,6 +111,9 @@ def ledger(pattern: str, section: str) -> Decimal:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--json", help="write the crosscheck's result here")
+    args = ap.parse_args()
     open_pool()
     print(f"Invoice register — tied both ways, {PERIOD}\n")
 
@@ -115,6 +127,9 @@ def main() -> int:
     print(f"           {rows['n']} invoices on period {PERIOD}, "
           f"{rows['y25']} dated 2025 and {rows['other']} not, "
           f"{rows['total']:,.2f} in total")
+    RESULT["register"] = {"invoices": rows["n"], "in_year": rows["y25"],
+                          "out_of_year": rows["other"],
+                          "total": str(rows["total"])}
     if rows["other"]:
         note(f"{rows['other']} invoice(s) carry period '{PERIOD}' and a date "
              f"outside it. Every tie below filters on the date; a figure that "
@@ -169,6 +184,10 @@ def main() -> int:
         led = ledger(income_acct, "Income")
         gap = (led - billed).quantize(CENT)
         expected, why = DECLARED.get((obj, "income"), (Decimal("0.00"), ""))
+        RESULT["ties"].append(
+            {"objective": obj, "billed": str(billed), "ledger": str(led),
+             "gap": str(gap), "expected": str(expected), "why": why,
+             "state": "TIES" if gap == expected else "OPEN"})
         if gap == expected and gap == 0:
             ok(f"{obj:<13} {billed:>13,.2f} = the ledger, to the cent")
         elif gap == expected:
@@ -185,6 +204,9 @@ def main() -> int:
     print("            the ledger's wage accounts are not split by contract)")
     for obj, (_, expense_acct) in AWARDS.items():
         if (obj, "cost") in NOT_EVALUABLE:
+            RESULT["cost"].append(
+                {"objective": obj, "state": "NOT EVALUABLE",
+                 "why": NOT_EVALUABLE[(obj, "cost")]})
             note(f"{obj:<13} NOT EVALUABLE — {NOT_EVALUABLE[(obj, 'cost')]}")
             continue
         cats = query("""
@@ -200,6 +222,11 @@ def main() -> int:
         shape = ", ".join(f"{c['category']} {c['a']:,.2f}" for c in sorted(
             cats, key=lambda x: -abs(x["a"])) if c["a"])
         expected, why = DECLARED.get((obj, "cost"), (Decimal("0.00"), ""))
+        RESULT["cost"].append(
+            {"objective": obj, "billed": str(billed), "ledger": str(cost),
+             "gap": str(gap), "expected": str(expected), "why": why,
+             "shape": shape,
+             "state": "TIES" if gap == expected else "OPEN"})
         if gap == 0:
             ok(f"{obj:<13} non-labour billed {billed:>12,.2f} = the ledger's "
                f"grant expense, to the cent  [{shape}]")
@@ -232,6 +259,10 @@ def main() -> int:
         if not inv["n"]:
             finding(f"{obj}: {row['cost']:,.2f} of direct cost and no 2025 invoice")
             continue
+        RESULT["backward"].append(
+            {"objective": obj, "lines": row["lines"], "cost": str(row["cost"]),
+             "award": award[0]["award_id"], "invoices": inv["n"],
+             "billed": str(inv["t"])})
         ok(f"{obj:<13} {row['lines']:>3} classified lines "
            f"({row['cost']:>12,.2f}) -> {award[0]['award_id']:<15} -> "
            f"{inv['n']:>2} invoices ({inv['t']:,.2f})")
@@ -270,6 +301,23 @@ def main() -> int:
     (ok if cov["unclassified"] == 0 else finding)(
         f"coverage {cov['pct_dollars_covered']}%, unclassified "
         f"{cov['unclassified']:,.2f}")
+
+    RESULT["upstream"] = {
+        "controls_tie": ctl["t"], "controls": ctl["n"],
+        "anchors_tie": anc["t"], "anchors": anc["n"],
+        "pools_tie": pool["t"], "pools": pool["n"],
+        "groups_decided": cov["groups_decided"],
+        "groups_total": cov["groups_total"],
+        "pct_covered": str(cov["pct_dollars_covered"]),
+        "unclassified": str(cov["unclassified"]),
+    }
+    RESULT["findings"] = FINDINGS
+    RESULT["notes"] = NOTES
+    RESULT["passed"] = not FINDINGS
+
+    if args.json:
+        Path(args.json).write_text(json.dumps(RESULT, indent=1) + "\n")
+        print(f"\nwrote {args.json}")
 
     print()
     if FINDINGS:

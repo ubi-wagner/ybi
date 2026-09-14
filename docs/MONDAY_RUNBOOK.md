@@ -1,224 +1,140 @@
 # Monday — the run sheet
 
-**Read §0 first.** The first version of this document described building the
-year from nothing, and the record is already at the end of that path — every
-step below is **verification, not construction**. Following the old version
-literally would have had the controller press *Seal* on a sealed set and
-recompute a rate that is already current.
+*Generated from the record by `scripts/runbook.py`, which will not write over a failing crosscheck. Every figure below was read by `scripts/drive_invoice_ties.py`; none was typed beside it.*
 
-Pre-flight, the night before or first thing:
+*14 September 2026*
+
+**Read §0 first.** The record is at the end of the path this document used to describe, so every step is **verification, not construction**. Following an earlier version literally would have had the controller press *Seal* on a sealed set.
 
 ```bash
-DATABASE_URL=... ./scripts/readiness.py              # read-only, writes nothing
-DATABASE_URL=... ./scripts/monday.sh                 # read-only checks
-YBI_SEED_PASSWORD=... ./scripts/monday.sh --full     # and the sandbox test
+DATABASE_URL=... ./scripts/readiness.py           # read-only
+DATABASE_URL=... python3 scripts/drive_invoice_ties.py   # the crosscheck
+YBI_SEED_PASSWORD=... ./scripts/monday.sh --full  # the sandbox test
 ```
 
-**Illustrated:** `docs/MONDAY_GUIDEBOOK.html` photographs every screen below,
-driven by `scripts/walk_runbook.py`. It walks a sandbox **from empty**, so it
-shows what each screen looks like and what each step *means* — the record you
-will open on Monday is further along, per §0.
-
-**In hand while you work:** `docs/MONDAY_ANCHOR.pdf` — every current
-recommendation from every document in `docs/`, dealt into the sequence below,
-with the screen each one is visible on and a tick box. Nine documents carry
-these and none of them is ordered the way the work is done, so a
-recommendation nobody can find at the moment it applies is one nobody checks.
-Its figures are read from the live record by `scripts/monday_anchor.py` rather
-than recalled; regenerate it if the record moves.
+**Illustrated:** `docs/MONDAY_GUIDEBOOK.pdf` photographs every screen below. **Recommendations to tick:** `docs/MONDAY_ANCHOR.pdf`.
 
 ---
 
-## 0 · Where the record actually stands
-
-Read from the live record, 13 September 2026. Re-read it any time with
-`scripts/readiness.py`, which writes nothing.
+## 0 · Where the record stands
 
 | | | |
 | --- | --- | --- |
-| the eleven control points | **11 tie**, 0 open, 0 unevaluable | 6 reconciling items recorded |
-| the classification | **757 of 757 groups**, 100.0% | $0.00 unclassified |
-| the seal | **sealed by Tom Metzinger**, 12 Sep 22:50 | covers all 757, no drift |
-| the rate | FRINGE **21.90%** · OVERHEAD 31.62% · G&A 12.37% · **INDIRECT_COMBINED 43.99%** | administrative labour on the **POOL** basis |
-| the anchors | **4 of 4 tie** | every pool at `pool_variance` 0.00 |
+| the eleven control points | **11 of 11 tie** | a rate is refused while any is open |
+| the classification | **757 of 757 groups**, 100.0% | 0.00 unclassified |
+| the seal | **Tom Metzinger**, 12 Sep 2026 22:50 UTC | covering 757 live judgments |
+| the rate | FRINGE **21.90%** · INDIRECT_COMBINED **43.99%** | administrative labour on the **POOL** basis |
+| the rate anchors | **4 of 4 tie** | 4 of 4 pools at variance 0.00 |
+| the invoice register | **61 invoices**, 2,964,077.32 | all of 2025, reconciled to the ledger |
 
-**So Monday is a review, not a build.** The 757 judgments were recorded
-through the API under Tom's name by `scripts/classification_log.py --apply`,
-with `docs/CLASSIFICATION_LOG.md` as the written rationale beside each one.
-What has *not* happened is a person reading them and affirming that they
-stand. That is the substantive human step and it is step 2 below.
+**So Monday is a review, not a build.**
 
-Three things are genuinely outstanding and none of them is classification:
-the roster reply, the certifications, and the square footage. They are in
-§P and they all belong to somebody other than the controller.
+## 0.1 · The crosscheck this sheet was generated from
+
+The register against the ledger's own grant income — two records of the same billing, neither derived from the other.
+
+| award | invoices | billed | ledger | difference | |
+| --- | ---: | ---: | ---: | ---: | --- |
+| DRIVE-AM | 12 | 579,240.87 | 579,240.87 | — | to the cent |
+| LTM | 12 | 368,222.24 | 368,222.24 | — | to the cent |
+| DIG-ENG | 7 | 579,074.25 | 579,074.25 | — | to the cent |
+| HYBRID-II | 9 | 187,416.05 | 191,638.05 | 4,222.00 | Oct-Dec on the ledger with no invoice — the tail after billing stopped |
+| AAMEN | — | 313,050.84 | 313,050.84 | — | to the cent |
+| RISING-TIDES | — | 937,073.07 | 804,270.03 | -132,803.04 | 86,281.30 is the 2024 portion, named on the January invoice; the rest is accrual timing across Jan-May |
+
+And the billed non-labour against the cost the ledger carries:
+
+| award | billed | ledger | | |
+| --- | ---: | ---: | ---: | --- |
+| DRIVE-AM | 274,757.07 | 181,880.88 | -92,876.19 | billed in ODCs above the cost classified to Drive AM. Either the classification under-attributes or the billing over-claimed, and it is the open question under the largest credit in the restatement |
+| LTM | 233,900.00 | 266,384.07 | 32,484.07 | cost incurred and never billed — including a 19,500.00 'UNI Q3-Q4 2025' line with no payee. Unbilled cost, which runs in YBI's favour |
+| DIG-ENG | — | — | **not evaluable** | its invoices carry a single undifferentiated monthly line, so the billing does not separate labour from non-labour |
+| HYBRID-II | 15,000.10 | 15,000.10 | ties | to the cent |
+
+**Not evaluable, and why** — a control that cannot be evaluated has not passed, and it has not failed either:
+
+- DIG-ENG       NOT EVALUABLE — its invoices carry a single undifferentiated monthly line, so the billing does not separate labour from non-labour
+- 12 invoice(s) on AAMEN carry no award — the schema allows it, and an award register that has not caught up is not a reason to hold evidence out
+- 9 invoice(s) on RISING-TIDES carry no award — the schema allows it, and an award register that has not caught up is not a reason to hold evidence out
 
 ---
 
 ## 1 · Confirm the books still agree — Tom
 
-**Gate: `POST /api/rates/compute` returns 409 while any of the eleven control
-points is open.** All eleven tie today. This step is to confirm they still do.
+`/reconcile`. **11 of 11 tie today.** This step is to confirm they still do. `POST /api/rates/compute` returns 409 while any one is open.
 
-`/reconcile` in the application, or:
-
-```bash
-python3 scripts/reconcile.py --base http://… # add --record only if it moves
-```
-
-**The one thing likely to have changed over the weekend** is the Bacon
-$45,053.23 donor credit sitting in an intern wage account. When it is
-reposted in QuickBooks the eleventh control moves — and the reconciling item
-naming it has to come off with it, or the correction counts twice.
-
-If a control has opened: close it by **naming** the difference, never by
-netting it. `/api/reconcile/propose` finds the lines when exactly one
-combination adds up, and proposes nothing at all when more than one would.
-Then go to §C, because a reposting changes the ledger under a sealed set.
-
-*Read `state`, never a variance of zero. Both sides of most controls are
-`COALESCE(..., 0)`, so an empty period compares zero against zero and looks
-green.*
+A difference is closed by *naming* the lines behind it, never by netting it. The Bacon $45,053.23 donor credit is the change most likely to have happened over the weekend — when it is reposted in QuickBooks the reconciling item comes off with it, or the correction counts twice.
 
 ## 2 · Review what stands — the controller team
 
-**This is the work.** `/classify` is empty because the queue is finished; the
-review happens against `docs/CLASSIFICATION_LOG.md`, which carries a reasoned
-treatment for every one of the 757 groups with a citation and a rationale —
-and now reads `already recorded · analysis of the lines` on each, so it says
-both what was decided and why.
+`/classify`. **This is the work.** 757 judgments were recorded through the API under Tom's name, each with a written rationale in `docs/CLASSIFICATION_LOG.md`. What has *not* happened is a person reading them and affirming they stand.
 
-Start where the money is. Four judgments carry most of the weight:
-
-| | | |
-| --- | ---: | --- |
-| `5227 Portfolio consulting` | $588,538.89 | in the base as **contractor** cost under 200.331, not a subrecipient. Reading it the other way takes the combined rate *up* to 50.23%. |
-| `5010 Depreciation` | $850,382.89 | OVERHEAD, federal treatment **PENDING** — 200.436(b) cannot be answered until the asset register carries a funding source. |
-| the wage accounts | $1,789,993.94 | **EXCLUDED**, deliberately: `compute` already feeds the payroll register into the base, so a DIRECT judgment here would count the labour twice. |
-| `5108 Other Income` | $110,182.87 | EXCLUDED — $105,865.41 of it is a Q1 **2020** ERTC owed back under 200.406(b). |
-
-If every judgment stands, nothing is required: the seal is current and so is
-the rate. **Skip to §5.** If any judgment is wrong, go to §C.
+If every judgment stands, nothing is required: the seal is current and so is the rate. **Skip to §5.** If any is wrong, go to §C.
 
 ## 3 · The seal — already held, and only Tom may move it
 
-Sealed 12 September, covering all 757 live judgments, written 11 seconds
-after the last one. `/rates` reads *Sealed by Tom Metzinger* from the record.
-
-**Nothing to do unless something changes.** Sealing is the assertion that the
-rate was not reverse-engineered; only `CONTROLLER` may seal or unseal and
-nothing automated may do either.
+Sealed 12 September 2026 by Tom Metzinger, covering 757 live judgments. **Nothing to do unless something changes.**
 
 ## 4 · The rate — already computed, on the basis that was chosen
 
-Four rates on file, all carrying the seal hash, all on the **POOL** basis.
+| | | |
+| --- | ---: | --- |
+| FRINGE | **21.90%** | pool 401,783.60 over 1,835,047.17 SALARIES_WAGES |
+| OVERHEAD | **31.62%** | pool 1,497,879.12 over 4,736,602.11 MTDC |
+| G&A | **12.37%** | pool 585,875.91 over 4,736,602.11 MTDC |
+| INDIRECT_COMBINED | **43.99%** | pool 2,083,755.03 over 4,736,602.11 MTDC |
 
-**If you recompute for any reason, choose POOL again.** The screen defaults to
-`OBJECTIVE`, which is what every rate before migration 068 used and gives
-**34.82%** instead of 43.99% — nine points, on the same sealed judgments.
-The basis is a choice on the screen under the seal, and it is recorded on the
-rate so the workpaper says which was used.
+**If you recompute for any reason, choose POOL again.** The screen defaults to `OBJECTIVE`, which is worth about nine points of combined rate on the same sealed judgments.
 
 ## 5 · Check the stack — Tom
 
-`/review/rate`. Every pool at `pool_variance` 0.00, all four `v_rate_anchor`
-rows tying. **Nothing on that screen is computed** — every figure is read from
-the row it was recorded in.
+`/review/rate`. **4 of 4 pools** at `pool_variance` 0.00 and **4 of 4 rate anchors** tying. Nothing on that screen is computed — every figure is read from the row it was recorded in.
 
-And read what it says above the figures: **no 200.465 facilities carve-out is
-in this rate**, because no facility on the record carries measured space, so
-every dollar of tenant and vacant occupancy cost sits in the federal pool.
-43.99% reads high, which is the honest direction to err.
+And read what it says above the figures: **no 200.465 facilities carve-out is in this rate** — 0 facilities carry measured space and 0 carve-outs are recorded, so every dollar of tenant and vacant occupancy cost sits in the federal pool. The rate reads high, which is the honest direction to err.
+
+## 6 · The restatement — what it now says
+
+The position is the **rebuild** against the cost record: labour taken down to wages plus fringe before indirect goes on, because these invoices bill labour that already carries indirect. The invoice-only reading is beside it and is **never** the position.
+
+| award | billed | position | as-billed would say | recovered |
+| --- | ---: | ---: | ---: | ---: |
+| DRIVE-AM | 37,593.90 | **+16,537.56** | 0.00 | — |
+| LTM | 18,993.52 | **+4,035.55** | -3,000.00 | — |
+| HYBRID-II | 1,374.00 | **+604.42** | 0.00 | — |
+
+The last column is the indirect rate the billing **actually** recovered, against a **10.00%** de minimis election. That election is written down in two places and they are different kinds of evidence: Last Tactical Mile's **executed** Schedule B budgets 10.0000% of total direct, and Hybrid Phase 2's **cost proposal** computes *ICR 10% maximum 45,457.00* into its labour line.
+
+**Nothing goes to a sponsor off this table today.** Everything is PROPOSED until a sponsor says otherwise in writing, and an acceptance must name the §4.4 modification that authorised the change of basis.
 
 ---
 
 ## C · If something has to change
 
-The path the first version of this document did not have, and the one most
-likely to be needed. Every step has a door in the application now.
-
-1. **Unseal** — `/rates`, *Unseal…*, with a written reason. It supersedes
-   every rate computed against that seal. The reason is required, because an
-   unseal with no reason is a hole in the trail the seal exists to make.
-2. **Correct the judgment** — `/classify`. Reclassifying supersedes rather
-   than editing; the prior judgment is reversed and stays on the record.
-3. **Re-seal** — the same act as before, over the corrected set.
+1. **Unseal** — `/rates`, with a written reason. It supersedes every rate computed against that seal.
+2. **Correct the judgment** — `/classify`. Reclassifying supersedes rather than edits; the prior judgment stays on the record.
+3. **Re-seal** over the corrected set.
 4. **Recompute** — and choose **POOL** again (§4).
-5. **Re-check** — §5. Then tell whoever has quoted the old figure, because
-   43.99% is on every workpaper in `docs/`.
+5. **Re-check** — §5, then re-run the crosscheck and regenerate this sheet: `python3 scripts/runbook.py --write`.
+6. **Tell whoever quoted the old figure.**
 
-*Correct by superseding, never by editing. The record is append-only and a
-position taken and then withdrawn is part of the trail.*
-
----
+*Correct by superseding, never by editing.*
 
 ## P · Running in parallel, and none of it blocks the above
 
-### The forty-three — their own timesheets
-
-`/timesheet` offers each person the controller's reconstruction of their year,
-pre-filled. **It is a convenience they may decline**, and the screen says so
-before it says anything else. Three answers are all complete: type your own
-days and ignore it; adopt it and correct any day that is wrong; or leave it.
-
-**Adopting is not certifying.** Adopting puts hours on a sheet; signing says
-the sheet is true, and that happens separately under `/certify`. Nobody signs
-for anybody else — 200.430(i) wants the record of the person whose effort it
-was, and a manager cannot sign on their behalf. `v_certification_chase` is a
-list to go and ask, never an action.
-
-**Blocked today: 0 of 43 certified, and no employment terms are on the record
-for anyone**, so no draft can be built for anybody. That is the roster reply
-coming back — the thing to go and get, not a fault in the system.
-
-**And there are two gates here, not one.** 40 of the 43 people in the payroll
-distribution have **no account to sign in with** — only Barb, Heidi and
-Stephanie are on the register as well as the payroll. Both gates come out of
-the same roster reply, so it is still one ask: it carries the terms *and* the
-addresses the accounts are opened against. But opening them is a second act,
-it is Barb's (`ORG_ADMIN` provisions employees, nobody provisions a peer), and
-it has to happen before the first person can reach their own sheet. Worth
-knowing before somebody assumes the reply alone unblocks a signature.
-
-**Submitting does not move the rate.** Adopting the reconstruction faithfully
-reproduces its shares, so the figures hold. If it did not, the rate would
-depend on who had got round to signing.
-
-### Kelly — the square footage
-
-The single largest open item, and **it does not gate any classification**. In
-the 2025 chart occupancy goes to OVERHEAD full stop; the tenant share comes
-out at rate time as a 200.465 carve-out. `carved` reads 0.00 on a
-$1,497,879.12 pool because no facility is measured.
-
-At a realistic tenant share the combined rate is about **37.67%** rather than
-43.99%. Nothing should go to NCDMM before this lands.
-
-### Barb — the four decisions
-
-`docs/BARB_ONE_PAGE_AM.pdf`. Whether YBI raises its own two credits first and
-unprompted; who opens with NCDMM and when; pushing the 43 certifications; and
-whether anybody looks at 2024.
-
----
+- **The 43 timesheets.** 0 of 43 certified, and **0 employment terms are on the record**, so no draft can be built for anybody. Two gates, and both come out of the roster reply — which also carries the addresses the accounts are opened against. Opening them is a second act and it is the administrator's.
+- **The square footage.** 0 facilities carry measured space. It is the largest open item and **it gates no classification** — occupancy is OVERHEAD in the 2025 chart and the tenant share comes out at rate time.
+- **Barb's decisions.** `docs/BARB_ONE_PAGE_AM.pdf`.
 
 ## What must not be automated, and why
 
 | | |
 | --- | --- |
-| **The seal** | It is the assertion that the rate was not reverse-engineered. A script that sealed would put the machine's name on it and the assertion would be worth nothing. |
-| **A certification** | 200.430(i) wants the person whose effort it was. A signature nobody gave is the one lie that matters here. |
-| **Adopting a draft** | Theirs to accept or decline. A pre-filled sheet that reads as an instruction produces forty-three signatures on somebody else's account of the year. |
-| **A reconciling item** | A difference is closed by naming the lines behind it. A tolerance that quietly swallows a residual is how a system starts lying. |
-| **Sending anything to NCDMM** | A position YBI takes with a sponsor, in writing. |
+| **The seal** | It is the assertion the rate was not reverse-engineered. A script that sealed would put the machine's name on it. |
+| **A certification** | 200.430(i) wants the person whose effort it was. |
+| **Adopting a draft** | Theirs to accept or decline. |
+| **A reconciling item** | A difference is closed by naming the lines behind it. |
+| **Anything sent to a sponsor** | A position YBI takes, in writing. |
 
-## If something goes wrong
+---
 
-- **Something was recorded by mistake.** `/api/undo` walks newest first. An
-  undo that walked nothing back answers 409 with the reason. A sealed set
-  refuses it — unseal first, per §C.
-- **A screen reported success and nothing happened.** The failure panel in the
-  shell now shows two records: what this browser saw fail, and what the
-  *server* wrote down in `refusal`. They are not the same list — the second
-  carries refusals from other sessions and other people.
-- **A control cannot be evaluated.** `NO DATA` is not a pass. Say what it
-  needs in order to mean anything.
+*Crosscheck: 0 findings, 3 not evaluable. This sheet is not written while any finding stands.*
