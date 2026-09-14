@@ -13,6 +13,22 @@ on 2026+ proposals.
 
 Single FastAPI process serving a React SPA. Postgres. Deployed on Railway.
 
+## Working on this
+
+**One branch: `claude/main`.** Everything goes there — commit as you finish
+each piece of work, push, and Eric reviews and merges to `main` and deploys.
+Do not open a second branch for a second theme; there were five at once and
+the question that ended it was *"why so many branches?"*, which is the right
+question. A branch per theme reads tidy from the inside and is five merges
+and five review contexts from the outside.
+
+**And this file is the running record.** A convention that lives in a chat
+message is the hand-kept map in its purest form: it cannot be checked, so it
+is never checked, and the next session invents its own. Everything worth
+carrying — a decision, a defect and what it cost, a rule and the reason for
+it — is written down here as it happens, which is why this file is the
+length it is.
+
 ## The one idea that shapes everything
 
 **Classifications are sealed before any rate is computed.**
