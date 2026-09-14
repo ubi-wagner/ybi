@@ -15,8 +15,8 @@
     "path": "/",
     "name": "01-home",
     "shows": "What you hold, and what is yours to do today.",
-    "characters": 4428,
-    "bytes": 945468,
+    "characters": 4655,
+    "bytes": 490521,
     "as": "tom@ybi.org"
   },
   {
@@ -25,8 +25,8 @@
     "path": "/reconcile",
     "name": "02-reconcile",
     "shows": "Schedule A-1 \u2014 the eleven points where the ledger, the P&L, the balance sheet and the payroll register have to agree. This is the gate: a rate is refused while any of them is open.",
-    "characters": 3976,
-    "bytes": 698348,
+    "characters": 3987,
+    "bytes": 702096,
     "as": "tom@ybi.org"
   },
   {
@@ -35,8 +35,8 @@
     "path": "/classify",
     "name": "03-classify-sweep",
     "shows": "The queue, in Sweep. Every group carries its recommendation; nothing has been accepted on anybody's behalf.",
-    "characters": 17135,
-    "bytes": 4066105,
+    "characters": 1437,
+    "bytes": 350878,
     "as": "tom@ybi.org"
   },
   {
@@ -45,8 +45,8 @@
     "path": "/classify",
     "name": "04-classify-focus",
     "shows": "Focus \u2014 one group at a time, the amount set large, the proposal as a single button. This is where the judgments that need thought are made.",
-    "characters": 1627,
-    "bytes": 374026,
+    "characters": 1269,
+    "bytes": 317982,
     "as": "tom@ybi.org"
   },
   {
@@ -55,8 +55,8 @@
     "path": "/rates",
     "name": "05-before-seal",
     "shows": "Before sealing. Coverage and the reconciliation gate are both shown, and no rate exists \u2014 that is the guarantee, not a gap.",
-    "characters": 1029,
-    "bytes": 240659,
+    "characters": 948,
+    "bytes": 235001,
     "as": "tom@ybi.org"
   },
   {
@@ -65,8 +65,8 @@
     "path": "/rates",
     "name": "06-sealed",
     "shows": "Sealed. The hash covers every live judgment in the set. Only now does computing become possible.",
-    "characters": 1618,
-    "bytes": 325760,
+    "characters": 1619,
+    "bytes": 326176,
     "as": "tom@ybi.org"
   },
   {
@@ -75,8 +75,8 @@
     "path": "/rates",
     "name": "07-computed",
     "shows": "Computed. The basis for administrative labour is chosen on the screen rather than defaulted silently \u2014 it is worth about nine points of combined rate on the same judgments \u2014 and it is recorded on the rate. A trigger refuses any rate whose seal does not match a sealed set.",
-    "characters": 1835,
-    "bytes": 385445,
+    "characters": 1833,
+    "bytes": 387379,
     "as": "tom@ybi.org"
   },
   {
@@ -85,8 +85,8 @@
     "path": "/review/rate",
     "name": "08-buildup",
     "shows": "The build-up an auditor reads. Nothing on it is computed \u2014 every figure is read from the row it was recorded in.",
-    "characters": 1740,
-    "bytes": 387719,
+    "characters": 1751,
+    "bytes": 393657,
     "as": "tom@ybi.org"
   },
   {
@@ -96,7 +96,7 @@
     "name": "09-timesheet-draft",
     "shows": "The pre-filled sheet, offered as a convenience. It says it is optional before it says anything else, and names the three complete answers. Nothing here has been adopted for anybody.",
     "characters": 2801,
-    "bytes": 523183,
+    "bytes": 422030,
     "as": "hruby@ybi.org"
   },
   {
@@ -115,8 +115,38 @@
     "path": "/worklist",
     "name": "11-worklist",
     "shows": "What is outstanding, routed to the portfolio that can act on it.",
-    "characters": 4436,
-    "bytes": 947142,
+    "characters": 4655,
+    "bytes": 490521,
     "as": "tom@ybi.org"
+  },
+  {
+    "step": "I",
+    "who": "Tom \u00b7 controller",
+    "path": "/contracts",
+    "name": "12-contracts",
+    "shows": "The income half. A charge code, who may charge it, the contract it works under, and the invoices issued against it. The register held three invoices from one month until the year arrived; it holds 61 now, reconciled to the ledger's grant income.",
+    "characters": 1462,
+    "bytes": 319533,
+    "as": "tom@ybi.org"
+  },
+  {
+    "step": "I",
+    "who": "Tom \u00b7 controller",
+    "path": "/restate",
+    "name": "13-restate",
+    "shows": "The restatement. The position is the REBUILD against the cost record \u2014 labour taken down to wages plus fringe before indirect goes on \u2014 and the invoice-only reading is kept beside it, labelled, because it is what every document written before today quotes. Everything is PROPOSED until a sponsor says otherwise in writing.",
+    "characters": 2061,
+    "bytes": 488781,
+    "as": "tom@ybi.org"
+  },
+  {
+    "step": "I",
+    "who": "Auditor",
+    "path": "/review/report",
+    "name": "14-auditor-report",
+    "shows": "The same record as the auditor sees it. Reading the cost record is one permission and they hold it by rank; they hold no portfolio and can change nothing.",
+    "characters": 6587,
+    "bytes": 857261,
+    "as": "auditor@ybi.org"
   }
 ]

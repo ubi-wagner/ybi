@@ -133,10 +133,36 @@ NOTES = {
    "reaches the controller rather than falling off the end. <br><br>Anybody "
    "holding a portfolio can recommend an item to somebody else with a reason "
    "— and that raises work, never a number."),
+
+ "12-contracts": (
+   "The income half, and the half that has to exist <em>before</em> the year "
+   "is worked: a code opened, somebody assigned to it, a deliverable, an "
+   "invoice, and the money against it. The register held <strong>three "
+   "invoices from one month</strong> until the 2025 billing arrived — and "
+   "four published figures had been computed against it as though it were the "
+   "year. It holds 61 now, and the ledger's own grant income is the control: "
+   "six of the seven streams agree, four of them to the cent."),
+
+ "13-restate": (
+   "The point of the whole system, and the screen that decides what YBI puts "
+   "in front of a sponsor. The position is the <strong>rebuild</strong> — "
+   "the labour line taken down to wages plus fringe from the cost record "
+   "before indirect goes on — because these invoices bill labour that "
+   "already carries indirect. The invoice-only reading is kept beside it and "
+   "labelled, never as the position: it is what every document written before "
+   "today quotes, and the two differ by $722,095.49. Everything here is "
+   "PROPOSED until a sponsor says otherwise in writing."),
+
+ "14-auditor-report": (
+   "The same record, as the auditor meets it. Reading the cost record is one "
+   "permission and they hold it by rank; they hold no portfolio and can change "
+   "nothing. A nav stricter than the API is the same defect as one looser "
+   "— both mean the screen and the server disagree about who you are."),
 }
 
 PHASE = {"0": "Getting in", "1": "Reconcile", "2": "Review",
-         "3": "Seal", "4": "Compute", "5": "Check", "P": "In parallel"}
+         "3": "Seal", "4": "Compute", "5": "Check", "P": "In parallel",
+         "I": "The register, and what it restates to"}
 
 
 def build() -> str:
@@ -210,9 +236,10 @@ TEMPLATE = """<!doctype html><meta charset="utf-8">
 <div class="wrap">
 <h1>Monday, illustrated</h1>
 <p class="sub">Every screen below was driven by <code>scripts/walk_runbook.py</code>
-against a sandbox built from an empty database — signed in as the person the
-step belongs to, clicking the controls a person clicks. Nothing here is a
-mock-up and nothing was photographed from the live record.</p>
+against a sandbox — signed in as the person the step belongs to, clicking the
+controls a person clicks. Nothing here is a mock-up, and nothing was
+photographed from the live record: the walk seals and computes, so it is
+refused a working instance.</p>
 
 <div class="banner">
 <p style="margin:0 0 8px"><strong>The walk found one thing before its first
@@ -226,12 +253,17 @@ believes.</p>
 </div>
 
 <div class="banner" style="border-left-color:#8c6a1f;background:#faf6ec">
-<p style="margin:0"><strong>This walks a sandbox from an empty database, so it
-shows what each screen looks like and what each step means.</strong> The live
-record is further along — already reconciled, classified, sealed and computed
-— so Monday is a <em>review</em> rather than a build. What is actually
-outstanding, and what to do if a judgment has to change, is
-<code>docs/MONDAY_RUNBOOK.md</code> §0 and §C.</p>
+<p style="margin:0 0 8px"><strong>The sandbox is a copy of the record, reopened
+so the seal and compute steps could be photographed being performed.</strong>
+Earlier versions walked a sandbox built from empty, which showed the screens
+honestly and showed every figure on them as a stranger. These are the real
+classifications, the real 61-invoice register and the real restatement — with
+three groups deliberately reopened so the queue is photographed with work in
+it, and the seal taken off so step 3 is a step rather than a description.</p>
+<p style="margin:0">The live record is sealed and computed, so <strong>Monday is
+a review rather than a build</strong>. What is outstanding, and what to do if a
+judgment has to change, is <code>docs/MONDAY_RUNBOOK.md</code> §0 and §C. The
+recommendations to check against are <code>docs/MONDAY_ANCHOR.pdf</code>.</p>
 </div>
 
 {body}
