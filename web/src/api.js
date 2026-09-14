@@ -151,7 +151,13 @@ export const api = {
   logout: () => req("/auth/logout", { method: "POST" }),
   changePassword: (body) =>
     req("/auth/password", { method: "POST", body: JSON.stringify(body) }),
-  dashboard: (period) => req("/dashboard" + (period ? `?period=${period}` : "")),
+  /* `product` scopes the rollup to the job being done. Omitted is
+     unfiltered, which is what a script reading the whole list expects. */
+  dashboard: (period, product = "") =>
+    req("/dashboard" + (period || product
+      ? "?" + new URLSearchParams({ ...(period && { period }),
+                                    ...(product && { product }) })
+      : "")),
   worklist: (params) => req("/dashboard/worklist?" + new URLSearchParams(params)),
   activity: (params) => req("/dashboard/activity?" + new URLSearchParams(params)),
   timesheetObjectives: (period = "2025") =>
@@ -193,7 +199,12 @@ export const api = {
   auditPackageUrl: (period = "2025") => `/api/export/audit-package?period=${period}`,
 
   // What this person owes, rather than what is outstanding in general.
-  myWorklist: (period = "2025") => req(`/dashboard/worklist/mine?period=${period}`),
+  /* `product` scopes the list to the job being done — the audit or the
+     ongoing system. Omitted means unfiltered, which is what a script reading
+     the whole list expects. */
+  myWorklist: (period = "2025", product = "") =>
+    req(`/dashboard/worklist/mine?period=${period}`
+        + (product ? `&product=${product}` : "")),
   // A helper recommends; the controller verifies and seals. Raises a todo
   // against the outstanding item, never a row in the register it points at.
   recommend: (body, period = "2025") =>

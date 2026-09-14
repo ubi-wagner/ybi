@@ -36,6 +36,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("")
 def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
+              product: str | None = None,
               actor: Actor = Depends(require_reader)) -> dict:
     period = period or settings.period
 
@@ -74,14 +75,26 @@ def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
                variance, (variance = 0) AS ties
           FROM v_asset_control WHERE period = %s""", (period,))
 
-    worklist = query("""
+    # Scoped the same way `/worklist/mine` is, and off the same view, because
+    # this card and that one were showing the same list to the same person at
+    # the same moment with different contents — the audit home carried 43
+    # uncertified timesheets in the rollup after they had been taken out of
+    # the list above it. Two readings of one question is the shape this
+    # repository keeps finding.
+    #
+    # Unknown is unfiltered, as it is there: a caller that does not say which
+    # product it is gets everything.
+    scope, args = "", []
+    if product in ("audit", "fcs"):
+        scope, args = " AND owner_product = %s", [product]
+    worklist = query(f"""
         SELECT kind, severity, count(*) AS items,
                COALESCE(sum(amount), 0) AS amount
-          FROM v_worklist WHERE period = %s
+          FROM v_worklist_owned WHERE period = %s{scope}
          GROUP BY kind, severity
          ORDER BY CASE severity WHEN 'BLOCKING' THEN 0 WHEN 'HIGH' THEN 1
                                 ELSE 2 END, sum(amount) DESC NULLS LAST""",
-        (period,))
+        (period, *args))
 
     activity = query("""
         SELECT occurred_at, kind, actor, entity, entity_id, label, amount, detail
@@ -198,7 +211,7 @@ def refusals(limit: int = 50, mine: bool = True,
 
 
 @router.get("/worklist/mine")
-def my_worklist(period: str = None,
+def my_worklist(period: str = None, product: str | None = None,
                 actor: Actor = Depends(require_own_work)) -> dict:
     """What *this* person owes, rather than what is outstanding in general.
 
@@ -216,22 +229,34 @@ def my_worklist(period: str = None,
     """
     period = period or settings.period
     held = {p.value for p in actor.portfolios}
+    # Which product is asking. The tabs were split into a year being closed
+    # and a company being run, and the worklist was not — so the controller's
+    # audit home opened on 43 uncertified timesheets and 43 missing
+    # employment terms, two of its six rows being work behind the other door
+    # and neither of them work a controller may do: 200.430(i) wants the
+    # signature of the person whose effort it was.
+    #
+    # Unknown is *unfiltered* rather than empty. A caller that does not say
+    # which product it is gets everything, which is what `/worklist` has
+    # always answered and what a script reading the whole list expects.
+    scope, args = "", []
+    if product in ("audit", "fcs"):
+        scope, args = " AND owner_product = %s", [product]
+
+    columns = """kind, severity, label, entity, entity_id,
+                 amount, detail, owner_portfolio, owner_product, goes_to"""
+    order = """ORDER BY CASE severity WHEN 'BLOCKING' THEN 0
+                                      WHEN 'HIGH' THEN 1 ELSE 2 END,
+                        amount DESC NULLS LAST"""
     if Portfolio.CONTROLLER in actor.portfolios:
-        rows = query("""SELECT kind, severity, label, entity, entity_id,
-                               amount, detail, owner_portfolio, goes_to
-                          FROM v_worklist_owned WHERE period = %s
-                          ORDER BY CASE severity WHEN 'BLOCKING' THEN 0
-                                                 WHEN 'HIGH' THEN 1 ELSE 2 END,
-                                   amount DESC NULLS LAST""", (period,))
+        rows = query(f"""SELECT {columns} FROM v_worklist_owned
+                          WHERE period = %s{scope} {order}""",
+                     (period, *args))
     elif held:
-        rows = query("""SELECT kind, severity, label, entity, entity_id,
-                               amount, detail, owner_portfolio, goes_to
-                          FROM v_worklist_owned
-                         WHERE period = %s AND owner_portfolio = ANY(%s)
-                         ORDER BY CASE severity WHEN 'BLOCKING' THEN 0
-                                                WHEN 'HIGH' THEN 1 ELSE 2 END,
-                                  amount DESC NULLS LAST""",
-                     (period, list(held)))
+        rows = query(f"""SELECT {columns} FROM v_worklist_owned
+                          WHERE period = %s AND owner_portfolio = ANY(%s)
+                                {scope} {order}""",
+                     (period, list(held), *args))
     else:
         rows = []
 

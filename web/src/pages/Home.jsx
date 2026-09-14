@@ -45,7 +45,7 @@ const PORTFOLIO_WORK = {
   },
 };
 
-export default function Home({ actor }) {
+export default function Home({ actor, product }) {
   const [docs, setDocs] = useState(null);
   const [dash, setDash] = useState(null);
   const [lib, setLib] = useState(null);
@@ -57,7 +57,7 @@ export default function Home({ actor }) {
     api.myDocuments().then(setDocs).catch(() => {});
     api.guides().then(setGuides).catch(() => {});
     if (actor.can_read) {
-      api.dashboard().then(setDash).catch(() => {});
+      api.dashboard("2025", product).then(setDash).catch(() => {});
       // Only the counts are wanted here; the rows stay on the library
       // screen, where there is room to read them.
       api.documentLibrary({ limit: 1 }).then(setLib).catch(() => {});
@@ -65,7 +65,7 @@ export default function Home({ actor }) {
     if ((actor.portfolios || []).includes("OFFICE"))
       api.documentInbox().then(setInbox).catch(() => {});
     if (actor.is_admin) api.rosterGaps().then(setGaps).catch(() => {});
-  }, [actor]);
+  }, [actor, product]);
 
   const held = actor.portfolios || [];
   const open = dash?.controls?.filter((c) => !c.ties) || [];
@@ -76,7 +76,7 @@ export default function Home({ actor }) {
         {describe(actor)}
       </PageHead>
 
-      <MyWork actor={actor} />
+      <MyWork actor={actor} product={product} />
 
       {/* ── Mine ─────────────────────────────────────────────── */}
       {actor.employee_key && (
@@ -286,7 +286,13 @@ export default function Home({ actor }) {
                   <td className="l">
                     <Tick state={w.severity === "BLOCKING" ? "flagged" : "open"} />
                   </td>
-                  <td className="l">{w.kind.replaceAll("_", " ").toLowerCase()}</td>
+                  {/* `forKind` is the one place a kind's meaning is written
+                      down, and it was imported at the top of this file and
+                      used by the list below while this one lowercased the
+                      raw database name. A fourth copy of the defect
+                      worklistKinds.js exists to end: a screen that starts
+                      speaking SQL. */}
+                  <td className="l">{forKind(w.kind).plural}</td>
                   <td className="amt">{w.items}</td>
                   <td className="amt">{money(w.amount)}</td>
                 </tr>
@@ -336,7 +342,7 @@ function describe(actor) {
 
 const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
 
-function MyWork({ actor }) {
+function MyWork({ actor, product }) {
   const [d, setD] = useState(null);
   /* `require_own_work` admits somebody who holds a portfolio *or* reads the
      record, and nobody else — so for an employee with a timesheet and
@@ -349,10 +355,17 @@ function MyWork({ actor }) {
      matters. Never offer something that will answer 403. */
   const mine = Boolean((actor.portfolios || []).length) || actor.can_read;
   useEffect(() => {
-    if (mine) api.myWorklist().then(setD).catch(() => {});
-  }, [mine]);
+    if (mine) api.myWorklist("2025", product).then(setD).catch(() => {});
+  }, [mine, product]);
   if (!mine) return null;
-  if (!d || (!d.groups.length && !d.certification_chase.length)) return null;
+  /* The chase list is the certification question in another shape — who has
+     not signed, on whose work — and a controller cannot sign any of it.
+     It moved behind the ongoing-system door with NEEDS_CERTIFICATION and
+     EMPLOYMENT_UNKNOWN; leaving it on the audit home would have been the
+     same defect one component further down. */
+  const chase = product === "audit" ? [] : (d?.certification_chase || []);
+
+  if (!d || (!d.groups.length && !chase.length)) return null;
 
   const everything = (actor.portfolios || []).includes("CONTROLLER");
 
@@ -394,7 +407,7 @@ function MyWork({ actor }) {
         })}
       </Table>
 
-      {d.certification_chase.length > 0 && (
+      {chase.length > 0 && (
         <>
           <div className="card-title" style={{ margin: "18px 0 4px" }}>
             People to chase
@@ -408,7 +421,7 @@ function MyWork({ actor }) {
             { label: "Work", align: "left" }, { label: "Contract", align: "left" },
             { label: "People" }, { label: "Wages" }, { label: "Stale" },
           ]}>
-            {d.certification_chase.map((c) => (
+            {chase.map((c) => (
               <tr key={c.objective_id}>
                 <td className="l">
                   <strong>{c.objective_id}</strong>

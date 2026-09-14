@@ -302,7 +302,7 @@ export default function App() {
         </nav>
 
         <Routes>
-          <Route path="/" element={<Home actor={actor} />} />
+          <Route path="/" element={<Home actor={actor} product={effective} />} />
           <Route path="/documents" element={<MyDocuments actor={actor} />} />
           <Route path="/library" element={<Library />} />
           <Route path="/reports" element={<Reports actor={actor} />} />
