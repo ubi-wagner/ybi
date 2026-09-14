@@ -40,12 +40,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 EXPECTED_UNWRITTEN: dict[str, str] = {
     # ── Money that has not moved ──────────────────────────────────────
     "invoice.paid_on": (
-        "No payment is recorded against any invoice. `receipt` is the live "
-        "register for money in, and `drive_reverse` names this missing link "
-        "rather than inventing one."),
-    "invoice.paid_amount": (
-        "With invoice.paid_on: the receipt register is empty, so nothing "
-        "has a payment amount to record against an invoice."),
+        "The 2025 invoices are stamped PAID and state the payment received, "
+        "so paid_amount is written now — but the stamp carries no date and "
+        "nothing else on the record does either. A date nobody wrote down is "
+        "not a date to invent."),
     "invoice.milestone_id": (
         "All four America Makes awards are cost reimbursement invoiced "
         "monthly and no statement of work carries a CLIN, a deliverable "
