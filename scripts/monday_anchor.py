@@ -160,6 +160,25 @@ def facts() -> dict:
                                   period_end, rate_method from award
                             order by award_id""")
 
+    # The 2025 register and what it restates to. Neither existed when this
+    # sheet was first written, and three of its cards were built on a
+    # three-invoice sample.
+    f["register"] = query("""
+        SELECT count(*) AS n, COALESCE(sum(total), 0) AS total,
+               count(*) FILTER (WHERE paid_amount IS NOT NULL) AS paid
+          FROM invoice WHERE extract(year from invoice_date) = 2025""")[0]
+    f["streams"] = query("""
+        SELECT objective_id, count(*) AS n, sum(total) AS billed,
+               sum(indirect_claimed) AS indirect
+          FROM invoice WHERE extract(year from invoice_date) = 2025
+         GROUP BY 1 ORDER BY sum(total) DESC""")
+    f["restate"] = query("""
+        SELECT objective_id, invoices, billed_total, indirect_billed,
+               indirect_supported, under_recovered, over_collected,
+               as_billed_position, elected_indirect, implied_rate, method
+          FROM v_restatement WHERE period = %s AND status = 'PROPOSED'
+         ORDER BY billed_total DESC""", (PERIOD,))
+
     f["contractor"] = query(
         "select * from v_contractor_effort_check where state = 'OPEN'"
         " order by expense desc")
@@ -625,6 +644,92 @@ def recommendations(f: dict) -> list[dict]:
         watch=None,
     ))
 
+    # ── I · the invoice register ────────────────────────────────────────
+    reg, streams = f["register"], f["streams"]
+    R.append(dict(
+        id="R30", step="I", screen="/contracts · the invoice register",
+        title="The register is the year now, not a sample of it",
+        rec="It held **three invoices from one month of 2026**, and four "
+            "published figures were computed against it as though it were the "
+            "year — *1.6% of the ceilings has ever been invoiced*, *$936,190.52 "
+            "of cost never invoiced*, *Digital Engineering has no invoice to "
+            "restate against at all*. All three were wrong. A register loaded "
+            "from one document is a sample until something says otherwise.",
+        record=[(r["objective_id"], f"{r['n']} invoices · {money(r['billed'])}"
+                 + (f" · indirect {money(r['indirect'])}" if r["indirect"]
+                    else " · no indirect line on any of them"))
+                for r in streams]
+               + [("all of 2025", f"{reg['n']} invoices, {money(reg['total'])}, "
+                   f"{reg['paid']} stating a payment received")],
+        cite=None,
+        watch="The ledger is the control, not the parser: `3900 Grant Income` "
+              "records the same billing independently and six of the seven "
+              "streams agree, four of them **to the cent**. The two that "
+              "differ are named \u2014 Hybrid's $4,222.00 tail and Rising Tides' "
+              "2024 portion.",
+    ))
+    R.append(dict(
+        id="R31", step="I", screen="/restate",
+        title="A restatement rebuilds; it does not add",
+        rec="The route applied the rate to the invoice's **own** base, and that "
+            "base carries labour already holding embedded indirect \u2014 YBI's "
+            "Hybrid cost proposal computes $45,457 of 10% ICR into a "
+            "$449,043.40 labour line. It read **$435,301.76 owed to YBI** where "
+            "the rebuild shows **$286,793.73 owed back**. Migration 076 records "
+            "the rebuild as the position and keeps the old reading beside it, "
+            "labelled.",
+        record=[(r["objective_id"],
+                 f"position {money(r['under_recovered'] - r['over_collected'])}"
+                 f" \u00b7 as-billed would say {money(r['as_billed_position'])}")
+                for r in f["restate"]] or [("nothing restated yet", "\u2014")],
+        cite="2 CFR 200.414(f)",
+        watch="The rebuild reproduces both published workpapers to the cent "
+              "\u2014 LTM $107,683.52 and Drive AM $(58,786.31). That is the "
+              "check; the route agreeing with itself would not be.",
+    ))
+    R.append(dict(
+        id="R32", step="I", screen="/restate \u2014 the implied rate",
+        title="What was actually recovered, against the 10% elected",
+        rec="Every award carries the de minimis election, and it is written "
+            "down in exactly two places: **Last Tactical Mile's executed "
+            "Schedule B** budgets 10.0000% of total direct to four decimal "
+            "places, and **Hybrid Phase 2's cost proposal** computes *ICR 10% "
+            "maximum 45,457.00* into its labour line. One is a signed agreement "
+            "and one is a proposal \u2014 an auditor will want to know which is "
+            "which.",
+        record=[(r["objective_id"],
+                 (f"{Decimal(r['implied_rate']) * 100:.2f}% recovered against "
+                  f"10.00% elected") if r["implied_rate"] is not None
+                 else "not computed")
+                for r in f["restate"]] or [("nothing restated yet", "\u2014")],
+        cite="2 CFR 200.414(f)",
+        watch="A high implied rate has **two** readings and the column does not "
+              "choose: YBI billed above cost, or the classification has not "
+              "attributed enough cost to that objective. Digital Engineering at "
+              "179.21% carries $207,398.87 of classified cost against "
+              "$579,074.25 of billing.",
+    ))
+    R.append(dict(
+        id="R33", step="I", screen="/restate \u2014 Digital Engineering",
+        title="A base that cannot be read is not a base of zero",
+        rec="Digital Engineering bills **one undifferentiated line a month** "
+            "\u2014 *YBI Total: January 2025* \u2014 which is `OTHER`, and "
+            "`OTHER` is not an MTDC category. The route measured a base of zero "
+            "and reported a variance of exactly $0.00 on $579,074.25 of "
+            "billing. It says **NOT ASSESSABLE** now, which is a different "
+            "answer and the true one.",
+        record=[("billed", money(next((r["billed_total"] for r in f["restate"]
+                                       if r["objective_id"] == "DIG-ENG"), 0))),
+                ("what the invoice separates",
+                 "nothing \u2014 labour and non-labour are one figure"),
+                ("so the position comes from",
+                 "the cost record, not the invoice")],
+        cite=None,
+        watch="Zero and *not measurable from this document* lead to different "
+              "work, and a reading that cannot tell them apart reports the "
+              "second as the first every time.",
+    ))
+
     # ── A · after Monday, sponsor-facing ────────────────────────────────────
     R.append(dict(
         id="R23", step="A", screen="/restate",
@@ -705,11 +810,12 @@ def recommendations(f: dict) -> list[dict]:
         record=[(c["award_id"], c["detail"]) for c in failing("TERM")]
                or [("none failing", "—")],
         cite=None,
-        watch="Nothing in the record supports any invoice's service period — "
-              "the ledger is 2025 and all three invoices bill April 2026 — and "
-              "**no payment is recorded against any invoice**, which decides "
-              "whether a restatement is an additional claim or a correction to "
-              "a settled one.",
+        watch="**Every one of the 61 invoices is stamped PAID and states its "
+              "payment**, which settles a question this sheet used to carry "
+              "open: a restatement is a correction to money already collected, "
+              "not an additional claim. The bank side is still empty — "
+              "`receipt` has no rows — so what is recorded is the invoice's "
+              "own assertion, not a receipt YBI logged.",
     ))
     R.append(dict(
         id="R28", step="A", screen="/contracts · /classify",
@@ -720,9 +826,13 @@ def recommendations(f: dict) -> list[dict]:
             "understated. **Restating to cost only works if the cost record is "
             "complete**, and on the contract with the biggest credit it may not "
             "be.",
-        record=[("Digital Engineering", "no invoice on file at all, and its "
-                 "period of performance ended 9 July 2025"),
-                ("ever invoiced against the ceilings", "about 1.6%")],
+        record=[("Digital Engineering", "**seven** invoices, $579,074.25, "
+                 "January to July 2025 — the final one dated 9 July, exactly "
+                 "its period end. This sheet said it had none."),
+                ("ever invoiced against the ceilings",
+                 "the 1.6% this sheet used to carry was measured on three "
+                 "invoices; Drive AM, LTM and DE alone billed $1,526,537.36 "
+                 "in 2025")],
         cite=None,
         watch=None,
     ))
@@ -777,6 +887,10 @@ STEPS = {
     "P": ("In parallel", "None of it blocks the five steps above",
           "Three asks of other people and one set of decisions. Sorted by lead "
           "time, not by size.", "11-worklist.png"),
+    "I": ("The invoice register", "New since this sheet was first written",
+          "61 invoices, the whole of 2025, reconciled to the ledger. Three of "
+          "the cards below it were built on three invoices from one month.",
+          None),
     "A": ("After Monday", "Sponsor-facing — the reason the five steps exist",
           "Nothing here is a Monday action. It is what the record now supports "
           "saying, and in what order.", None),
