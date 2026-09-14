@@ -35,6 +35,8 @@ from decimal import Decimal, InvalidOperation
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 FINDINGS: list[str] = []
 CHECKS = 0
 
@@ -251,7 +253,7 @@ def main() -> int:
     from app.db import open_pool
     open_pool()
 
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     undo_ids: list[str] = []
 
     try:

@@ -2,7 +2,7 @@
 """Put the foundational documents into the record, through the real door.
 
     PYTHONPATH=. python3 scripts/seed_documents.py \
-        --base https://ybi.up.railway.app --as tom@ybi.org
+        --base https://ybi.up.railway.app --as tmetzinger@ybi.org
 
 Everything in `docs/source-documents/` is a document the engagement rests on:
 the two NCDMM subrecipient agreements, the audited financial statements and
@@ -45,7 +45,7 @@ SOURCE = ROOT / "docs" / "source-documents"
 #: to file anything the register is missing. It lived here first, and a copy
 #: on each side of that door is two lists of the same eighteen documents —
 #: which is the shape the module it moved to was written about.
-from app.foundation import DOCUMENTS  # noqa: E402
+from app.foundation import DOCUMENTS, EMAIL  # noqa: E402
 
 
 def find(name: str) -> Path | None:
@@ -57,7 +57,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=os.getenv("YBI_BASE",
                                                 "http://127.0.0.1:8000"))
-    ap.add_argument("--as", dest="who", default="tom@ybi.org")
+    ap.add_argument("--as", dest="who", default=EMAIL["tom"])
     ap.add_argument("--password", default=os.getenv("YBI_PASSWORD", ""))
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()

@@ -1973,6 +1973,83 @@ administrative objective. The test that caught it then failed again because
 the fixture said `INDIRECT` from memory; *read the schema, never recall it*
 applies to the test as much as to the code.
 
+## One person, one account
+
+Migration `079`. He signed in as `tmetzinger@ybi.org`, so `tom@ybi.org` is
+retired. `077`'s bootstrap will not touch an account that exists, which is the
+right rule and is why it opened the real address *beside* the wrong one rather
+than over it — leaving two active accounts for one person, which is how a
+timesheet and a certification come apart and how *who classified this* gains
+two answers.
+
+**Retired, never removed.** 891 audit rows and all eighteen foundational
+documents point at that actor row: it is the provenance of the whole 2025
+classification. Deleting it orphans the record it authorised, which is what
+`POST /api/actors/{id}/active` says in its own docstring and what `027` chose
+when it corrected addresses in place. The 891 rows keep pointing where they
+point, because those acts *were* performed on that account and repointing them
+would be inventing a history.
+
+Three fences, and the first is the one that matters:
+
+- **It fires only where the replacement exists and is active.** A recovery
+  that restored the old row and not the new one would otherwise leave the
+  controller with no way in at all. **A migration that can lock somebody out is
+  worse than the duplicate it tidies.** Watched refusing to fire in that case
+  and in the case where the replacement is deactivated, and idempotent on a
+  second run.
+- It revokes the retired account's 24 live sessions in the same statement,
+  because `app/auth.py` requires `a.is_active` to resolve a token but a revoked
+  session is the honest record of the sign-out.
+- It moves no portfolio grant. Both rows already held CONTROLLER in their own
+  right, and a grant history that gained a row nobody made is a worse record
+  than one that did not.
+
+Proved by experiment rather than by reading: both rows put on the *same*
+password hash so that `is_active` is the only difference, then signed in
+through the real door — `tmetzinger@` answers 200 and *Tom Metzinger*,
+`tom@` answers 401.
+
+### Fifty-two copies of one address
+
+And the reason this was not a one-line change. **Twenty-seven scripts carried
+`tom@ybi.org` as a literal** — every drive, the classification log, the request
+issuer, both walks — each with its own `sign_in`. Retiring the address would
+have made all of them exit on a 401 against a system working perfectly, and
+`prove.sh` runs nine of them: **the proof harness going red for a reason that
+is not a defect is how a reader learns to ignore it.** The hand-kept map, in
+the instruments again.
+
+`foundation.EMAIL` is derived from `ROSTER`, which is already the one list of
+who these people are, and the scripts read it. A first draft offered
+`CONTROLLER_EMAIL` picked with `next(... if "CONTROLLER" in p.portfolios)` —
+Stephanie and Heidi hold CONTROLLER too, so it returned Tom only because he is
+listed first. **A hand-kept map wearing a derivation** is still one.
+
+Two things worth not repeating, both mine, both in this one change:
+
+- **A bulk edit that reported success and left a `NameError`.** The regex
+  appended `, EMAIL` to the whole import *line*, comment included, so one file
+  ended up with `from app.foundation import DOCUMENTS  # noqa: E402, EMAIL`
+  and used `EMAIL["tom"]` two lines later. Found by asking the AST of every
+  changed file whether it imports what it uses, rather than by reading the
+  diff — 26 of 27 were right, which is exactly the ratio that survives a
+  reading.
+- **The sweep passed with the defect pasted back in.** `test_no_script_signs_
+  in_at_an_address_the_roster_no_longer_holds` matched **surnames** — and `tom`
+  is a first name, so the one address the test exists for was the one it could
+  not see. The second time in one session a sweep of mine was green over the
+  thing it names; both were found the same way, by restoring the defect and
+  watching. It reads first names, surnames and the local part of the address
+  each person actually holds now, and leaves `peer-test@ybi.org` alone, which
+  is deliberately not on the roster.
+
+The rule the test holds is narrower than *never write an address*, because a
+test that argues with correct code is worse than no test: `hruby@` and
+`bewing@` are hard-coded in the drives and are **right**. What fails is an
+address **for a person the roster knows** that the roster no longer holds —
+which is the copy that goes stale, and did.
+
 ## A cent is the unit a reviewer ties in
 
 `api.js::money()`, and the six screens that had stopped reading it. Eight

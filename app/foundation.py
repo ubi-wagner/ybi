@@ -134,6 +134,28 @@ STAFF = (
 
 ROSTER = (SYSTEM_ADMIN, ORG_ADMIN, *STAFF)
 
+#: Addresses by the name everybody says out loud, derived from the roster
+#: above rather than written a second time.
+#:
+#: Fifty-two literal `tom@ybi.org` across twenty-seven scripts is what this
+#: replaces — every drive, the classification log and the request issuer each
+#: carrying its own copy of one person's address. That was the naming
+#: convention rather than a lookup, and when `079` retired the old address
+#: every one of them would have exited on a 401 against a system that was
+#: working perfectly: the proof harness going red for a reason that is not a
+#: defect is how a reader learns to ignore it.
+#:
+#: There is one list of who these people are, and this reads it.
+#: Keyed on the first name because that is what the scripts were saying —
+#: `sign_in(base, "tom@ybi.org")` means *sign in as Tom*. A first draft
+#: offered `CONTROLLER_EMAIL` instead and picked by position: Stephanie and
+#: Heidi hold CONTROLLER too, so it returned Tom only because he is listed
+#: first, which is a hand-kept map wearing a derivation.
+EMAIL = {p.display_name.split()[0].lower(): p.email for p in ROSTER}
+assert len(EMAIL) == len(ROSTER), (
+    "two people on the roster share a first name, so EMAIL would silently "
+    "drop one of them; key it on something that tells them apart")
+
 #: The organisation's administrator holds no portfolio, and the reason column
 #: is where that is said rather than inferred from an empty set.
 BARB_REASON = ORG_ADMIN.why

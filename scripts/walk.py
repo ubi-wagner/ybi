@@ -15,6 +15,8 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+from app.foundation import EMAIL  # noqa: E402
+
 BASE = "http://127.0.0.1:8000"
 SHOTS = Path("web/public/help")
 PW = "SandboxDrive2026!"
@@ -54,7 +56,7 @@ def main() -> int:
 
         # ── 1. Sign in as the controller ────────────────────────────
         page.goto(BASE + "/", wait_until="networkidle")
-        page.fill("input[type=email]", "tom@ybi.org")
+        page.fill("input[type=email]", EMAIL["tom"])
         page.fill("input[type=password]", PW)
         shot(page, "01-signin", "sign-in, credentials entered")
         page.click("button[type=submit]")

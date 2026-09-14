@@ -45,6 +45,8 @@ from decimal import Decimal
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 FINDINGS: list[str] = []
 CHECKS = 0
 TURN = 0
@@ -318,7 +320,7 @@ def main() -> int:
     from app.db import one, open_pool
     open_pool()
 
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     heidi = sign_in(args.base, "hruby@ybi.org", password)
     auditor = sign_in(args.base, "auditor@ybi.org", password)
 

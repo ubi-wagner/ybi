@@ -50,6 +50,8 @@ from decimal import Decimal
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 FINDINGS: list[str] = []
 CHECKS = 0
 
@@ -133,7 +135,7 @@ def main() -> int:
 
     from app.db import execute, one, query
 
-    tom = sign_in(args.base, "tom@ybi.org", args.password)
+    tom = sign_in(args.base, EMAIL["tom"], args.password)
     auditor = sign_in(args.base, "auditor@ybi.org", args.password)
     emp = one("""SELECT email FROM actor WHERE role = 'EMPLOYEE' AND is_active
                    AND password_set_by = 'SELF' ORDER BY email LIMIT 1""")

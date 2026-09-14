@@ -49,6 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx                                              # noqa: E402
 
 from app.db import one, open_pool, query                  # noqa: E402
+from app.foundation import EMAIL  # noqa: E402
 
 CHECKS = 0
 FINDINGS: list[str] = []
@@ -113,7 +114,7 @@ def main() -> int:
     open_pool()
     BEFORE = census()
 
-    tom = sign_in(args.base, "tom@ybi.org", pw)
+    tom = sign_in(args.base, EMAIL["tom"], pw)
     auditor = sign_in(args.base, "auditor@ybi.org", pw)
 
     step("What it will be measured against")

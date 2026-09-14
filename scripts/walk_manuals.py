@@ -39,6 +39,8 @@ from pathlib import Path
 import httpx
 from playwright.sync_api import sync_playwright
 
+from app.foundation import EMAIL  # noqa: E402
+
 OUT = Path("web/public/help")
 MANIFEST = OUT / "taken.json"
 CHROME_CANDIDATES = [
@@ -62,15 +64,15 @@ SHOTS = [
     ("hruby@ybi.org",   "/certify",    "m-certify",       "Signing for your own effort", []),
     ("hruby@ybi.org",   "/documents",  "m-documents",     "Sending a document in", []),
     # Controller
-    ("tom@ybi.org",     "/classify",   "m-classify",      "The classification queue", []),
-    ("tom@ybi.org",     "/reconcile",  "m-reconcile",     "Schedule A-1", []),
-    ("tom@ybi.org",     "/rates",      "m-rates",         "Sealing, and the rate", []),
-    ("tom@ybi.org",     "/imports",    "m-imports",       "Importing from QuickBooks", []),
+    (EMAIL["tom"],     "/classify",   "m-classify",      "The classification queue", []),
+    (EMAIL["tom"],     "/reconcile",  "m-reconcile",     "Schedule A-1", []),
+    (EMAIL["tom"],     "/rates",      "m-rates",         "Sealing, and the rate", []),
+    (EMAIL["tom"],     "/imports",    "m-imports",       "Importing from QuickBooks", []),
     # Portfolios
     ("hruby@ybi.org",   "/space",      "m-space",         "Buildings and the rent roll", []),
     ("hruby@ybi.org",   "/inventory",  "m-inventory",     "The equipment register", []),
     ("hruby@ybi.org",   "/evidence",   "m-evidence",      "Filing what people send in", []),
-    ("tom@ybi.org",     "/requests",   "m-requests",      "Asking for what is missing", []),
+    (EMAIL["tom"],     "/requests",   "m-requests",      "Asking for what is missing", []),
     # The shelf, as the person who arrives wanting to read something rather
     # than to file anything — which is the auditor, who holds no portfolio.
     ("auditor@ybi.org", "/library",    "m-library",       "The document library", []),
@@ -98,20 +100,20 @@ SHOTS = [
     # retaken. A picture nobody can reproduce is the thing this file exists
     # to stop.
     (None,              "/",            "01-signin",       "The sign-in screen", []),
-    ("tom@ybi.org",     "/",            "02-dashboard",    "The dashboard, and the activity feed under it", []),
-    ("tom@ybi.org",     "/worklist/UNCLASSIFIED", "03-worklist", "One class of open work", []),
-    ("tom@ybi.org",     "/imports",     "05-import",       "Importing each report", []),
-    ("tom@ybi.org",     "/reconcile",   "05a-reconcile",   "The eleven cross-reference points", []),
-    ("tom@ybi.org",     "/reconcile",   "05b-reconcile-gl-pl", "Ledger against the P&L, account by account",
+    (EMAIL["tom"],     "/",            "02-dashboard",    "The dashboard, and the activity feed under it", []),
+    (EMAIL["tom"],     "/worklist/UNCLASSIFIED", "03-worklist", "One class of open work", []),
+    (EMAIL["tom"],     "/imports",     "05-import",       "Importing each report", []),
+    (EMAIL["tom"],     "/reconcile",   "05a-reconcile",   "The eleven cross-reference points", []),
+    (EMAIL["tom"],     "/reconcile",   "05b-reconcile-gl-pl", "Ledger against the P&L, account by account",
      [("tab", "Ledger vs P&L")]),
-    ("tom@ybi.org",     "/reconcile",   "05c-reconcile-items", "Each named difference and the lines behind it",
+    (EMAIL["tom"],     "/reconcile",   "05c-reconcile-items", "Each named difference and the lines behind it",
      [("tab", "Reconciling items")]),
-    ("tom@ybi.org",     "/classify",    "06-classify-sweep", "Sweep mode — the dense table", []),
-    ("tom@ybi.org",     "/classify",    "07-classify-focus", "Focus mode — one group, set large",
+    (EMAIL["tom"],     "/classify",    "06-classify-sweep", "Sweep mode — the dense table", []),
+    (EMAIL["tom"],     "/classify",    "07-classify-focus", "Focus mode — one group, set large",
      [("tab", "Focus")]),
-    ("tom@ybi.org",     "/classify",    "11-editor",       "Classifying differently",
+    (EMAIL["tom"],     "/classify",    "11-editor",       "Classifying differently",
      [("tab", "Focus"), ("click", "button:has-text('Classify differently')")]),
-    ("tom@ybi.org",     "/classify",    "12-split",        "A split being composed — shares, drivers and citations",
+    (EMAIL["tom"],     "/classify",    "12-split",        "A split being composed — shares, drivers and citations",
      [("tab", "Focus"), ("click", "button:has-text('Split this group')"),
       ("fill", ("input[placeholder='What this part is'] >> nth=0", "Direct programme delivery")),
       ("fill", ("input[placeholder='%'] >> nth=0", "70")),
@@ -127,7 +129,7 @@ SHOTS = [
     # edited in place — and the empty box below it at the same time. The
     # manual used to show those as separate pictures, and the second was a
     # state only a write could produce.
-    ("tom@ybi.org",     "/classify",    "08-note",         "A note on the record, and the box for the next one",
+    (EMAIL["tom"],     "/classify",    "08-note",         "A note on the record, and the box for the next one",
      [("tab", "Focus"), ("click", "button:has-text('Notes and documents')"),
       ("fill", ("textarea", "The invoice is in the inbox but not yet filed; "
                             "this group stays open until it is cited.")),

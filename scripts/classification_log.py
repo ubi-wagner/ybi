@@ -46,6 +46,7 @@ from app.domain.classification_log import (
     OBJECTIVES_TO_OPEN, RECORDED, Group, disagreements, judge,
     judge_on_merits, summarise, walk)
 from app.domain.core import money
+from app.foundation import EMAIL  # noqa: E402
 
 BOLD, DIM, OK, WARN, FAIL, END = (
     "\033[1m", "\033[2m", "\033[32m", "\033[33m", "\033[31m", "\033[0m")
@@ -417,7 +418,7 @@ def main() -> int:
     ap.add_argument("--write", action="store_true", help="write docs/CLASSIFICATION_LOG.md")
     ap.add_argument("--apply", action="store_true", help="record through the API")
     ap.add_argument("--base", default=os.environ.get("BASE", "http://127.0.0.1:8000"))
-    ap.add_argument("--email", default="tom@ybi.org")
+    ap.add_argument("--email", default=EMAIL["tom"])
     ap.add_argument("--password", default=os.environ.get("YBI_SEED_PASSWORD", ""))
     a = ap.parse_args()
 

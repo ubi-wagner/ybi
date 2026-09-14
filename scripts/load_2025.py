@@ -25,6 +25,8 @@ from pathlib import Path
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 SOURCE = Path("docs/source-documents/accounting-records")
 PL_FILE = SOURCE / "2025_Profit-and-Loss_QuickBooks.xlsx"
 GL_FILE = SOURCE / "2025_General-Ledger_QuickBooks.xlsx"
@@ -86,7 +88,7 @@ def main() -> int:
 
     with httpx.Client(base_url=args.base, timeout=300) as c:
         c.get("/api/health").raise_for_status()
-        sign_in(c, "YBI_CONTROLLER_EMAIL", "tom@ybi.org")
+        sign_in(c, "YBI_CONTROLLER_EMAIL", EMAIL["tom"])
 
         print("\nProfit and loss")
         pl_batch = upload(c, PL_FILE, "PROFIT_LOSS", args.who)

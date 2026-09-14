@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx  # noqa: E402
 
 from app.db import one, open_pool, query, transaction  # noqa: E402
+from app.foundation import EMAIL  # noqa: E402
 
 
 def sign_in(base: str, email: str, password: str) -> dict:
@@ -68,7 +69,7 @@ def main() -> int:
     g.add_argument("--apply", action="store_true")
     ap.add_argument("--base", default=os.environ.get("BASE",
                                                      "http://127.0.0.1:8000"))
-    ap.add_argument("--actor", default="tom@ybi.org")
+    ap.add_argument("--actor", default=EMAIL["tom"])
     args = ap.parse_args()
 
     open_pool()

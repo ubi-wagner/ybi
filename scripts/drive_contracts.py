@@ -49,6 +49,7 @@ import uuid
 import httpx
 
 from app.db import one, open_pool, query
+from app.foundation import EMAIL  # noqa: E402
 
 CHECKS = 0
 FINDINGS: list[str] = []
@@ -236,7 +237,7 @@ def main() -> int:
     open_pool()
     P = {"period": args.period}
 
-    tom = sign_in(args.base, "tom@ybi.org")          # CONTROLLER
+    tom = sign_in(args.base, EMAIL["tom"])          # CONTROLLER
     steph = sign_in(args.base, "sgaffney@ybi.org")   # project manager
     auditor = sign_in(args.base, "auditor@ybi.org")
 

@@ -40,6 +40,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 BOLD, DIM, OK, WARN, FAIL, END = (
     "\033[1m", "\033[2m", "\033[32m", "\033[33m", "\033[31m", "\033[0m")
 
@@ -71,7 +73,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=os.environ.get("BASE",
                                                      "http://127.0.0.1:8000"))
-    ap.add_argument("--email", default="tom@ybi.org")
+    ap.add_argument("--email", default=EMAIL["tom"])
     ap.add_argument("--password", default=os.environ.get("YBI_SEED_PASSWORD", ""))
     ap.add_argument("--period", default="2025")
     ap.add_argument("--due", default="", help="YYYY-MM-DD, optional")

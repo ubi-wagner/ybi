@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.auth import MIN_PASSWORD, hash_password  # noqa: E402
 from app.db import execute, one, open_pool, query  # noqa: E402
+from app.foundation import EMAIL  # noqa: E402
 
 SHEET = Path(__file__).resolve().parent / "first_passwords.json"
 
@@ -56,7 +57,7 @@ def main() -> int:
     if not sheet.exists():
         print(f"No password sheet at {sheet}.\n\n"
               f"It is deliberately not in the repository. Write it as\n"
-              f'  {{"tom@ybi.org": "...", "bewing@ybi.org": "..."}}\n'
+              f'  {{EMAIL["tom"]: "...", "bewing@ybi.org": "..."}}\n'
               f"and delete it once the five people have signed in.",
               file=sys.stderr)
         return 2

@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx                                              # noqa: E402
 
 from app.db import one, open_pool, query                  # noqa: E402
+from app.foundation import EMAIL  # noqa: E402
 
 CHECKS = 0
 FINDINGS: list[str] = []
@@ -122,7 +123,7 @@ def main() -> int:
                  for t in ("restatement", "decision", "rate")}
 
     steph = sign_in(args.base, "sgaffney@ybi.org", pw)
-    tom = sign_in(args.base, "tom@ybi.org", pw)
+    tom = sign_in(args.base, EMAIL["tom"], pw)
     auditor = sign_in(args.base, "auditor@ybi.org", pw)
 
     # A project the loader set up. If none exists the drive says so rather
@@ -159,7 +160,7 @@ def main() -> int:
              "approved a span", params={"period": args.period}, json={
                  "covers_from": f"{args.period}-01-01",
                  "covers_to": f"{args.period}-12-31",
-                 "hand_to": "tom@ybi.org",
+                 "hand_to": EMAIL["tom"],
                  "note": "Drive: the year as distributed, for the handoff to "
                          "be walked. Withdrawn at the end of this run."})
     if r.status_code != 201:

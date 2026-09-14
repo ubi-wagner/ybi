@@ -34,6 +34,8 @@ from pathlib import Path
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 
 #: Severity, most serious first. A FAULT is the system not working; a GAP is
@@ -69,7 +71,7 @@ WHO = [
      "stands the software up; reads the record only on a written grant"),
     ("bewing@ybi.org", "Barb", "ORG_ADMIN",
      "hands out access; holds no portfolio and judges no cost"),
-    ("tom@ybi.org", "Tom", "CONTROLLER",
+    (EMAIL["tom"], "Tom", "CONTROLLER",
      "classifies, seals, computes the rate, restates"),
     ("sgaffney@ybi.org", "Stephanie", "CONTROLLER+ALL",
      "project manager, holding every portfolio for the 2025 push"),
