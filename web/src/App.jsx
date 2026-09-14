@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
 import Certify from "./pages/Certify.jsx";
 import Timesheet from "./pages/Timesheet.jsx";
+import Guidebook from "./pages/Guidebook.jsx";
 import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
 import Imports from "./pages/Imports.jsx";
@@ -91,6 +92,12 @@ const ALL_TABS = [
   ["/restate",   "Restate",    "F",   "CONTROLLER"],
   ["/reports",   "Reports",    "G",   "reader"],
   ["/review",    "Review",     "A-1", "reader"],
+  /* The manuals and the generated PDFs, on a shelf. `null` because the
+     everybody manual is written for somebody with a timesheet and no
+     portfolio, and nothing on any of these pages is part of the cost
+     record — which is what `reader` is a grant over. The API asks for the
+     same thing, so the nav and the server agree. */
+  ["/guidebook", "Guidebook",  "?",   null],
   ["/help",      "Help",       "?",   null],
 ];
 
@@ -233,6 +240,7 @@ export default function App() {
           <Route path="/inventory" element={<Facilities actor={actor} tab="equipment" />} />
           <Route path="/timesheet" element={<Timesheet actor={actor} />} />
           <Route path="/certify" element={<Certify />} />
+          <Route path="/guidebook" element={<Guidebook />} />
           <Route path="/help" element={<Help />} />
           <Route path="/worklist/:kind" element={<Worklist actor={actor} />} />
           <Route path="/imports" element={<Imports />} />

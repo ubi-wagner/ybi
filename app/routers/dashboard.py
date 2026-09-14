@@ -156,13 +156,26 @@ def activity(limit: int = Query(100, le=500), offset: int = 0,
 
 @router.get("/refusals")
 def refusals(limit: int = 50, mine: bool = True,
-             actor: Actor = Depends(require_reader)) -> dict:
+             actor: Actor = Depends(current_actor)) -> dict:
     """What the system has refused, and what it said.
 
     Everybody sees their own without any grant: being told why your own
     button did nothing is not a privilege. Reading somebody else's needs
     `require_reader`, because a refusal names a person and what they were
     trying to do.
+
+    **The gate used to be `require_reader` and the paragraph above was not
+    true.** The narrowing four lines down is what protects another person's
+    refusals — `everybody` is `actor.can_read and not mine`, so a caller who
+    may not read the record only ever sees their own row however they ask.
+    The dependency on top of that made "your own" a privilege as well, and
+    the failure panel in the shell calls this on every page load: for
+    somebody with a timesheet and nothing else it was a 403 every time, a
+    console error every time, and a panel that could never show them the one
+    thing it exists to show them. It never surfaced while every account in
+    the record held a portfolio or a rank; self-registration makes that class
+    of person real. A handler whose docstring and whose dependency disagree
+    is the screen-and-server defect inside one function.
 
     `mine=false` from somebody who may not read the record quietly narrows to
     their own rather than refusing — a screen that answers 403 when you untick

@@ -607,6 +607,168 @@ dead end. `scripts/load_contract_terms.py` is the fix.
 Set `YBI_DEV_SEED=1` to give every account the same password so the drives
 can sign in; provisioning refuses that outside a development environment.
 
+## The deployment brings itself back
+
+`app/foundation.py`, migration `077`, called from the boot beside
+`run_migrations()`. **A Postgres service was rebuilt, every table came back
+on the first boot, and nobody could sign in.**
+
+The schema survives a recovery because migrations run on startup. Nothing
+else did, because everything else is a script somebody runs: the six
+accounts are `scripts/provision.py`, the eighteen documents are
+`scripts/seed_documents.py`, and `scripts/seed.sh` — written for exactly this
+lesson, after *the twenty-six contract provisions read out of the executed
+agreements lived in one developer's database and in no script* — writes the
+seven steps down and still waits for a person to run them. **Anything that
+only exists because somebody remembered to run it does not survive a
+recovery.** It is the dead-register shape pointed at the deployment: the
+mechanism is there, and nothing calls it.
+
+So the boot opens what is missing. Four rules, and the first is the whole of
+it:
+
+- **It never overwrites.** An account that exists is left exactly as it is —
+  password, name, rank, portfolios; a document whose SHA-256 is on file is
+  skipped. A deploy happens far more often than a recovery, so a boot that
+  reset a password would take an account away from the person using it on an
+  ordinary Tuesday. The one permitted update is the engagement lead's
+  `record_access`, and only where it is not already granted.
+- **It opens an account on the organisation's password and never on one of
+  its own.** `password_set_by = 'SEED'` and the random hash nobody holds, so
+  the only way in is `YBI_INITIAL_PASSWORD` and `refuse_issued_password`
+  still stops that session writing anything but its own new password. No
+  credential is in the image and none is at rest in the database.
+- **It does nothing without that variable.** Opening accounts nobody can
+  sign into is not a recovery, it is a row. The gate is also what keeps it
+  out of `provision.py`'s way on a development machine.
+- **The roster and the document list live in one place and are read from
+  there.** `provision.py` and `seed_documents.py` import them. Two lists of
+  the same six people is the defect this module is named after, one level up.
+
+It restores **nothing that is a judgment** — no ledger, no classification,
+no seal, no rate. A boot that classified would be the machine putting its
+name on the seal.
+
+Three things came out of building it:
+
+- **The image did not contain the documents.** The Dockerfile copies
+  `app/`, `scripts/` and `web/dist`, with a comment saying the scripts ship
+  *"so seeding runs inside the deployment"* — and `docs/source-documents/`
+  did not ship, so `seed_documents.py` was in the container and the eighteen
+  documents it files were not. A bootstrap script with nothing to bootstrap
+  from. `docs/` ships now, which also makes the run sheet's own links
+  resolve where the run sheet is.
+- **A deployment with no signing secret booted green and answered 500 to
+  every sign-in.** `app/auth.py` opens on *"fail closed"* and says a service
+  that refuses to start is cheaper than one that does not — and
+  `jwt_secret()` is called when a token is issued, not at boot, so a missing
+  `YBI_JWT_SECRET` passed the healthcheck, served every screen, and broke
+  for every person, with nothing anywhere naming the variable. The worst
+  shape a configuration fault can take: healthy to everything watching.
+  `check_deployment()` holds it now, on Railway only. Found by standing a
+  recovered deployment up and signing in as all six people, which is the
+  only way anybody was going to find it.
+- **The two doors collided, and one of them left the root account
+  stranded.** `provision.py` reset the system administrator's password,
+  printed nothing — the sheet is printed at the end — and then exited on the
+  organisation's administrator already existing, telling the operator to set
+  a variable when the answer was a variable already set. It recognises a
+  SEED-origin account now and signs in on the organisation's password.
+  **Only on SEED**: an `ADMIN` or `SELF` password is one somebody chose for
+  one named person, which is exactly what `check_credential` narrowed to.
+
+**And the guides are documents.** The manuals and the three generated PDFs
+are filed as `GENERATED` and read in the library like anything else — but
+they must not reach `v_evidence_inbox`, which is *what nobody has filed
+yet*. Nobody is ever going to attach the controller's manual to a ledger
+line, so eight guides at the top of that queue is the defect the evidence
+screen already learned: *thirty-two unread workbooks buried three real
+proposals*. `077` filters the inbox on the channel rather than the kind,
+because a regenerated invoice is the same case and was already in it.
+
+## Two doors that were not there
+
+**The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.
+The manuals and the generated PDFs were files in `docs/` and — once the boot
+started filing them — rows in a register an employee may not read. So the
+person the everybody manual is *written for*, somebody with a timesheet and
+no portfolio, could not reach it at all. The capability-with-no-door shape
+one step along: the content was complete and nothing served it to its
+reader.
+
+Gated on `current_actor`, not `require_reader`, which would be wrong in the
+direction that costs the most — reading the cost record is a grant, and
+nothing on any of these pages is part of the cost record. The file route
+widens by exactly one kind: an employee may open a guide and still gets 403
+on the general ledger, which was watched.
+
+- **`yours` orders the shelf and never shortens it.** The manual *inside*
+  the application is assembled from what the reader holds so it never
+  describes a screen they cannot open; a shelf is the other case. An
+  employee who cannot see that a controller's manual exists learns the shelf
+  is short — the nav-stricter-than-the-API defect in another costume.
+- **Rank and portfolio are read apart, and this is the easiest place to
+  collapse them.** `CONTROLLER` is the name of a portfolio *and* of a rank,
+  and a first draft that fell through to `"CONTROLLER" in held` for anything
+  it did not otherwise match handed Tom the auditor's manual as his own.
+- **The audience is on the server.** `foundation.GUIDES` carries it, so the
+  screen computes nothing — a second copy of "whose job is this" in the SPA
+  is a map free to drift.
+
+**The way in.** `POST /api/auth/register`, and a second tab on the sign-in
+card. Thirty-seven of the forty-three people on the 2025 payroll have no
+account and every one has to sign their own 200.430(i) certification; the
+only path to an account was an administrator typing in an address and
+handing out a password, and while that was outstanding their effort stayed
+`MANAGEMENT_RECONSTRUCTION`. An `@ybi.org` address plus `YBI_INITIAL_PASSWORD`
+opens one, and it is the same door the round already uses — the account is
+`SEED`, the person chooses their own immediately, and
+`refuse_issued_password` stops them writing anything until they do.
+
+- **It grants nothing.** EMPLOYEE, no portfolio, no rank, no record access.
+  Authority stays a grant somebody makes and is recorded when it is.
+- **The payroll register is consulted and is not a gate.** Where the
+  `surname@ybi.org` convention matches, the account is opened against the
+  `employee_key` the books already carry. Where it does not, the key is
+  derived from the address and the audit row says so — because the
+  convention is not universal (Tom is `tmetzinger@`, and has no payroll row
+  at all, being paid as `Metz Consulting, LLC.`), and a register gate would
+  have refused the controller. A key already held is a 409 rather than a
+  second account: two rows for one person is how a timesheet and a
+  certification come apart.
+- **The residual risk is written down rather than hidden.** Everybody inside
+  YBI holds the same organisational password this round, so somebody holding
+  it could register as a colleague who has not claimed their account. So
+  `provisioned_by` stays NULL — nobody provisioned it — the audit row carries
+  the address, the key and the IP, and it reaches the activity screen.
+  Auto-approved, visible, reversible.
+- **Registering signs in through the ordinary door.** It returns `login(...)`
+  rather than issuing a session of its own, so the throttle, the
+  `SIGN_IN_SHARED` row and the must-set-password gate are not special-cased.
+- **Two tabs, not one clever form.** Sign in and open an account want the
+  same two boxes and mean opposite things by the password — yours against
+  the organisation's. A form that quietly did one or the other would tell
+  somebody they had registered when they had signed in as a colleague. And
+  only the registration error says why: a sign-in error that distinguished
+  an unknown account from a wrong password enumerates the organisation,
+  while a registration refusal is the opposite case — wrong password, wrong
+  domain, or a name already held each lead somewhere different.
+
+**And Tom is `tmetzinger@ybi.org`.** The roster said `tom@ybi.org`, which
+was the naming convention rather than a lookup; his own email of 10
+September 2026 carries the four YBI addresses in its header. An account at
+the wrong address is an account nobody can sign into. If a record already
+carries `tom@ybi.org`, deactivate it — the bootstrap will not touch an
+account that exists, so it opens the correct one beside the old.
+
+**Putting somebody back on the organisation's password** is
+`scripts/password_round.py`, and it is the one act in the system that takes
+an account away from the person using it. So it is never automatic, it is
+behind `--yes`, it revokes every live session in the same transaction, and
+it writes an audit row per account. It refuses outright with no
+organisational password set, because putting six accounts on a credential
+that does not exist locks six people out.
+
 ## Reviewing it
 
 `scripts/review_system.py` drives the whole system as all six people across

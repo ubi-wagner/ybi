@@ -51,9 +51,11 @@ export default function Home({ actor }) {
   const [lib, setLib] = useState(null);
   const [inbox, setInbox] = useState(null);
   const [gaps, setGaps] = useState(null);
+  const [guides, setGuides] = useState(null);
 
   useEffect(() => {
     api.myDocuments().then(setDocs).catch(() => {});
+    api.guides().then(setGuides).catch(() => {});
     if (actor.can_read) {
       api.dashboard().then(setDash).catch(() => {});
       // Only the counts are wanted here; the rows stay on the library
@@ -154,6 +156,33 @@ export default function Home({ actor }) {
         </p>
         <Link className="btn primary" to="/documents">Send in a document</Link>
       </Card>
+
+      {/* ── How to use the thing ─────────────────────────────── */}
+      {/* Not gated. The everybody manual is written for somebody with a
+          timesheet and no portfolio, and until this shelf existed they
+          could not reach it at all: the manuals were files in the
+          repository and rows in a library an employee may not read. Quiet
+          when there is nothing on it, because a card that is three zeroes
+          at the top of the page is one people learn to scroll past. */}
+      {Boolean(guides?.total) && (
+        <Card title="Your guidebook" variant="quiet"
+              aside={`${guides.yours} for your job · ${guides.total} on the shelf`}>
+          <p className="lede" style={{ marginTop: 0 }}>
+            The manuals and the printed walk-throughs, readable in the page.
+            Yours first; everybody else's is there too, because knowing what
+            the auditor is working from is worth as much as your own chapter.
+          </p>
+          <ul className="plain-list">
+            {guides.guides.filter((g) => g.yours).slice(0, 4).map((g) => (
+              <li key={g.evidence_id}>
+                <Link to="/guidebook"><strong>{g.title}</strong></Link>
+                <span className="rowsub"> — {g.note}</span>
+              </li>
+            ))}
+          </ul>
+          <Link className="btn" to="/guidebook">Open the guidebook</Link>
+        </Card>
+      )}
 
       <Manual actor={actor} />
 
@@ -309,7 +338,20 @@ const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
 
 function MyWork({ actor }) {
   const [d, setD] = useState(null);
-  useEffect(() => { api.myWorklist().then(setD).catch(() => {}); }, []);
+  /* `require_own_work` admits somebody who holds a portfolio *or* reads the
+     record, and nobody else — so for an employee with a timesheet and
+     nothing else this call is a 403 every time the page loads, which rings
+     the failure bell about a card they were never going to see. It never
+     showed while every account in the record held a portfolio or a rank;
+     self-registration makes that class of person real, and a bell that
+     rings on every page load for a whole class of user is the "green all
+     day" defect inverted — they learn to ignore it before the day it
+     matters. Never offer something that will answer 403. */
+  const mine = Boolean((actor.portfolios || []).length) || actor.can_read;
+  useEffect(() => {
+    if (mine) api.myWorklist().then(setD).catch(() => {});
+  }, [mine]);
+  if (!mine) return null;
   if (!d || (!d.groups.length && !d.certification_chase.length)) return null;
 
   const everything = (actor.portfolios || []).includes("CONTROLLER");

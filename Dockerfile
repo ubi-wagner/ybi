@@ -19,6 +19,12 @@ COPY app/ ./app/
 # against the private database URL, rather than requiring someone to open the
 # database to the internet and run them from a laptop.
 COPY scripts/ ./scripts/
+# The documents ship with the image for the same reason the scripts do. They
+# did not, and a rebuilt database came back with an empty document register
+# and no way to refill it from inside the deployment: `seed_documents.py` was
+# in the container and the eighteen documents it files were not. The guides
+# come with them, so a link in the run sheet resolves where the run sheet is.
+COPY docs/ ./docs/
 COPY --from=web /web/dist ./web/dist
 # Evidence lands here. On Railway this path must be a mounted volume — a
 # container filesystem is discarded on every deploy, and an audit record whose

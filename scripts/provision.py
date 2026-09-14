@@ -51,41 +51,25 @@ def one_time_password() -> str:
                     + ["".join(secrets.choice("23456789") for _ in range(5))])
 
 
-ALL = ["CONTROLLER", "INVENTORY", "PROJECT", "FACILITIES", "OFFICE"]
+#: The roster, the reasons and the NDA grant live in `app/foundation.py`,
+#: which is what the deployment itself reads on every boot. This script and
+#: that module are two doors to the same room — the ladder walked by a person
+#: against a running API, and the boot opening whatever is missing on the
+#: organisation's password — and two copies of the six people is the defect
+#: that module is named after.
+#:
+#: The shapes below are what this script has always used: tuples, not the
+#: `Person` records, because the rest of the file reads them positionally.
+from app.foundation import (ALL_PORTFOLIOS as ALL, BARB_REASON, NDA_REASON,
+                            ORG_ADMIN as _ORG_ADMIN, STAFF as _STAFF,
+                            SYSTEM_ADMIN as _SYSTEM_ADMIN)
 
-#: Everybody whose email address is actually known. The payroll register has
-#: forty-three people in it but carries surnames only, and an account at a
-#: guessed address is an account nobody can sign into — so the rest are
-#: surfaced as a gap on the administrator's screen instead of invented here.
-STAFF = [
-    # email, name, role, employee_key, portfolios, why
-    ("tom@ybi.org", "Tom Metzinger", "CONTROLLER", None, ["CONTROLLER"],
-     "Controller for the 2025 engagement: classification, the seal, and the "
-     "rate that follows from it."),
-    ("sgaffney@ybi.org", "Stephanie Gaffney", "CONTROLLER", "GAFFNEY", ALL,
-     "Project manager. Holding every portfolio for the 2025 push so the "
-     "classification backlog is not gated on one person; the intent is "
-     "PROJECT once the year is closed."),
-    ("hruby@ybi.org", "Heidi Ruby", "CONTROLLER", "RUBY", ALL,
-     "Facilities and inventory manager. Holding every portfolio for the 2025 "
-     "push; the intent is FACILITIES and INVENTORY once the year is closed."),
-    ("auditor@ybi.org", "Engagement Auditor", "AUDITOR", None, [],
-     ""),
-]
+STAFF = [(p.email, p.display_name, p.role, p.employee_key,
+          list(p.portfolios), p.why) for p in _STAFF]
 
-ORG_ADMIN = ("bewing@ybi.org", "Barb Ewing", "EWING")
-SYSTEM_ADMIN = ("eric.c.wagner@gmail.com", "Eric Wagner")
-
-NDA_REASON = (
-    "Engagement lead for the 2025 cost allocation initiative, under a "
-    "non-disclosure agreement with YBI. Reads the record at the same level "
-    "as the organisation's administrator; holds no portfolio and makes no "
-    "cost judgments.")
-
-BARB_REASON = (
-    "Chief executive and the organisation's administrator: sets up the "
-    "finance accounts and hands out access. Deliberately holds no portfolio "
-    "— provisioning people and judging cost are different jobs.")
+ORG_ADMIN = (_ORG_ADMIN.email, _ORG_ADMIN.display_name,
+             _ORG_ADMIN.employee_key)
+SYSTEM_ADMIN = (_SYSTEM_ADMIN.email, _SYSTEM_ADMIN.display_name)
 
 
 def sign_in(c: httpx.Client, email: str, password: str) -> dict:
@@ -190,9 +174,31 @@ def main() -> int:
             barb_pw = os.environ.get("YBI_ORG_ADMIN_PASSWORD", "")
             barb_in_use = bool(barb_pw)
             if not barb_pw:
+                # The account may have been opened by the deployment itself.
+                # `app/foundation.py` opens the six on the organisation's
+                # password when the record comes back without them, and the
+                # two doors have to compose rather than collide: this script
+                # ran, reset the root account and then stopped here, on a
+                # deployment where the answer was a variable already set.
+                #
+                # Only on SEED. An account on ADMIN or SELF holds a password
+                # somebody chose for one named person, and signing in as
+                # them with the organisation's value is precisely what
+                # `check_credential` refuses.
+                from app.auth import shared_initial_password
+                from app.db import one, open_pool
+                open_pool()
+                row = one("SELECT password_set_by::text AS o FROM actor "
+                          "WHERE email=%s", (email,))
+                if row and row["o"] == "SEED" and shared_initial_password():
+                    barb_pw = shared_initial_password()
+                    print(f"  on the organisation's password  {email}")
+            if not barb_pw:
                 raise SystemExit(
                     f"{email} already exists. Set YBI_ORG_ADMIN_PASSWORD to "
-                    f"their current password to continue, or reset it first.")
+                    f"their current password to continue, or set "
+                    f"YBI_INITIAL_PASSWORD if the deployment opened the "
+                    f"account, or reset it out of band.")
         elif r.status_code != 201:
             raise SystemExit(f"could not provision {email}: {r.text[:300]}")
         else:

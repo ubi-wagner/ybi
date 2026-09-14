@@ -103,6 +103,7 @@ Legend: ⛔ the service will not start without it · ⚙️ Railway injects it �
 | `YBI_PERIOD` | `2025`. The period every screen defaults to | ○ (defaults to 2025) |
 | `YBI_SESSION_HOURS` | How long a session lasts before signing in again. A plain expiry, not an idle timer | ○ (defaults to 12) |
 | `YBI_STORAGE_DIR` | `/srv/storage` — must equal the volume mount path | ⛔ once a volume exists |
+| `YBI_INITIAL_PASSWORD` | The organisation's first-login password, at least 12 characters. Two things depend on it. Login accepts it **in addition** for any account that has not yet set its own, and the account stops accepting it the moment that person chooses theirs — so the door closes person by person as the round completes. And it is the gate on the boot-time bootstrap below: with it set, a deployment that comes back without its accounts opens them itself; without it, the boot stands down and `scripts/provision.py` is the door. Clearing it closes the door immediately, for everybody still on it | ○ (no shared password without it) |
 | `YBI_SEED_PASSWORD` | Not needed. `scripts/provision.py` generates a password per person and prints them once; the drives in step 7 take theirs on the command line. Leave it unset | ○ (not used) |
 | `S3_BUCKET` · `S3_ENDPOINT` · `S3_ACCESS_KEY` · `S3_SECRET_KEY` | Object-store offload is configured for but **not implemented**: `app/routers/evidence.py` writes to the local path regardless of these. Setting them does nothing | 💤 |
 | `PORT` · `RAILWAY_ENVIRONMENT_NAME` · `RAILWAY_GIT_COMMIT_SHA` | injected | ⚙️ |
@@ -138,6 +139,46 @@ Two rules that hold forever after that:
   filename, not because of when it was committed.
 
 ## Step 5 — Provision the people
+
+**A deployment that comes back without its accounts now opens them itself.**
+That is `app/foundation.py`, called from the boot beside `run_migrations()`.
+A Postgres service was rebuilt, every table returned on the first boot, and
+nobody could sign in — because the six accounts were made by the script
+below, which is a thing somebody runs from a laptop. Anything that only
+exists because a person remembered to run it does not survive a recovery.
+
+So the boot opens whatever is missing — the six accounts on
+`YBI_INITIAL_PASSWORD`, the eighteen foundational documents, the manuals and
+the generated PDFs — and touches nothing that is already there. It never
+overwrites an account, never writes a password into a row, and restores
+nothing that is a judgment: the ledger, the classifications, the seal and
+the rate are people's work and come from `scripts/seed.sh` and from people.
+Without `YBI_INITIAL_PASSWORD` set it does nothing at all, because opening
+accounts nobody can sign into is not a recovery.
+
+**And a person can open their own.** The sign-in card has a second tab: an
+`@ybi.org` address plus `YBI_INITIAL_PASSWORD` opens an `EMPLOYEE` account
+holding no portfolio and no access to the cost record — a timesheet, a
+certification and an inbox, which is what the thirty-seven people on the
+2025 payroll without accounts actually need. Every registration is written
+to `audit_log` with the address, the payroll key it matched and the address
+it came from, and shows on the activity screen; deactivate any you did not
+expect. Everybody inside YBI holds the same password this round, so somebody
+holding it could register as a colleague who has not claimed their account —
+which is why the act is recorded rather than silent.
+
+**To reopen the round** — put people back on the organisation's password and
+end their sessions — `scripts/password_round.py`. It lists who is on what
+with no arguments, and changes nothing without `--yes`.
+
+```bash
+railway run --service ybi-cost -- python scripts/password_round.py --list
+railway run --service ybi-cost -- python scripts/password_round.py --all --yes
+```
+
+The two doors compose. Running the script below against a record the boot
+opened is fine: it finds each account, signs in as the organisation's
+administrator on that same password, and walks the rest of the ladder.
 
 The first system administrator cannot be created through the API, because
 creating an account requires an account. That one is written directly, which
