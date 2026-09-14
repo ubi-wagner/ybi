@@ -1,0 +1,220 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tom — today, in order</title>
+<style>
+  :root{--ink:#16211f;--graphite:#4a5754;--muted:#74827e;--rule:#d6ddda;
+        --paper:#f4f6f5;--surface:#fff;--accent:#0e6e66;--accent-wash:#e4efed;
+        --warn:#a9700c;--warn-wash:#f8f0dd;--fail:#a32e22;--fail-wash:#f8e7e4;
+        --pass:#2f6b4e;--pass-wash:#e6efe9;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:16px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 80px}
+  h1{font:600 30px/1.2 Georgia,"Times New Roman",serif;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 28px;font-size:15px}
+  h2{font:600 20px/1.3 Georgia,serif;margin:36px 0 10px;
+     padding-top:18px;border-top:1px solid var(--rule)}
+  h3{font:600 16px/1.3 Georgia,serif;margin:22px 0 6px}
+  p{margin:0 0 12px}
+  .step{background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+        padding:18px 20px;margin:0 0 14px}
+  .step h3{margin-top:0;display:flex;gap:10px;align-items:baseline}
+  .n{display:inline-flex;align-items:center;justify-content:center;
+     min-width:26px;height:26px;border-radius:13px;background:var(--accent);
+     color:#fff;font:600 13px/1 ui-sans-serif;flex:none}
+  .where{display:inline-block;background:var(--accent-wash);color:var(--accent);
+         border-radius:4px;padding:1px 7px;font:600 13px/1.5 ui-monospace,monospace}
+  kbd{background:#eef1ef;border:1px solid var(--rule);border-bottom-width:2px;
+      border-radius:4px;padding:1px 6px;font:500 13px/1.5 ui-sans-serif}
+  .see{margin:10px 0 0;padding:10px 12px;background:var(--pass-wash);
+       border-left:3px solid var(--pass);border-radius:0 4px 4px 0;font-size:14.5px}
+  .else{margin:8px 0 0;padding:10px 12px;background:var(--warn-wash);
+        border-left:3px solid var(--warn);border-radius:0 4px 4px 0;font-size:14.5px}
+  .stop{background:var(--fail-wash);border:1px solid var(--fail);
+        border-radius:8px;padding:18px 20px;margin:0 0 14px}
+  .stop h3{margin-top:0;color:var(--fail)}
+  .note{color:var(--graphite);font-size:14.5px}
+  .lead{background:var(--surface);border:1px solid var(--rule);
+        border-left:4px solid var(--accent);border-radius:0 8px 8px 0;
+        padding:16px 20px;margin:0 0 24px}
+  ul{margin:0 0 12px;padding-left:22px} li{margin:0 0 6px}
+  .fork{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin:14px 0 0}
+  @media(max-width:640px){.fork{grid-template-columns:1fr}}
+  .fork>div{background:var(--surface);border:1px solid var(--rule);
+            border-radius:8px;padding:14px 16px;font-size:14.5px}
+  .fork b:first-child{display:block;margin-bottom:4px}
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);
+         color:var(--muted);font-size:13.5px}
+  @media print{body{background:#fff}.wrap{padding:0}.step,.fork>div{break-inside:avoid}}
+</style>
+<div class="wrap">
+
+<h1>Today, in order</h1>
+<p class="sub">For Tom Metzinger · the 2025 cost allocation · one pass, about twenty minutes</p>
+
+<div class="lead">
+  <p style="margin:0"><b>Read this first.</b> The year is already classified and
+  the rate is already computed. So today is <b>checking that it still holds</b>,
+  not building it. Every one of the five steps below is something you
+  <b>look at</b> &mdash; if everything holds you will not write a single thing
+  today. The only part of this page that changes the record is the section at
+  the bottom, and only if step 1 or step 2 turns something up.</p>
+</div>
+
+<h2>Before you start — which record are you looking at?</h2>
+
+<p>The application was redeployed. Open <span class="where">Classify</span> in the
+top nav and look at the coverage figure at the top of the screen. It tells you
+which of two situations you are in, and they need completely different things.</p>
+
+<div class="fork">
+  <div><b>It says 100% · 757 of 757</b>
+    The year is loaded and judged. <b>Carry on to step 1.</b></div>
+  <div><b>It is empty, or near 0%</b>
+    The ledger was not reloaded after the redeploy. There is nothing here for you
+    to check or seal yet. <b>Stop and tell Eric</b> — it is a ten-minute job at his
+    end, not yours.</div>
+</div>
+
+<h2>The five steps</h2>
+
+<div class="step">
+  <h3><span class="n">1</span> Do the books still agree with themselves?</h3>
+  <p><span class="where">Reconcile</span> · Schedule A-1</p>
+  <p>Eleven points where the general ledger, the profit and loss, the balance
+  sheet and the payroll register have to say the same thing.</p>
+  <div class="see"><b>You should see</b> eleven ticks — all eleven tie.</div>
+  <div class="else"><b>If any is open</b> stop here. A rate over books that do not
+  agree is a rate over the wrong numbers, and the system will refuse to compute
+  one anyway. Close the difference by <em>naming</em> the lines behind it, never by
+  netting it.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">2</span> Do the judgments still stand?</h3>
+  <p><span class="where">Classify</span></p>
+  <p><b>This is the real work, and it is the only step that needs your
+  judgment.</b> 757 groups were classified and recorded under your name, each
+  with a written rationale. What has <em>not</em> happened is a person reading them
+  and saying they are right.</p>
+  <p class="note">You do not have to read all 757. They are ordered by money —
+  the top twenty or thirty carry most of it. If they look right, the rest
+  follow the same rules.</p>
+  <div class="see"><b>If they all stand</b> nothing to do. Skip to step 4.</div>
+  <div class="else"><b>If any is wrong</b> go to “If something has to change”
+  at the bottom. Do not change it here first — the set is sealed, and the
+  system will refuse you.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">3</span> The seal</h3>
+  <p><span class="where">Rates</span></p>
+  <p>The seal is the assertion that the classifications were fixed <em>before</em>
+  any rate existed — which is what lets you tell a reviewer the rate was not
+  reverse-engineered. It is the one thing in this system that only means
+  something because a person did it.</p>
+  <div class="see"><b>You should see</b> it already sealed, in your name, over 757
+  judgments — and the buttons offered are <kbd>Unseal…</kbd> and
+  <kbd>Compute the rate</kbd>. <b>Nothing to do.</b></div>
+  <div class="else"><b>If you see a <kbd>Seal decision set</kbd> button</b> the set
+  is open. Finish step 2 first, then press it. Do not press it on a queue you
+  have not read — that is the whole thing the seal is for.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">4</span> The rate</h3>
+  <p><span class="where">Rates</span> · then <span class="where">Review → Rate</span></p>
+  <p>The rate is already computed. Computing is arithmetic; the judgment was
+  sealing, which is already done. <b>You do not need to press anything here
+  today.</b></p>
+  <div class="see"><b>You should see</b> four rates: FRINGE, OVERHEAD, G&amp;A and
+  INDIRECT_COMBINED — and the basis recorded as <b>POOL</b>.</div>
+  <div class="else"><b>If you ever do recompute</b>, the dropdown labelled
+  <em>Administrative labour</em> defaults to <b>“a cost objective”</b> and that is
+  <b>not</b> what this engagement settled on. Change it to
+  <b>“in the G&amp;A pool (it is the indirect)”</b> before pressing
+  <kbd>Compute the rate</kbd>. It is worth about nine points of combined rate on
+  exactly the same judgments.</div>
+</div>
+
+<div class="step">
+  <h3><span class="n">5</span> Does the rate tie to what is underneath it?</h3>
+  <p><span class="where">Review → Rate</span></p>
+  <p>Nothing on this screen is calculated for display — every figure is read
+  from the row it was recorded in. That is what makes it a workpaper.</p>
+  <div class="see"><b>You should see</b> four pools at variance 0.00 and four
+  anchor checks tying.</div>
+  <div class="else"><b>Read the line above the figures too.</b> It should say that
+  no 200.465 facilities carve-out is in this rate, because no building has
+  measured square footage yet. That means the rate reads <em>high</em> — which is
+  the honest direction to be wrong in, but it is the single largest open item
+  and it is Kelly's square footage that closes it.</div>
+</div>
+
+<h2>Certification — and the one thing you cannot do</h2>
+
+<div class="stop">
+  <h3>You cannot certify, and that is correct</h3>
+  <p><b>You have no timesheet and no “My effort” tab</b>, because you are not on
+  the 2025 payroll register — you are paid as Metz Consulting, LLC. There is no
+  distribution under your name to sign, and the system will tell you so if you
+  reach the screen by URL.</p>
+  <p><b>And you cannot sign for anybody else.</b> 2 CFR 200.430(i) wants the
+  record of the person whose effort it was. A controller signing forty-three
+  certifications would produce forty-three signatures worth nothing.</p>
+</div>
+
+<p><b>So what is actually outstanding is this:</b> <b>0 of 43 people</b> have
+signed for their own effort. The whole $1.8m labour distribution is the
+controller's reconstruction, which nobody has yet read and affirmed.</p>
+
+<p>That does not change a single figure in the rate. It changes whether the
+rate is <em>usable</em>, because 200.430(i) goes to the allowability of the entire
+direct labour charge. It is the largest thing between here and a defensible
+file, and it is a chasing job, not a clicking job.</p>
+
+<p>Each of the forty-three signs their own by opening
+<span class="where">My effort</span>, reading the statement, ticking
+<em>“I have read the statement above”</em> and pressing
+<kbd>Sign certification</kbd>. They can correct the reconstruction first if it
+is wrong. <b>What you can do today is ask them</b> — and the first thing they
+need is an account, which most of them do not have yet.</p>
+
+<h2>If something has to change</h2>
+
+<p>Only if step 1 or step 2 turned something up. In this order, and not out of it:</p>
+<ul>
+  <li><b>Unseal</b> — <span class="where">Rates</span> → <kbd>Unseal…</kbd>, with a
+      written reason. This supersedes every rate computed against that seal.
+      That is expected, not a problem.</li>
+  <li><b>Correct the judgment</b> — <span class="where">Classify</span>. Reclassifying
+      supersedes rather than edits; the old judgment stays on the record with
+      your reason beside it.</li>
+  <li><b>Re-seal</b> over the corrected set.</li>
+  <li><b>Recompute</b> — and choose <b>“in the G&amp;A pool”</b> again (step 4).</li>
+  <li><b>Re-check</b> step 5.</li>
+  <li><b>Tell whoever was quoted the old figure.</b> The system cannot do this one.</li>
+</ul>
+<p class="note"><em>Correct by superseding, never by editing.</em> Nothing you do
+here removes anything from the record.</p>
+
+<h2>Five things only you can do</h2>
+<p>Everything else in this system is automated on purpose. These are not,
+because a machine doing them would destroy exactly what they are worth:</p>
+<ul>
+  <li><b>Sealing</b> — it is the assertion that the rate was not reverse-engineered.</li>
+  <li><b>Saying a classification is right</b> — step 2.</li>
+  <li><b>Naming a reconciling difference</b> — a difference is closed by saying
+      what it consists of, never by netting it away.</li>
+  <li><b>Anything that goes to a sponsor.</b> Every restatement in the system is
+      marked PROPOSED and stays that way until NCDMM says otherwise in writing.</li>
+  <li><b>Asking forty-three people to sign.</b></li>
+</ul>
+
+<footer>
+  If a screen says something different from what this page says it will say,
+  trust the screen and tell Eric — this page was written against the record as
+  it stood, and the screen is reading it live.
+</footer>
+
+</div>
