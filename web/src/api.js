@@ -437,6 +437,13 @@ export const api = {
       body: JSON.stringify({ email, password, display_name }) }),
 
   guides: () => req("/documents/guides"),
+  /* Served out of the image rather than the document register: a manual is
+     not evidence, and the 2025 audit's register carries foundation documents
+     only. */
+  guideViewUrl: (name) =>
+    `/api/documents/guides/${encodeURIComponent(name)}?inline=1`,
+  guideDownloadUrl: (name) =>
+    `/api/documents/guides/${encodeURIComponent(name)}`,
 
   documentViewUrl: (id) =>
     `/api/documents/${encodeURIComponent(id)}/file?inline=1`,

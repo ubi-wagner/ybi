@@ -119,7 +119,7 @@ def test_it_does_nothing_without_the_organisation_password(monkeypatch):
 
     monkeypatch.setattr(f, "shared_initial_password", lambda: "")
     called: list[str] = []
-    for name in ("ensure_accounts", "ensure_documents", "ensure_guides"):
+    for name in ("ensure_accounts", "ensure_documents"):
         monkeypatch.setattr(f, name, lambda n=name: called.append(n) or [])
     assert f.restore() == {}
     assert not called, f"the bootstrap acted with no password set: {called}"
@@ -164,13 +164,51 @@ def test_every_guide_is_in_the_repository():
     assert not missing, f"named but not in docs/: {missing}"
 
 
-def test_the_guides_are_filed_as_generated():
-    """`GENERATED` is the channel `038` added because every other value means
-    the document came from outside. A manual rendered from this repository is
-    exactly what it is for — and it is what keeps them out of the inbox."""
-    ensure = re.search(r"def ensure_guides[\s\S]*?\n\n\ndef ", SRC).group(0)
-    assert '"GENERATED"' in ensure
-    assert '"UPLOAD"' not in ensure
+def test_a_guide_is_never_filed_as_a_document():
+    """The register the 2025 audit rests on carries foundation documents and
+    nothing else.
+
+    For one morning it did not: `ensure_guides()` put eight manuals and PDFs
+    into `evidence`, so the library listed the controller's manual beside the
+    subrecipient agreements, the audited statements, the returns and the
+    QuickBooks exports. A reviewer opening that register should find the
+    lease and nothing that is not of that kind.
+
+    They are served out of the image instead — no row, no SHA, no period, no
+    library, no inbox.
+    """
+    import app.foundation as f
+
+    assert not hasattr(f, "ensure_guides"), (
+        "the boot files guides as documents again")
+    # The *code*, not the comment that explains the absence — a first draft
+    # searched the text and failed on a sentence saying guides are absent,
+    # which is the prose-not-code mistake the handler helper already fixed.
+    node = next(n for n in ast.walk(ast.parse(FOUNDATION.read_text()))
+                if isinstance(n, ast.FunctionDef) and n.name == "restore")
+    assert "guide" not in ast.unparse(node).lower(), (
+        "restore() touches guides; they are not part of the record it brings "
+        "back")
+
+
+def test_the_shelf_is_read_from_the_image_and_not_from_the_register():
+    docs = (ROOT / "app" / "routers" / "documents.py").read_text()
+    shelf = docs[docs.index('@router.get("/guides")'):
+                 docs.index('@router.get("/guides/{name}")')]
+    assert "FROM evidence" not in shelf and "v_document_library" not in shelf, (
+        "the guidebook reads the document register again")
+    assert "foundation.GUIDES" in shelf
+
+
+def test_a_guide_cannot_name_a_path_of_its_own():
+    """`name` is checked against the definition rather than joined to a path,
+    so there is no traversal to guard against."""
+    from app.foundation import GUIDES_BY_NAME, guide_path
+
+    assert guide_path("../../etc/passwd") is None
+    assert guide_path("nothing-by-this-name.md") is None
+    for name in GUIDES_BY_NAME:
+        assert guide_path(name) is not None, name
 
 
 def test_the_inbox_excludes_what_this_system_made():

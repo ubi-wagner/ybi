@@ -18,6 +18,7 @@ period's record it ends up supporting is decided when somebody attaches it.
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -36,6 +37,8 @@ from app.domain.evidence_match import Document as MatchDocument
 from app.domain.evidence_match import Target as MatchTarget
 from app.domain.evidence_match import propose as match_propose
 from app.settings import settings
+
+log = logging.getLogger("ybi.documents")
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -199,29 +202,25 @@ def mine(actor: Actor = Depends(current_actor)) -> dict:
 def guides(actor: Actor = Depends(current_actor)) -> dict:
     """The manuals and the generated PDFs, for anybody signed in.
 
+    **Read from the image, not from `evidence`.** They were filed as
+    documents for one morning, which put eight manuals in the register the
+    2025 audit rests on — beside the agreements, the statements, the returns
+    and the QuickBooks exports. That register is the paper the engagement
+    stands on and a manual is not of that kind, so nothing here touches the
+    database: no row, no SHA, no period, no library, no inbox.
+
     Gated on `current_actor` and not on `require_reader`, which would be
     wrong in the direction that costs the most: the everybody manual is
     written for somebody with a timesheet and no portfolio, and reading the
-    cost record is a grant they do not have. There is nothing on any of
-    these pages that is not about how to use the software.
+    cost record is a grant they do not have. There is nothing on any of these
+    pages that is not about how to use the software.
 
-    **`yours` orders the shelf; it never shortens it.** The manual inside
-    the application is assembled from what the reader holds so that it never
+    **`yours` orders the shelf; it never shortens it.** The manual inside the
+    application is assembled from what the reader holds so that it never
     describes a screen they cannot open, and a shelf is the other case — an
     employee who cannot see that an auditor's manual exists learns the shelf
-    is short, and that is the same defect as a nav stricter than the API.
-
-    A guide on file that the definition does not name still comes back,
-    under its own filename. Something filed it as a guide; a screen that
-    silently dropped it would be a register reporting a gap it caused.
+    is short, which is the nav-stricter-than-the-API defect in another shape.
     """
-    rows = query("""SELECT evidence_id, filename, note, mime_type, byte_size,
-                           received_at, inline_safe
-                      FROM v_document_library
-                     WHERE kind = %s
-                     ORDER BY received_at""", (foundation.GUIDE_KIND,))
-    order = list(foundation.GUIDES_BY_FILENAME)
-
     def mine(audience: str) -> bool:
         """Whose job this describes, read the way the nav reads a gate.
 
@@ -242,24 +241,54 @@ def guides(actor: Actor = Depends(current_actor)) -> dict:
         return audience == actor.role
 
     out = []
-    for row in rows:
-        known = foundation.GUIDES_BY_FILENAME.get(row["filename"] or "")
-        out.append({**row,
-                    "title": known.title if known else (row["filename"] or
-                                                        row["evidence_id"]),
-                    "note": known.note if known else row["note"],
-                    "audience": known.audience if known else "everybody",
-                    "yours": mine(known.audience) if known else True,
-                    "rank": order.index(row["filename"]) if known else len(order)})
-    out.sort(key=lambda g: (not g["yours"], g["rank"]))
-
-    # Deliberately not recorded. The library records that somebody opened
-    # the cost record, which is a thing an auditor asks about; a shelf of
-    # manuals is not, and a row every time anybody lands on it would bury
-    # the ones that matter. Opening a guide still records EVIDENCE_VIEW or
-    # EVIDENCE_DOWNLOAD on the file route, which is the act worth having.
+    for guide in foundation.GUIDES:
+        path = foundation.GUIDE_DIR / guide.path
+        if not path.exists():
+            # Named and not in the image. Said rather than skipped: a shelf
+            # that quietly drops a title reports a gap it caused itself.
+            log.warning("guide not in the image: %s", guide.path)
+            continue
+        name = Path(guide.path).name
+        out.append({"name": name, "title": guide.title, "note": guide.note,
+                    "audience": guide.audience, "yours": mine(guide.audience),
+                    "byte_size": path.stat().st_size,
+                    "mime_type": storage.sniff_type(path.read_bytes()[:512], name),
+                    "inline_safe": storage.sniff_type(
+                        path.read_bytes()[:512], name) in INLINE_SAFE})
+    out.sort(key=lambda g: not g["yours"])
     return {"guides": out, "total": len(out),
             "yours": sum(1 for g in out if g["yours"])}
+
+
+@router.get("/guides/{name}")
+def guide_file(name: str, inline: bool = False,
+               actor: Actor = Depends(current_actor)):
+    """One guide, out of the image.
+
+    `name` is checked against `foundation.GUIDES_BY_NAME` rather than joined
+    to anything or turned into a path — a caller cannot ask for a file this
+    module does not name, so there is no traversal to guard against.
+
+    The two locks the library uses travel with it: the type is read from the
+    bytes, anything off `INLINE_SAFE` downloads however it is asked for, and
+    the response carries `nosniff` and a sandboxing Content-Security-Policy.
+    """
+    path = foundation.guide_path(name)
+    if not path:
+        raise HTTPException(404, "No such guide.")
+    declared = storage.sniff_type(path.read_bytes()[:512], name)
+    shown = inline and declared in INLINE_SAFE
+    response = FileResponse(path,
+                            media_type=declared if shown else "application/octet-stream",
+                            filename=None if shown else name)
+    if shown:
+        response.headers["Content-Disposition"] = (
+            f'inline; filename="{_header_safe(name)}"')
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; "
+        "object-src 'none'; sandbox")
+    return response
 
 
 #: The types a browser renders without running anything the uploader wrote.
@@ -292,19 +321,15 @@ def download(evidence_id: str, inline: bool = False,
     unrecognised: an uploader who mislabels a file gets a download, not a
     decision made in their favour.
     """
-    row = one("""SELECT uri, mime_type, uploaded_by, kind,
+    row = one("""SELECT uri, mime_type, uploaded_by,
                         coalesce(filename, '') AS filename
                    FROM evidence WHERE evidence_id = %s""", (evidence_id,))
     if not row:
         raise HTTPException(404, "No such document.")
-    # A guide is the third case, and it is a narrow one. The manuals and the
-    # generated PDFs describe how to use this system; an employee with a
-    # timesheet and no portfolio is exactly who the everybody manual is
-    # written for, and `can_read` is a grant over the *cost record*, which a
-    # manual is not part of. Nothing else widens: the rule that an employee's
-    # receipt is not public to the organisation is untouched.
-    mine = str(row["uploaded_by"]) == actor.actor_id
-    if not mine and not actor.can_read and row["kind"] != foundation.GUIDE_KIND:
+    # No third case. A guide is not a document and is served by
+    # `/documents/guides/{name}` out of the image, so this gate stays exactly
+    # what it was: your own, or anybody's if you may read the cost record.
+    if str(row["uploaded_by"]) != actor.actor_id and not actor.can_read:
         raise HTTPException(403, "That is not your document.")
     path = Path(row["uri"])
     if not path.exists():

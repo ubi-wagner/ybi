@@ -91,27 +91,29 @@ def test_the_nav_asks_for_what_the_api_asks_for():
 def test_yours_orders_the_shelf_and_never_shortens_it():
     """An employee who cannot see that a controller's manual exists learns
     the shelf is short, which is the nav-stricter-than-the-API defect in
-    another costume. The handler must not filter on `yours`."""
+    another costume. `yours` sorts; it never filters.
+
+    Structural rather than textual, because the rule is about control flow:
+    every guide in the definition that is present in the image is appended,
+    unconditionally. A first draft asserted a regex that matched the SELECT's
+    own WHERE and so could only ever fail.
+    """
     body = handler(DOCS, "guides")
     assert "out.sort(" in body, "the shelf is not ordered at all"
 
-    # Structural rather than textual, because the rule is about control
-    # flow: every row read is appended, unconditionally. A first draft
-    # asserted `not re.search(r"WHERE[\s\S]*yours")`, which matched the
-    # SELECT's own WHERE and the `yours` key in the return and so could only
-    # ever fail — an assertion that argues against working code.
     node = next(n for n in ast.walk(ast.parse(DOCS))
                 if isinstance(n, ast.FunctionDef) and n.name == "guides")
-    loops = [n for n in ast.walk(node) if isinstance(n, ast.For)]
-    assert len(loops) == 1, "the shelf is built by more than one loop"
-    loop = loops[0]
-    assert not [n for n in ast.walk(loop) if isinstance(n, ast.Continue)], (
-        "the guides loop skips a row")
+    loop = next(n for n in ast.walk(node) if isinstance(n, ast.For))
+    # One `continue`, and it is the guide that is not in the image at all —
+    # which is a missing file, not a shelf hiding somebody else's chapter.
+    skips = [n for n in ast.walk(loop) if isinstance(n, ast.Continue)]
+    assert len(skips) <= 1, "the guides loop skips on more than one condition"
+    assert "yours" not in ast.unparse(loop).split("out.append")[0], (
+        "the loop decides whether to include a guide from `yours`")
     appends = [st for st in loop.body
                if isinstance(st, ast.Expr) and isinstance(st.value, ast.Call)
                and getattr(st.value.func, "attr", "") == "append"]
-    assert appends, ("nothing is appended at the top level of the loop, so "
-                     "a guide reaches the shelf conditionally")
+    assert appends, "a guide reaches the shelf conditionally"
 
 
 def test_rank_and_portfolio_are_read_apart():
@@ -127,13 +129,23 @@ def test_rank_and_portfolio_are_read_apart():
     assert "audience == actor.role" in body
 
 
-def test_a_guide_is_readable_by_anybody_signed_in_and_nothing_else_is():
-    """The widening is one kind wide. An employee's receipt is not public to
-    the organisation because a manual is."""
+def test_the_document_gate_has_no_special_case_for_guides():
+    """A guide is not a document, so the gate on documents is exactly what it
+    was: your own, or anybody's if you may read the cost record. The widening
+    that briefly existed here is gone with the rows that needed it."""
     body = handler(DOCS, "download")
-    assert "foundation.GUIDE_KIND" in body
+    assert "GUIDE" not in body.upper(), (
+        "the document gate special-cases guides again")
     assert "not actor.can_read" in body, (
         "the download gate no longer consults can_read at all")
+
+
+def test_a_guide_is_readable_by_anybody_signed_in():
+    """The everybody manual is written for somebody with a timesheet and no
+    portfolio, and reading the cost record is a grant they do not have."""
+    body = handler(DOCS, "guide_file")
+    assert "Depends(current_actor)" in body
+    assert "require_reader" not in body
 
 
 # ── The way in ───────────────────────────────────────────────────────

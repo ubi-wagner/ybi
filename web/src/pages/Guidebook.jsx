@@ -61,7 +61,7 @@ function GuideCard({ guide, onOpen }) {
       <p className="guide-note">{guide.note}</p>
       <div className="guide-foot">
         <span className="rowsub">
-          {guide.filename}{size(guide.byte_size) ? ` · ${size(guide.byte_size)}` : ""}
+          {guide.name}{size(guide.byte_size) ? ` · ${size(guide.byte_size)}` : ""}
         </span>
         <span className="guide-actions">
           {openable && (
@@ -72,8 +72,8 @@ function GuideCard({ guide, onOpen }) {
               anything the browser will not render in the page it is the only
               honest offer rather than a button that does nothing. */}
           <a className="btn quiet"
-             href={api.documentDownloadUrl(guide.evidence_id)}
-             download={guide.filename}>
+             href={api.guideDownloadUrl(guide.name)}
+             download={guide.name}>
             {openable ? "Download" : "Download to read"}
           </a>
         </span>
@@ -127,7 +127,7 @@ export default function Guidebook() {
           <h2 className="section-head">For your job</h2>
           <div className="guide-grid">
             {yours.map((g) => (
-              <GuideCard key={g.evidence_id} guide={g} onOpen={setOpen} />
+              <GuideCard key={g.name} guide={g} onOpen={setOpen} />
             ))}
           </div>
         </>
@@ -142,7 +142,7 @@ export default function Guidebook() {
           </p>
           <div className="guide-grid">
             {rest.map((g) => (
-              <GuideCard key={g.evidence_id} guide={g} onOpen={setOpen} />
+              <GuideCard key={g.name} guide={g} onOpen={setOpen} />
             ))}
           </div>
         </>
@@ -150,11 +150,11 @@ export default function Guidebook() {
 
       <Drawer open={Boolean(open)} wide
               title={open?.title || ""}
-              subtitle={open?.filename || ""}
+              subtitle={open?.name || ""}
               onClose={() => setOpen(null)}
               footer={open && (
-                <a className="btn" href={api.documentDownloadUrl(open.evidence_id)}
-                   download={open.filename}>Download</a>
+                <a className="btn" href={api.guideDownloadUrl(open.name)}
+                   download={open.name}>Download</a>
               )}>
         {open && (
           /* No `sandbox` attribute, and it must not grow one. Chromium
@@ -165,7 +165,7 @@ export default function Guidebook() {
              still renders a PDF under — and which travels with the file
              when it is opened outside this panel. */
           <iframe className="doc-frame" title={open.title}
-                  src={api.documentViewUrl(open.evidence_id)} />
+                  src={api.guideViewUrl(open.name)} />
         )}
       </Drawer>
     </div>
