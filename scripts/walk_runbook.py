@@ -46,6 +46,7 @@ CHROME = ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
 
 CONTROLLER = "tom@ybi.org"
 EMPLOYEE = "hruby@ybi.org"
+AUDITOR = "auditor@ybi.org"
 
 #: (step, who, email, path, name, what it shows, actions)
 #:
@@ -115,6 +116,33 @@ STEPS = [
 
     ("P", "Tom · controller", CONTROLLER, "/worklist", "11-worklist",
      "What is outstanding, routed to the portfolio that can act on it.",
+     [("wait", 1500)]),
+
+    # ── The register and what it restates to ─────────────────────────
+    #
+    # Added after the 2025 invoices arrived. The walk built this sandbox
+    # from empty, so these screens show the shape a reader will meet
+    # rather than the live figures — which is what the guidebook's banner
+    # has always said about every screen in it.
+    ("I", "Tom · controller", CONTROLLER, "/contracts", "12-contracts",
+     "The income half. A charge code, who may charge it, the contract it "
+     "works under, and the invoices issued against it. The register held "
+     "three invoices from one month until the year arrived; it holds 61 "
+     "now, reconciled to the ledger's grant income.",
+     [("wait", 2000)]),
+
+    ("I", "Tom · controller", CONTROLLER, "/restate", "13-restate",
+     "The restatement. The position is the REBUILD against the cost "
+     "record — labour taken down to wages plus fringe before indirect "
+     "goes on — and the invoice-only reading is kept beside it, labelled, "
+     "because it is what every document written before today quotes. "
+     "Everything is PROPOSED until a sponsor says otherwise in writing.",
+     [("wait", 2500)]),
+
+    ("I", "Auditor", AUDITOR, "/review/report", "14-auditor-report",
+     "The same record as the auditor sees it. Reading the cost record is "
+     "one permission and they hold it by rank; they hold no portfolio and "
+     "can change nothing.",
      [("wait", 1500)]),
 ]
 
