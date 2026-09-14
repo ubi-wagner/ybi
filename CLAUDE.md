@@ -1973,6 +1973,156 @@ administrative objective. The test that caught it then failed again because
 the fixture said `INDIRECT` from memory; *read the schema, never recall it*
 applies to the test as much as to the code.
 
+## Eight tabs, and the reach they must not cost
+
+Migration `080`. Sixteen tabs reached the 2025 audit door and the controller's
+screen was two rows of them — Import beside Reconcile beside Chart beside
+Classify beside Space beside Inventory beside Rates beside Review, which is one
+job dealt out as eight errands. The eight are the year being closed, in the
+order it is closed in: **Audit · Books · Classify · Evidence · Rate · Restate ·
+Reports · Requests.**
+
+**A fold removes nav and never capability.** `/space`, `/inventory`, `/library`,
+`/imports`, `/reconcile` and `/review` all left the audit nav and all still
+answer, because this file's own rule is that the nav shows what is *yours to
+do* and some screens are reached by URL with no tab. A fold that deleted the
+routes would be the nav-stricter-than-the-API defect with the evidence removed.
+`tests/test_the_audit_door.py` holds both halves.
+
+- **Books** is Import and Reconcile, which are one job done once in order:
+  get the books in, make them agree. As two tabs they were two errands both
+  finished five minutes into the engagement and sitting in the nav for the
+  rest of it.
+- **Space and Inventory are partitions, not tabs**, at `/classify/space` and
+  `/classify/assets`. They are the queue's question asked of a different sheet
+  — *account for the year* — and `v_partition_coverage` puts all three on one
+  row each. Two report **NO DATA**, which is not a pass: no building carries
+  square footage, so the 200.465 carve-out cannot fire at all, and no asset
+  carries a funding source, so 200.436(b) cannot be answered on $850,383 of
+  depreciation. A screen printing those as 0% done would say somebody has
+  started.
+- **Rate is read-only** and is `/review/rate`, reached through the steps above.
+- **Guidebook and Help left the nav and had to not leave the building.** They
+  are in the masthead, on every screen rather than only beside the two tabs
+  they used to sit next to.
+
+### The screen that matters reached 10.6% of the ledger
+
+And this is what the fold turned up. `ClassifyQueue` asked for **80 groups**,
+the ledger has **757**, and nothing ever sent an `offset` — which
+`GET /api/classify/queue` has taken since it was written. So the screen this
+file calls *the one that matters* could reach 80 groups, and the other 677
+could only be found by guessing a vendor name into the search box.
+
+**Nobody noticed because the top of the list carries the money.** The queue is
+ordered by absolute dollars and the first 200 groups carry 93.3%, so coverage
+climbs fast and then stops, and what is left is the small groups nobody can
+find. A capability-with-no-door where the door exists and the screen never
+knocked on it.
+
+`Show 80 more` appends rather than replaces — the cursor, the selection and
+the keyboard position are all indexes into that list — and the count beside it
+is read off `v_classification_coverage` rather than counted on the screen,
+which would be a second definition and the wrong number by construction. A
+search narrows the list in a way coverage cannot know about, so the total is
+left off rather than guessed at. **Measured in a browser: nine clicks,
+"757 shown of 757 · that is all of them."**
+
+### The whole general ledger, not just the part in scope
+
+`v_gl_accounted`, `GET /api/classify/ledger`. Coverage answers *how much of the
+cost has been judged*, over the scope `064` narrowed to cost. That is the right
+denominator for a rate and the wrong one for the question the controller is
+actually asked — **have you been through the whole book?** Those are 4,038
+lines and 15,500.
+
+Taking income out of scope was correct and it also took income out of *view*,
+which this file already records costing the engagement the America Makes
+billing: thirty-six monthly postings in the Income section for a year, one join
+away from every figure computed without them. So every line lands in exactly
+one of four buckets and the two that are out of scope **say why** — *cannot be
+classified* with no reason is the dead end this file keeps finding, and
+out-of-scope with no reason is that in a new place.
+
+| | | |
+| --- | ---: | ---: |
+| CLASSIFIED | 4,038 lines | $10,180,642.10 |
+| IN THE QUEUE | 0 | $0.00 |
+| NOT COST — INCOME | 1,058 | $6,876,763.86 |
+| NOT COST — BALANCE SHEET | 10,404 | $82,224,249.62 |
+| **the ledger** | **15,500** | **$99,281,655.58** |
+
+`v_gl_accounted_check` is the control that the four are the book, because a
+line falling between two `WHERE` clauses is one nobody is looking at. It
+reports `NO DATA` on an empty period rather than tying zero against zero.
+
+Two defects came out of building it, both mine and both the same shape:
+
+- **The bucket list was derived from the rows.** `SELECT DISTINCT seq FROM
+  buckets` cannot contain a bucket that has no rows, so the live record
+  printed three and *the queue is empty* was indistinguishable from *there is
+  no queue* — `029` reproduced inside the fix written for it. The four are a
+  `VALUES` list now, declared independently of what is in them.
+- **The reason ran underneath the figures.** Constraining the first cell did
+  nothing because the table sizes columns to their content, so the text
+  collided with the numbers on exactly the two rows whose whole job is to say
+  why they are out of scope. It is a row of its own now: a row cannot overlap
+  a row.
+
+### Classification and propagation, measured rather than claimed
+
+Both halves of *connect to and allow classification and propagation across
+100% of the GL*, proved against the live record through the real API:
+
+    reach          757 shown of 757, nine clicks, in a browser
+    propagate      reclassify 5130 Benefits, FRINGE -> OVERHEAD:
+                     FRINGE    401,783.60 -> 207,430.01   (-194,353.59)
+                     OVERHEAD 1,497,879.12 -> 1,692,232.71 (+194,353.59)
+                     coverage, classified and scope all held still
+                   reversed, and the record is identical to before
+    seal, compute  FRINGE 21.90% over the register's 1,835,047.17,
+                   INDIRECT_COMBINED 34.82%
+
+The pools moved by **exactly the group's own amount** on both gross and
+allocable, and coverage held — which is the right answer, because no
+reclassification changes how much there is to judge or how much of it is
+judged.
+
+One thing worth not repeating, and it is the third instance in a day:
+`test_the_queue_can_reach_every_group` first asserted `"offset" in src`, which
+the *comment* above `fetchMore` satisfies perfectly — so it passed with the
+paging deleted. It strips comments and reads the `api.queue({...})` call now.
+**A test that asserts prose rather than code cannot fail for the thing it
+names**, and three of my own did today.
+
+### `--help` is not a safe way to check that a script imports
+
+And the near-miss that came out of the last change. Checking that
+twenty-seven edited scripts still ran, I called each with `--help` — which is
+safe for the twenty-five that use `argparse` and **not for the two that do
+not**. `walk.py` takes no arguments, so it ignored the flag and ran: it signed
+in with a password that is wrong for this database, photographed the sign-in
+card, and **overwrote seven of the manual's screenshots with pictures of a
+login box** — `03-worklist.png` went from 2,279,805 bytes to 34,349 — and
+minted an eighth that no page shows. `git add -A` committed all of it and it
+was pushed.
+
+Found by `tests/test_manual.py::test_nothing_is_kept_that_nothing_shows`
+failing on the orphan, which is the only reason any of it surfaced: the seven
+that were *replaced* rather than added broke no test at all, because a
+screenshot of the wrong screen is still a screenshot. Restored from the commit
+before it.
+
+Two things follow:
+
+- **To check that a script imports, import it.** `importlib` and an
+  `exec_module` under `try/except SystemExit` answers the question without
+  running `main()`. A flag is a request the script is free to ignore.
+- **`walk.py` no longer photographs the activity feed.** No page has ever
+  shown `04-activity`, so every legitimate walk minted an orphan for the test
+  to fail on — *nothing is kept that nothing shows* applied to the thing that
+  produces it, rather than to the file it leaves behind.
+
 ## One person, one account
 
 Migration `079`. He signed in as `tmetzinger@ybi.org`, so `tom@ybi.org` is

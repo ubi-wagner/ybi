@@ -81,19 +81,30 @@ def test_the_guidebook_is_not_gated_on_reading_the_cost_record():
     assert "require_reader" not in body and "require_office" not in body
 
 
-def test_the_nav_asks_for_what_the_api_asks_for():
+def test_the_shell_offers_the_guide_to_everybody():
     """A nav stricter than the API hides work; a looser one offers a 403.
-    The route takes `current_actor`, so the tab takes `null`."""
-    # The *gate*, read by position. A first draft asserted the row "ends
-    # with null", which was true until the rows grew a fifth field saying
-    # which product a tab belongs to — and then failed against a nav that
-    # obeys the rule perfectly. The same defect as asserting a literal line
-    # rather than the rule it describes.
-    row = re.search(r'\["/guidebook",([^\]]*)\]', APP).group(1)
-    fields = [f.strip() for f in row.split(",")]
-    assert fields[2] == "null", (
-        f"the guidebook tab asks for {fields[2]}; the route takes "
-        f"current_actor, so the tab takes null")
+
+    The route takes `current_actor` — reading the cost record is a grant and
+    nothing on the shelf is part of the cost record, so an employee with a
+    timesheet and no portfolio may open it. The tab took `null` to match.
+
+    It is not a tab any more. The eight-tab fold moved the guide to the
+    masthead, where it is on every screen rather than only beside the two tabs
+    it used to sit next to — so the rule to hold is the same one in its new
+    shape: **the shell offers it unconditionally**, because the API does.
+    A link wrapped in a portfolio check would be the nav-stricter-than-the-API
+    defect on the one door written for the person with the fewest ways to find
+    things.
+    """
+    m = re.search(r'<Link[^>]*to="/guidebook"[^>]*>', APP)
+    assert m, "nothing in the shell links to the guidebook"
+
+    # Unconditional: no `&&` guard immediately before the link, which is how
+    # a React shell hides something.
+    before = APP[max(0, m.start() - 200):m.start()]
+    assert "&&" not in before.split("{/*")[-1], (
+        "the guide link is behind a condition; the API gates it on "
+        "current_actor, so the shell must offer it to everybody signed in")
 
 
 def test_yours_orders_the_shelf_and_never_shortens_it():

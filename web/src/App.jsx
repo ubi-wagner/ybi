@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { ToastHost } from "./components/ui.jsx";
 import { api, Unauthorized } from "./api.js";
 import SignIn from "./pages/SignIn.jsx";
@@ -14,6 +14,7 @@ import Choose from "./pages/Choose.jsx";
 import Guidebook from "./pages/Guidebook.jsx";
 import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
+import Books from "./pages/Books.jsx";
 import Imports from "./pages/Imports.jsx";
 import Reconcile from "./pages/Reconcile.jsx";
 import MyDocuments from "./pages/MyDocuments.jsx";
@@ -50,57 +51,77 @@ import Reports from "./pages/Reports.jsx";
 //: [path, label, schedule, needs]
 //: needs — null for everyone, "staff" for anyone on the payroll,
 //: "admin" for a provisioner, otherwise a portfolio name.
+/* The 2025 audit is eight tabs and the ongoing system is the rest.
+ *
+ * Sixteen tabs were reaching the audit door and the controller's screen was
+ * two rows of them — Import beside Reconcile beside Chart beside Classify
+ * beside Space beside Inventory beside Rates beside Review, which is one job
+ * dealt out as eight errands. The eight below are the year being closed, in
+ * the order it is closed in, and nothing else is offered behind that door.
+ *
+ * **Folding a tab never removes a route.** `/space`, `/inventory`, `/library`,
+ * `/imports`, `/reconcile` and `/review` all still answer and are all still
+ * linked to from inside the tab that owns them — this file's own rule is that
+ * the nav shows what is *yours to do*, not what you may open, and some screens
+ * are reached by URL with no tab at all. A fold that deleted the routes would
+ * be the nav-stricter-than-the-API defect with the evidence removed.
+ *
+ * Schedule letters are kept because somebody who has seen the workpapers
+ * navigates by them, and two tabs now carry a span: Books is A and A-1
+ * together, Reports is D and G.
+ */
 const ALL_TABS = [
-  ["/",          "Home",       "·",   null, "both"],
-  ["/timesheet", "My time",    "G",   "staff", "fcs"],
-  ["/certify",   "My effort",  "G",   "staff", "fcs"],
-  /* Three tabs live on Schedule E and they are easy to confuse, so each one
-     is named for what you do there rather than for what it holds. "My
-     documents" is where you send yours in; the "Library" is the whole shelf,
-     to read; "Evidence" is where somebody says what a document proves. The
-     first of those was called "Documents", which is the generic word for all
-     three and matched neither its own heading nor its job. */
-  ["/documents", "My documents", "E", null, "both"],
-  ["/library",   "Library",    "E",   "reader", "both"],
-  ["/people",    "People",     "·",   "admin", "fcs"],
-  ["/imports",   "Import",     "A",   "CONTROLLER", "audit"],
-  ["/reconcile", "Reconcile",  "A-1", "CONTROLLER", "audit"],
-  ["/chart",     "Chart",      "H",   "CONTROLLER", "fcs"],
-  ["/classify",  "Classify",   "B",   "CONTROLLER", "audit"],
-  ["/evidence",  "Evidence",   "E",   "OFFICE", "audit"],
+  // ── the 2025 audit, in the order the file is closed ──────────────────
+  ["/",          "Audit",      "·",     null,         "both"],
+  /* Import and Reconcile were two tabs and are one job: get the books in and
+     make them agree with themselves before anything is judged. Nothing
+     downstream can start until both are done, so splitting them put a tab in
+     the nav that is finished five minutes into the engagement and sits there
+     for the rest of it. */
+  ["/books",     "Books",      "A",     "CONTROLLER", "audit"],
+  /* And Space and Inventory fold in here as partitions rather than tabs.
+     They are the same question as the queue asked of a different sheet —
+     account for the year — and they were two tabs a controller had no reason
+     to open until the cost side was finished. `/classify/space` and
+     `/classify/assets` are where they live now. */
+  ["/classify",  "Classify",   "B",     "CONTROLLER", "audit"],
+  ["/evidence",  "Evidence",   "E",     "OFFICE",     "audit"],
+  /* The rate is read-only and is reached through the steps above rather than
+     opened first. Nothing on it is computed — every figure is read from the
+     row the computation recorded — which is the whole reason a reviewer can
+     be told the rate was not reverse-engineered. */
+  ["/review/rate", "Rate",     "D",     "reader",     "audit"],
+  ["/restate",   "Restate",    "F",     "CONTROLLER", "audit"],
+  ["/reports",   "Reports",    "G",     "reader",     "audit"],
   /* Reading what has been asked for takes the same gate the router asks for,
      `require_reader`. Accepting a reply takes the portfolio that owns the
      data, which the screen itself decides — so somebody who may read this
      and not write it sees everything and is told whose judgment the last
      step is, rather than meeting a 403 they could not have predicted. */
-  ["/requests",  "Requests",   "E",   "reader", "audit"],
-  ["/space",     "Space",      "I",   "FACILITIES", "both"],
-  ["/inventory", "Inventory",  "I",   "INVENTORY", "both"],
-  ["/contracts", "Contracts",  "F",   "PROJECT", "fcs"],
+  ["/requests",  "Requests",   "E",     "reader",     "audit"],
+
+  // ── the ongoing financial control system ─────────────────────────────
+  ["/timesheet", "My time",    "G",     "staff",      "fcs"],
+  ["/certify",   "My effort",  "G",     "staff",      "fcs"],
+  ["/documents", "My documents", "E",   null,         "fcs"],
+  ["/library",   "Library",    "E",     "reader",     "fcs"],
+  ["/people",    "People",     "·",     "admin",      "fcs"],
+  ["/imports",   "Import",     "A",     "CONTROLLER", "fcs"],
+  ["/reconcile", "Reconcile",  "A-1",   "CONTROLLER", "fcs"],
+  ["/chart",     "Chart",      "H",     "CONTROLLER", "fcs"],
+  ["/space",     "Space",      "I",     "FACILITIES", "fcs"],
+  ["/inventory", "Inventory",  "I",     "INVENTORY",  "fcs"],
+  ["/contracts", "Contracts",  "F",     "PROJECT",    "fcs"],
   /* Setting a piece of work up, and the list of who is doing what by when.
      Same gate as Contracts, because it is the same job: a project IS a
      charge code somebody set up, and the people on it are the people the
      charge-code routes authorise. */
-  ["/projects",  "Projects",   "F",   "PROJECT", "fcs"],
-  ["/lanes",     "Lanes",      "C",   "CONTROLLER", "fcs"],
-  ["/rates",     "Rates",      "D",   "CONTROLLER", "audit"],
-  /* The point of the whole system, and it had no tab for as long as it has
-     existed: five routes, complete, and no page, no route and no call in
-     api.js. Everything upstream — the classification, the seal, the rate,
-     the allocation — exists so that a number put in front of NCDMM can be
-     traced back to a judgment somebody signed their name to, and nobody
-     could reach the screen that puts it there. */
-  ["/restate",   "Restate",    "F",   "CONTROLLER", "audit"],
-  ["/reports",   "Reports",    "G",   "reader", "audit"],
-  ["/review",    "Review",     "A-1", "reader", "audit"],
-  /* The manuals and the generated PDFs, on a shelf. `null` because the
-     everybody manual is written for somebody with a timesheet and no
-     portfolio, and nothing on any of these pages is part of the cost
-     record — which is what `reader` is a grant over. The API asks for the
-     same thing, so the nav and the server agree. */
-  ["/guidebook", "Guidebook",  "?",   null, "both"],
-  ["/help",      "Help",       "?",   null, "both"],
+  ["/projects",  "Projects",   "F",     "PROJECT",    "fcs"],
+  ["/lanes",     "Lanes",      "C",     "CONTROLLER", "fcs"],
+  ["/rates",     "Rates",      "D",     "CONTROLLER", "fcs"],
+  ["/review",    "Review",     "A-1",   "reader",     "fcs"],
 ];
+
 
 /* Two products, one login.
  *
@@ -269,6 +290,17 @@ export default function App() {
                 : "No portfolio — this account judges nothing"}>
               {actor.role.replace("_", " ")}
             </span>
+            {/* Guidebook and Help were tabs and are not work, so they left
+                the nav with the fold. They must not leave the *building*
+                with it: the everybody manual is written for somebody with a
+                timesheet and no portfolio, and a shelf they cannot see is
+                the capability-with-no-door shape one step along. The
+                masthead is where a reader looks for them, and it is on
+                every screen rather than only on the two they were tabs
+                beside. */}
+            <Link className="btn quiet" to="/guidebook" title="The manuals and the printed walk-throughs">
+              Guide
+            </Link>
             <button className="btn quiet" onClick={() => setShowTrail(true)}>
               Undo
             </button>
@@ -316,7 +348,15 @@ export default function App() {
           <Route path="/imports" element={<Imports />} />
           <Route path="/reconcile" element={<Reconcile actor={actor} />} />
           <Route path="/chart" element={<Chart />} />
+          {/* The fold keeps every route and adds the two the partitions
+              point at. `/space` and `/inventory` still answer — a link, a
+              bookmark and the worklist's own `goes_to` all still land — and
+              these are the addresses the Classify screen sends people to. */}
           <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
+          <Route path="/classify/space" element={<Facilities actor={actor} />} />
+          <Route path="/classify/assets" element={<Facilities actor={actor} tab="equipment" />} />
+          <Route path="/books" element={<Books actor={actor} />} />
+          <Route path="/books/:pane" element={<Books actor={actor} />} />
           <Route path="/evidence" element={<Evidence actor={actor} />} />
           <Route path="/requests" element={<Requests actor={actor} />} />
           <Route path="/space" element={<Facilities actor={actor} />} />

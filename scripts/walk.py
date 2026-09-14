@@ -66,8 +66,11 @@ def main() -> int:
         # the work list and activity feed further down the dashboard
         page.mouse.wheel(0, 1100)
         shot(page, "03-worklist", "what is left, on the dashboard")
-        page.mouse.wheel(0, 1400)
-        shot(page, "04-activity", "the activity feed")
+        # No shot of the activity feed. It used to take one and no page has
+        # ever shown it, so every walk minted an orphan that
+        # `test_nothing_is_kept_that_nothing_shows` then failed on — an image
+        # shipped to every visitor and read by nobody. Nothing is kept that
+        # nothing shows, and that applies to the thing that produces it.
         page.mouse.wheel(0, -3000)
 
         # ── 2. Import ───────────────────────────────────────────────

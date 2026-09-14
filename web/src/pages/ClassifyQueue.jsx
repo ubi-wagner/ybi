@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, money } from "../api.js";
+import { Link } from "react-router-dom";
+import { api, count, money } from "../api.js";
 import {
   Card, Drawer, Empty, Field, Keys, Meter, PageHead, Pill, Search, Segmented,
   Stat, Table, Tick, useToast,
@@ -47,6 +48,141 @@ const FUNCTION_FOR = {
 const POOL_KEYS = ["DIRECT", "FRINGE", "OVERHEAD", "G&A", "RENTAL_DIRECT",
                    "FUNDRAISING", "UNALLOWABLE", "EXCLUDED"];
 
+/* The three sheets the year divides into, and the whole book behind them.
+ *
+ * Space and Inventory were tabs. They are the same question as the queue,
+ * asked of a different sheet — *account for the year* — and as tabs they sat
+ * in the nav from January being things a controller has no reason to open
+ * until the cost side is finished.
+ *
+ * `NO DATA` is not a pass, and it is the answer on two of the three: no
+ * building carries square footage and no asset carries a funding source. The
+ * first is why the 200.465 carve-out cannot fire at all — the single largest
+ * adjustment in the rate model, absent and silent — and the second is why
+ * 200.436(b) cannot be answered on $850,383 of depreciation. A screen that
+ * printed those as 0% done would be saying somebody has started; nobody has.
+ */
+function Partitions({ rows }) {
+  if (!rows?.length) return null;
+  return (
+    <Card title="Accounting for the year" variant="raised"
+          aside={<span className="rowsub">three sheets, one job</span>}>
+      <Table columns={[
+        { label: "Sheet", align: "left" },
+        { label: "Divides", align: "left" },
+        { label: "Done" },
+        { label: "Of" },
+        { label: "Parts" },
+        { label: "", align: "left" },
+      ]}>
+        {rows.map((p) => (
+          <tr key={p.partition} className="hoverable">
+            <td className="l">
+              <Tick state={p.state === "TIES" ? "done"
+                         : p.state === "OPEN" ? "open" : "flagged"} />
+              <Link to={p.goes_to} style={{ marginLeft: 8, fontWeight: 600 }}>
+                {p.partition === "COST" ? "Cost"
+                  : p.partition === "SPACE" ? "Space" : "Assets"}
+              </Link>
+            </td>
+            <td className="l rowsub">{p.divides}</td>
+            {/* A sheet nobody has measured has no percentage, and printing
+                0.0% there would say somebody has started. */}
+            <td className="num">{p.pct === null || p.pct === undefined
+              ? <span className="rowsub">—</span>
+              : `${Number(p.pct).toFixed(1)}%`}</td>
+            <td className="num rowsub">
+              {p.unit === "dollars" ? money(p.whole) : count(p.whole)}
+              {p.unit !== "dollars" && <span className="rowsub"> {p.unit}</span>}
+            </td>
+            <td className="num rowsub">{count(p.parts_done)} / {count(p.parts)}</td>
+            <td className="l">
+              {p.evaluable
+                ? <Pill tone={p.state === "TIES" ? "pass" : ""}>{p.state}</Pill>
+                : <span className="rowsub">
+                    <Pill>NO DATA</Pill> needs {p.needs}
+                  </span>}
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </Card>
+  );
+}
+
+/* And the whole general ledger, not only the part in scope.
+ *
+ * `064` took income out of the classification scope, correctly — a cost pool
+ * is for cost — and it also took income out of *view*, which this system has
+ * already recorded costing it the America Makes billing: thirty-six monthly
+ * postings sitting in the Income section for a year, one join away from every
+ * figure computed without them.
+ *
+ * So the question a controller is actually asked — *have you been through the
+ * whole book?* — is answered here, and the two buckets that are out of scope
+ * say why they are out. Nothing is computed: `v_gl_accounted_check` holds the
+ * four buckets against the ledger they came from, so the screen cannot claim
+ * to have accounted for the book while being short of it.
+ */
+function WholeLedger({ data }) {
+  if (!data?.buckets?.length) return null;
+  const { buckets, check } = data;
+  const ties = check?.state === "TIES";
+  return (
+    <Card title="The whole general ledger" variant="quiet"
+          aside={<span className="rowsub">
+            {check ? `${count(check.ledger_lines)} lines · ${money(check.ledger_dollars)}` : ""}
+          </span>}>
+      <Table columns={[
+        { label: "", align: "left" },
+        { label: "Lines" },
+        { label: "Groups" },
+        { label: "Dollars" },
+        { label: "", align: "left" },
+      ]}>
+        {/* The reason gets its own row across the whole width.
+            Constraining the first cell did not work — the table sizes
+            columns to their content, so the reason ran underneath the
+            figures to its right on exactly the two rows whose entire job is
+            to say why they are out of scope. A row cannot overlap a row. */}
+        {buckets.map((b) => (
+          <React.Fragment key={b.seq}>
+            <tr>
+              <td className="l">
+                <strong style={{ opacity: b.in_scope ? 1 : 0.65 }}>{b.bucket}</strong>
+              </td>
+              <td className="num">{count(b.lines)}</td>
+              <td className="num">{count(b.groups)}</td>
+              <td className="amt">{money(b.dollars)}</td>
+              <td className="l">
+                {b.in_scope
+                  ? <Link className="btn sm" to={b.goes_to}>Open</Link>
+                  : <span className="rowsub">not cost</span>}
+              </td>
+            </tr>
+            <tr>
+              <td className="l wrap rowsub" colSpan={5}
+                  style={{ paddingTop: 0, borderTop: "none" }}>
+                {b.why}
+              </td>
+            </tr>
+          </React.Fragment>
+        ))}
+      </Table>
+      <div className="rowsub" style={{ marginTop: 10 }}>
+        {check && (ties
+          ? `The four add to the ledger they came from — ${count(check.ledger_lines)} lines, ${money(check.ledger_dollars)}. Every line is in exactly one of them.`
+          : `These do not add to the ledger: ${count(check.line_difference)} line(s) and ${money(check.dollar_difference)} are in neither. A line that falls between two buckets is one nobody is looking at.`)}
+      </div>
+    </Card>
+  );
+}
+
+/* How many groups a page of the queue holds. The handler caps a request at
+   200 and defaults to 50; 80 is a screenful of the sweep table, and the
+   button below the table is what reaches the other 677. */
+const PAGE = 80;
+
 export default function ClassifyQueue({ actor }) {
   /* A reader who is offered a button that will 403 has been told the wrong
      thing about their own access. The auditor sees the queue and everything
@@ -55,6 +191,10 @@ export default function ClassifyQueue({ actor }) {
   const toast = useToast();
   const [mode, setMode] = useState("sweep");
   const [cov, setCov] = useState(null);
+  const [parts, setParts] = useState([]);
+  const [gl, setGl] = useState(null);
+  const [exhausted, setExhausted] = useState(false);
+  const [fetchingMore, setFetchingMore] = useState(false);
   const [rows, setRows] = useState([]);
   const [vocab, setVocab] = useState(null);
   const [status, setStatus] = useState("undecided");
@@ -66,15 +206,28 @@ export default function ClassifyQueue({ actor }) {
   const [loading, setLoading] = useState(true);
   const searchRef = useRef(null);
 
+  /* How many groups this filter holds, read off `v_classification_coverage`
+     through the coverage endpoint rather than counted here. Two counts of one
+     thing is the defect this repository is named for in a dozen places. */
+  const total = !cov ? null
+    : status === "all" ? cov.groups_total
+    : status === "decided" ? cov.groups_decided
+    : cov.groups_remaining;
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, q, v] = await Promise.all([
+      const [c, q, v, parts, gl] = await Promise.all([
         api.coverage(),
-        api.queue({ status, search, limit: 80 }),
+        api.queue({ status, search, limit: PAGE }),
         vocab ? Promise.resolve(vocab) : api.vocabulary(),
+        api.partitions(),
+        api.glAccounted(),
       ]);
-      setCov(c); setRows(q); setVocab(v);
+      setCov(c); setRows(q); setVocab(v); setParts(parts); setGl(gl);
+      // A short page is the end of the list. A full one is not evidence
+      // either way, so the button stays until a page comes back short.
+      setExhausted(q.length < PAGE);
       setCursor((i) => Math.min(i, Math.max(0, q.length - 1)));
     } catch (e) {
       toast(String(e.message || e), { tone: "bad" });
@@ -82,6 +235,35 @@ export default function ClassifyQueue({ actor }) {
       setLoading(false);
     }
   }, [status, search, vocab, toast]);
+
+  /* The rest of the queue.
+   *
+   * The screen asked for 80 groups and the ledger has 757, and nothing sent
+   * an `offset` — which the handler has always taken. So the classification
+   * screen, the one this whole system calls the screen that matters, reached
+   * **10.6% of the groups** and there was no way to the other 677 except by
+   * guessing a vendor name into the search box. The top of the list carries
+   * most of the dollars, which is why it was never noticed: coverage climbs
+   * fast and then stops, and the groups that are left are the small ones
+   * nobody can find.
+   *
+   * Appending rather than replacing, because the cursor, the selection and
+   * the keyboard position are all indexes into this list and a page that
+   * replaced it would throw away whatever somebody was in the middle of.
+   */
+  const fetchMore = useCallback(async () => {
+    setFetchingMore(true);
+    try {
+      const q = await api.queue({ status, search, limit: PAGE,
+                                  offset: rows.length });
+      setRows((prev) => [...prev, ...q]);
+      setExhausted(q.length < PAGE);
+    } catch (e) {
+      toast(String(e.message || e), { tone: "fail" });
+    } finally {
+      setFetchingMore(false);
+    }
+  }, [status, search, rows.length, toast]);
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [status, search]);
 
@@ -287,6 +469,14 @@ export default function ClassifyQueue({ actor }) {
         </Card>
       )}
 
+      {/* The three sheets, then the whole book, then the queue. That is the
+          order the question is asked in: what am I accounting for, how much of
+          it is there, and then the next group. Putting the queue first made
+          the two unmeasured sheets invisible until somebody went looking for
+          a tab that no longer exists. */}
+      <Partitions rows={parts} />
+      <WholeLedger data={gl} />
+
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "18px 0 12px" }}>
         <Segmented value={mode} onChange={setMode} options={[["sweep", "Sweep"], ["focus", "Focus"]]} />
         <Segmented value={status} onChange={setStatus}
@@ -386,6 +576,29 @@ export default function ClassifyQueue({ actor }) {
             </tr>
           ))}
         </Table>
+      )}
+
+      {/* The way to the rest of the queue.
+          The screen asked for one page and the ledger has 757 groups, so
+          without this it reached 10.6% of them and the other 677 could only
+          be found by guessing a vendor name into the search box. The count
+          is read off the coverage row, which is the one definition of how
+          many there are — counting the rows on the screen would be a second
+          one, and it would be the wrong number by construction. A search
+          narrows the list in a way coverage cannot know about, so the total
+          is left off rather than guessed at. */}
+      {!loading && rows.length > 0 && (
+        <div className="queue-more">
+          <span className="rowsub">
+            {count(rows.length)} shown
+            {!search && total !== null && <> of {count(total)}</>}
+          </span>
+          {exhausted
+            ? <span className="rowsub">· that is all of them</span>
+            : <button className="btn" disabled={fetchingMore} onClick={fetchMore}>
+                {fetchingMore ? "Fetching…" : `Show ${PAGE} more`}
+              </button>}
+        </div>
       )}
 
       {picked.size > 0 && (

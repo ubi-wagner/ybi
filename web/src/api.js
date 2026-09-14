@@ -255,6 +255,13 @@ export const api = {
   auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
   form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,
   coverage: (period = "2025") => req(`/classify/coverage?period=${period}`),
+  /* The whole book, and the three sheets it divides into. Both read views
+     and compute nothing — the screen that shows "100% of the general ledger"
+     has to be able to prove it against the ledger, not assert it. */
+  partitions: (period = "2025") =>
+    req(`/classify/partitions?period=${encodeURIComponent(period)}`),
+  glAccounted: (period = "2025") =>
+    req(`/classify/ledger?period=${encodeURIComponent(period)}`),
   queue: (params) => req("/classify/queue?" + new URLSearchParams(params)),
   vocabulary: () => req("/classify/vocabulary"),
   undoable: (params) => req("/undo?" + new URLSearchParams(params || {})),

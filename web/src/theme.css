@@ -1016,3 +1016,9 @@ td .btn-row { flex-wrap: nowrap; align-items: center; }
    offer, which is not what is being said. */
 .door-row { align-items: stretch; }
 .door-points { flex: 1; }
+
+/* The way to the rest of the queue. Quiet, under the table, and present
+   whenever there is a table — a control that appears only when it is needed
+   is one nobody knows exists until the day it does. */
+.queue-more { display: flex; align-items: center; gap: 12px;
+              margin: 14px 2px 4px; }
