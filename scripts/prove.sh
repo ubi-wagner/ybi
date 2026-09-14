@@ -123,6 +123,14 @@ step "The rate build-up, and everything that moves it"
 # can fail — so it must run where it can seal freely and put the record back.
 run "drive_buildup" $PY scripts/drive_buildup.py --base "$BASE"
 
+step "The auditor rejects a classification inside a sealed, certified set"
+# After drive_buildup, because it needs a rate to certify and drive_buildup is
+# what leaves one. It certifies, withdraws, unseals, reclassifies, re-seals,
+# recomputes and re-certifies — then puts every one of those back, checked
+# against a census of the pools taken before it started. The cycle an auditor
+# actually triggers, and until this existed nobody had walked it end to end.
+run "drive_recertify" $PY scripts/drive_recertify.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

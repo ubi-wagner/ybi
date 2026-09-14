@@ -102,6 +102,27 @@ def unseal(reason: str, period: str = "2025",
            actor: Actor = Depends(require_controller)) -> dict:
     if not reason.strip():
         raise HTTPException(422, "Unsealing requires a reason for the audit trail.")
+    # A certified rate is not unsealed by accident.
+    #
+    # Unsealing supersedes every rate, which kills the certificate on its own
+    # — so this refusal changes no outcome. What it changes is whether the act
+    # was deliberate. An auditor rejecting a classification inside a sealed set
+    # is the case this whole chain exists for, and it should cost the
+    # controller two conscious acts with two reasons on the record, not one
+    # that quietly takes his signature off the rate on the way past.
+    #
+    # It is the `password_round.py` rule in a smaller place: the one act that
+    # takes something away from the person who made it is never automatic.
+    certified = one("""SELECT signature, certified_by FROM v_rate_certified
+                        WHERE period = %s AND certified""", (period,))
+    if certified:
+        raise HTTPException(
+            409,
+            f"The rate for {period} is certified — signed by "
+            f"{certified['certified_by']}. Unsealing supersedes it, so "
+            f"withdraw the signature first and say why: that is two acts on "
+            f"the record rather than one that removes a signature on the way "
+            f"past.")
     # Also one act. Unsealing and superseding the rates it invalidates were
     # two separate transactions, so there was a moment where the set was open
     # and a rate on file still read as current — the exact state `/review`

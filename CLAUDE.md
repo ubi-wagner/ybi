@@ -1980,6 +1980,66 @@ administrative objective. The test that caught it then failed again because
 the fixture said `INDIRECT` from memory; *read the schema, never recall it*
 applies to the test as much as to the code.
 
+## The auditor rejects a classification inside a sealed, certified set
+
+`scripts/drive_recertify.py`, in `prove.sh` after `drive_buildup`. The cycle
+the whole chain exists for, and until it was driven **nobody had walked it end
+to end**:
+
+    certified  ->  withdraw the signature, with a reason
+               ->  unseal, with a reason
+               ->  reclassify
+               ->  re-seal, recompute, re-certify
+               ->  and everything the first signature covered is still readable
+
+**25 checks, 0 findings, and the record comes back to the cent.**
+
+**A certified rate is not unsealed on the way past.** Unsealing supersedes
+every rate, which kills the certificate on its own — so refusing changes no
+outcome. What it changes is whether the act was deliberate: an auditor's
+rejection should cost the controller two conscious acts with two reasons on
+the record, not one that removes a signature in passing. It is
+`password_round.py`'s rule in a smaller place — *the one act that takes
+something away from the person who made it is never automatic.* Watched: with
+the gate removed the drive reports it, and the cascade shows exactly what it
+prevents.
+
+What the cycle proves, each hop asserted:
+
+- the superseded judgment is still readable **with its rationale**, at
+  `live = false`;
+- the withdrawn certificate still stands, with who withdrew it and why —
+  a position taken and withdrawn is part of the trail, not an edit;
+- the withdrawn signature **does not reattach** to the recomputed build-up,
+  and the new one names the new rate rows;
+- the pools move by exactly the group's own position and coverage does not
+  move at all;
+- `RATE_CERTIFY`, `RATE_CERTIFY_WITHDRAW`, `UNSEAL` and `SEAL` each name an
+  account and a session.
+
+Three things the drive found, and **two of them were the drive**:
+
+- **`decision.scope` and the queue's `group_key` are two encodings of one
+  key.** `classify.py` stores `account=…|payee=…` and the wire form is
+  `account\x1fpayee`, with an encoder at the point of writing and **no decoder
+  anywhere**. Feeding `scope` back to `/classify/decide` answers 409 naming a
+  group that does not exist. So the walk back from a judgment to the queue
+  goes through `decision_line` to `ledger_line`, which is the only route that
+  survives an account name containing the separator. Worth knowing before
+  something else tries the short way.
+- **The drive compared a signed pool to an absolute sum** and reported a
+  finding against working code: the group is $195,895.50 gross and
+  $139,303.78 net. `066` says this in as many words — *coverage measures in
+  absolute dollars and the pools carry the signed position; comparing those
+  two would be a false alarm every time a credit is judged* — and I wrote it
+  into a drive anyway.
+- **Editing an applied migration file mutates nothing.** Two of my four
+  mutation tests reported "no findings" because the change never reached the
+  database: the runner had already recorded `082` and skipped it. A mutation
+  has to be made against the **live view**, and until it is, a green mutation
+  run means nothing at all. The same shape as a test asserting prose — the
+  experiment did not touch the thing it named.
+
 ## Tom's signature on the rate, and what it does not block
 
 Migration `082`, `rate_certification`, `POST /api/rates/certify`,
