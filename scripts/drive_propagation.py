@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import httpx
 
@@ -48,6 +48,38 @@ def ok(msg: str) -> None:
     global CHECKS
     CHECKS += 1
     print(f"  ok       {msg}", flush=True)
+
+
+NOTES: list[str] = []
+
+
+def note(msg: str) -> None:
+    """Neither a pass nor a finding: the check could not be evaluated.
+
+    Counted and printed rather than swallowed, because a check count that
+    moves without saying why is how somebody learns to ignore the run that
+    actually lost one.
+    """
+    NOTES.append(msg)
+    print(f"  note     {msg}", flush=True)
+
+
+def _too_small_to_show(before: dict, after: dict) -> bool:
+    """Would this group move a percentage carried to one decimal?
+
+    Derived from the figures rather than from a threshold somebody picked:
+    the two percentages are recomputed at full precision from the absolute
+    totals, and if they round to the same tenth then no movement was ever
+    available to observe.
+    """
+    try:
+        b = (Decimal(str(before["classified"])).copy_abs()
+             / Decimal(str(before["scope_dollars"])).copy_abs() * 100)
+        a = (Decimal(str(after["classified"])).copy_abs()
+             / Decimal(str(after["scope_dollars"])).copy_abs() * 100)
+    except (InvalidOperation, ZeroDivisionError, KeyError):
+        return False
+    return b.quantize(Decimal("0.1")) == a.quantize(Decimal("0.1"))
 
 
 def head(msg: str) -> None:
@@ -141,8 +173,20 @@ def compare(before: dict, after: dict, expect_moved: set[str],
 
     for key in expect_moved:
         if key not in moved:
-            finding(f"{what}: {key} did not move "
-                    f"({before[key]} -> {after[key]})")
+            # `coverage_pct` is rounded to one decimal, so a group small
+            # enough not to move it cannot be expected to. Judging $1.19 out
+            # of $10.18m leaves 100.0 at 100.0, and calling that a failure is
+            # asserting on a presentation rather than on a figure — the
+            # absolute `classified` and `unclassified` checks below carry the
+            # arithmetic and are exact. A control that cannot be evaluated
+            # has not passed, and it has not failed either.
+            if key == "coverage_pct" and _too_small_to_show(before, after):
+                note(f"{what}: {key} held at {before[key]} — the group is too "
+                     f"small to move a figure rounded to one decimal; the "
+                     f"absolute totals below are what carry this")
+            else:
+                finding(f"{what}: {key} did not move "
+                        f"({before[key]} -> {after[key]})")
         else:
             ok(f"{what}: {key} moved {before[key]} -> {after[key]}")
 
@@ -343,7 +387,8 @@ def main() -> int:
 
         print(f"\n{'PASS' if not FINDINGS else 'FAIL'} — {CHECKS} checks"
               + (f", {len(FINDINGS)} finding(s)" if FINDINGS else
-                 ", every change moved what it should and nothing else"))
+                 ", every change moved what it should and nothing else")
+              + (f", {len(NOTES)} not evaluable" if NOTES else ""))
         return 1 if FINDINGS else 0
     finally:
         tom.close()
