@@ -160,7 +160,7 @@ def test_every_foundational_document_is_in_the_repository():
 def test_every_guide_is_in_the_repository():
     from app.foundation import GUIDE_DIR, GUIDES
 
-    missing = [n for n in GUIDES if not (GUIDE_DIR / n).exists()]
+    missing = [g.path for g in GUIDES if not (GUIDE_DIR / g.path).exists()]
     assert not missing, f"named but not in docs/: {missing}"
 
 

@@ -109,6 +109,21 @@ async function sendForm(path, form, opts = {}) {
 
 /* The sentence the API gave, not the JSON it gave it in. A person reading
    `{"detail":"..."}` in a toast is reading our plumbing. */
+/* The sentence inside an error, for the two screens that show one.
+ *
+ * `req` throws three shapes — a Forbidden carrying the raw body, an Error
+ * whose message is "409: …", and a plain Error for a network failure — and
+ * a screen that unpicked them itself would be a second copy of this
+ * function, free to disagree with the first about what the server said.
+ */
+export function explain(err) {
+  if (!err) return "";
+  const raw = String(err.message ?? err);
+  if (err instanceof Forbidden) return detailOf(raw);
+  const numbered = raw.match(/^\d{3}: ([\s\S]+)$/);
+  return numbered ? numbered[1] : raw;
+}
+
 function detailOf(body) {
   try {
     const parsed = JSON.parse(body);
@@ -410,6 +425,18 @@ export const api = {
     const s = q.toString();
     return `/api/reports/timesheet${s ? `?${s}` : ""}`;
   },
+
+  /* The guidebook — the manuals and the generated PDFs, for anybody signed
+     in. Not gated on reading the cost record: the everybody manual is
+     written for somebody with a timesheet and no portfolio. */
+  /* Open your own account. The password here is the organisation's, never
+     one the applicant chose — they set theirs on the next screen, through
+     the same gate everybody else meets. */
+  register: (email, password, display_name = "") =>
+    req("/auth/register", { method: "POST",
+      body: JSON.stringify({ email, password, display_name }) }),
+
+  guides: () => req("/documents/guides"),
 
   documentViewUrl: (id) =>
     `/api/documents/${encodeURIComponent(id)}/file?inline=1`,

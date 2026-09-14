@@ -111,7 +111,13 @@ ORG_ADMIN = Person(
     "— provisioning people and judging cost are different jobs.")
 
 STAFF = (
-    Person("tom@ybi.org", "Tom Metzinger", "CONTROLLER", None, ("CONTROLLER",),
+    # tmetzinger@, not tom@. Read off the From: header of his own email of
+    # 10 September 2026 — the four YBI addresses in this roster are all
+    # confirmed from that one message rather than from the naming
+    # convention, which is the difference between a lookup and a guess.
+    # An account at the wrong address is an account nobody can sign into.
+    Person("tmetzinger@ybi.org", "Tom Metzinger", "CONTROLLER", None,
+           ("CONTROLLER",),
            "Controller for the 2025 engagement: classification, the seal, and "
            "the rate that follows from it."),
     Person("sgaffney@ybi.org", "Stephanie Gaffney", "CONTROLLER", "GAFFNEY",
@@ -249,23 +255,71 @@ DOCUMENTS: dict[str, tuple[str, str, str]] = {
 
 # ── The guides ───────────────────────────────────────────────────────
 
-#: What somebody is handed, rather than what they are asked to judge.
-#:
-#: These are filed as `GENERATED` — the channel `038` added because every
+@dataclass(frozen=True)
+class Guide:
+    """One document somebody is handed, rather than one they are asked to
+    judge.
+
+    `audience` is whose job it describes, and it decides what the Guidebook
+    puts at the top — not what it hides. The manual inside the application is
+    assembled from what the reader holds so that it never describes a screen
+    they cannot open; a *shelf* is the other case. Hiding the auditor's
+    manual from an employee would teach them the shelf is short, and there is
+    nothing on any of these pages they may not read.
+    """
+
+    path: str        # relative to docs/
+    title: str
+    note: str
+    audience: str    # "everybody", a portfolio, "admin", or a role
+
+
+#: In the order they are read. The audience values are the same vocabulary
+#: `tabsFor` uses, because a second spelling of "who is this for" is a map
+#: kept by hand in two places.
+GUIDES = (
+    Guide("manuals/everybody.md", "Everybody",
+          "The screens every account has: your time, your documents, and "
+          "what the system is doing with them.", "everybody"),
+    Guide("manuals/controller.md", "The controller",
+          "The queue, the seal and the rate that follows from it — the whole "
+          "of the classification job in the order it is done.", "CONTROLLER"),
+    Guide("manuals/administrator.md", "The administrator",
+          "Accounts, access and the roster: who may do what, and how to give "
+          "somebody their way in.", "admin"),
+    Guide("manuals/auditor.md", "The auditor",
+          "What to read and in what order, and where every figure on a "
+          "workpaper comes from.", "AUDITOR"),
+    Guide("MONDAY_RUNBOOK.md", "The run sheet",
+          "Where the record stands and what is left to do, generated from "
+          "the crosscheck and never written over a figure that does not tie.",
+          "CONTROLLER"),
+    Guide("MONDAY_GUIDEBOOK.pdf", "The illustrated walk",
+          "Every screen in the run sheet, photographed, in the order you "
+          "meet them.", "everybody"),
+    Guide("MONDAY_ANCHOR.pdf", "The recommendations",
+          "Every recommendation the record makes, to read and tick.",
+          "CONTROLLER"),
+    Guide("BARB_ONE_PAGE_AM.pdf", "America Makes, on one page",
+          "The four awards, what was billed against them and what the "
+          "restatement asks for — the decisions, without the arithmetic.",
+          "admin"),
+)
+
+#: A guide is filed as `GENERATED` — the channel `038` added because every
 #: other value means the document arrived from outside and there was no way
 #: to say *this system made it*. That is exactly what a manual rendered from
 #: this repository is, and it is what keeps them out of the inbox: the inbox
 #: is what nobody has filed yet, and a manual is not waiting for a judgment.
-GUIDES: dict[str, tuple[str, str]] = {
-    "manuals/everybody.md": ("guide", "Everybody: the screens every account has."),
-    "manuals/controller.md": ("guide", "The controller: the queue, the seal, the rate."),
-    "manuals/administrator.md": ("guide", "The administrator: accounts, access, the roster."),
-    "manuals/auditor.md": ("guide", "The auditor: what to read and in what order."),
-    "MONDAY_GUIDEBOOK.pdf": ("guide", "The illustrated walk: every screen in the run sheet, photographed."),
-    "MONDAY_ANCHOR.pdf": ("guide", "The recommendations, to read and tick."),
-    "MONDAY_RUNBOOK.md": ("guide", "The run sheet, generated from the crosscheck."),
-    "BARB_ONE_PAGE_AM.pdf": ("guide", "America Makes, on one page, for the administrator."),
-}
+GUIDE_KIND = "guide"
+
+#: Looked up by filename, because a guide has no key that survives being
+#: regenerated: `evidence_id` is derived from the SHA-256, so editing a
+#: sentence in the controller's manual files a new row with a new id. The
+#: name is what stays the same, and these eight are distinct. A stored guide
+#: the list does not name still reaches the screen under its own filename —
+#: never hidden, because it was filed as a guide by something.
+GUIDES_BY_FILENAME = {Path(g.path).name: g for g in GUIDES}
 
 #: The year a guide is *of*. They describe the engagement rather than a
 #: figure in it, so they carry the period whose work they are about.
@@ -435,18 +489,18 @@ def ensure_guides() -> list[str]:
     controller = one("""SELECT actor_id FROM actor
                          WHERE role = 'CONTROLLER' ORDER BY created_at LIMIT 1""")
     filed: list[str] = []
-    for rel, (kind, note) in GUIDES.items():
-        path = GUIDE_DIR / rel
+    for guide in GUIDES:
+        path = GUIDE_DIR / guide.path
         if not path.exists():
-            log.warning("guide not in the image: %s", rel)
+            log.warning("guide not in the image: %s", guide.path)
             continue
-        eid = _file(path, kind, GUIDE_PERIOD, note, "GENERATED",
+        eid = _file(path, GUIDE_KIND, GUIDE_PERIOD, guide.note, "GENERATED",
                     controller["actor_id"] if controller else None,
                     "deployment bootstrap")
         if eid:
-            filed.append(rel)
+            filed.append(guide.path)
             _note("EVIDENCE_UPLOAD", "evidence", eid,
-                  f"filed by the deployment bootstrap: {rel}")
+                  f"filed by the deployment bootstrap: {guide.path}")
     return filed
 
 

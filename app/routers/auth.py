@@ -9,6 +9,7 @@ organisation.
 from __future__ import annotations
 
 import logging
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
@@ -157,6 +158,181 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
             # why their first write was refused.
             "signed_in_with": credential}
 
+
+
+#: The address every YBI account is at. A self-registration is only for
+#: people inside the organisation, and the domain is the cheap half of
+#: saying so — the organisation's password is the half that does the work.
+ORG_DOMAIN = "@ybi.org"
+
+
+class RegisterIn(BaseModel):
+    email: EmailStr
+    #: The organisation's own first-login password, which is what stands in
+    #: for an invitation. Never the applicant's chosen one: they set that
+    #: immediately afterwards, through the same screen everybody else meets.
+    password: str
+    display_name: str = ""
+
+
+@router.post("/register", status_code=201)
+def register(body: RegisterIn, request: Request, response: Response) -> dict:
+    """Open your own account, if the books already know who you are.
+
+    Thirty-seven of the forty-three people on the 2025 payroll have no
+    account, and every one of them has to sign their own 200.430(i)
+    certification. The path to an account was an administrator typing in
+    thirty-seven addresses and handing out thirty-seven passwords, and while
+    that was outstanding their effort stayed `MANAGEMENT_RECONSTRUCTION` —
+    the weakest evidence in the system, on the whole of the direct labour
+    charge.
+
+    So a person can open their own, and three things have to be true:
+
+    - the address is at the organisation's own domain;
+    - they hold `YBI_INITIAL_PASSWORD`, which is the invitation.
+
+    **The payroll register is consulted and is not a gate**, which is a
+    decision rather than a shortcut. `surname@ybi.org` is the convention the
+    known accounts follow, so the register usually names the person and the
+    account is opened against the `employee_key` the books already carry —
+    which is what links a timesheet, a certification and the effort
+    distribution to one person. Where it does not, the key is derived from
+    the address instead and the audit row says so. Two reasons:
+
+    - the convention is not universal. Tom Metzinger is `tmetzinger@`, not
+      `metzinger@`, and he has no payroll row at all because he is paid as
+      `Metz Consulting, LLC.` — so a register gate would refuse the
+      controller.
+    - a person who cannot open an account cannot certify their own effort,
+      and an account opened for the wrong reason is fixable while a
+      certification nobody signed is not.
+
+    A derived key can never take a real surname: the insert refuses a key
+    already held, and `TMETZINGER` is not `METZINGER`. What it can produce
+    is a second row for one person, which shows on the roster and which the
+    administrator resolves — a roster to tidy, not a figure that is wrong.
+
+    Nobody gets any authority this way. The account holds no portfolio, no
+    rank above EMPLOYEE, and no access to the cost record — it is a
+    timesheet, a certification and an inbox, which is what these thirty-seven
+    people need. Authority stays a grant somebody makes.
+
+    **The residual risk is stated rather than hidden.** Everybody inside YBI
+    holds the same organisational password this round, so somebody holding it
+    could register as a colleague who has not yet claimed their account. That
+    is why `provisioned_by` stays NULL — the roster shows the account as one
+    nobody provisioned — and why the act is written to `audit_log` with the
+    address, the payroll key it matched and the user agent it came from. The
+    administrator sees every one on the activity screen and can deactivate
+    any of them. Auto-approved, visible, and reversible.
+    """
+    email = str(body.email).strip().lower()
+    ip = request.client.host if request.client else ""
+
+    shared = shared_initial_password()
+    if not shared:
+        raise HTTPException(
+            403, "Registration is closed: this deployment has no "
+                 "organisational password set. Ask an administrator to open "
+                 "your account.")
+
+    # The same throttle sign-in uses, and for a sharper reason: this endpoint
+    # takes one password that opens every unclaimed account, so a series of
+    # guesses against it is worth more than a series against one person's.
+    failures = one("SELECT recent_login_failures(%s, %s::interval) AS n",
+                   (email, LOCKOUT_WINDOW))["n"]
+    if failures >= MAX_FAILURES:
+        raise HTTPException(
+            429, "Too many failed attempts. Wait fifteen minutes and try "
+                 "again.")
+
+    def refuse(reason: str, status: int = 403) -> HTTPException:
+        execute("""INSERT INTO login_attempt (email, ip, succeeded)
+                   VALUES (%s, %s, false)""", (email, ip))
+        log.info("registration refused for %s from %s — %s", email, ip, reason)
+        return HTTPException(status, reason)
+
+    # Checked the same way `check_credential` checks it: on bytes, because
+    # `secrets.compare_digest` raises TypeError on a non-ASCII `str` and a
+    # 500 where a 403 belongs is a sharper oracle than the one being avoided.
+    try:
+        matched = secrets.compare_digest(body.password.encode("utf-8"),
+                                         shared.encode("utf-8"))
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException:
+        log.exception("the registration password comparison refused its "
+                      "arguments")
+        matched = False
+    if not matched:
+        raise refuse("That is not the organisation's password. Ask whoever "
+                     "sent you here for it.")
+
+    if not email.endswith(ORG_DOMAIN):
+        raise refuse(f"Register with your {ORG_DOMAIN} address. An account "
+                     f"at any other domain is opened by an administrator.")
+
+    if one("SELECT 1 FROM actor WHERE email = %s", (email,)):
+        raise HTTPException(
+            409, "You already have an account at that address. Sign in "
+                 "instead — and if you have forgotten the password, an "
+                 "administrator can reset it.")
+
+    # Matched against the payroll register, by the convention the existing
+    # accounts use. `roster-gaps` computes the same suggestion and this has
+    # to agree with it, so both read `employee_key` rather than either one
+    # keeping a list of addresses.
+    local = email[:-len(ORG_DOMAIN)]
+    person = one("""SELECT l.employee_key,
+                           max(l.employee_name) AS employee_name
+                      FROM v_labor_effective l
+                     WHERE lower(l.employee_key) = %s
+                       AND NOT EXISTS (SELECT 1 FROM actor a
+                                        WHERE a.employee_key = l.employee_key)
+                     GROUP BY l.employee_key""", (local,))
+    key = person["employee_key"] if person else local.upper()
+    from_register = bool(person)
+    if one("SELECT 1 FROM actor WHERE employee_key = %s", (key,)):
+        # Somebody already holds this payroll identity. Answering 409 rather
+        # than opening a second account under a different key is the whole
+        # point: two rows for one person is how a timesheet and a
+        # certification come apart.
+        raise HTTPException(
+            409, "Somebody already has the account for that name. If that "
+                 "is you at a different address, an administrator can put "
+                 "them together — ask Barb.")
+
+    name = (body.display_name.strip()
+            or (person["employee_name"] if person else "")
+            or key.title())
+    # `provisioned_by` stays NULL: nobody provisioned this. `email_confirmed`
+    # is true because the person typed their own address — that column exists
+    # precisely because forty were *derived* from a naming convention, and
+    # somebody typing their own is the confirmation it was waiting for.
+    row = one("""INSERT INTO actor (email, display_name, role, password_hash,
+                                    employee_key, password_set_by,
+                                    email_confirmed)
+                 VALUES (%s, %s, 'EMPLOYEE', %s, %s, 'SEED', true)
+                 RETURNING actor_id""",
+              (email, name, unusable_password_hash(), key))
+    execute("""INSERT INTO audit_log (actor, actor_id, actor_role, action,
+                                      entity, entity_id, reason)
+               VALUES (%s, %s, 'EMPLOYEE', 'ACTOR_CREATE', 'actor', %s, %s)""",
+            (name, row["actor_id"], email,
+             f"registered on the organisation's password from {ip}; "
+             + (f"matched the 2025 payroll register as {key}"
+                if from_register else
+                f"no payroll row at that address — the key {key} is derived "
+                f"from it and stands for nothing in the distribution")))
+    log.warning("%s registered themselves from %s as %s key %s", email, ip,
+                "payroll" if from_register else "derived", key)
+
+    # And then sign in exactly as everybody else does. Nothing about the
+    # session, the throttle, the SIGN_IN_SHARED row or the must-set-password
+    # gate is special-cased for a registration, because none of it should be.
+    return login(LoginIn(email=email, password=body.password), request,
+                 response)
 
 @router.post("/logout")
 def logout(response: Response, actor: Actor = Depends(current_actor)) -> dict:

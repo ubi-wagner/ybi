@@ -686,6 +686,89 @@ screen already learned: *thirty-two unread workbooks buried three real
 proposals*. `077` filters the inbox on the channel rather than the kind,
 because a regenerated invoice is the same case and was already in it.
 
+## Two doors that were not there
+
+**The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.
+The manuals and the generated PDFs were files in `docs/` and — once the boot
+started filing them — rows in a register an employee may not read. So the
+person the everybody manual is *written for*, somebody with a timesheet and
+no portfolio, could not reach it at all. The capability-with-no-door shape
+one step along: the content was complete and nothing served it to its
+reader.
+
+Gated on `current_actor`, not `require_reader`, which would be wrong in the
+direction that costs the most — reading the cost record is a grant, and
+nothing on any of these pages is part of the cost record. The file route
+widens by exactly one kind: an employee may open a guide and still gets 403
+on the general ledger, which was watched.
+
+- **`yours` orders the shelf and never shortens it.** The manual *inside*
+  the application is assembled from what the reader holds so it never
+  describes a screen they cannot open; a shelf is the other case. An
+  employee who cannot see that a controller's manual exists learns the shelf
+  is short — the nav-stricter-than-the-API defect in another costume.
+- **Rank and portfolio are read apart, and this is the easiest place to
+  collapse them.** `CONTROLLER` is the name of a portfolio *and* of a rank,
+  and a first draft that fell through to `"CONTROLLER" in held` for anything
+  it did not otherwise match handed Tom the auditor's manual as his own.
+- **The audience is on the server.** `foundation.GUIDES` carries it, so the
+  screen computes nothing — a second copy of "whose job is this" in the SPA
+  is a map free to drift.
+
+**The way in.** `POST /api/auth/register`, and a second tab on the sign-in
+card. Thirty-seven of the forty-three people on the 2025 payroll have no
+account and every one has to sign their own 200.430(i) certification; the
+only path to an account was an administrator typing in an address and
+handing out a password, and while that was outstanding their effort stayed
+`MANAGEMENT_RECONSTRUCTION`. An `@ybi.org` address plus `YBI_INITIAL_PASSWORD`
+opens one, and it is the same door the round already uses — the account is
+`SEED`, the person chooses their own immediately, and
+`refuse_issued_password` stops them writing anything until they do.
+
+- **It grants nothing.** EMPLOYEE, no portfolio, no rank, no record access.
+  Authority stays a grant somebody makes and is recorded when it is.
+- **The payroll register is consulted and is not a gate.** Where the
+  `surname@ybi.org` convention matches, the account is opened against the
+  `employee_key` the books already carry. Where it does not, the key is
+  derived from the address and the audit row says so — because the
+  convention is not universal (Tom is `tmetzinger@`, and has no payroll row
+  at all, being paid as `Metz Consulting, LLC.`), and a register gate would
+  have refused the controller. A key already held is a 409 rather than a
+  second account: two rows for one person is how a timesheet and a
+  certification come apart.
+- **The residual risk is written down rather than hidden.** Everybody inside
+  YBI holds the same organisational password this round, so somebody holding
+  it could register as a colleague who has not claimed their account. So
+  `provisioned_by` stays NULL — nobody provisioned it — the audit row carries
+  the address, the key and the IP, and it reaches the activity screen.
+  Auto-approved, visible, reversible.
+- **Registering signs in through the ordinary door.** It returns `login(...)`
+  rather than issuing a session of its own, so the throttle, the
+  `SIGN_IN_SHARED` row and the must-set-password gate are not special-cased.
+- **Two tabs, not one clever form.** Sign in and open an account want the
+  same two boxes and mean opposite things by the password — yours against
+  the organisation's. A form that quietly did one or the other would tell
+  somebody they had registered when they had signed in as a colleague. And
+  only the registration error says why: a sign-in error that distinguished
+  an unknown account from a wrong password enumerates the organisation,
+  while a registration refusal is the opposite case — wrong password, wrong
+  domain, or a name already held each lead somewhere different.
+
+**And Tom is `tmetzinger@ybi.org`.** The roster said `tom@ybi.org`, which
+was the naming convention rather than a lookup; his own email of 10
+September 2026 carries the four YBI addresses in its header. An account at
+the wrong address is an account nobody can sign into. If a record already
+carries `tom@ybi.org`, deactivate it — the bootstrap will not touch an
+account that exists, so it opens the correct one beside the old.
+
+**Putting somebody back on the organisation's password** is
+`scripts/password_round.py`, and it is the one act in the system that takes
+an account away from the person using it. So it is never automatic, it is
+behind `--yes`, it revokes every live session in the same transaction, and
+it writes an audit row per account. It refuses outright with no
+organisational password set, because putting six accounts on a credential
+that does not exist locks six people out.
+
 ## Reviewing it
 
 `scripts/review_system.py` drives the whole system as all six people across

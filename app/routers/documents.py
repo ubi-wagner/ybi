@@ -27,6 +27,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.audit import record
+from app import foundation
 from app.auth import (Actor, Portfolio, current_actor, require_office,
                       require_own_writes, require_reader)
 from app import storage
@@ -194,6 +195,73 @@ def mine(actor: Actor = Depends(current_actor)) -> dict:
             "waiting": sum(1 for r in rows if not r["is_attached"])}
 
 
+@router.get("/guides")
+def guides(actor: Actor = Depends(current_actor)) -> dict:
+    """The manuals and the generated PDFs, for anybody signed in.
+
+    Gated on `current_actor` and not on `require_reader`, which would be
+    wrong in the direction that costs the most: the everybody manual is
+    written for somebody with a timesheet and no portfolio, and reading the
+    cost record is a grant they do not have. There is nothing on any of
+    these pages that is not about how to use the software.
+
+    **`yours` orders the shelf; it never shortens it.** The manual inside
+    the application is assembled from what the reader holds so that it never
+    describes a screen they cannot open, and a shelf is the other case — an
+    employee who cannot see that an auditor's manual exists learns the shelf
+    is short, and that is the same defect as a nav stricter than the API.
+
+    A guide on file that the definition does not name still comes back,
+    under its own filename. Something filed it as a guide; a screen that
+    silently dropped it would be a register reporting a gap it caused.
+    """
+    rows = query("""SELECT evidence_id, filename, note, mime_type, byte_size,
+                           received_at, inline_safe
+                      FROM v_document_library
+                     WHERE kind = %s
+                     ORDER BY received_at""", (foundation.GUIDE_KIND,))
+    order = list(foundation.GUIDES_BY_FILENAME)
+
+    def mine(audience: str) -> bool:
+        """Whose job this describes, read the way the nav reads a gate.
+
+        The portfolio branch and the role branch are kept apart on purpose.
+        `CONTROLLER` is the name of a portfolio *and* of a rank, and a first
+        draft that fell through to `"CONTROLLER" in held` for anything it did
+        not otherwise match handed Tom the auditor's manual as his own — the
+        portfolio that reaches every screen does not make somebody the
+        auditor. Rank and judgment are two axes, and this is the place that
+        is easiest to collapse them.
+        """
+        if audience == "everybody":
+            return True
+        if audience == "admin":
+            return actor.is_admin
+        if audience in Portfolio.__members__:
+            return actor.holds(Portfolio(audience), Portfolio.CONTROLLER)
+        return audience == actor.role
+
+    out = []
+    for row in rows:
+        known = foundation.GUIDES_BY_FILENAME.get(row["filename"] or "")
+        out.append({**row,
+                    "title": known.title if known else (row["filename"] or
+                                                        row["evidence_id"]),
+                    "note": known.note if known else row["note"],
+                    "audience": known.audience if known else "everybody",
+                    "yours": mine(known.audience) if known else True,
+                    "rank": order.index(row["filename"]) if known else len(order)})
+    out.sort(key=lambda g: (not g["yours"], g["rank"]))
+
+    # Deliberately not recorded. The library records that somebody opened
+    # the cost record, which is a thing an auditor asks about; a shelf of
+    # manuals is not, and a row every time anybody lands on it would bury
+    # the ones that matter. Opening a guide still records EVIDENCE_VIEW or
+    # EVIDENCE_DOWNLOAD on the file route, which is the act worth having.
+    return {"guides": out, "total": len(out),
+            "yours": sum(1 for g in out if g["yours"])}
+
+
 #: The types a browser renders without running anything the uploader wrote.
 #: Everybody signed in may upload, so an inline render on this origin is a
 #: door held open by whoever sends a file in — `text/html` inline would be a
@@ -224,12 +292,19 @@ def download(evidence_id: str, inline: bool = False,
     unrecognised: an uploader who mislabels a file gets a download, not a
     decision made in their favour.
     """
-    row = one("""SELECT uri, mime_type, uploaded_by,
+    row = one("""SELECT uri, mime_type, uploaded_by, kind,
                         coalesce(filename, '') AS filename
                    FROM evidence WHERE evidence_id = %s""", (evidence_id,))
     if not row:
         raise HTTPException(404, "No such document.")
-    if str(row["uploaded_by"]) != actor.actor_id and not actor.can_read:
+    # A guide is the third case, and it is a narrow one. The manuals and the
+    # generated PDFs describe how to use this system; an employee with a
+    # timesheet and no portfolio is exactly who the everybody manual is
+    # written for, and `can_read` is a grant over the *cost record*, which a
+    # manual is not part of. Nothing else widens: the rule that an employee's
+    # receipt is not public to the organisation is untouched.
+    mine = str(row["uploaded_by"]) == actor.actor_id
+    if not mine and not actor.can_read and row["kind"] != foundation.GUIDE_KIND:
         raise HTTPException(403, "That is not your document.")
     path = Path(row["uri"])
     if not path.exists():

@@ -24,6 +24,20 @@ import pytest
 ROUTERS = Path(__file__).resolve().parent.parent / "app" / "routers"
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 
+#: The three auth handlers that cannot resolve an actor from the session,
+#: because of where they sit relative to one. Each writes its own audit row
+#: naming who it was, so the trail is not short — the actor simply cannot
+#: come from a dependency that requires the thing being created or ended.
+#:
+#: `register` is the newest and the one worth reading twice: it is anonymous
+#: by definition, and it therefore takes the address from the request body,
+#: which is the shape this test exists to refuse everywhere else. What makes
+#: it sound is that the body is not a *claim about who is acting* — there is
+#: nobody acting yet — it is the account being asked for, and the row it
+#: writes records the address, the payroll key it matched and the address it
+#: came from rather than a name somebody typed.
+BEFORE_A_SESSION = frozenset({"login", "logout", "register"})
+
 #: Routes that change nothing on the record and so have nothing to record.
 #: Each one is here because somebody decided it, not because it was missed.
 EXEMPT: dict[tuple[str, str], str] = {}
@@ -96,8 +110,8 @@ def test_mutating_route_takes_its_actor_from_the_session(router, method, route,
     """
     if (router, handler) in EXEMPT:
         pytest.skip(EXEMPT[(router, handler)])
-    if router == "auth" and handler in ("login", "logout"):
-        return          # login has no session yet; logout ends the one it has
+    if router == "auth" and handler in BEFORE_A_SESSION:
+        return
     assert re.search(r"Depends\((require_|current_actor)", body), (
         f"{method} /api/{router}{route} ({handler}) does not resolve an actor "
         f"from the session. An audit entry whose actor came from the request "

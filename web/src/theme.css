@@ -902,3 +902,52 @@ td .btn-row { flex-wrap: nowrap; align-items: center; }
   background: var(--warn-wash); border-radius: 4px; padding: 1px 7px; }
 .failcode.fault { color: var(--fail); background: var(--fail-wash); }
 .failmsg { margin-top: 5px; font-size: 13px; line-height: 1.5; }
+
+/* ── The guidebook ───────────────────────────────────────────────────
+   A shelf, not a table. These are eight documents somebody reads once and
+   comes back to twice, so the thing that has to be legible at a glance is
+   what each one is *about* — which is a sentence, and a sentence does not
+   belong in a column. */
+.guide-grid { display: grid; gap: 14px; margin: 10px 0 26px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.guide-card { display: flex; flex-direction: column; gap: 8px; }
+.guide-head { display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; }
+.guide-title { font-family: var(--serif); font-size: 17px; margin: 0;
+  color: var(--ink); }
+.guide-note { margin: 0; color: var(--graphite); font-size: 13.5px;
+  line-height: 1.5; flex: 1; }
+.guide-foot { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--rule-soft);
+  padding-top: 8px; }
+.guide-actions { display: flex; gap: 8px; align-items: center; }
+
+/* A heading between two runs of cards. Quieter than a page title, because
+   the page has one already and two things claiming to be the title is how a
+   reader loses the thread. */
+.section-head { font-family: var(--serif); font-size: 15px; font-weight: 600;
+  color: var(--graphite); margin: 18px 0 2px;
+  text-transform: none; letter-spacing: 0.01em; }
+.quiet-note { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+
+/* A list of links with no bullets and no indent — used where the items are
+   destinations rather than prose. */
+.plain-list { list-style: none; margin: 4px 0 12px; padding: 0;
+  display: flex; flex-direction: column; gap: 6px; }
+.plain-list li { font-size: 13.5px; line-height: 1.45; }
+
+/* ── Two doors on the sign-in card ───────────────────────────────────
+   Signing in and opening an account want the same two boxes and mean
+   opposite things by the password, so they are two tabs with a heading
+   each rather than one form that guesses. */
+.signin-tabs { display: flex; gap: 0; margin: 14px 0 4px;
+  border-bottom: 1px solid var(--rule); }
+.signin-tab { appearance: none; background: none; border: 0;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 8px 12px; font: inherit; font-size: 13px; color: var(--muted);
+  cursor: pointer; }
+.signin-tab:hover { color: var(--graphite); }
+.signin-tab.on { color: var(--accent-deep); border-bottom-color: var(--accent);
+  font-weight: 600; }
+.signin-foot { font-size: 12px; line-height: 1.5; margin: 12px 0 0;
+  padding-top: 10px; border-top: 1px solid var(--rule-soft); }

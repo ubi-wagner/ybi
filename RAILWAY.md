@@ -156,6 +156,26 @@ the rate are people's work and come from `scripts/seed.sh` and from people.
 Without `YBI_INITIAL_PASSWORD` set it does nothing at all, because opening
 accounts nobody can sign into is not a recovery.
 
+**And a person can open their own.** The sign-in card has a second tab: an
+`@ybi.org` address plus `YBI_INITIAL_PASSWORD` opens an `EMPLOYEE` account
+holding no portfolio and no access to the cost record — a timesheet, a
+certification and an inbox, which is what the thirty-seven people on the
+2025 payroll without accounts actually need. Every registration is written
+to `audit_log` with the address, the payroll key it matched and the address
+it came from, and shows on the activity screen; deactivate any you did not
+expect. Everybody inside YBI holds the same password this round, so somebody
+holding it could register as a colleague who has not claimed their account —
+which is why the act is recorded rather than silent.
+
+**To reopen the round** — put people back on the organisation's password and
+end their sessions — `scripts/password_round.py`. It lists who is on what
+with no arguments, and changes nothing without `--yes`.
+
+```bash
+railway run --service ybi-cost -- python scripts/password_round.py --list
+railway run --service ybi-cost -- python scripts/password_round.py --all --yes
+```
+
 The two doors compose. Running the script below against a record the boot
 opened is fine: it finds each account, signs in as the organisation's
 administrator on that same password, and walks the rest of the ladder.
