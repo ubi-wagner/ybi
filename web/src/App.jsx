@@ -35,10 +35,28 @@ import Awards from "./pages/Awards.jsx";
 import Library from "./pages/Library.jsx";
 import Reports from "./pages/Reports.jsx";
 
-/* Navigation carries the schedule each step eventually prints as in the audit
-   package. Someone who has seen the workpapers already knows where they are.
-   The dashboard has no schedule letter because it prints as nothing — it is
-   where the work is picked up, not part of the package. */
+/* The nav mark is the step of the walk, not the schedule letter.
+ *
+ * It used to carry the schedule each tab prints as in the audit package, so
+ * that somebody holding the workpapers knew where they were. That was right
+ * when the nav was twenty unordered tabs. It is wrong now the eight ARE the
+ * order of operations: they read `· A B E D F G E` — E before D, and E twice
+ * — which looks like a sequence, is not one, and is worse than no mark at all.
+ *
+ * So the mark is the step number, and it is **the walk's** number rather than
+ * a fresh 1–8. Books is steps 1 and 2, Classify is 3 to 5, Rate is 7 and 8: a
+ * plain 1–8 would put "Rate = 5" in the nav beside a landing page saying the
+ * rate is step 8, which is two numberings of one order — the defect this file
+ * is mostly about. One order, one set of numbers, and the nav and the walk are
+ * the same map.
+ *
+ * Two tabs carry no number, and that is a statement rather than a gap: Audit
+ * *is* the walk, and Requests is not a step in it — asking for what is missing
+ * runs alongside the sequence, not inside it.
+ *
+ * The schedule letters are not lost. Every page carries its own in `PageHead`,
+ * which is where a workpaper reference belongs: on the page, where there is
+ * exactly one of them and it cannot read as an ordering. */
 /* The nav is assembled rather than switched. Everybody in the organisation
    keeps a timesheet and has somewhere to put documents, controllers
    included — so those tabs are not an employee's consolation prize, they are
@@ -78,27 +96,27 @@ const ALL_TABS = [
      downstream can start until both are done, so splitting them put a tab in
      the nav that is finished five minutes into the engagement and sits there
      for the rest of it. */
-  ["/books",     "Books",      "A",     "CONTROLLER", "audit"],
+  ["/books",     "Books",      "1–2",     "CONTROLLER", "audit"],
   /* And Space and Inventory fold in here as partitions rather than tabs.
      They are the same question as the queue asked of a different sheet —
      account for the year — and they were two tabs a controller had no reason
      to open until the cost side was finished. `/classify/space` and
      `/classify/assets` are where they live now. */
-  ["/classify",  "Classify",   "B",     "CONTROLLER", "audit"],
-  ["/evidence",  "Evidence",   "E",     "OFFICE",     "audit"],
+  ["/classify",  "Classify",   "3–5",     "CONTROLLER", "audit"],
+  ["/evidence",  "Evidence",   "6",     "OFFICE",     "audit"],
   /* The rate is read-only and is reached through the steps above rather than
      opened first. Nothing on it is computed — every figure is read from the
      row the computation recorded — which is the whole reason a reviewer can
      be told the rate was not reverse-engineered. */
-  ["/review/rate", "Rate",     "D",     "reader",     "audit"],
-  ["/restate",   "Restate",    "F",     "CONTROLLER", "audit"],
-  ["/reports",   "Reports",    "G",     "reader",     "audit"],
+  ["/review/rate", "Rate",     "7–8",     "reader",     "audit"],
+  ["/restate",   "Restate",    "9",     "CONTROLLER", "audit"],
+  ["/reports",   "Reports",    "10",     "reader",     "audit"],
   /* Reading what has been asked for takes the same gate the router asks for,
      `require_reader`. Accepting a reply takes the portfolio that owns the
      data, which the screen itself decides — so somebody who may read this
      and not write it sees everything and is told whose judgment the last
      step is, rather than meeting a 403 they could not have predicted. */
-  ["/requests",  "Requests",   "E",     "reader",     "audit"],
+  ["/requests",  "Requests",   "·",     "reader",     "audit"],
 
   // ── the ongoing financial control system ─────────────────────────────
   ["/timesheet", "My time",    "G",     "staff",      "fcs"],

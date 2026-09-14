@@ -519,10 +519,17 @@ convention:
 
 - **Tick marks, not status dots.** Auditors tick reconciled items. `<Tick
   state="done|open|flagged|failed" />`.
-- **Schedule references in the nav.** Each tab carries the schedule it prints
-  as in the audit package (A Import, A-1 Reconcile, B Classify, C Lanes,
-  D Rates, F Awards), so someone who has seen the workpapers knows where they
-  are.
+- **Schedule references on the page; step numbers in the nav.** Each screen
+  carries the schedule it prints as in the audit package in its `PageHead`
+  (A Import, A-1 Reconcile, B Classify, C Lanes, D Rates, F Awards), so
+  somebody holding the workpapers knows where they are. That used to be the
+  *nav* mark and no longer is behind the 2025 door: once the eight tabs became
+  the order of operations the letters read `· A B E D F G E` — **E before D,
+  and E twice** — which looks like a sequence, is not one, and is worse than
+  no mark at all. The nav mark there is the step of the walk, and the letter
+  stays on the page, where there is exactly one of them and it cannot be
+  mistaken for an ordering. The ongoing system's tabs keep letters, because
+  they are not a sequence and the reference is doing its original job.
 - **Three card weights, not one.** `card`, `card raised`, `card quiet`. Radius
   and shadow carry hierarchy; do not apply the same treatment to everything.
 - **Tabular numerals everywhere.** `.num` on any figure. Money right-aligned,
@@ -2062,6 +2069,29 @@ routes would be the nav-stricter-than-the-API defect with the evidence removed.
 - **Guidebook and Help left the nav and had to not leave the building.** They
   are in the masthead, on every screen rather than only beside the two tabs
   they used to sit next to.
+
+### The mark beside a tab is the step, not the schedule
+
+*"Why the initials? Maybe just number them since it's the order of
+operations?"* — and that is right. The letters were the schedule each tab
+prints as in the audit package, which is a real thing a reviewer navigates by,
+and it was the correct mark for twenty unordered tabs. Against eight that
+**are** the order they read `· A B E D F G E`: out of sequence, with `E`
+twice. A mark that looks like an ordering and is not one is worse than none,
+because the reader trusts it once.
+
+**The numbers are the walk's, deliberately, and not a fresh 1–8.** Books is
+steps 1–2, Classify 3–5, Rate 7–8. A plain 1–8 would put *Rate = 5* in the nav
+beside a landing page saying the rate is step 8 — two numberings of one order,
+which is the defect most of this file is about. One order, one set of numbers,
+and the nav and the walk are the same map.
+
+`test_the_nav_marks_are_the_walk_s_step_numbers` derives both sides and keeps
+no list of either: the tabs come from `ALL_TABS`, the steps from
+`v_audit_walk`, and a step that moves or a tab renumbered by hand fails there.
+Two tabs carry no number and that is a statement rather than a gap — **Audit
+is the walk**, and **Requests is not a step in it**: asking for what is missing
+runs alongside the sequence, not inside it.
 
 ### The screen that matters reached 10.6% of the ledger
 
