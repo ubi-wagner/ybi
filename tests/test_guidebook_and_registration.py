@@ -84,8 +84,16 @@ def test_the_guidebook_is_not_gated_on_reading_the_cost_record():
 def test_the_nav_asks_for_what_the_api_asks_for():
     """A nav stricter than the API hides work; a looser one offers a 403.
     The route takes `current_actor`, so the tab takes `null`."""
-    row = re.search(r'\["/guidebook",[^\]]*\]', APP).group(0)
-    assert row.rstrip("]").rstrip().endswith("null"), row
+    # The *gate*, read by position. A first draft asserted the row "ends
+    # with null", which was true until the rows grew a fifth field saying
+    # which product a tab belongs to — and then failed against a nav that
+    # obeys the rule perfectly. The same defect as asserting a literal line
+    # rather than the rule it describes.
+    row = re.search(r'\["/guidebook",([^\]]*)\]', APP).group(1)
+    fields = [f.strip() for f in row.split(",")]
+    assert fields[2] == "null", (
+        f"the guidebook tab asks for {fields[2]}; the route takes "
+        f"current_actor, so the tab takes null")
 
 
 def test_yours_orders_the_shelf_and_never_shortens_it():
