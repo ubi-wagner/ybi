@@ -174,11 +174,19 @@ def main() -> int:
                               invoice_number, invoice_date, service_from,
                               service_to, po_number, bill_to_name, terms,
                               direct_claimed, indirect_claimed, total, status)
-                           VALUES ('2025',%s,%s,%s,%s,%s,%s,%s,%s,%s,'Net 30',
+                           -- The period is the invoice's own year, not a
+                           -- constant. These three are dated April 2026 and
+                           -- were filed under 2025, so every 2025 figure
+                           -- taken off the register was comparing thirteen
+                           -- months to twelve — 19,145.79 of Drive AM ODCs
+                           -- on its own. Corrected on the record, and here
+                           -- so a re-run does not put it back.
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Net 30',
                                    %s,%s,%s,'ISSUED')
                            RETURNING invoice_id""",
-                        (award_id, objective, int(number), number,
-                         INVOICE_DATE, SERVICE_FROM, SERVICE_TO, po, bill_to,
+                        (str(INVOICE_DATE.year), award_id, objective,
+                         int(number), number, INVOICE_DATE, SERVICE_FROM,
+                         SERVICE_TO, po, bill_to,
                          total - indirect, indirect, total))
             invoice_id = cur.fetchone()["invoice_id"]
             for i, (category, amount, description, personnel) in enumerate(lines, 1):

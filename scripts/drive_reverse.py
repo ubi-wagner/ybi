@@ -109,9 +109,27 @@ def main() -> int:
         # recorded was $12,000 against a real NCDMM invoice that NCDMM never
         # sent. The backward walk was only ever walkable because a test
         # script had invented its first hop.
-        gap("no payment is recorded against any invoice — the receipt "
-            "register is empty, so the walk starts one hop in, at the "
-            "invoice. This is the first link and it is missing")
+        # The 2025 register changed half of this and not the other half, and
+        # the difference is the whole point of the hop. Every one of those
+        # invoices is stamped PAID and states the payment it received, so
+        # `invoice.paid_amount` is no longer empty — but `receipt` still is,
+        # and a payment the *invoice* asserts is not a payment the
+        # organisation has recorded receiving. Saying "no payment is
+        # recorded" over sixty-one stated payments would be the gap a drive
+        # reports that doing the work cannot clear.
+        stated = one("""SELECT count(*) AS n, COALESCE(sum(paid_amount), 0) AS a
+                          FROM invoice WHERE paid_amount IS NOT NULL""")
+        if stated and stated["n"]:
+            gap(f"the receipt register is empty, so the walk starts one hop "
+                f"in, at the invoice. {stated['n']} invoices state a payment "
+                f"of {m(stated['a'])} between them and every one is stamped "
+                f"PAID — but that is the invoice's own assertion, not a "
+                f"receipt YBI recorded. The bank side of this link is the "
+                f"one still missing")
+        else:
+            gap("no payment is recorded against any invoice — the receipt "
+                "register is empty, so the walk starts one hop in, at the "
+                "invoice. This is the first link and it is missing")
 
     step("2. Which invoice did it settle?")
     if receipt:
@@ -124,13 +142,26 @@ def main() -> int:
             finding("the receipt points at an invoice that does not exist")
             return 1
     else:
-        # The largest, because it is the one a reviewer opens first and the
-        # one the restatement is about.
+        # The largest invoice **that reaches an award**, because the point of
+        # a backward walk is to exercise the links and an invoice with no
+        # award stops it at step 3 for a reason that is about the choice
+        # rather than about the record. With sixty-one invoices on file the
+        # largest overall is a Rising Tides accrual carrying no award, and
+        # picking it reported two gaps that say nothing.
         inv = one("""SELECT i.invoice_id, i.invoice_number, i.award_id,
                             i.milestone_id, i.objective_id, i.invoice_date,
                             i.direct_claimed, i.indirect_claimed, i.cost_share
-                       FROM invoice i ORDER BY i.total DESC NULLS LAST
-                       LIMIT 1""")
+                       FROM invoice i WHERE i.award_id IS NOT NULL
+                       ORDER BY i.total DESC NULLS LAST LIMIT 1""")
+        if not inv:
+            inv = one("""SELECT i.invoice_id, i.invoice_number, i.award_id,
+                                i.milestone_id, i.objective_id, i.invoice_date,
+                                i.direct_claimed, i.indirect_claimed, i.cost_share
+                           FROM invoice i ORDER BY i.total DESC NULLS LAST
+                           LIMIT 1""")
+            if inv:
+                gap("no invoice on the register reaches an award, so the walk "
+                    "cannot get past the invoice whichever one it picks")
         if not inv:
             print("\nCOULD NOT RUN — no invoice on file either; "
                   "run scripts/load_invoices.py.", file=sys.stderr)

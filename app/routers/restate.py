@@ -34,11 +34,34 @@ from app.audit import record
 from app.auth import Actor, require_controller, require_reader
 from app.db import one, query, transaction
 from app.statelock import turn
-from app.domain.invoice import Category, Invoice, InvoiceLine, assess
+from app.domain.core import money
+from app.domain.invoice import (Category, DirectCost, Invoice, InvoiceLine,
+                                assess, rebuild)
 from app.settings import settings
 
 router = APIRouter(prefix="/restate", tags=["restate"],
                    dependencies=[Depends(require_reader)])
+
+
+#: The de minimis an award is set to, as a rate. Both places it is written
+#: down are cited because they are different kinds of evidence and an auditor
+#: will want to know which is which:
+#:
+#:   * Last Tactical Mile — the only EXECUTED agreement that budgets it.
+#:     Schedule B carries 10.0000% of total direct to four decimal places,
+#:     and LTM's are the only invoices in the register with an indirect line.
+#:   * Hybrid Phase 2 — a COST PROPOSAL, not an executed schedule. Its ODCs
+#:     tab computes "ICR 10% maximum 45,457.00" over a $454,570 base and puts
+#:     the result inside the labour line. It is the document that proves the
+#:     indirect is embedded rather than absent.
+#:
+#: Every one of the four awards carries DE_MINIMIS_10 on the record, so the
+#: election is what they are all measured against.
+ELECTED = {
+    "DE_MINIMIS_10": Decimal("0.10"),
+    "DE_MINIMIS_15": Decimal("0.15"),
+    "NEGOTIATED": Decimal(0),      # a negotiated rate is the rate itself
+}
 
 
 class RestateIn(BaseModel):
@@ -154,6 +177,50 @@ def restate(body: RestateIn, period: str = None,
                      FROM award WHERE objective_id = %s LIMIT 1""",
                 (body.objective_id,))
 
+    # ── The cost record for this objective, which is what a rebuild is ──
+    #
+    # Before migration 076 the position was the rate applied to the invoice's
+    # own base. That base carries labour which already contains embedded
+    # indirect — YBI's Hybrid cost proposal computes $45,457 of 10% ICR into a
+    # $449,043.40 labour line — so the rate went on top of a figure that
+    # already held it. Across the four America Makes awards the two readings
+    # differ by $722,095.49, in the direction that would have YBI ask a
+    # federal pass-through for money it cannot support.
+    #
+    # Annual rather than per-invoice because the cost record is annual, and
+    # splitting a year of classified cost across twelve invoices needs a
+    # driver nobody has recorded.
+    wages = one("""SELECT COALESCE(round(sum(distributed_wages), 2), 0) AS w
+                     FROM v_labor_effective
+                    WHERE period = %s AND objective_id = %s""",
+                (period, body.objective_id))["w"]
+    nonlabour = one("""SELECT COALESCE(sum(l.amount), 0) AS a
+                         FROM decision d
+                         JOIN decision_line dl
+                           ON dl.decision_id = d.decision_id AND dl.live
+                         JOIN ledger_line l ON l.line_id = dl.line_id
+                        WHERE d.reversed_at IS NULL AND d.pool = 'DIRECT'
+                          AND d.objective_id = %s""",
+                    (body.objective_id,))["a"]
+    mtdc_row = one("""SELECT a.base_amount AS b FROM allocation a
+                       WHERE a.rate_id = %s AND a.objective_id = %s""",
+                   (rate["rate_id"], body.objective_id))
+    if not mtdc_row:
+        raise HTTPException(409, {
+            "error": "NO_BASE_FOR_OBJECTIVE",
+            "message": (f"The sealed rate carries no allocation for "
+                        f"{body.objective_id}, so there is no MTDC base to "
+                        f"rebuild against. A restatement is measured against "
+                        f"the cost record, and this objective has none under "
+                        f"this rate."),
+            "objective_id": body.objective_id})
+    cost = DirectCost(wages=Decimal(str(wages)),
+                      fringe=money(Decimal(str(wages)) * fringe_rate),
+                      nonlabour=Decimal(str(nonlabour)),
+                      mtdc=Decimal(str(mtdc_row["b"])))
+    elected_rate = ELECTED.get(
+        (award or {}).get("rate_method") or "", Decimal(0))
+
     lines, under, over = [], Decimal(0), Decimal(0)
     billed_total = base_total = indirect_billed = indirect_supported = Decimal(0)
     for header, inv in pairs:
@@ -183,6 +250,22 @@ def restate(body: RestateIn, period: str = None,
             "variance": variance, "direction": direction,
             "finding": " ".join(rec.findings),
         })
+
+    # ── The position, rebuilt ───────────────────────────────────────────
+    #
+    # `under` and `over` above were accumulated from the per-invoice as-billed
+    # reading, which is kept as detail. The POSITION is the rebuild, and the
+    # two are deliberately both on the row: an auditor comparing this to
+    # anything written before migration 076 has to be able to see why they
+    # differ, and removing the old figure would make the difference invisible
+    # rather than resolved.
+    rb = rebuild(body.objective_id, invoices=len(lines), billed=billed_total,
+                 cost=cost, indirect_rate=indirect_rate,
+                 elected_rate=elected_rate, indirect_billed=indirect_billed,
+                 as_billed_base=base_total)
+    as_billed_under, as_billed_over = under, over
+    under = rb.position if rb.position > 0 else Decimal(0)
+    over = -rb.position if rb.position < 0 else Decimal(0)
 
     # The ceiling caps what can be claimed. A restatement that would take the
     # award past its ceiling is not a bigger claim, it is a modification
@@ -221,14 +304,20 @@ def restate(body: RestateIn, period: str = None,
                           invoices, billed_total, base_total, indirect_billed,
                           indirect_supported, under_recovered, over_collected,
                           ceiling_headroom, capped_by_ceiling, basis,
-                          computed_by)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                          computed_by, direct_supported, indirect_rebuilt,
+                          supported_total, as_billed_base, as_billed_indirect,
+                          elected_rate, elected_indirect, implied_rate, method)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                               %s,%s,%s,%s,%s,%s,%s,%s,'REBUILD')
                        RETURNING restatement_id""",
                     (period, award["award_id"] if award else None,
                      body.objective_id, rate["rate_id"], rate["seal_hash"],
                      len(lines), billed_total, base_total, indirect_billed,
-                     indirect_supported, under, over, headroom,
-                     bool(capped), body.basis.strip(), actor.display_name))
+                     rb.indirect_supported, under, over, headroom,
+                     bool(capped), body.basis.strip(), actor.display_name,
+                     rb.direct_supported, rb.indirect_supported, rb.supported,
+                     rb.as_billed_base, rb.as_billed_indirect,
+                     rb.elected_rate, rb.elected_indirect, rb.implied_rate))
         rid = cur.fetchone()["restatement_id"]
         for l in lines:
             cur.execute("""INSERT INTO restatement_line
@@ -257,9 +346,41 @@ def restate(body: RestateIn, period: str = None,
         "billed_total": str(billed_total),
         "base_total": str(base_total),
         "indirect_billed": str(indirect_billed),
-        "indirect_supported": str(indirect_supported),
+        "indirect_supported": str(rb.indirect_supported),
         "under_recovered": str(under),
         "over_collected": str(over),
+        # The position, and the reading it replaced, side by side and named.
+        "method": "REBUILD",
+        "rebuild": {
+            "direct_supported": str(rb.direct_supported),
+            "indirect_supported": str(rb.indirect_supported),
+            "supported_total": str(rb.supported),
+            "position": str(rb.position),
+            "wages": str(cost.wages), "fringe": str(cost.fringe),
+            "nonlabour": str(cost.nonlabour), "mtdc": str(cost.mtdc),
+        },
+        "as_billed": {
+            "base": str(rb.as_billed_base),
+            "indirect_supported": str(rb.as_billed_indirect),
+            "position": str(rb.as_billed_position),
+            "under_recovered": str(as_billed_under),
+            "over_collected": str(as_billed_over),
+            "note": ("The invoice-only reading, kept for comparison and never "
+                     "the position. It applies the rate to a base that "
+                     "already carries embedded indirect."),
+        },
+        "elected": {
+            "rate": str(rb.elected_rate),
+            "indirect": str(rb.elected_indirect),
+            "position": str(rb.elected_indirect - indirect_billed),
+            "cited": ("Both places the 10% is written down: Last Tactical "
+                      "Mile's executed Schedule B budgets 10.0000% of total "
+                      "direct, and Hybrid Phase 2's cost proposal computes "
+                      "'ICR 10% maximum 45,457.00' into its labour line."),
+        },
+        "implied_rate": (str(rb.implied_rate) if rb.implied_rate is not None
+                         else None),
+        "findings": rb.findings,
         "ceiling_headroom": str(headroom) if headroom is not None else None,
         "capped_by_ceiling": bool(capped),
         "lines": [{**l, "invoice_id": str(l["invoice_id"]),
@@ -283,7 +404,14 @@ def list_restatements(period: str = None) -> list[dict]:
                            indirect_supported, under_recovered, over_collected,
                            ceiling_headroom, capped_by_ceiling, rate_applied,
                            rate_kind, billed_under, sponsor, basis,
-                           modification_ref, computed_by, computed_at
+                           modification_ref, computed_by, computed_at,
+                           -- Both readings reach the screen, or the screen
+                           -- shows a position with no way to see why it is
+                           -- not the figure anybody wrote down before today.
+                           method, direct_supported, indirect_rebuilt,
+                           supported_total, as_billed_base, as_billed_indirect,
+                           as_billed_position, elected_rate, elected_indirect,
+                           elected_position, implied_rate
                       FROM v_restatement WHERE period = %s
                      ORDER BY computed_at DESC""", (period,))
 
