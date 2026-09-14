@@ -1022,3 +1022,27 @@ td .btn-row { flex-wrap: nowrap; align-items: center; }
    is one nobody knows exists until the day it does. */
 .queue-more { display: flex; align-items: center; gap: 12px;
               margin: 14px 2px 4px; }
+
+/* The walk: the 2025 audit as one ordered journey rather than a to-do list.
+   Numbered, because the order is the guarantee — classification is sealed
+   before any rate exists, and a page that lost the sequence would lose the
+   thing the sequence is evidence of. */
+.walk { list-style: none; margin: 0; padding: 0; counter-reset: walk; }
+.walk-step { display: grid; grid-template-columns: 28px 1fr auto;
+             gap: 12px; align-items: start; padding: 11px 2px;
+             border-top: 1px solid var(--rule); counter-increment: walk; }
+.walk-step:first-child { border-top: none; }
+.walk-mark { padding-top: 2px; }
+.walk-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.walk-title { font-weight: 600; }
+.walk-title::before { content: counter(walk) ". "; color: var(--muted);
+                      font-weight: 400; }
+.walk-what { font-size: 12px; color: var(--muted); }
+.walk-detail { font-size: 12px; color: var(--muted); }
+.walk-step.is-done .walk-title { color: var(--muted); font-weight: 500; }
+.walk-state { font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+              color: var(--muted); white-space: nowrap; padding-top: 3px; }
+.walk-state.s-open { color: var(--accent); font-weight: 600; }
+.walk-state.s-no-data { color: var(--warn); font-weight: 600; }
+.walk-next { margin-top: 14px; padding-top: 12px;
+             border-top: 1px solid var(--rule); font-size: 13px; }

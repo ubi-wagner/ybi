@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, money, count } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import Walk from "../components/Walk.jsx";
 import Manual from "../components/Manual.jsx";
 import { forKind } from "../worklistKinds.js";
 
@@ -75,6 +76,15 @@ export default function Home({ actor, product }) {
       <PageHead title={`Good to see you, ${actor.display_name}`}>
         {describe(actor)}
       </PageHead>
+
+      {/* Behind the 2025 door the landing page *is* the walk. The generic
+          dashboard answers "what is outstanding" and never "where am I in
+          this", and the second is the question a controller closing a year
+          holds — the file is closed in an order and the order is the whole
+          guarantee. The worklist stays underneath it, because what is
+          outstanding is still worth knowing; it is no longer the first
+          thing on the page. */}
+      {product === "audit" && actor.can_read && <Walk period="2025" />}
 
       <MyWork actor={actor} product={product} />
 

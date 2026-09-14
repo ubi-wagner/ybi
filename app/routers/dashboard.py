@@ -182,6 +182,29 @@ def activity(limit: int = Query(100, le=500), offset: int = 0,
 
 
 
+@router.get("/walk")
+def walk(period: str = None, actor: Actor = Depends(require_reader)) -> list[dict]:
+    """The 2025 audit as the one ordered journey it is.
+
+    The door opened on the generic dashboard, which answers *what is
+    outstanding* and never *where am I in this*. Those are different questions
+    and the second is the one a controller closing a year holds: the file is
+    closed in an order, each step depends on the one before it, and the order
+    is the whole guarantee — classification is sealed before any rate exists,
+    and a landing page listing the two as peers said nothing about that.
+
+    Nothing is computed here or in the view. Each step reads the view that
+    already owns its figure.
+    """
+    period = period or settings.period
+    rows = query("""SELECT seq, step, what, state, detail, goes_to
+                      FROM v_audit_walk WHERE period = %s ORDER BY seq""",
+                 (period,))
+    if not rows:
+        raise HTTPException(404, "No such period.")
+    return rows
+
+
 @router.get("/refusals")
 def refusals(limit: int = 50, mine: bool = True,
              actor: Actor = Depends(current_actor)) -> dict:

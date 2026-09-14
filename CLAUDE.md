@@ -1973,6 +1973,63 @@ administrative objective. The test that caught it then failed again because
 the fixture said `INDIRECT` from memory; *read the schema, never recall it*
 applies to the test as much as to the code.
 
+## The audit is a walk, not a to-do list
+
+Migration `081`, `v_audit_walk`, `GET /api/dashboard/walk`, `Walk.jsx`. The
+2025 door opened on the generic dashboard — a worklist, a document count, a
+manual panel — which answers *what is outstanding* and never *where am I in
+this*. Those are different questions and the second is the one a controller
+closing a year actually holds: **the file is closed in an order, each step
+rests on the one before it, and the order is the whole guarantee.**
+Classification is sealed before any rate exists; a landing page listing those
+as two items on a list said nothing about the thing the sequence is evidence
+of.
+
+Ten steps, each reading the view that already owns its figure — the
+reconciliation from `v_statement_reconciliation`, the coverage from
+`v_classification_coverage`, the partitions from `v_partition_coverage`.
+**Nothing on it is computed**, in the view or on the screen, and
+`tests/test_the_walk.py` fails either.
+
+Four states, and the fourth is what a task list usually gets wrong:
+
+| | |
+| --- | --- |
+| `DONE` | finished |
+| `OPEN` | work outstanding that somebody here can do |
+| `NO DATA` | cannot be evaluated; it needs a document from outside, and an empty set matching an empty set perfectly is not a pass |
+| `WAITING` | an earlier step is not done, so this one cannot honestly be called open — offering it would offer work the server refuses |
+
+On the live record: **7 of 10 done**, square footage and the asset register
+`NO DATA`, and the one thing actually to do is the citations.
+
+Three defects came out of building it:
+
+- **`decision.scope` is the group key, not the period.** The citation step
+  grouped by it and reported *"nothing has been judged yet"* over 757
+  judgments. `decision.period` for `scope` is on this file's own list of
+  names written from memory, and I wrote it having just read the list. The
+  period comes through `decision_set`.
+- **Two true figures about one thing, on one page.** The step counted all 757
+  live judgments beside a worklist row saying 363 — `NEEDS_EVIDENCE` scopes to
+  federally chargeable judgments (`ALLOWABLE` or `PENDING`) and the walk did
+  not. Both right, and a reader has to reconcile them in their head, which is
+  13.0% and 2.2% in its presentation form. The walk counts what the worklist
+  counts and says which population it is: *0 of 363 federally chargeable, of
+  757 live.*
+- **A figure formatted in the database bypasses the one formatter.** The view
+  composes its own sentences, so `money()` and `count()` cannot reach inside
+  them and `15500 general-ledger lines` read as a part number. `to_char(…,
+  'FM999,999,999')` at the point the string is built.
+
+And the test that would not fail, twice in one file. `view in body` is a
+**substring** test, so renaming the join's source to
+`v_classification_coverage_XX` satisfied it; `\bview\b` then still passed,
+because the migration's own header names all three views **in prose**. It
+strips comments and matches on a word boundary now. That is the fourth
+instance in a day of a test asserting prose rather than code, and every one
+was found the same way — by breaking the thing and watching.
+
 ## Eight tabs, and the reach they must not cost
 
 Migration `080`. Sixteen tabs reached the 2025 audit door and the controller's

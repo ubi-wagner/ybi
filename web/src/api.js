@@ -158,6 +158,10 @@ export const api = {
       ? "?" + new URLSearchParams({ ...(period && { period }),
                                     ...(product && { product }) })
       : "")),
+  /* The walk: the ten steps of the 2025 audit and where each one stands.
+     Read, never computed — `v_audit_walk` owns it. */
+  walk: (period = "2025") =>
+    req(`/dashboard/walk?period=${encodeURIComponent(period)}`),
   worklist: (params) => req("/dashboard/worklist?" + new URLSearchParams(params)),
   activity: (params) => req("/dashboard/activity?" + new URLSearchParams(params)),
   timesheetObjectives: (period = "2025") =>
