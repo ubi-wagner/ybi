@@ -15,12 +15,22 @@ derived from the view.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
 import pytest
 
 from app.db import query
+
+# Everything here is derived from the views, which means it needs the views.
+# Without a database it failed with a connection error rather than skipping,
+# which is a test arguing against working code: a fresh clone has no Postgres
+# on the default port and seven reds said nothing about the code. CI sets
+# DATABASE_URL against a bare Postgres with the migrations applied, which is
+# exactly what these read.
+pytestmark = pytest.mark.skipif(not os.getenv("DATABASE_URL"),
+                                reason="needs a database")
 
 SQL = Path(__file__).resolve().parent.parent / "app" / "sql"
 PRODUCTS = {"audit", "fcs"}

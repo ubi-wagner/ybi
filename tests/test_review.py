@@ -205,6 +205,49 @@ def test_coverage_is_defined_once():
         "is a second definition of the scope")
 
 
+def test_no_handler_anywhere_derives_coverage_for_itself():
+    """And the list of handlers to check is not kept by hand.
+
+    The assertion above names `classify.py`, which is the file the defect was
+    found in — so `dashboard.py` grew the next copy of the scope and nothing
+    saw it. It scoped to `l.statement = 'P&L'`, which is the predicate `064`
+    moved into `v_cost_line` because **income is on the P&L**, and the
+    controller's home screen read **59.7% classified** while the view read
+    **100.0%**, at the same moment, over the same 757 judgments. The figure a
+    reader quotes was the wrong one, on a denominator that was 41% grant
+    income.
+
+    A test written about one file is the hand-kept map wearing a test's
+    clothes. Every router is swept and there is no list in it.
+
+    The shape is specific, because four legitimate queries join these two
+    registers and aggregate: a **period-wide** total — `ledger_line` driving,
+    LEFT JOIN to live decisions so undecided lines survive, an aggregate, and
+    no GROUP BY. That is a denominator. The four that are fine either group
+    (the queue, by account and payee) or inner-join from the decision side,
+    which can only ever measure what *is* classified, never the scope.
+    """
+    offenders = []
+    for f in sorted((ROOT / "app" / "routers").glob("*.py")):
+        src = f.read_text()
+        for m in re.finditer(r'"""(.*?)"""', src, re.S):
+            q = m.group(1)
+            if "ledger_line" not in q or "decision_line" not in q:
+                continue
+            if not re.search(r"\b(sum|count)\s*\(", q):
+                continue
+            if re.search(r"\bGROUP\s+BY\b", q, re.I):
+                continue
+            if not re.search(r"LEFT\s+JOIN\s+decision_line", q, re.I):
+                continue
+            offenders.append(f"{f.name}:{src[:m.start()].count(chr(10)) + 1}")
+    assert not offenders, (
+        "a handler derives a classification scope from the ledger instead of "
+        "reading v_classification_coverage, which is where `039` put the "
+        "definition after it answered 13.0% and 2.2% at once: "
+        + ", ".join(offenders))
+
+
 def test_the_coverage_row_can_be_checked_by_hand():
     """classified + unclassified = scope, and the percentage comes from them.
 

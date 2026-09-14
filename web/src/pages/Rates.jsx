@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 export default function Rates() {
@@ -247,9 +247,9 @@ export default function Rates() {
             {rates.map((r, i) => (
               <tr key={i} className="hoverable">
                 <td className="l" style={{ fontWeight: 600 }}>{r.kind.replace(/_/g, " ")}</td>
-                <td>{Number(r.pool_amount).toLocaleString()}</td>
+                <td className="num">{money(r.pool_amount)}</td>
                 <td className="l rowsub">{r.base_type}</td>
-                <td>{Number(r.base_amount).toLocaleString()}</td>
+                <td className="num">{money(r.base_amount)}</td>
                 <td style={{ fontWeight: 700, fontSize: 14 }}>{(Number(r.rate) * 100).toFixed(2)}%</td>
                 <td className="l"><Pill tone={r.status === "ACCEPTED" ? "pass" : ""}>{r.status}</Pill></td>
                 <td className="l mono-ref">{String(r.seal_hash).slice(0, 12)}…</td>

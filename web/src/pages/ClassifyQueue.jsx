@@ -121,8 +121,7 @@ export default function ClassifyQueue({ actor }) {
          judgment over nothing. */
       const covered = got?.lines
         ? ` · ${got.lines} line${got.lines === 1 ? "" : "s"}`
-          + (got.amount ? `, $${Number(got.amount).toLocaleString(undefined,
-              { maximumFractionDigits: 0 })}` : "")
+          + (got.amount ? `, $${money(got.amount)}` : "")
         : " · no lines";
       const missed = got?.skipped?.length || 0;
       const label = (groups.length === 1

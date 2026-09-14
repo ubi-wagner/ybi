@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { Card, Table, Empty, Drawer, Field, Pill, Tick, useToast }
   from "../components/ui.jsx";
 import { forKind } from "../worklistKinds.js";
 
-const money = (v) =>
-  v === null || v === undefined
-    ? "—"
-    : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 /* Recommending an item.
  *

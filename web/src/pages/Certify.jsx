@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table } from "../components/ui.jsx";
 
-const money = (v) =>
-  v === null || v === undefined ? "—"
-    : Number(v).toLocaleString(undefined, { minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2 });
 const pct = (v) => `${(Number(v) * 100).toFixed(1)}%`;
 const when = (t) => (!t ? "" : new Date(t).toLocaleString());
 

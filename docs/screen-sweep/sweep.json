@@ -3,127 +3,33 @@
   "headings": [
    "Good to see you, Tom Metzinger",
    "What is waiting on you",
-   "People to chase",
    "The papers behind the numbers",
    "What I have sent in",
    "Your guidebook",
    "Your portfolio",
    "Where the engagement stands"
   ],
-  "figures": 65,
-  "figures_linked": 0,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "43",
-   "1,835,047",
-   "1",
-   "363"
-  ],
-  "tables": 3,
-  "rows": 27,
-  "buttons": [
-   "Undo",
-   "Password",
-   "Sign out"
-  ],
-  "empty_states": [],
-  "drew": 5190,
-  "path": "/",
-  "label": "Home",
-  "faults": []
- },
- {
-  "headings": [
-   "Time",
-   "Roster"
-  ],
-  "figures": 49,
-  "figures_linked": 0,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "43",
-   "0 / 43",
-   "0",
-   "0"
-  ],
-  "tables": 1,
-  "rows": 43,
-  "buttons": [
-   "Undo",
-   "Password",
-   "Sign out",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms",
-   "Terms"
-  ],
-  "empty_states": [],
-  "drew": 3337,
-  "path": "/timesheet",
-  "label": "My time",
-  "faults": []
- },
- {
-  "headings": [],
-  "figures": 2,
+  "figures": 26,
   "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
-   "1"
+   "2025 Audit",
+   "1",
+   "363",
+   "3,425,505.00",
+   "21"
   ],
-  "tables": 0,
-  "rows": 0,
+  "tables": 2,
+  "rows": 8,
   "buttons": [
-   "1 problem",
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out"
   ],
-  "empty_states": [
-   "!Not available{\"detail\":\"This account is not linked to an employee, so it has no effort distribution to certify.\"}"
-  ],
-  "drew": 433,
-  "path": "/certify",
-  "label": "My effort",
+  "empty_states": [],
+  "drew": 4128,
+  "path": "/",
+  "label": "Home",
   "faults": []
  },
  {
@@ -133,9 +39,9 @@
    "What I have sent in"
   ],
   "figures": 5,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "0",
    "0",
    "0",
@@ -144,6 +50,7 @@
   "tables": 0,
   "rows": 0,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -152,7 +59,7 @@
   "empty_states": [
    "\u2014Nothing yetDocuments you send in will be listed here, along with whether anybody has put them to work yet."
   ],
-  "drew": 1166,
+  "drew": 1122,
   "path": "/documents",
   "label": "My documents",
   "faults": []
@@ -164,9 +71,9 @@
    "Everything on file"
   ],
   "figures": 46,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "18",
    "0",
    "22.3 MB",
@@ -175,6 +82,7 @@
   "tables": 1,
   "rows": 18,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -213,40 +121,9 @@
    "Download"
   ],
   "empty_states": [],
-  "drew": 3664,
+  "drew": 3620,
   "path": "/library",
   "label": "Library",
-  "faults": []
- },
- {
-  "headings": [
-   "People",
-   "Accounts"
-  ],
-  "figures": 9,
-  "figures_linked": 4,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "2",
-   "0",
-   "0 active",
-   "0"
-  ],
-  "tables": 1,
-  "rows": 0,
-  "buttons": [
-   "2 problems",
-   "Undo",
-   "Password",
-   "Sign out",
-   "Roster (0)",
-   "Addresses to check (0)",
-   "Payroll without accounts (0)"
-  ],
-  "empty_states": [],
-  "drew": 816,
-  "path": "/people",
-  "label": "People",
   "faults": []
  },
  {
@@ -255,9 +132,9 @@
    "Import history"
   ],
   "figures": 4,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "898",
    "12",
    "14"
@@ -265,12 +142,13 @@
   "tables": 1,
   "rows": 3,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out"
   ],
   "empty_states": [],
-  "drew": 1202,
+  "drew": 1158,
   "path": "/imports",
   "label": "Import",
   "faults": []
@@ -281,9 +159,9 @@
    "The register"
   ],
   "figures": 42,
-  "figures_linked": 3,
+  "figures_linked": 4,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "11",
    "11",
    "0",
@@ -292,6 +170,7 @@
   "tables": 1,
   "rows": 22,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -301,38 +180,9 @@
    "Reconciling items (6)"
   ],
   "empty_states": [],
-  "drew": 3988,
+  "drew": 4031,
   "path": "/reconcile",
   "label": "Reconcile",
-  "faults": []
- },
- {
-  "headings": [
-   "Chart of accountsH",
-   "Four dimensions, straight off the transaction"
-  ],
-  "figures": 144,
-  "figures_linked": 2,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "Form 990 function",
-   "103",
-   "7",
-   "20"
-  ],
-  "tables": 1,
-  "rows": 103,
-  "buttons": [
-   "Undo",
-   "Password",
-   "Sign out",
-   "2026 chart",
-   "2025 crosswalk"
-  ],
-  "empty_states": [],
-  "drew": 8301,
-  "path": "/chart",
-  "label": "Chart",
   "faults": []
  },
  {
@@ -340,17 +190,18 @@
    "ClassificationB"
   ],
   "figures": 7,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "100.0%",
    "0",
    "of 757",
-   "0"
+   "0.00"
   ],
   "tables": 0,
   "rows": 0,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -363,7 +214,7 @@
   "empty_states": [
    "\u2713Queue is clearEvery group in this filter has a decision. Seal the set when you are ready for the rate."
   ],
-  "drew": 853,
+  "drew": 812,
   "path": "/classify",
   "label": "Classify",
   "faults": []
@@ -376,9 +227,9 @@
    "Register"
   ],
   "figures": 20,
-  "figures_linked": 1,
+  "figures_linked": 2,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "Every document received for ",
    "0 proposed of 6 unattached",
    "6",
@@ -387,6 +238,7 @@
   "tables": 1,
   "rows": 6,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out"
@@ -394,7 +246,7 @@
   "empty_states": [
    "\u2014Nothing to proposeEvery unattached document either has no amount read off it yet, or its amount matches no cost in the period."
   ],
-  "drew": 2186,
+  "drew": 2142,
   "path": "/evidence",
   "label": "Evidence",
   "faults": []
@@ -407,9 +259,9 @@
    "What we have asked for"
   ],
   "figures": 63,
-  "figures_linked": 1,
+  "figures_linked": 2,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "0",
    "0",
    "0",
@@ -418,6 +270,7 @@
   "tables": 1,
   "rows": 21,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -430,7 +283,7 @@
   "empty_states": [
    "\u2014Nothing asked for yetEach of these has a lead time in weeks, so the ask is the long pole. Nothing above can be inferred from the record."
   ],
-  "drew": 11190,
+  "drew": 11146,
   "path": "/requests",
   "label": "Requests",
   "faults": []
@@ -441,17 +294,18 @@
    "Buildings"
   ],
   "figures": 8,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "0",
    "0",
-   "0",
-   "0"
+   "0.00",
+   "0.00"
   ],
   "tables": 0,
   "rows": 0,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -464,7 +318,7 @@
   "empty_states": [
    "\u2014No buildings recordedAdd the five buildings and their usable area, then the rent roll."
   ],
-  "drew": 1136,
+  "drew": 1104,
   "path": "/space",
   "label": "Space",
   "faults": []
@@ -475,17 +329,18 @@
    "Buildings"
   ],
   "figures": 8,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "0",
    "0",
-   "0",
-   "0"
+   "0.00",
+   "0.00"
   ],
   "tables": 0,
   "rows": 0,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -498,97 +353,9 @@
   "empty_states": [
    "\u2014No buildings recordedAdd the five buildings and their usable area, then the rent roll."
   ],
-  "drew": 1136,
+  "drew": 1104,
   "path": "/inventory",
   "label": "Inventory",
-  "faults": []
- },
- {
-  "headings": [
-   "ContractsF",
-   "Portfolio"
-  ],
-  "figures": 21,
-  "figures_linked": 0,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "1,103,594",
-   "616,835",
-   "0",
-   "616,835"
-  ],
-  "tables": 1,
-  "rows": 4,
-  "buttons": [
-   "Undo",
-   "Password",
-   "Sign out",
-   "Contracts",
-   "Charge codes",
-   "People"
-  ],
-  "empty_states": [],
-  "drew": 1463,
-  "path": "/contracts",
-  "label": "Contracts",
-  "faults": []
- },
- {
-  "headings": [
-   "ProjectsF"
-  ],
-  "figures": 10,
-  "figures_linked": 0,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "1,103,594",
-   "6",
-   "1",
-   "512,409"
-  ],
-  "tables": 1,
-  "rows": 3,
-  "buttons": [
-   "Undo",
-   "Password",
-   "Sign out",
-   "Projects",
-   "To do",
-   "What nobody has taken",
-   "Set up a project"
-  ],
-  "empty_states": [],
-  "drew": 1105,
-  "path": "/projects",
-  "label": "Projects",
-  "faults": []
- },
- {
-  "headings": [
-   "Testing lanesC",
-   "Two different things that look alike"
-  ],
-  "figures": 3,
-  "figures_linked": 0,
-  "sample": [
-   "Cost allocation \u00b7 2025",
-   "0",
-   "0"
-  ],
-  "tables": 1,
-  "rows": 1,
-  "buttons": [
-   "Undo",
-   "Password",
-   "Sign out",
-   "Compare side by side",
-   "New lane",
-   "Open"
-  ],
-  "empty_states": [],
-  "drew": 1136,
-  "path": "/lanes",
-  "label": "Lanes",
   "faults": []
  },
  {
@@ -598,9 +365,9 @@
    "Computed rates"
   ],
   "figures": 17,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "100.0%",
    "0",
    "80",
@@ -609,6 +376,7 @@
   "tables": 1,
   "rows": 4,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -616,7 +384,7 @@
    "Compute the rate"
   ],
   "empty_states": [],
-  "drew": 1782,
+  "drew": 1739,
   "path": "/rates",
   "label": "Rates",
   "faults": []
@@ -629,17 +397,18 @@
    "Proposals"
   ],
   "figures": 40,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "43.99%",
    "9",
-   "937,073",
+   "937,073.07",
    "12"
   ],
   "tables": 1,
   "rows": 6,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -651,7 +420,7 @@
    "Open"
   ],
   "empty_states": [],
-  "drew": 2062,
+  "drew": 2075,
   "path": "/restate",
   "label": "Restate",
   "faults": []
@@ -663,17 +432,18 @@
    "Invoices on the register"
   ],
   "figures": 206,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "49",
    "9062",
-   "0",
-   "82,725"
+   "0.00",
+   "82,724.89"
   ],
   "tables": 1,
   "rows": 61,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -863,7 +633,7 @@
    "File it"
   ],
   "empty_states": [],
-  "drew": 7566,
+  "drew": 7924,
   "path": "/reports",
   "label": "Reports",
   "faults": []
@@ -877,10 +647,10 @@
    "Where the standard bent",
    "Take the record away"
   ],
-  "figures": 79,
-  "figures_linked": 2,
+  "figures": 72,
+  "figures_linked": 3,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "Form 990",
    "100%",
    "0",
@@ -889,6 +659,7 @@
   "tables": 3,
   "rows": 31,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -897,7 +668,7 @@
    "Form 990"
   ],
   "empty_states": [],
-  "drew": 5350,
+  "drew": 5453,
   "path": "/review",
   "label": "Review",
   "faults": []
@@ -909,9 +680,9 @@
    "Everything else on the shelf"
   ],
   "figures": 11,
-  "figures_linked": 0,
+  "figures_linked": 1,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "8",
    "5",
    "\u00b7 4 KB",
@@ -920,6 +691,7 @@
   "tables": 0,
   "rows": 0,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -933,7 +705,7 @@
    "Read"
   ],
   "empty_states": [],
-  "drew": 1822,
+  "drew": 1778,
   "path": "/guidebook",
   "label": "Guidebook",
   "faults": []
@@ -956,9 +728,9 @@
    "Who can do what"
   ],
   "figures": 5,
-  "figures_linked": 1,
+  "figures_linked": 2,
   "sample": [
-   "Cost allocation \u00b7 2025",
+   "2025 Audit",
    "Form 990 function",
    "1",
    "8",
@@ -967,6 +739,7 @@
   "tables": 1,
   "rows": 4,
   "buttons": [
+   "2025 Auditswitch",
    "Undo",
    "Password",
    "Sign out",
@@ -975,7 +748,7 @@
    "+Who do I ask?"
   ],
   "empty_states": [],
-  "drew": 16996,
+  "drew": 16952,
   "path": "/help",
   "label": "Help",
   "faults": []

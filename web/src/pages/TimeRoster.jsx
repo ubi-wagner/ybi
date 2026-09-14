@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { Card, Empty, Field, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /*
@@ -13,8 +13,6 @@ import { Card, Empty, Field, Pill, Stat, Table, Tick, useToast } from "../compon
 */
 
 const hrs = (v) => v === null || v === undefined ? "—"
-  : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
-const money = (v) => v === null || v === undefined ? "—"
   : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const pct = (v) => v === null || v === undefined ? "—" : `${(Number(v) * 100).toFixed(0)}%`;
 

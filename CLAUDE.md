@@ -1973,6 +1973,75 @@ administrative objective. The test that caught it then failed again because
 the fixture said `INDIRECT` from memory; *read the schema, never recall it*
 applies to the test as much as to the code.
 
+## A cent is the unit a reviewer ties in
+
+`api.js::money()`, and the six screens that had stopped reading it. Eight
+spellings of one formatter, six rounding to the whole dollar — so the payroll
+register printed **$1,835,047** on the controller's home screen and
+**$1,835,047.17** on the seal screen, at the same moment, over the same
+`numeric`. Nothing behind the rendering was ever lossy; money is `Decimal`
+through the engine and `numeric` in the schema, which is precisely why no
+control could see it. It is 13.0% and 2.2% in the place a figure gets quoted
+from.
+
+One definition, and `count()` beside it so the choice is made by naming the
+thing: 757 groups and 15,500 ledger lines are whole and print whole, and
+nobody reaches for the nearest formatter. `tests/test_money_is_printed_once.py`
+fails a seventh spelling, the way `test_no_screen_reaches_past_the_request_layer`
+fails a second `fetch(`.
+
+**And a blank prints as a blank.** `Number(n || 0)` is 0, so the formatter
+itself broke the rule the intake follows: *there is no amount* and *nobody has
+read one off* were the same pixel. Which is how the change found two more:
+
+- **One row read two ways on one screen.** `SPACE_UNMEASURED` carries no
+  amount at all — there is no dollar figure for *no building has square
+  footage* — and both dashboard handlers wrote `COALESCE(sum(amount), 0)`, so
+  the card at the top printed `—` (its own guard) and the rollup at the bottom
+  printed `0.00`, on one page at one moment. Zero says the facilities
+  carve-out is worth nothing; it is the single largest adjustment in the rate
+  model. A sum over all-NULL is NULL now and reaches the screen as a blank,
+  while a group that genuinely nets to zero still reads `0.00` — which the
+  screen's old guard could not tell apart either.
+
+- **The sixth copy of the classification scope.** `GET /api/dashboard` built
+  its own coverage from `ledger_line` scoped to `l.statement = 'P&L'` — the
+  predicate `064` moved into `v_cost_line` *because income is on the P&L*. So
+  the denominator was 41% grant income and the controller's home screen read
+  **59.7% classified** where `v_classification_coverage` read **100.0%**, over
+  the same 757 judgments. That is the defect `039` exists to end, alive on the
+  screen the engagement opens on.
+
+  `test_coverage_is_defined_once` was written about it and could not see it:
+  its handler half names `classify.py`, which is the file the *first* instance
+  was in. **A test written about one file is the hand-kept map wearing a
+  test's clothes.** Every router is swept now, with no list in it, on a shape
+  specific enough to discriminate: `ledger_line` driving, LEFT JOIN to live
+  decisions so undecided lines survive, an aggregate, **and no GROUP BY** —
+  which is a denominator. Four legitimate queries join those two registers and
+  aggregate; all four either group (the queue, by account and payee) or
+  inner-join from the decision side, which can only measure what *is*
+  classified.
+
+  The first version of that sweep **passed with the defect pasted back in** —
+  a non-greedy span stopped at the first `decision_line`, before the evidence
+  it was looking for. Found by restoring the defect and watching, which is the
+  only way any of these are found.
+
+**And the screen sweep was reporting a green that described nothing.**
+`sweep_screens.py` predates the two doors, so `App.jsx` rendered the chooser in
+place of every screen and it walked 23 paths, photographed the same card 23
+times, and reported *46 figures, 100% clickable* — against a record where it
+had counted 864 and 15. It picks a door now, takes `--product`, and **exits 2
+rather than reporting** if it is still on the chooser. Behind the audit door
+the honest reading is 16 screens, 580 figures, **24 of them (4%) clickable to
+anything**, which is the size of the drill-down still to build.
+
+One smaller thing, the same shape: `tests/test_worklist_product.py` derives
+everything from the views and had no `skipif`, so on a clone with no Postgres
+on the default port it failed with a connection error rather than skipping —
+seven reds that said nothing about the code.
+
 ## The screen the draft never had
 
 `DraftCard` in `Timesheet.jsx`. The routes above shipped with **no page, no

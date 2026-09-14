@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
-const money = (v) =>
-  v === null || v === undefined ? "—"
-    : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const size = (b) =>
   !b ? "—" : b < 1024 ? `${b} B`
     : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`;

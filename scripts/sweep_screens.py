@@ -37,12 +37,24 @@ OUT = Path("docs/screen-sweep")
 
 #: Read from App.jsx rather than kept here: a hand-kept list of screens was
 #: wrong four times in one run of the system review.
-def screens() -> list[tuple[str, str]]:
+def screens(product: str | None = None) -> list[tuple[str, str]]:
+    """Every tab, optionally only the ones that belong to one product.
+
+    The rows gained a fifth field when the application was split into the
+    year being closed and the company being run; this reads it rather than
+    keeping a second list of which screen is behind which door.
+    """
     src = (Path(__file__).resolve().parent.parent
            / "web" / "src" / "App.jsx").read_text()
     block = src[src.index("const ALL_TABS"):src.index("function tabsFor")]
-    return [(m[0], m[1]) for m in
-            re.findall(r'\["(/[^"]*)",\s*"([^"]+)"', block)]
+    rows = re.findall(
+        r'\["(/[^"]*)",\s*"([^"]+)"(?:[^\]]*?"(audit|fcs|both)")?[^\]]*\]', block)
+    out = []
+    for path, label, prod in rows:
+        if product and prod and prod not in (product, "both"):
+            continue
+        out.append((path, label))
+    return out
 
 
 def look(page) -> dict:
@@ -99,6 +111,8 @@ def main() -> int:
     ap.add_argument("--base", default="http://127.0.0.1:8092")
     ap.add_argument("--as", dest="who", default="tmetzinger@ybi.org")
     ap.add_argument("--shots", action="store_true")
+    ap.add_argument("--product", choices=("audit", "fcs"), default=None,
+                    help="sweep only the screens behind one door")
     args = ap.parse_args()
     pw = os.environ.get("YBI_SWEEP_PASSWORD", "")
     if not pw:
@@ -133,7 +147,22 @@ def main() -> int:
             page.click("button[type=submit]")
             page.wait_for_timeout(2000)
 
-        for path, label in screens():
+        # The landing page offers two doors and `App.jsx` renders it in place
+        # of every screen until one is picked. Without this the sweep walked
+        # 23 paths, photographed the chooser 23 times, and reported "46
+        # figures, 100% clickable" — a green that describes nothing. An
+        # instrument that cannot tell a screen from a door is worse than no
+        # instrument, because the next real reading gets dismissed too.
+        if page.get_by_text("2025 Audit", exact=True).count():
+            page.get_by_text("2025 Audit", exact=True).first.click()
+            page.wait_for_timeout(1200)
+        still = page.inner_text("body")
+        if "Pick the one you are doing" in still:
+            print("could not get past the product chooser", file=sys.stderr)
+            b.close()
+            return 2
+
+        for path, label in screens(args.product):
             before = len(bad)
             page.goto(args.base + path, wait_until="networkidle")
             page.wait_for_timeout(1400)

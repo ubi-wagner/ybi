@@ -504,9 +504,39 @@ export const api = {
     req(`/reconcile/items/${id}/retract`, { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
+/* Money, to the cent, in one place.
+
+   Eight screens carried their own spelling of this and six of them rounded to
+   the whole dollar, so the record's $1,835,047.17 reached an auditor as
+   $1,835,047 on the home screen and as $1,835,047.17 on the seal screen — one
+   figure in two readings, which is the defect that produced 13.0% and 2.2% at
+   the same moment in a smaller place. Everything behind the rendering is
+   Decimal and exact; only the printing was lossy, and a cent is the unit a
+   reviewer ties in.
+
+   A blank is unanswered and prints as such. `Number(null || 0)` is 0, so the
+   first version of this printed "nobody has read this off" and "this is nil"
+   identically — the intake rule, applied to the screen.
+
+   Negatives in parentheses, which is the accounting convention the workpapers
+   already use and what a payables clerk reads. */
 export const money = (n) => {
-  const v = Number(n || 0);
+  if (n === null || n === undefined || n === "") return "\u2014";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "\u2014";
   return (v < 0 ? "(" : "") +
-    Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 }) +
+    Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2 }) +
     (v < 0 ? ")" : "");
+};
+
+/* A count is not money. Groups, lines, documents and people are whole things
+   and printing "757.00 groups" would be absurd; the separator is still wanted
+   above a thousand. Kept beside money() so the choice is made by naming the
+   thing rather than by reaching for the nearest formatter. */
+export const count = (n) => {
+  if (n === null || n === undefined || n === "") return "\u2014";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "\u2014";
+  return v.toLocaleString("en-US", { maximumFractionDigits: 0 });
 };

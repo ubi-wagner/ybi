@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, money, count } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
 import Manual from "../components/Manual.jsx";
 import { forKind } from "../worklistKinds.js";
@@ -265,7 +265,7 @@ export default function Home({ actor, product }) {
         <Card title="Where the engagement stands"
               aside={open.length ? `${open.length} control open` : "every control ties"}>
           <div className="grid three">
-            <Stat label="Ledger lines" value={dash.rollup?.ledger_lines ?? "—"} />
+            <Stat label="Ledger lines" value={count(dash.rollup?.ledger_lines)} />
             <Stat label="Classified"
                   value={dash.coverage ? `${dash.coverage.pct_dollars ?? 0}%` : "—"}
                   note="of dollars" />
@@ -394,10 +394,13 @@ function MyWork({ actor, product }) {
                 <div className="rowsub">{note}</div>
               </td>
               <td className="amt">{g.items}</td>
-              <td className="amt">
-                {Number(g.amount || 0) ? money(g.amount)
-                                       : <span className="rowsub">—</span>}
-              </td>
+              {/* The guard that used to live here printed a blank for a
+                  *genuine* zero as well as for a kind that carries no
+                  amount, and the rollup below printed 0.00 for both — so
+                  one row read "—" here and "0.00" there at the same
+                  moment. The handler keeps a missing amount missing now,
+                  and money() prints the two apart. */}
+              <td className="amt">{money(g.amount)}</td>
               <td className="l"><Pill>{g.owner_portfolio}</Pill></td>
               <td className="l">
                 <Link className="btn sm" to={g.goes_to}>Open</Link>

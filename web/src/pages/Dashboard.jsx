@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { Card, Stat, Pill, Tick, Meter, Table, Empty } from "../components/ui.jsx";
 import { forKind } from "../worklistKinds.js";
 
-const money = (v) =>
-  v === null || v === undefined
-    ? "—"
-    : Number(v).toLocaleString(undefined, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
 
 const when = (t) =>
   !t ? "" : new Date(t).toLocaleString(undefined,
