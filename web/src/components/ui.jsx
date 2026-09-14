@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 /* Shared primitives. Deliberately small: the pages should read as content,
    not as a wiring diagram. */
@@ -207,31 +207,103 @@ export function Drawer({ open, title, subtitle, onClose, footer, wide = false,
    mistakes expensive. */
 
 const ToastCtx = createContext(() => {});
+
+/* What a screen gets from `useToast()`.
+ *
+ * Callable, and also carrying `.show`, `.fail`, `.ok` and `.warn` — because
+ * half this application called `toast(...)` and the other half called
+ * `toast.show(...)`, the context value was a bare function, and seventeen
+ * call sites across five screens threw `TypeError: toast.show is not a
+ * function` instead of saying anything.
+ *
+ * Most of those seventeen were inside `catch` blocks. So a write would fail,
+ * the error handler would fail, and the person would be told nothing at all —
+ * which is worse than an ugly error and is the exact thing a notification
+ * exists to prevent. Barb could create an account, have it refused, and see
+ * an unchanged screen.
+ *
+ * Supporting both spellings is not indecision. One of them was always going
+ * to be written by somebody, and a surface that throws on a plausible call is
+ * a surface that will be called that way again. */
+function toaster(push) {
+  const fn = (message, opts) => push(message, opts);
+  fn.show = fn;
+  fn.ok = (message, opts = {}) => push(message, { ...opts, tone: "ok" });
+  fn.warn = (message, opts = {}) => push(message, { ...opts, tone: "warn" });
+  fn.fail = (message, opts = {}) => push(message, { ...opts, tone: "fail" });
+  return fn;
+}
+
 export const useToast = () => useContext(ToastCtx);
+
+/* Tone names that have been used in this codebase, mapped to the three that
+ * mean something. "bad" and "fail" were both in use and only "bad" was
+ * rendered, so nine error toasts came out looking exactly like a success
+ * message — a failure notification indistinguishable from a confirmation.
+ *
+ * Anything unrecognised is treated as a failure rather than as plain. Getting
+ * a red toast for a tone somebody misspelled is a small cost; showing an
+ * error as a confirmation is not. */
+const TONES = {
+  ok: "ok", good: "ok", success: "ok",
+  warn: "warn", warning: "warn",
+  bad: "fail", fail: "fail", error: "fail", danger: "fail",
+};
+
+function toneOf(raw) {
+  if (!raw) return "";
+  const t = TONES[String(raw).toLowerCase()];
+  if (t) return t;
+  if (import.meta.env?.DEV) {
+    console.error(
+      `[toast] unknown tone "${raw}" — rendering as a failure. Known tones: `
+      + Object.keys(TONES).join(", "));
+  }
+  return "fail";
+}
 
 export function ToastHost({ children }) {
   const [items, setItems] = useState([]);
 
   const push = useCallback((message, opts = {}) => {
     const id = Math.random().toString(36).slice(2);
-    setItems((x) => [...x, { id, message, ...opts }]);
-    if (!opts.sticky) setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), opts.ms || 6000);
+    const tone = toneOf(opts.tone);
+    /* A failure stays until it is dismissed. One that disappears after six
+       seconds while somebody is looking at a different part of the screen is
+       the same as no notification, and this system's whole claim is that you
+       can tell what happened. Confirmations still fade; nobody needs to
+       acknowledge that a thing worked. */
+    const sticky = opts.sticky ?? tone === "fail";
+    setItems((x) => [...x, { ...opts, id, message, tone, sticky }]);
+    if (!sticky) {
+      setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)),
+                 opts.ms || 6000);
+    }
     return id;
   }, []);
 
   const dismiss = (id) => setItems((x) => x.filter((i) => i.id !== id));
+  const value = useMemo(() => toaster(push), [push]);
+  const failing = items.some((t) => t.tone === "fail");
 
   return (
-    <ToastCtx.Provider value={push}>
+    <ToastCtx.Provider value={value}>
       {children}
-      <div className="toasts" aria-live="polite">
+      {/* assertive while something has failed, so a screen reader announces
+          it rather than waiting for a pause. */}
+      <div className="toasts" role={failing ? "alert" : "status"}
+           aria-live={failing ? "assertive" : "polite"}>
         {items.map((t) => (
-          <div key={t.id} className={`toast ${t.tone === "bad" ? "bad" : ""}`}>
-            <span style={{ flex: 1 }}>{t.message}</span>
+          <div key={t.id} className={`toast ${t.tone}`}>
+            <span style={{ flex: 1 }}>
+              {t.tone === "fail" && <strong>Failed — </strong>}
+              {t.message}
+            </span>
             {t.onUndo && (
               <button className="sm" onClick={() => { t.onUndo(); dismiss(t.id); }}>Undo</button>
             )}
-            <button className="sm ghost" style={{ color: "#fff" }} onClick={() => dismiss(t.id)}>✕</button>
+            <button className="sm ghost" style={{ color: "#fff" }}
+                    onClick={() => dismiss(t.id)} aria-label="Dismiss">✕</button>
           </div>
         ))}
       </div>

@@ -221,3 +221,141 @@ def test_evidence_ratio_reports_how_much_labour_is_timesheet_backed():
 
 def test_evidence_ratio_is_none_rather_than_zero_when_there_is_no_labour():
     assert ObjectiveCost(objective_id="X").evidence_ratio is None
+
+
+# ── administrative labour: in the base, or in the G&A pool ───────────
+#
+# Migration 068. `YBI-GA` carries $264,444.90 of wages and the model has
+# always treated it as a cost objective, so it takes an allocation of
+# indirect rather than forming part of it. Appendix IV B puts the director's
+# office, accounting and personnel administration *in* the G&A pool.
+#
+# It is a judgment rather than arithmetic, so the engine offers both and the
+# rate records which was used. What these hold is that the move is exactly
+# the move described and nothing else travels with it.
+
+def admin_model() -> PoolModel:
+    """One administrative objective and one programme objective."""
+    m = model([("dir", PoolType.DIRECT, [("l1", "500000")], "DRIVE-AM"),
+               ("ga", PoolType.GA, [("l2", "100000")], None),
+               ("oh", PoolType.OVERHEAD, [("l3", "200000")], None),
+               # A real fringe pool, because a model without one computes a
+               # fringe rate of 0.00 either side of any change and every
+               # assertion about it compares nothing to nothing.
+               ("fr", PoolType.FRINGE, [("l4", "80000")], None)])
+    m.add_labor({"Drive AM": {"wages": Decimal("300000"),
+                              "backed": Decimal("0")},
+                 "YBI G&A": {"wages": Decimal("100000"),
+                             "backed": Decimal("0")}},
+                fringe_rate=Decimal("0.2000"),
+                objective_map={"Drive AM": "DRIVE-AM", "YBI G&A": "YBI-GA"},
+                federal={"DRIVE-AM"})
+    return m
+
+
+def test_administration_moves_its_whole_cost_into_the_pool():
+    m = admin_model()
+    before_mtdc = m.base_amount(AllocationBase.MTDC)
+    moved = m.administration_into_the_pool("YBI-GA")
+
+    # wages 100,000 + fringe at 20% + no direct non-labour on it
+    assert moved == Decimal("120000.00")
+    assert m.pools[PoolType.GA].gross == Decimal("220000.00")
+    assert m.base_amount(AllocationBase.MTDC) == before_mtdc - moved
+    # Removed, not zeroed: an objective carrying nothing still prints a row
+    # and still takes an allocation of zero, which reads as "administration
+    # bore no indirect" rather than "it stopped being an objective".
+    assert "YBI-GA" not in m.objectives
+
+
+def test_the_wage_base_is_the_payroll_register_either_way():
+    """The bug the anchors caught, held as a property.
+
+    Administrative staff draw benefits like everybody else, so their wages
+    belong in the fringe denominator whether or not their salary sits in the
+    G&A pool. The first draft answered both questions at once: deleting the
+    objective took its wages out of the *fringe* base too and the rate went
+    21.90% to 25.58% on the live record — which is the payroll register
+    disagreeing with itself.
+    """
+    m = admin_model()
+    payroll = dict(fringe_denominator=True)
+    wages_before = m.base_amount(AllocationBase.SALARIES_WAGES, **payroll)
+    fringed_before = m.base_amount(AllocationBase.SALARIES_FRINGE, **payroll)
+    assert wages_before == Decimal("400000.00")
+    assert fringed_before == Decimal("480000.00")
+
+    m.administration_into_the_pool("YBI-GA")
+
+    assert m.base_amount(AllocationBase.SALARIES_WAGES, **payroll) == wages_before
+    assert m.base_amount(AllocationBase.SALARIES_FRINGE, **payroll) == fringed_before
+    # And it is genuinely out of the *allocation* base, or nothing happened.
+    assert m.base_amount(AllocationBase.SALARIES_WAGES) == Decimal("300000.00")
+    assert m.base_amount(AllocationBase.MTDC) < Decimal("920000.00")
+
+
+def test_the_fringe_rate_does_not_move_when_administration_is_pooled():
+    """The whole point of the previous test, stated as the figure that
+    reaches a workpaper."""
+    a, b = admin_model(), admin_model()
+    b.administration_into_the_pool("YBI-GA")
+    assert (a.apply_fringe(AllocationBase.SALARIES_WAGES)
+            == b.apply_fringe(AllocationBase.SALARIES_WAGES))
+    # The same holds on a salaries-and-fringe denominator, which the first
+    # version of `base_amount` got wrong by exactly the administrative
+    # fringe: it added the wages back and not the benefits on them.
+    c, d = admin_model(), admin_model()
+    d.administration_into_the_pool("YBI-GA")
+    assert (c.apply_fringe(AllocationBase.SALARIES_FRINGE)
+            == d.apply_fringe(AllocationBase.SALARIES_FRINGE))
+
+
+def test_pooling_administration_raises_the_indirect_rate_and_ties():
+    """Both halves: the rate moves in the direction the decision claims, and
+    the allocation still proves out over the objectives that remain."""
+    plain, pooled = admin_model(), admin_model()
+    for m in (plain, pooled):
+        m.apply_fringe(AllocationBase.SALARIES_WAGES)
+    pooled.administration_into_the_pool("YBI-GA")
+    for m in (plain, pooled):
+        m.decisions.seal()
+        m.compute_rates(fringe_base=m.base_amount(
+            AllocationBase.SALARIES_WAGES, fringe_denominator=True))
+        m.allocate()
+
+    assert pooled.rates["G&A"] > plain.rates["G&A"]
+    assert pooled.rates["INDIRECT_COMBINED"] > plain.rates["INDIRECT_COMBINED"]
+    assert pooled.allocation_proof()["variance"] == Decimal("0.00")
+
+
+def test_a_rate_over_named_objectives_does_not_get_the_moved_wages_back():
+    """`include` is a filter over objectives and moved administration is no
+    longer one, so a rate over a named subset is asking a different question
+    and must not have the whole payroll added to its denominator."""
+    m = admin_model()
+    m.administration_into_the_pool("YBI-GA")
+    subset = m.base_amount(AllocationBase.SALARIES_WAGES, include={"DRIVE-AM"},
+                           fringe_denominator=True)
+    assert subset == Decimal("300000.00")
+
+
+def test_fundraising_is_not_swept_along_with_administration():
+    """200.413 and Appendix IV B.3.d make fundraising bear indirect while
+    recovering nothing, so it *is* a benefiting objective. General
+    administration is the opposite case, and a change to one must not be a
+    change to the other."""
+    m = admin_model()
+    m.pools[PoolType.FUNDRAISING].gross = Decimal("40000.00")
+    m.objectives.setdefault("FUNDRAISING",
+                            ObjectiveCost(objective_id="FUNDRAISING"))
+    m.administration_into_the_pool("YBI-GA")
+    assert "FUNDRAISING" in m.objectives
+
+
+def test_moving_an_objective_that_is_not_there_changes_nothing():
+    """A period with no administrative distribution is a real state, and it
+    is not a reason to refuse a computation."""
+    m = admin_model()
+    ga_before = m.pools[PoolType.GA].gross
+    assert m.administration_into_the_pool("NOT-A-THING") == Decimal(0)
+    assert m.pools[PoolType.GA].gross == ga_before

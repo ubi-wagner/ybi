@@ -50,6 +50,20 @@ def ok(msg: str) -> None:
     print(f"  ok       {msg}")
 
 
+NOTES: list[str] = []
+
+
+def note(msg: str) -> None:
+    """Neither a pass nor a finding: the check could not be evaluated.
+
+    A control that cannot be evaluated has not passed — and it has not
+    failed either. Counting an empty queue as a refusal is how a drive comes
+    to argue against working code.
+    """
+    NOTES.append(msg)
+    print(f"  --       {msg}")
+
+
 def resolve_actors(c: httpx.Client, admin_email: str, password: str) -> dict:
     """Sign in as the admin and read the actor roster from the service."""
     r = c.post("/api/auth/login", json={"email": admin_email, "password": password})
@@ -206,6 +220,16 @@ def main() -> int:
         q = auditor.get("/api/classify/queue", params={"limit": 5})
         if q.status_code == 200 and isinstance(q.json(), list) and q.json():
             ok(f"reads the classification queue — {len(q.json())} groups")
+        elif q.status_code == 200:
+            # **200 with nothing in it is not a refusal.** On a fully
+            # classified record the queue is legitimately empty, and this
+            # branch used to print "could not read the queue (200)" — a
+            # finding against working code, whose own status line said the
+            # opposite. The drive already makes this distinction for an
+            # empty ledger a few checks above.
+            note("the classification queue is empty, so read access to it "
+                 "cannot be demonstrated here — not a refusal; the coverage "
+                 "read above is the positive control")
         else:
             finding(f"auditor could not read the queue ({q.status_code}); "
                     f"read access is not working")
@@ -306,8 +330,14 @@ def main() -> int:
     if plain:
         outsider = sign_in(args.base, plain["email"], password)
         try:
+            # The library belongs on this list rather than only on the
+            # access drive: it is the cost record in document form, and
+            # somebody with a timesheet and nothing else has no more standing
+            # in the papers than in the ledger they support.
             for path in ("/api/classify/queue", "/api/classify/coverage",
-                         "/api/export/audit-package"):
+                         "/api/export/audit-package",
+                         "/api/documents/library",
+                         "/api/reports/timesheet"):
                 r = outsider.get(path)
                 (ok if r.status_code == 403 else finding)(
                     f"a plain employee is refused {path} — {r.status_code}"
@@ -423,6 +453,9 @@ def main() -> int:
         q = controller.get("/api/classify/queue", params={"limit": 3})
         if q.status_code == 200 and q.json():
             ok(f"reads the queue — {len(q.json())} groups")
+        elif q.status_code == 200:
+            note("the classification queue is empty, so the controller's "
+                 "read of it cannot be demonstrated — not a refusal")
         else:
             finding(f"controller cannot read the queue ({q.status_code})")
         a = controller.get("/api/auth/actors")
@@ -437,6 +470,13 @@ def main() -> int:
     if FINDINGS:
         print(f"FAIL — {len(FINDINGS)} finding(s)")
         return 1
+    # A check count that moves without saying why is how somebody learns to
+    # ignore the run that actually lost one.
+    if NOTES:
+        print(f"PASS — every boundary held, against a ledger with real rows "
+              f"in it. {len(NOTES)} check(s) could not be evaluated on this "
+              f"record; each is printed above.")
+        return 0
     print("PASS — every boundary held, against a ledger with real rows in it.")
     return 0
 

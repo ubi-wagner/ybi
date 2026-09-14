@@ -1,0 +1,342 @@
+#!/usr/bin/env python3
+"""Is everybody ready to do their part, and what is waiting for a human?
+
+Run it before Monday. It answers one question per section — *can this person
+do their job today, and if not, what is in the way* — and it **writes
+nothing at all**. Not a classification, not an adoption, not a seal.
+
+That is the design, not a limitation. Everything this report describes is a
+judgment with somebody's name on it:
+
+- a **classification** is the controller's, and the seal exists so a reviewer
+  can be told the rate was not reverse-engineered. A script that applied 757
+  recommendations and sealed them would put the machine's name on the seal
+  and throw the guarantee away.
+- a **timesheet** is the employee's. 2 CFR 200.430(i) wants the record of the
+  person whose effort it was, so adopting the reconstruction is theirs to do
+  and the draft is offered as a convenience they may decline.
+- a **certification** is a signature. Nothing may produce one but the person.
+- a **rate** is arithmetic and could be computed — and is deliberately not,
+  because computing before the books reconcile is a rate over the wrong
+  numbers, and reconciliation is the Monday gate.
+
+So the exit code says whether the *machinery* is sound, never whether the
+*work* is finished. Outstanding work is the normal state of an engagement in
+progress and a report that failed on it would be one nobody reads twice.
+
+    2   something is structurally broken — a view missing, a control that
+        cannot be evaluated where it should be, a rate that does not tie
+    0   the machinery is sound; the summary says what is waiting for a human
+
+`--json` prints the same findings as data, for a check that wants to assert
+on them rather than read them.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from decimal import Decimal
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.db import open_pool, one, query
+
+PERIOD = "2025"
+
+BOLD, DIM, OK, WARN, BAD, OFF = (
+    "\033[1m", "\033[2m", "\033[32m", "\033[33m", "\033[31m", "\033[0m")
+
+
+class Report:
+    """Findings, and the one distinction that matters.
+
+    `blocked` is the machinery being wrong and fails the run. `waiting` is a
+    human not having acted yet, which is not a fault and must never be
+    reported as one — the `FACILITY_UNPARTITIONED` lesson applied to a
+    status report: an item nobody can clear by doing the work teaches the
+    reader that the list is wrong.
+    """
+
+    def __init__(self) -> None:
+        self.blocked: list[str] = []
+        self.waiting: list[str] = []
+        self.notes: list[dict] = []
+
+    def head(self, title: str) -> None:
+        print(f"\n{BOLD}{title}{OFF}")
+
+    def line(self, state: str, label: str, detail: str = "") -> None:
+        colour = {"ok": OK, "waiting": WARN, "blocked": BAD, "note": DIM}[state]
+        mark = {"ok": "ok", "waiting": "--", "blocked": "!!", "note": "  "}[state]
+        print(f"  {colour}{mark}{OFF}  {label:<42} {DIM}{detail}{OFF}")
+        self.notes.append({"state": state, "label": label, "detail": detail})
+        if state == "blocked":
+            self.blocked.append(f"{label}: {detail}")
+        elif state == "waiting":
+            self.waiting.append(f"{label}: {detail}")
+
+
+def money(x) -> str:
+    return f"{Decimal(str(x or 0)):,.2f}"
+
+
+# ── the baseline ──────────────────────────────────────────────────────
+
+def baseline(r: Report) -> None:
+    r.head("The baseline")
+    lines = one("SELECT count(*) n, count(DISTINCT account) accounts, "
+                "sum(abs(amount)) moved FROM ledger_line WHERE period = %s",
+                (PERIOD,))
+    if not lines or not lines["n"]:
+        r.line("blocked", "the ledger", "no lines — run scripts/seed.sh first")
+        return
+    r.line("ok", "the ledger",
+           f"{lines['n']:,} lines over {lines['accounts']} accounts")
+
+    for label, sql in [
+        ("the payroll distribution",
+         "SELECT count(*) n, count(DISTINCT employee_key) k FROM labor_allocation "
+         "WHERE period = %s"),
+        ("the hours log", "SELECT count(*) n, count(DISTINCT employee_key) k "
+                          "FROM labor_month WHERE period = %s"),
+        ("the awards", "SELECT count(*) n, count(*) k FROM award"),
+        ("contract provisions", "SELECT count(*) n, count(DISTINCT award_id) k "
+                                "FROM award_term"),
+        ("documents on file", "SELECT count(*) n, count(*) k FROM evidence"),
+    ]:
+        row = one(sql, (PERIOD,) if "%s" in sql else ())
+        n = row["n"] if row else 0
+        r.line("ok" if n else "blocked", label,
+               f"{n:,} rows" if n else "empty — the foundation is not in")
+
+
+# ── the Monday gate ───────────────────────────────────────────────────
+
+def reconciliation(r: Report) -> None:
+    """The eleven points, read rather than run.
+
+    `POST /api/rates/compute` returns 409 while any of these is open, so this
+    is the gate everything downstream waits behind. **A control that cannot
+    be evaluated has not passed** — `NO DATA` is counted apart from `TIES`,
+    because an empty period compares zero against zero and looks green.
+    """
+    r.head("The eleven control points — Monday's gate")
+    rows = query("SELECT seq, control, state, variance, note "
+                 "FROM v_statement_reconciliation WHERE period = %s "
+                 "ORDER BY seq", (PERIOD,))
+    if not rows:
+        r.line("blocked", "v_statement_reconciliation", "returned nothing")
+        return
+    ties = [x for x in rows if x["state"] == "TIES"]
+    open_ = [x for x in rows if x["state"] == "OPEN"]
+    nodata = [x for x in rows if x["state"] not in ("TIES", "OPEN")]
+    for x in open_:
+        r.line("blocked", x["control"], f"OPEN by {money(x['variance'])}")
+    for x in nodata:
+        r.line("blocked", x["control"],
+               f"{x['state']} — cannot be evaluated, so it has not passed")
+    r.line("ok" if not (open_ or nodata) else "note",
+           f"{len(ties)} of {len(rows)} tie",
+           "a rate may be computed" if not (open_ or nodata)
+           else "compute is refused while any is open")
+
+
+# ── what the controller team has to review ────────────────────────────
+
+def classification(r: Report) -> None:
+    r.head("The classification — for the controller to review, accept and seal")
+    cov = one("SELECT * FROM v_classification_coverage WHERE period = %s",
+              (PERIOD,))
+    if not cov:
+        r.line("blocked", "v_classification_coverage", "returned nothing")
+        return
+    r.line("ok", "coverage",
+           f"{cov['pct_dollars_covered']}% of {money(cov['scope_dollars'])} "
+           f"— {cov['groups_decided']} of {cov['groups_total']} groups")
+    if Decimal(str(cov["unclassified"])) > 0:
+        r.line("waiting", "still to judge",
+               f"{money(cov['unclassified'])} across "
+               f"{cov['groups_total'] - cov['groups_decided']} groups")
+
+    log = Path("docs/CLASSIFICATION_LOG.md")
+    r.line("ok" if log.exists() else "waiting", "the recommendation log",
+           f"{log} — a reasoned treatment per group, proposing nothing to the "
+           f"record" if log.exists()
+           else "not written — run scripts/classification_log.py --write")
+
+    st = one("SELECT label, seal_hash IS NOT NULL AS sealed, sealed_at, "
+             "       sealed_by, unsealed_reason "
+             "FROM decision_set WHERE period = %s "
+             "ORDER BY sealed_at DESC NULLS FIRST LIMIT 1", (PERIOD,))
+    if not st:
+        r.line("waiting", "the decision set", "none open yet")
+    elif st["sealed"]:
+        r.line("ok", "sealed", f"by {st['sealed_by']} at {st['sealed_at']:%Y-%m-%d %H:%M}")
+    else:
+        r.line("waiting", "the seal",
+               "open — sealing is the controller's judgment and nothing here "
+               "may make it")
+
+
+# ── whether forty-three people can do their part ──────────────────────
+
+def certification(r: Report) -> None:
+    """Who can adopt and sign today, and who is blocked on what.
+
+    The draft is a **convenience the person may decline**, so nobody is
+    reported as failing for not having taken it. What is reported is the one
+    thing that stops them even having the choice: no employment terms on the
+    record means no denominator, and no draft can be built.
+    """
+    r.head("The forty-three — their own timesheets, at their own pace")
+    people = query(
+        "SELECT c.employee_key, c.employee_name, c.certified, c.reconstructed, "
+        "       e.expected_hours, m.months "
+        "FROM v_certification_status c "
+        "LEFT JOIN v_employment_expected e "
+        "       ON e.period = c.period AND e.employee_key = c.employee_key "
+        "LEFT JOIN (SELECT employee_key, count(DISTINCT month_start) months "
+        "           FROM labor_month WHERE period = %s GROUP BY 1) m "
+        "       ON m.employee_key = c.employee_key "
+        "WHERE c.period = %s ORDER BY c.employee_key", (PERIOD, PERIOD))
+    if not people:
+        r.line("blocked", "v_certification_status", "returned nothing")
+        return
+
+    signed = [p for p in people if p["certified"]]
+    no_terms = [p for p in people if not p["expected_hours"]]
+    monthly = [p for p in people if (p["months"] or 0) > 1]
+
+    r.line("ok", "people in the distribution", f"{len(people)}")
+    r.line("ok" if not no_terms else "waiting", "can be offered a draft",
+           f"{len(people) - len(no_terms)} of {len(people)}"
+           + (f" — {len(no_terms)} have no employment terms on the record, so "
+              f"there is no denominator to divide and no draft can be built. "
+              f"That is the roster reply, not a fault here."
+              if no_terms else ""))
+    r.line("note", "with a month-by-month hours log",
+           f"{len(monthly)} — the rest get the year's distribution, and the "
+           f"draft says which it is showing")
+    r.line("ok" if len(signed) == len(people) else "waiting", "certified",
+           f"{len(signed)} of {len(people)} — theirs to sign, nobody else's")
+
+
+# ── the rate stack ────────────────────────────────────────────────────
+
+def rate_stack(r: Report) -> None:
+    r.head("The rate stack")
+    rows = query("SELECT kind, rate, pool_amount, base_amount, pool_variance, "
+                 "       ties, pool_state, admin_labour_basis "
+                 "FROM v_rate_buildup WHERE period = %s AND status = 'PROPOSED' "
+                 "ORDER BY kind", (PERIOD,))
+    if not rows:
+        r.line("waiting", "no rate on file",
+               "expected before a seal — compute is the step after Monday's "
+               "reconciliation")
+        return
+    for x in rows:
+        pct = Decimal(str(x["rate"])) * 100
+        state = "ok" if x["ties"] else ("note" if x["pool_state"] == "NO DATA"
+                                        else "blocked")
+        r.line(state, x["kind"],
+               f"{pct:.2f}%  pool {money(x['pool_amount'])} over "
+               f"{money(x['base_amount'])}"
+               + ("" if x["ties"]
+                  else f"  [{x['pool_state']}, variance "
+                       f"{money(x['pool_variance'])}]"))
+    r.line("note", "administrative labour",
+           f"{rows[0]['admin_labour_basis']} — a recorded choice on the rate")
+
+    for a in query("SELECT control, state, variance, note FROM v_rate_anchor "
+                   "WHERE period = %s ORDER BY seq", (PERIOD,)):
+        r.line("ok" if a["state"] == "TIES"
+               else ("note" if a["state"] == "NO DATA" else "blocked"),
+               a["control"],
+               a["state"] + ("" if a["state"] == "TIES"
+                             else f" — {money(a['variance'])}"))
+
+    # `facility`, not `building` — the first draft of this line recalled the
+    # name and the report failed on the one adjustment it exists to watch.
+    # Read the schema, never recall it.
+    carve = one("SELECT count(*) n FROM carve_out WHERE period = %s", (PERIOD,))
+    measured = one("SELECT count(*) n FROM v_space_unit_control "
+                   "WHERE period = %s AND ties", (PERIOD,))
+    facilities = one("SELECT count(*) n FROM facility")
+    if not (facilities and facilities["n"]):
+        r.line("waiting", "200.465 facilities carve-out",
+               "no facility on the record, so it has never been evaluated — "
+               "every dollar of tenant and vacant occupancy cost is in the "
+               "federal pool and the rate reads high, which is the honest "
+               "direction to err")
+    elif not (measured and measured["n"]):
+        r.line("waiting", "200.465 facilities carve-out",
+               f"{facilities['n']} facilities on file, none with space units "
+               f"that account for them in full — Kelly's measurement is what "
+               f"closes it")
+    elif not (carve and carve["n"]):
+        r.line("blocked", "200.465 facilities carve-out",
+               "space is measured and accounted for, and no carve-out was "
+               "written — the largest adjustment in the rate model, absent")
+    else:
+        r.line("ok", "200.465 facilities carve-out", f"{carve['n']} recorded")
+
+
+# ── what is on somebody's list ────────────────────────────────────────
+
+def worklist(r: Report) -> None:
+    r.head("Outstanding, by whose job it is")
+    for row in query(
+            "SELECT owner_portfolio, count(*) n, "
+            "       count(*) FILTER (WHERE severity = 'BLOCKING') blocking "
+            "FROM v_worklist_owned WHERE period = %s OR period IS NULL "
+            "GROUP BY 1 ORDER BY 2 DESC", (PERIOD,)):
+        r.line("note", row["owner_portfolio"] or "(unrouted)",
+               f"{row['n']:,} open"
+               + (f", {row['blocking']} blocking" if row["blocking"] else ""))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--json", action="store_true",
+                    help="print the findings as data")
+    args = ap.parse_args()
+    if not os.environ.get("DATABASE_URL"):
+        raise SystemExit("DATABASE_URL is not set.")
+    open_pool()
+
+    r = Report()
+    print(f"{BOLD}Readiness — {PERIOD}{OFF}")
+    print(f"{DIM}Read-only. Nothing in this report writes to the record.{OFF}")
+    for section in (baseline, reconciliation, classification, certification,
+                    rate_stack, worklist):
+        try:
+            section(r)
+        except Exception as exc:                       # noqa: BLE001
+            r.head(section.__name__)
+            r.line("blocked", section.__name__, f"{type(exc).__name__}: {exc}")
+
+    print(f"\n{BOLD}Summary{OFF}")
+    if r.blocked:
+        print(f"  {BAD}{len(r.blocked)} blocked{OFF} — the machinery, not the work:")
+        for x in r.blocked:
+            print(f"      {x}")
+    else:
+        print(f"  {OK}the machinery is sound{OFF}")
+    if r.waiting:
+        print(f"  {WARN}{len(r.waiting)} waiting on a person{OFF} — "
+              f"which is the normal state, not a fault:")
+        for x in r.waiting:
+            print(f"      {x}")
+
+    if args.json:
+        print(json.dumps({"blocked": r.blocked, "waiting": r.waiting,
+                          "findings": r.notes}, indent=2))
+    return 2 if r.blocked else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

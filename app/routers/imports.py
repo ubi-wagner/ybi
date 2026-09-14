@@ -260,7 +260,17 @@ def preview(batch_id: str) -> dict:
 def accept(batch_id: str, accepted_by: str = "",
            actor: Actor = Depends(require_controller)) -> dict:
     """A trigger refuses this while any subtotal is off by more than half a
-    cent, so the guarantee holds even if this handler is wrong."""
+    cent, so the guarantee holds even if this handler is wrong.
+
+    Identity comes from the session. ``accepted_by`` is a label, the way it
+    is on ``upload`` two hundred lines up — and this was the one route of
+    nine that did not say so, while the screen sent the literal string
+    ``tom`` in the query string. It reached ``staging_batch.accepted_by`` and
+    ``ledger_import.imported_by``, which is the permanent provenance record
+    every ledger line points back to: who promoted the general ledger was
+    whatever the URL said.
+    """
+    accepted_by = actor.display_name or accepted_by
     try:
         execute("""UPDATE staging_batch
                       SET status='ACCEPTED', accepted_at=now(), accepted_by=%s

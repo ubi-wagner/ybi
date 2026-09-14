@@ -13,9 +13,11 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 
-from app.auth import (SESSION_COOKIE, SESSION_MAX_AGE, Actor, Portfolio, Role,
-                      current_actor, hash_password, issue_token, require_admin,
-                      session_expiry, verify_password)
+from app.auth import (MIN_PASSWORD, SESSION_COOKIE, SESSION_MAX_AGE, Actor,
+                      Portfolio, Role, check_credential, current_actor,
+                      hash_password, issue_token, require_admin,
+                      session_expiry, shared_initial_password,
+                      unusable_password_hash, verify_password)
 from app.audit import record
 from app.db import execute, one, query, transaction
 from app.settings import settings
@@ -33,7 +35,11 @@ class ActorIn(BaseModel):
     email: EmailStr
     display_name: str
     role: Role
-    password: str
+    #: Omit it to open the account on the organisation's shared first-login
+    #: password (`YBI_INITIAL_PASSWORD`), which is what a round of forty
+    #: accounts wants. The shared value is never stored against the row — see
+    #: `unusable_password_hash`.
+    password: str | None = None
     employee_key: str | None = None
     #: Portfolios to grant at the same time. Optional — an account with none
     #: can still keep a timesheet and send in documents, which is what most
@@ -68,9 +74,15 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
                    FROM actor WHERE email = %s AND is_active""", (email,))
 
     # Verify against a hash either way so a missing account and a wrong
-    # password take the same time and give the same answer.
+    # password take the same time and give the same answer. An absent account
+    # is passed as SELF so the shared branch is not reachable for it — a guess
+    # at an unknown address must be refused on the same path as a wrong
+    # password at a known one, or the shared credential becomes an
+    # enumeration oracle for the whole organisation.
     stored = row["password_hash"] if row else "$2b$12$" + "x" * 53
-    if not verify_password(body.password, stored) or not row:
+    origin = row["password_set_by"] if row else "SELF"
+    credential = check_credential(body.password, stored, origin)
+    if credential is None or not row:
         execute("""INSERT INTO login_attempt (email, ip, succeeded)
                    VALUES (%s, %s, false)""", (email, ip))
         log.info("failed sign-in for %s from %s", email, ip)
@@ -98,8 +110,17 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
                       employee_key=row["employee_key"],
                       portfolios=frozenset(Portfolio(p) for p in held),
                       record_access=bool(row["record_access"]))
-    record(signed_in, "SIGN_IN", "actor_session", str(session_id),
+    # Signing in on the organisation's shared password and signing in on your
+    # own are different acts, so they are different rows. "Who was still on
+    # the shared credential, and when" is a question an auditor can ask, and
+    # a single SIGN_IN action could not answer it.
+    record(signed_in,
+           "SIGN_IN_SHARED" if credential == "SHARED" else "SIGN_IN",
+           "actor_session", str(session_id),
            reason=request.headers.get("user-agent", "")[:200])
+    if credential == "SHARED":
+        log.warning("%s signed in on the shared initial password from %s",
+                    email, ip)
 
     token = issue_token(actor_id=row["actor_id"], session_id=session_id,
                         email=row["email"], role=row["role"],
@@ -130,7 +151,11 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
             "record_access": signed_in.record_access,
             "may_provision": sorted(r.value for r in Role
                                     if signed_in.may_provision(r)),
-            "must_set_password": row["password_set_by"] != "SELF"}
+            "must_set_password": row["password_set_by"] != "SELF",
+            # OWN or SHARED. The shell says which, because a person who does
+            # not know they are on the organisation's password does not know
+            # why their first write was refused.
+            "signed_in_with": credential}
 
 
 @router.post("/logout")
@@ -193,14 +218,26 @@ def change_password(body: PasswordIn, request: Request,
     does not answer that. The session doing the changing survives, so the
     person is not signed out of the screen they are standing in.
     """
-    row = one("SELECT password_hash FROM actor WHERE actor_id = %s",
-              (actor.actor_id,))
-    if not row or not verify_password(body.current_password, row["password_hash"]):
+    # The shared organisational password counts as the current one here, and
+    # only here. An account opened on it holds no stored password of its own,
+    # so requiring the stored hash to match would leave the single exit from
+    # `refuse_issued_password` locked: the account could neither write nor
+    # ever become able to.
+    row = one("""SELECT password_hash, password_set_by::text AS password_set_by
+                   FROM actor WHERE actor_id = %s""", (actor.actor_id,))
+    if not row or check_credential(body.current_password, row["password_hash"],
+                                   row["password_set_by"]) is None:
         log.warning("failed password change for %s from %s", actor.email,
                     request.client.host if request.client else "?")
         raise HTTPException(403, "That is not your current password.")
-    if len(body.new_password) < 12:
-        raise HTTPException(422, "A password must be at least 12 characters.")
+    if len(body.new_password) < MIN_PASSWORD:
+        raise HTTPException(
+            422, f"A password must be at least {MIN_PASSWORD} characters.")
+    if body.new_password == shared_initial_password():
+        raise HTTPException(
+            422, "That is the password the whole organisation was given. "
+                 "Choose one only you know — the point of this screen is that "
+                 "what you record from here says who you are.")
     if body.new_password == body.current_password:
         raise HTTPException(422, "The new password is the same as the old one.")
 
@@ -243,8 +280,19 @@ def create_actor(body: ActorIn, admin: Actor = Depends(require_admin)) -> dict:
     if body.role is Role.EMPLOYEE and not body.employee_key:
         raise HTTPException(422, "An EMPLOYEE account must name the employee "
                                  "it keeps time and certifies for.")
-    if len(body.password) < 12:
-        raise HTTPException(422, "A password must be at least 12 characters.")
+    # Three states, and the middle one is the round this exists for: a chosen
+    # password, the organisation's shared one, or no way in at all. The third
+    # is refused rather than creating an account nobody can reach.
+    on_shared = body.password is None
+    if on_shared and not shared_initial_password():
+        raise HTTPException(
+            422, f"No password was given and no organisational default is "
+                 f"configured. Set YBI_INITIAL_PASSWORD (at least "
+                 f"{MIN_PASSWORD} characters) to open accounts on a shared "
+                 f"first-login password, or name a password for this one.")
+    if not on_shared and len(body.password) < MIN_PASSWORD:
+        raise HTTPException(
+            422, f"A password must be at least {MIN_PASSWORD} characters.")
     if body.portfolios and not body.grant_reason.strip():
         raise HTTPException(422, "Granting a portfolio needs a reason — it is "
                                  "a grant of authority over the cost record.")
@@ -259,10 +307,18 @@ def create_actor(body: ActorIn, admin: Actor = Depends(require_admin)) -> dict:
         cur.execute("""INSERT INTO actor (email, display_name, role,
                                           password_hash, employee_key,
                                           password_set_by, provisioned_by)
-                       VALUES (%s,%s,%s,%s,%s,'ADMIN',%s) RETURNING actor_id""",
+                       VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING actor_id""",
                     (body.email.strip().lower(), body.display_name,
-                     body.role.value, hash_password(body.password),
-                     body.employee_key, admin.actor_id))
+                     body.role.value,
+                     # SEED is the honest origin for the shared one: the flag
+                     # it drives, `holds_bootstrap_password`, means precisely
+                     # "this password identifies nobody". ADMIN means an
+                     # administrator chose a password for this one person,
+                     # which is a different fact and a different risk.
+                     unusable_password_hash() if on_shared
+                     else hash_password(body.password),
+                     body.employee_key,
+                     "SEED" if on_shared else "ADMIN", admin.actor_id))
         actor_id = cur.fetchone()["actor_id"]
         for pf in body.portfolios:
             cur.execute("""INSERT INTO actor_portfolio
@@ -279,7 +335,11 @@ def create_actor(body: ActorIn, admin: Actor = Depends(require_admin)) -> dict:
              body.role.value, ", ".join(p.value for p in body.portfolios) or "no portfolio")
     return {"actor_id": str(actor_id), "email": body.email,
             "role": body.role.value,
-            "portfolios": [p.value for p in body.portfolios]}
+            "portfolios": [p.value for p in body.portfolios],
+            # So the caller knows what to tell the person, and a bulk opener
+            # does not have to infer it from what it sent.
+            "opened_on": "SHARED_INITIAL" if on_shared else "ISSUED",
+            "must_set_password": True}
 
 
 class GrantIn(BaseModel):

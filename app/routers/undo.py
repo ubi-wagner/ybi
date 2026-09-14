@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 from app.audit import record
 from app.auth import Actor, Role, current_actor, require_own_writes
 from app.db import one, query, transaction
+from app.statelock import serialise
 
 router = APIRouter(prefix="/undo", tags=["undo"])
 
@@ -52,6 +53,14 @@ def _may_undo(actor: Actor, row: dict) -> str | None:
     """Why this actor cannot undo this entry, or None if they may."""
     if row["action"] not in REVERSIBLE:
         return f"a {row['action']} cannot be walked back"
+    # The seal is a hash across every live judgment in the set, so reversing
+    # one underneath it leaves a stored hash that no longer recomputes — and
+    # nothing recomputes it until somebody unseals, which may be months away.
+    # This is a stop, not a refusal: unsealing is the way past it, and it is
+    # right there in the trail as the entry above this one.
+    if row.get("blocked_by_seal"):
+        return ("that judgment is inside a sealed set — walk the seal back "
+                "first, or unseal with a reason")
     own = row["actor_id"] and str(row["actor_id"]) == actor.actor_id
     if own:
         return None
@@ -89,7 +98,33 @@ def recent(limit: int = Query(20, ge=1, le=100), mine: bool = True,
                                 and blocked is None,
                     "blocked_because": (
                         "already walked back" if r["already_undone"] else blocked)})
+
     return out
+
+
+def _period_of(row: dict) -> str | None:
+    """Which period this entry touches, or None where it touches none.
+
+    An undo changes the cost record exactly as the action it reverses did, so
+    it takes the same lock — and the lock is per period. The period is read
+    from the row rather than taken from configuration: a record with two
+    periods open would otherwise serialise both against each other, or worse,
+    neither.
+    """
+    if row["action"] in ("CLASSIFY", "SEAL"):
+        r = one("""SELECT s.period FROM decision_set s
+                    WHERE s.set_id::text = %s
+                       OR s.set_id = (SELECT d.set_id FROM decision d
+                                       WHERE d.decision_id::text = %s)""",
+                (row["entity_id"], row["entity_id"]))
+        return r["period"] if r else None
+    if row["action"] == "SEGMENT":
+        r = one("""SELECT period FROM ledger_segment
+                    WHERE batch_key = (SELECT after_state->>'batch_key'
+                                         FROM audit_log WHERE entry_id = %s)
+                    LIMIT 1""", (row["entry_id"],))
+        return r["period"] if r else None
+    return None
 
 
 def _undo_one(cur, actor: Actor, row: dict, reason: str) -> str:
@@ -286,7 +321,7 @@ def undo(body: UndoIn, actor: Actor = Depends(require_own_writes)) -> dict:
     else:
         rows = query("""SELECT * FROM v_undoable
                          WHERE actor_id = %s AND reversible_action
-                           AND NOT already_undone
+                           AND NOT already_undone AND NOT blocked_by_seal
                          ORDER BY occurred_at DESC LIMIT %s""",
                      (actor.actor_id, body.count))
         if not rows:
@@ -306,6 +341,9 @@ def undo(body: UndoIn, actor: Actor = Depends(require_own_writes)) -> dict:
         # not roll back the ones that already were.
         try:
             with transaction() as cur:
+                period = _period_of(r)
+                if period:
+                    serialise(cur, period)
                 what = _undo_one(cur, actor, r, body.reason.strip())
                 cur.execute("""INSERT INTO audit_log
                                  (actor, actor_id, session_id, actor_role,
@@ -324,6 +362,20 @@ def undo(body: UndoIn, actor: Actor = Depends(require_own_writes)) -> dict:
                          "result": what})
         except HTTPException as e:
             refused.append({"entry_id": r["entry_id"], "why": e.detail})
+
+    # Nothing walked back is not a success, whatever else is in the body.
+    #
+    # This used to answer 200 with `undone: []`, and a caller checking the
+    # status — which is every caller, and every person watching a screen —
+    # was told it had worked. A state machine drive counted forty successes
+    # over one actual undo. The reasons were in the body the whole time and
+    # nobody was reading them, because nothing said to.
+    if not done:
+        why = "; ".join(f"{r['entry_id']}: {r['why']}" for r in refused)
+        raise HTTPException(
+            409,
+            f"Nothing was walked back. {why}" if why else
+            "Nothing was walked back.")
 
     return {"undone": done, "refused": refused,
             "count": len(done)}

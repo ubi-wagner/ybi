@@ -1,0 +1,2064 @@
+[
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/awards",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/certify",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/chart",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/classify",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/contracts",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/documents",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/evidence",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/help",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/imports",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/inventory",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/lanes",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/library",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/people",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/projects",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/rates",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/reconcile",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/reports",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/requests",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/restate",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/review",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/space",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "signed out",
+    "as": "signed out",
+    "path": "/timesheet",
+    "offered_in_nav": false,
+    "calls": 1,
+    "characters": 173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 2321,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/awards",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 859,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/certify",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 309,
+    "not_found_or_fault": [],
+    "refused": 1,
+    "refused_paths": [
+      "certify/mine"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/chart",
+    "offered_in_nav": false,
+    "calls": 5,
+    "characters": 8186,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/classify",
+    "offered_in_nav": false,
+    "calls": 5,
+    "characters": 727,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/contracts",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1321,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/documents",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1051,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/evidence",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1312,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/help",
+    "offered_in_nav": true,
+    "calls": 2,
+    "characters": 16881,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/imports",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1084,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/inventory",
+    "offered_in_nav": false,
+    "calls": 6,
+    "characters": 1003,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/lanes",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1021,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/library",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 3549,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/people",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 1459,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/projects",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 973,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/rates",
+    "offered_in_nav": false,
+    "calls": 5,
+    "characters": 835,
+    "not_found_or_fault": [
+      "404 rates/current-typo?period=2025"
+    ],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "faults": [
+      "asked for 404 rates/current-typo?period=2025",
+      "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/reconcile",
+    "offered_in_nav": false,
+    "calls": 7,
+    "characters": 3873,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/reports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1407,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/requests",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 11075,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/restate",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 1184,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/review",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 5245,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/space",
+    "offered_in_nav": false,
+    "calls": 6,
+    "characters": 1003,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "system admin",
+    "as": "eric.c.wagner@gmail.com",
+    "path": "/timesheet",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 3222,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 2788,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/awards",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 877,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/certify",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1439,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/chart",
+    "offered_in_nav": false,
+    "calls": 5,
+    "characters": 8204,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/classify",
+    "offered_in_nav": false,
+    "calls": 5,
+    "characters": 745,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/contracts",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1339,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/documents",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1069,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/evidence",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1330,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/help",
+    "offered_in_nav": true,
+    "calls": 2,
+    "characters": 16899,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/imports",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1102,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/inventory",
+    "offered_in_nav": false,
+    "calls": 6,
+    "characters": 1021,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/lanes",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 1039,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/library",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 3567,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/people",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 1472,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/projects",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 991,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/rates",
+    "offered_in_nav": false,
+    "calls": 5,
+    "characters": 853,
+    "not_found_or_fault": [
+      "404 rates/current-typo?period=2025"
+    ],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "faults": [
+      "asked for 404 rates/current-typo?period=2025",
+      "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/reconcile",
+    "offered_in_nav": false,
+    "calls": 7,
+    "characters": 3891,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/reports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1443,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/requests",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 11093,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/restate",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 1202,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/review",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 5263,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/space",
+    "offered_in_nav": false,
+    "calls": 6,
+    "characters": 1021,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "org admin \u00b7 on the payroll",
+    "as": "bewing@ybi.org",
+    "path": "/timesheet",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 2810,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 5526,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/awards",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 981,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/certify",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1396,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/chart",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 8308,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/classify",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 860,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/contracts",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1443,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/documents",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1173,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/evidence",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 2193,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/help",
+    "offered_in_nav": true,
+    "calls": 2,
+    "characters": 17003,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/imports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1206,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/inventory",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1143,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/lanes",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1143,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/library",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 3671,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/people",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 823,
+    "not_found_or_fault": [],
+    "refused": 2,
+    "refused_paths": [
+      "auth/actors",
+      "auth/roster-gaps"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/projects",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1112,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/rates",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 966,
+    "not_found_or_fault": [
+      "404 rates/current-typo?period=2025"
+    ],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "faults": [
+      "asked for 404 rates/current-typo?period=2025",
+      "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/reconcile",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 3995,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/reports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1570,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/requests",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 11197,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/restate",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 1306,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/review",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 5367,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/space",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1143,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "hruby@ybi.org",
+    "path": "/timesheet",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 2801,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 5540,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/awards",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 988,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/certify",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1493,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/chart",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 8315,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/classify",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 867,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/contracts",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1450,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/documents",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1180,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/evidence",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 2200,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/help",
+    "offered_in_nav": true,
+    "calls": 2,
+    "characters": 17010,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/imports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1213,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/inventory",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1150,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/lanes",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1150,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/library",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 3678,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/people",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 830,
+    "not_found_or_fault": [],
+    "refused": 2,
+    "refused_paths": [
+      "auth/actors",
+      "auth/roster-gaps"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/projects",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1119,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/rates",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 973,
+    "not_found_or_fault": [
+      "404 rates/current-typo?period=2025"
+    ],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "faults": [
+      "asked for 404 rates/current-typo?period=2025",
+      "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/reconcile",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 4002,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/reports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1580,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/requests",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 11204,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/restate",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 1313,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/review",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 5374,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/space",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1150,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
+    "as": "sgaffney@ybi.org",
+    "path": "/timesheet",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 2935,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 4436,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/awards",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 962,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/certify",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 421,
+    "not_found_or_fault": [],
+    "refused": 1,
+    "refused_paths": [
+      "certify/mine"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/chart",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 8289,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/classify",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 841,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/contracts",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1424,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/documents",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 2533,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/evidence",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 2174,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/help",
+    "offered_in_nav": true,
+    "calls": 2,
+    "characters": 16984,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/imports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1187,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/inventory",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1124,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/lanes",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1124,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/library",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 3652,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/people",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 804,
+    "not_found_or_fault": [],
+    "refused": 2,
+    "refused_paths": [
+      "auth/actors",
+      "auth/roster-gaps"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/projects",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1093,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/rates",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 947,
+    "not_found_or_fault": [
+      "404 rates/current-typo?period=2025"
+    ],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "faults": [
+      "asked for 404 rates/current-typo?period=2025",
+      "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/reconcile",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 3976,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/reports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1534,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/requests",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 11178,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/restate",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 1287,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/review",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 5348,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/space",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1124,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "controller \u00b7 controller",
+    "as": "tom@ybi.org",
+    "path": "/timesheet",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 3325,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 2516,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/awards",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 964,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/certify",
+    "offered_in_nav": false,
+    "calls": 3,
+    "characters": 423,
+    "not_found_or_fault": [],
+    "refused": 1,
+    "refused_paths": [
+      "certify/mine"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/chart",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 8291,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/classify",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 832,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/contracts",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1426,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/documents",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1156,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/evidence",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1417,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/help",
+    "offered_in_nav": true,
+    "calls": 2,
+    "characters": 16986,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/imports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1189,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/inventory",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1108,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/lanes",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1126,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/library",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 3654,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/people",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 806,
+    "not_found_or_fault": [],
+    "refused": 2,
+    "refused_paths": [
+      "auth/actors",
+      "auth/roster-gaps"
+    ],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    ]
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/projects",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1078,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/rates",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 949,
+    "not_found_or_fault": [
+      "404 rates/current-typo?period=2025"
+    ],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "faults": [
+      "asked for 404 rates/current-typo?period=2025",
+      "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/reconcile",
+    "offered_in_nav": true,
+    "calls": 7,
+    "characters": 3978,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/reports",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 1512,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/requests",
+    "offered_in_nav": true,
+    "calls": 5,
+    "characters": 11180,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/restate",
+    "offered_in_nav": true,
+    "calls": 4,
+    "characters": 1289,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/review",
+    "offered_in_nav": true,
+    "calls": 3,
+    "characters": 5350,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/space",
+    "offered_in_nav": true,
+    "calls": 6,
+    "characters": 1108,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  },
+  {
+    "who": "auditor",
+    "as": "auditor@ybi.org",
+    "path": "/timesheet",
+    "offered_in_nav": false,
+    "calls": 4,
+    "characters": 3327,
+    "not_found_or_fault": [],
+    "refused": 0,
+    "refused_paths": [],
+    "console_errors": []
+  }
+]

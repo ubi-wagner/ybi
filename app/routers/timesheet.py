@@ -18,6 +18,7 @@ recorded, and the row carries both.
 from __future__ import annotations
 
 from datetime import date, timedelta
+from decimal import ROUND_DOWN, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -27,6 +28,9 @@ from app.auth import (Actor, Role, current_actor, require_controller,
                       require_own_writes)
 from app.db import one, query, transaction
 from app.settings import settings
+from app.domain.core import money
+from app.domain.workdays import month_span, weekdays
+from app.statelock import turn
 from app.vocab import EmploymentStatus, TimeBasis
 
 router = APIRouter(prefix="/timesheet", tags=["timesheet"])
@@ -189,6 +193,20 @@ def put_entry(body: EntryIn, period: str = None,
             403, "Only an employee records their own time. This account is "
                  "not linked to one.")
     key = actor.employee_key
+
+    # **`ADOPTED` is not a basis anybody chooses.** It says the hours came
+    # from the controller's reconstruction and the person affirmed them, and
+    # it carries that reconstruction's grade — so a hand-typed day claiming
+    # it would take `MANAGEMENT_RECONSTRUCTION` for a figure nobody rebuilt.
+    # The picker never offers it; this is the gate for a request that does
+    # not come from the picker.
+    if body.basis == TimeBasis.ADOPTED:
+        raise HTTPException(
+            422, "ADOPTED is written only by adopting the reconstruction on "
+                 "your draft — it says those hours came from the controller's "
+                 "rebuild of the year. For a day you are entering yourself, "
+                 "say what it actually rests on: your calendar, a project "
+                 "record, a dated deliverable, or memory.")
 
     p_start, p_end = _period_bounds(period)
     if not (p_start <= body.work_date <= p_end):
@@ -404,6 +422,464 @@ def coverage(period: str = None, employee_key: str = None,
             "coverage": row, "min_coverage": MIN_COVERAGE}
 
 
+class AdoptIn(BaseModel):
+    #: Which objectives of the draft the person is adopting. Empty means all
+    #: of them — the ordinary case, and still an explicit act.
+    objective_ids: list[str] = []
+    acknowledged: bool = False
+    note: str = ""
+
+
+def spread_hours(total: Decimal, days: int) -> list[Decimal]:
+    """Split `total` hours across `days`, exactly, by largest remainder.
+
+    **Rounding to the nearest cent is what gets this wrong**, and it did:
+    rounding rounds up as often as down, and where it rounds up the residual
+    goes negative. MBAC's 25.31 hours over 261 days is 0.09697 a day, which
+    became 0.10 and adopted 26.00 — more than the draft showed, with the
+    negative last day silently dropped by a `<= 0` guard. The sheet said one
+    figure and the record held another.
+
+    So: floor every day to the cent, which can only ever be short, and hand
+    the spare cents out one at a time. The total is exact by construction and
+    no day is more than a cent from the mean, which also keeps the last
+    working day from carrying a visible spike that means nothing.
+
+    A total too small to give every day a cent still lands in full, on as
+    many days as there are cents — better a short run of real days than a
+    year of zeroes that loses the objective entirely.
+    """
+    if days <= 0:
+        return []
+    daily = (total / days).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+    spare = int(((total - daily * days) * 100).to_integral_value())
+    return [daily + (Decimal("0.01") if i < spare else Decimal(0))
+            for i in range(days)]
+
+
+def _calendar_months(period: str, employee_key: str) -> list[dict]:
+    """Each month of the employed span, with its dates and what YBI says it
+    holds.
+
+    **The counts are theirs.** `work_month` is transcribed from the
+    `Hours available` sheet of the controller's workbook — *Work Days* and
+    *Hours Per Month* — which for 2025 is 261 days and 2,088 hours, every
+    weekday with no holiday deducted. This used to derive federal holidays
+    and take them out, which imposed another organisation's calendar on this
+    one and made the draft disagree with the `Allow Hours` the record itself
+    measures every person against.
+
+    The dates are enumerated here because a table of monthly counts cannot
+    say *which* days they are; `v_work_calendar_check` holds the two against
+    each other and names any month where they differ.
+    """
+    p_start, p_end = _period_bounds(period)
+    terms = one("""SELECT from_date, to_date, weekly_hours
+                     FROM v_employment_expected
+                    WHERE period = %s AND employee_key = %s""",
+                (period, employee_key))
+    start = max(terms["from_date"], p_start) if terms else p_start
+    end = min(terms["to_date"] or p_end, p_end) if terms else p_end
+    # A week of the organisation's own calendar, so a part-time person's
+    # capacity is a fraction of the month rather than a guess at one.
+    scale = Decimal(1)
+    if terms and terms["weekly_hours"]:
+        scale = Decimal(str(terms["weekly_hours"])) / 40
+
+    out = []
+    for row in query("""SELECT month_start, work_days, available_hours
+                          FROM work_month WHERE period = %s
+                         ORDER BY month_start""", (period,)):
+        m_start, m_end = month_span(row["month_start"])
+        days = [d for d in weekdays(max(m_start, start), min(m_end, end))]
+        if not days:
+            continue
+        whole = weekdays(m_start, m_end)
+        # Employed for part of a month: the share of its days they were here.
+        part = (Decimal(len(days)) / len(whole)) if whole else Decimal(0)
+        out.append({
+            "month_start": row["month_start"],
+            "days": days,
+            "work_days": row["work_days"],
+            "available": money(Decimal(str(row["available_hours"]))
+                               * scale * part)})
+    return out
+
+
+@router.get("/draft")
+def draft(period: str = None,
+          actor: Actor = Depends(current_actor)) -> dict:
+    """What the controller's reconstruction says your year was.
+
+    **Nothing here is on your timesheet.** It is a proposal, in the same
+    sense every other proposal in this system is one: the controller rebuilt
+    the 2025 distribution from payroll and hours logs, that reconstruction is
+    already on the record as *their* account of the work, and this is it
+    shown to the person whose work it was.
+
+    Why a draft at all. Forty-three people cannot reconstruct a year from
+    memory, and the honest alternative to showing them the reconstruction is
+    not a better record — it is no record, which is where 2025 has been
+    sitting. 200.430(i) does not require a contemporaneous record; it
+    requires one that reflects the work actually performed, supported, and
+    reviewed after the fact. A reconstruction the person reads, corrects and
+    signs meets that. A reconstruction nobody ever saw does not.
+
+    Why it is hours and not dollars. `labor_allocation` distributes *wages*,
+    so the draft turns each objective's share of the person's wages into the
+    same share of their contracted hours. That needs employment terms, and
+    where those are missing this answers with what is missing rather than
+    with a guess — a year of hours invented against an unknown denominator
+    is the thing the coverage check exists to refuse.
+
+    **Adopting it is optional, and the answer says so.** `optional` is on
+    every draft and it is not decoration: 200.430(i) wants the record of the
+    person whose effort it was, so a convenience that reads as an
+    instruction is the one way this exercise produces forty-three signatures
+    worth nothing. Somebody who would rather enter their own days, correct
+    half of these and leave the rest, or do nothing today, has taken a
+    legitimate route in each case — `instead` names them on the answer so a
+    screen cannot present adoption as the only door.
+
+    Certifying is a **separate, later act** on `/api/certify/sign`, and it is
+    theirs too. Adopting puts hours on a sheet; signing says the sheet is
+    true. Collapsing the two into one button would take a signature from
+    somebody who had only meant to accept a starting point.
+    """
+    period = period or settings.period
+    if not actor.employee_key:
+        raise HTTPException(
+            403, "Only an employee has a timesheet. This account is not "
+                 "linked to one.")
+    key = actor.employee_key
+    p_start, p_end = _period_bounds(period)
+
+    # **The terms come from the register of terms, not from the coverage
+    # view.** `v_timesheet_coverage` is `FROM v_timesheet_entry`, so somebody
+    # with no entries has no row in it at all — and that is exactly who this
+    # screen is for. Reading `expected_hours` from there made the draft
+    # answer "nobody has recorded your employment terms" to a person whose
+    # terms were on the record, and no draft could ever become adoptable:
+    # its precondition was satisfied only by already having the entries it
+    # exists to create. `entered_hours` genuinely is a coverage question and
+    # is honestly zero when the view has nothing to say.
+    terms = one("""SELECT expected_hours, employed_days, weekly_hours
+                     FROM v_employment_expected
+                    WHERE period = %s AND employee_key = %s""", (period, key))
+    expected = Decimal(str(terms["expected_hours"] or 0)) if terms else Decimal(0)
+    cover = one("""SELECT entered_hours FROM v_timesheet_coverage
+                    WHERE period = %s AND employee_key = %s""", (period, key))
+
+    rows = query("""SELECT objective_id,
+                           COALESCE(reconstructed_units, original_units) AS units,
+                           evidence_quality::text AS grade, rationale,
+                           source_label
+                      FROM labor_allocation
+                     WHERE period = %s AND employee_key = %s
+                     ORDER BY COALESCE(reconstructed_units, original_units) DESC""",
+                 (period, key))
+    total = sum(Decimal(str(r["units"] or 0)) for r in rows)
+
+    if not rows:
+        return {"period": period, "employee_key": key, "lines": [],
+                "expected_hours": str(expected), "adoptable": False,
+                "because": "The controller's reconstruction has no line for "
+                           "you in this period, so there is nothing to "
+                           "propose. Record your time directly."}
+    if expected <= 0:
+        return {"period": period, "employee_key": key, "lines": [],
+                "expected_hours": "0", "adoptable": False,
+                "because": "Nobody has recorded your employment terms for "
+                           "this period, so there are no contracted hours to "
+                           "divide. Until then a draft would be a year of "
+                           "hours against an unknown denominator. Ask the "
+                           "administrator to record your status, your "
+                           "contracted hours and the dates you worked."}
+
+    months = _calendar_months(period, key)
+    if not months:
+        return {"period": period, "employee_key": key, "lines": [],
+                "expected_hours": str(expected), "adoptable": False,
+                "because": "The organisation's working calendar has no month "
+                           "covering your employment span, so there is "
+                           "nothing to place these hours in. Load it from "
+                           "the `Hours available` sheet of the grant "
+                           "reconciliation workbook."}
+
+    available = money(sum(m["available"] for m in months))
+    all_days = [d for m in months for d in m["days"]]
+
+    # **The hours log, where the person has one.** `labor_month` is the
+    # controller's `Hours Log` sheet at the grain it is kept — a person, a
+    # month, an objective — and `labor_allocation`'s wage distribution is a
+    # linear function of it (correlation 1.000000 on all eight full-year
+    # people). Nine of forty-five have a month-by-month record; the other
+    # thirty-six carry one summary row, so for them the year is all there is
+    # and the draft says so rather than inventing twelve months.
+    logged = query("""SELECT month_start, objective_id,
+                             sum(adjusted_hours) AS hours
+                        FROM labor_month
+                       WHERE period = %s AND employee_key = %s
+                       GROUP BY month_start, objective_id
+                       HAVING sum(adjusted_hours) > 0
+                       ORDER BY month_start, sum(adjusted_hours) DESC""",
+                   (period, key))
+    by_month: dict = {}
+    for r in logged:
+        by_month.setdefault(r["month_start"], []).append(r)
+
+    lines, monthly = [], []
+    if by_month:
+        totals: dict[str, Decimal] = {}
+        for m in months:
+            rows_m = by_month.get(m["month_start"], [])
+            hours_m = money(sum(Decimal(str(r["hours"])) for r in rows_m))
+            for r in rows_m:
+                totals[r["objective_id"]] = money(
+                    totals.get(r["objective_id"], Decimal(0))
+                    + Decimal(str(r["hours"])))
+            monthly.append({
+                "month": m["month_start"].strftime("%B"),
+                "month_start": str(m["month_start"]),
+                "days": len(m["days"]),
+                "available": str(m["available"]),
+                "hours": str(hours_m),
+                "lines": [{"objective_id": r["objective_id"],
+                           "hours": str(Decimal(str(r["hours"])))}
+                          for r in rows_m]})
+        drawn = money(sum(totals.values()))
+        for oid, h in sorted(totals.items(), key=lambda kv: -kv[1]):
+            src = next((r for r in rows if r["objective_id"] == oid), None)
+            lines.append({
+                "objective_id": oid,
+                "share": str((h / drawn).quantize(Decimal("0.0001"))
+                             if drawn else Decimal(0)),
+                "hours": str(h),
+                "grade": src["grade"] if src else "MANAGEMENT_RECONSTRUCTION",
+                "rationale": (src["rationale"] if src else
+                              "From the hours log for this period."),
+                "source": src["source_label"] if src else "Hours Log"})
+        work_hours = drawn
+    else:
+        # No monthly record: the year's distribution, over the hours their
+        # own calendar says the span holds.
+        for r in rows:
+            units = Decimal(str(r["units"] or 0))
+            share = (units / total) if total else Decimal(0)
+            lines.append({
+                "objective_id": r["objective_id"],
+                "share": str(share.quantize(Decimal("0.0001"))),
+                "hours": str((available * share).quantize(Decimal("0.01"))),
+                "grade": r["grade"],
+                "rationale": r["rationale"],
+                "source": r["source_label"]})
+        work_hours = money(sum(Decimal(l["hours"]) for l in lines))
+
+    return {"period": period, "employee_key": key, "lines": lines,
+            "expected_hours": str(expected),
+            "available_hours": str(available),
+            "work_hours": str(work_hours),
+            "months": monthly,
+            "from_hours_log": bool(by_month),
+            "working_days": len(all_days),
+            "hours_per_day": str((work_hours / len(all_days)).quantize(
+                Decimal("0.01")) if all_days else Decimal(0)),
+            "already_entered": str(cover["entered_hours"] or 0) if cover else "0",
+            "adoptable": True,
+            #: A convenience, never an instruction. See the docstring: a
+            #: pre-filled sheet that reads as the only route produces
+            #: signatures on somebody else's account of the year, which is
+            #: the one outcome 200.430(i) is written against.
+            "optional": True,
+            "instead": [
+                "Enter your own days on the sheet above and ignore this "
+                "entirely — a sheet you type yourself is the stronger record, "
+                "not the weaker one.",
+                "Adopt it and then change any day that is wrong. What you "
+                "certify is the corrected sheet, not what was proposed here.",
+                "Leave it for now. Nothing here expires, and an unadopted "
+                "draft costs the record nothing.",
+            ],
+            "because": ("This is your own hours log, month by month, as the "
+                        "controller keeps it — not a figure spread evenly "
+                        "over the year. Adopting records it under your name; "
+                        "correct anything that is wrong first, because what "
+                        "you adopt is what you will be certifying."
+                        if by_month else
+                        "This is the controller's reconstruction, not your "
+                        "timesheet. There is no month-by-month record of "
+                        "your hours, so it is the year's distribution spread "
+                        "evenly. Adopting records it under your name — "
+                        "correct anything that is wrong first, because what "
+                        "you adopt is what you will be certifying."),
+            #: Their calendar counts every weekday as available and deducts
+            #: no holiday, so nothing here separates a day off from a day
+            #: worked. Said out loud rather than left to be noticed.
+            "not_known": ("YBI's calendar counts every weekday as available "
+                          f"— {len(all_days)} of them here, and no holiday "
+                          "taken out — so nothing in this draft separates a "
+                          "day you were off from a day you worked. Move any "
+                          "holiday, vacation or sick day to Paid leave "
+                          "before you submit.")}
+
+
+@router.post("/adopt")
+def adopt(body: AdoptIn, period: str = None,
+          actor: Actor = Depends(require_own_writes)) -> dict:
+    """Adopt the reconstruction as your own record.
+
+    The one act that turns somebody else's account of your year into yours.
+    It is **yours to perform and nobody else's** — the router's first rule is
+    that nobody enters time for anybody else, and this does not bend it: the
+    entries are written under the calling actor, for the calling actor's own
+    employee key, and there is no parameter naming somebody else.
+
+    `basis = ADOPTED`, always. It is not contemporaneous and recording it as
+    though it were would be the one lie that matters here; `AS_WORKED` is
+    refused by the schema more than seven days after the fact anyway, and
+    `v_certification_status.reconstructed` reads from this.
+
+    It was `RECALL` and that made the record **worse for being certified**:
+    RECALL grades `UNSUPPORTED`, so a person who read the reconstruction and
+    signed it took their own distribution from
+    `MANAGEMENT_RECONSTRUCTION` down a rung — same numbers, same provenance,
+    plus a signature. `ADOPTED` (migration `070`) carries the
+    reconstruction's grade across instead. RECALL still means what it always
+    meant for a day somebody types from memory.
+
+    **One entry per objective per working day, and the schema decided that,
+    not this handler.** The first version wrote one entry per objective dated
+    the last day of the period, reasoning that spreading a reconstruction
+    across the calendar manufactures a daily record nobody has. The concern
+    is real and the table had already answered it: `timesheet_hours_sane`
+    caps a row at 24 hours and `timesheet_day_must_fit` caps a person-day at
+    24 across rows, so the unit of `timesheet_entry` **is** a day. 978.68
+    hours on 31 December is not a coarser record, it is a refused one — read
+    the schema, never recall it.
+
+    So the year is spread uniformly across the weekdays of the employed span.
+    Uniform is the honest shape: it is visibly the same split every day,
+    which together with RECALL on every row tells a reviewer at a glance that
+    this is a reconstruction. Varying it to look contemporaneous is what
+    would manufacture precision.
+
+    The rounding residual lands on the last working day rather than being
+    dropped, so the hours adopted are the hours the draft showed. A
+    distribution that quietly loses a few hours per objective is the thing
+    `allocation_proof` exists to refuse one level up.
+    """
+    period = period or settings.period
+    if not actor.employee_key:
+        raise HTTPException(
+            403, "Only an employee records their own time. This account is "
+                 "not linked to one.")
+    if not body.acknowledged:
+        raise HTTPException(
+            422, "Adopting says this is a true record of your own work. It "
+                 "has to be acknowledged — that is the whole point of the "
+                 "act, and an unacknowledged adoption would be the "
+                 "controller's reconstruction wearing your name.")
+    key = actor.employee_key
+    p_start, p_end = _period_bounds(period)
+
+    proposed = draft(period=period, actor=actor)
+    if not proposed["adoptable"]:
+        raise HTTPException(409, proposed["because"])
+    wanted = set(body.objective_ids) or {l["objective_id"]
+                                         for l in proposed["lines"]}
+    unknown = wanted - {l["objective_id"] for l in proposed["lines"]}
+    if unknown:
+        raise HTTPException(
+            422, f"The draft has no line for {', '.join(sorted(unknown))}. "
+                 f"Adopting can only accept what was proposed; record "
+                 f"anything else as an entry of your own.")
+
+    months = _calendar_months(period, key)
+    all_days = [d for m in months for d in m["days"]]
+    # A day holds 24 hours and the trigger says so. Refuse in words here
+    # rather than let the person meet `RUBY has 31.50 hours on 2025-03-04`.
+    per_day_total = (sum(Decimal(l["hours"]) for l in proposed["lines"]
+                         if l["objective_id"] in wanted) / len(all_days)
+                     if all_days else Decimal(0))
+    if per_day_total > 24:
+        raise HTTPException(
+            409, f"Adopting this would book {per_day_total.quantize(Decimal('0.01'))} "
+                 f"hours a day across {len(all_days)} working days, and a day "
+                 f"holds 24. The hours and the employed span disagree — ask "
+                 f"the administrator to check your terms.")
+
+    # **Each month's hours in that month.** Where the hours log has a
+    # month-by-month record it is placed month by month, because that is the
+    # grain the record is kept at and smearing it over the year would throw
+    # away the only part of it that is a fact. Where there is no monthly
+    # record the year is spread evenly, and the draft says which it is.
+    plan: list[tuple] = []
+    if proposed.get("months"):
+        for m in proposed["months"]:
+            days_m = next((c["days"] for c in months
+                           if str(c["month_start"]) == m["month_start"]), [])
+            if not days_m:
+                continue
+            for ln in m["lines"]:
+                if ln["objective_id"] not in wanted:
+                    continue
+                plan.append((ln["objective_id"], Decimal(ln["hours"]),
+                             days_m, m["month"]))
+    else:
+        for line in proposed["lines"]:
+            if line["objective_id"] not in wanted:
+                continue
+            plan.append((line["objective_id"], Decimal(line["hours"]),
+                         all_days, "the year"))
+
+    grade = {l["objective_id"]: l for l in proposed["lines"]}
+    written, hours = 0, Decimal(0)
+    with turn(period) as cur:
+        for objective, total_h, days_m, when in plan:
+            if total_h <= 0 or not days_m:
+                continue
+            src = grade.get(objective, {})
+            note = (f"Adopted from the controller's hours log for {when} "
+                    f"({total_h} hours over {len(days_m)} working days; "
+                    f"{src.get('grade', 'MANAGEMENT_RECONSTRUCTION')}). "
+                    f"{src.get('rationale', '')}"
+                    + (f" {body.note.strip()}" if body.note.strip() else ""))[:900]
+            for d, h in zip(days_m, spread_hours(total_h, len(days_m))):
+                if h <= 0:
+                    continue
+                cur.execute(
+                    """INSERT INTO timesheet_entry
+                         (period, employee_key, work_date, objective_id, hours,
+                          basis, note, entered_by, entered_by_name)
+                       VALUES (%s,%s,%s,%s,%s,'ADOPTED',%s,%s,%s)
+                       ON CONFLICT DO NOTHING""",
+                    (period, key, d, objective, h,
+                     note, actor.actor_id, actor.display_name))
+                written += 1
+                hours = hours + h
+
+        record(actor, "TIMESHEET_ADOPT", "timesheet_entry", key,
+               after={"period": period, "entries": written,
+                      "hours": str(hours), "working_days": len(all_days),
+                      "months": len(proposed.get("months") or []),
+                      "objectives": sorted(wanted)},
+               reason=(body.note.strip()
+                       or "Adopted the controller's reconstruction as my own "
+                          "record of the period."),
+               cursor=cur)
+    if not written:
+        raise HTTPException(
+            409, "Nothing was adopted: every line of the draft came to zero "
+                 "hours. Nothing has been recorded.")
+    return {"period": period, "employee_key": key, "entries": written,
+            "hours": str(hours), "working_days": len(all_days),
+            "months": len(proposed.get("months") or []),
+            "from_hours_log": bool(proposed.get("from_hours_log")),
+            "next": "Submit the sheet, then sign the certification. What you "
+                    "sign is what is on the sheet now, so change anything "
+                    "that is wrong before you do."}
+
+
 @router.post("/submit")
 def submit(body: SubmitIn, period: str = None,
            actor: Actor = Depends(require_own_writes)) -> dict:
@@ -596,6 +1072,149 @@ def put_employment(body: EmploymentIn, period: str = None,
             "expected_hours": expected["expected_hours"] if expected else None}
 
 
+# ── Donated time, and what it is worth ────────────────────────────────
+#
+# Hours given rather than paid. They never enter the paid labour
+# distribution — that would move every other share — so they are valued
+# separately or not at all.
+#
+# `donation_rate` has been in the schema since `019` with every invariant it
+# needs: immutable once set, no delete, one live rate per person per period,
+# a basis of at least ten characters, a positive rate. **Nothing has ever
+# written it.** `DONATION_RATE_MISSING` is a worklist kind pointing at a
+# screen where there was nothing to do on arrival — which is the same defect
+# as a BLOCKING item that doing the work cannot clear, one step earlier.
+
+class DonationRateIn(BaseModel):
+    employee_key: str
+    hourly_rate: Decimal = Field(gt=0)
+    #: What the rate rests on. Ten characters is the schema's floor and it is
+    #: not arbitrary: 2 CFR 200.306(e) wants a rate consistent with what the
+    #: organisation pays for similar work, or with the labour market where it
+    #: has no such work — and "market" is not a statement of either.
+    basis: str = Field(min_length=11)
+    source_document: str = ""
+
+
+@router.get("/donations")
+def donations(period: str = None,
+              actor: Actor = Depends(current_actor)) -> dict:
+    """Donated hours by person, and what each is valued at.
+
+    A read, so anybody signed in sees it — including the person whose hours
+    they are, which is the point: somebody who gave a day should be able to
+    see that it was recorded and what it was put at.
+    """
+    period = period or settings.period
+    rows = query("""SELECT * FROM v_donated_time WHERE period = %s
+                     ORDER BY employee_key, objective_id""", (period,))
+    people = {}
+    for r in rows:
+        p = people.setdefault(r["employee_key"], {
+            "employee_key": r["employee_key"], "hours": Decimal(0),
+            "objectives": [], "hourly_rate": r["hourly_rate"],
+            "rate_basis": r["rate_basis"], "valued_at": Decimal(0),
+            "rate_missing": r["rate_missing"]})
+        p["hours"] += r["hours"]
+        if r["valued_at"] is not None:
+            p["valued_at"] += r["valued_at"]
+        p["objectives"].append({"objective_id": r["objective_id"],
+                                "label": r["objective_label"],
+                                "is_federal": r["is_federal"],
+                                "hours": str(r["hours"]),
+                                "valued_at": (str(r["valued_at"])
+                                              if r["valued_at"] is not None
+                                              else None)})
+    out = [{**p, "hours": str(p["hours"]),
+            "hourly_rate": str(p["hourly_rate"]) if p["hourly_rate"] else None,
+            "valued_at": str(p["valued_at"]) if not p["rate_missing"] else None}
+           for p in people.values()]
+    return {"period": period, "people": out,
+            "unvalued": sum(1 for p in out if p["rate_missing"]),
+            # Deliberately not a total across everybody: a total over a
+            # population where some are unvalued reads as the value of the
+            # donated time, and it is the value of the part somebody has got
+            # to. The count of the rest is beside it for that reason.
+            "valued_total": str(sum(Decimal(p["valued_at"]) for p in out
+                                    if not p["rate_missing"]))}
+
+
+@router.put("/donation-rate")
+def put_donation_rate(body: DonationRateIn, period: str = None,
+                      actor: Actor = Depends(require_controller)) -> dict:
+    """What an hour of somebody's donated time is worth.
+
+    The controller's judgment and nobody else's — **a volunteer valuing their
+    own time is the whole problem 2 CFR 200.306(e) is guarding against**, and
+    the rate has to be consistent with what YBI pays for similar work, or
+    with the labour market where it has no such work. So the basis is
+    required and the schema will not take a short one.
+
+    Superseded, never edited. The rate is immutable once set, which is what
+    makes "what was this valued at when the rate was computed" answerable
+    afterwards; a second rate closes the first and both stay.
+    """
+    period = period or settings.period
+    key = body.employee_key.upper()
+    with turn(period) as cur:
+        cur.execute("""SELECT count(*) AS n FROM v_timesheet_entry
+                        WHERE period = %s AND employee_key = %s AND donated""",
+                    (period, key))
+        if not cur.fetchone()["n"]:
+            # Not a refusal of a wrong value — a refusal of a value with
+            # nothing to apply to. A rate against nobody's hours is a figure
+            # somebody will later find and wonder about.
+            raise HTTPException(
+                422, f"{key} has no donated hours in {period}, so there is "
+                     f"nothing for a rate to value. Record the hours first.")
+
+        # The handler half of `nobody_values_their_own_time`. The trigger is
+        # what makes it hold when this is wrong; this is what makes the
+        # refusal a sentence somebody can act on rather than a constraint
+        # violation.
+        if actor.employee_key and actor.employee_key.upper() == key:
+            raise HTTPException(
+                422, "A donated hour cannot be valued by the person who gave "
+                     "it. 2 CFR 200.306(e) wants a rate consistent with what "
+                     "YBI pays for similar work, and that is a judgment "
+                     "about your time rather than yours to make. Ask one of "
+                     "the other controllers.")
+
+        cur.execute("""SELECT rate_id, hourly_rate FROM donation_rate
+                        WHERE period = %s AND employee_key = %s
+                          AND superseded_at IS NULL""", (period, key))
+        prior = cur.fetchone()
+        if prior:
+            # Close the old one first: `one_live_donation_rate` is a partial
+            # unique index and is checked at the insert, not at COMMIT.
+            cur.execute("""UPDATE donation_rate SET superseded_at = now()
+                            WHERE rate_id = %s""", (prior["rate_id"],))
+        cur.execute("""INSERT INTO donation_rate
+                         (period, employee_key, hourly_rate, basis,
+                          source_document, set_by, set_by_name)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s)
+                       RETURNING rate_id""",
+                    (period, key, body.hourly_rate, body.basis.strip(),
+                     body.source_document.strip(), actor.actor_id,
+                     actor.display_name))
+        rate_id = cur.fetchone()["rate_id"]
+        record(actor, "DONATION_RATE", "employee", key,
+               before=({"hourly_rate": str(prior["hourly_rate"])}
+                       if prior else None),
+               after={"hourly_rate": str(body.hourly_rate),
+                      "basis": body.basis.strip()},
+               reason=body.basis.strip()[:400], cursor=cur)
+        cur.execute("""SELECT sum(hours) AS hours, sum(valued_at) AS valued
+                         FROM v_donated_time
+                        WHERE period = %s AND employee_key = %s""",
+                    (period, key))
+        got = cur.fetchone()
+    return {"rate_id": rate_id, "employee_key": key,
+            "hourly_rate": str(body.hourly_rate),
+            "superseded": bool(prior),
+            "hours": str(got["hours"]), "valued_at": str(got["valued"])}
+
+
 @router.get("/roster")
 def roster(period: str = None,
            actor: Actor = Depends(current_actor)) -> list[dict]:
@@ -692,6 +1311,37 @@ def summary(period: str = None, employee_key: str = None,
 
     cover = one("""SELECT * FROM v_timesheet_coverage
                     WHERE period = %s AND employee_key = %s""", (period, key))
+    # **`v_timesheet_coverage` is `FROM v_timesheet_entry`, so somebody with
+    # no entries has no row in it — and their employment terms are still on
+    # the record.** Returning nothing here told the screen the terms were
+    # unknown while the draft card beside it printed "2,080 contracted
+    # hours" from `v_employment_expected`: two cards on one screen
+    # disagreeing about the same fact at the same moment, which is 13.0%
+    # and 2.2% in a smaller place. It also disabled *Submit*, the one thing
+    # somebody with a full sheet and no coverage row would want.
+    #
+    # The terms come from the register of terms either way, so the two
+    # cannot disagree rather than being patched where they happened to.
+    terms = one("""SELECT expected_hours, employed_days, weekly_hours,
+                          statuses, from_date AS employed_from,
+                          to_date AS employed_to
+                     FROM v_employment_expected
+                    WHERE period = %s AND employee_key = %s""", (period, key))
+    if cover is None:
+        cover = {"period": period, "employee_key": key, "entered_hours": 0,
+                 "chargeable_hours": 0, "leave_hours": 0, "days_with_time": 0,
+                 "donated_hours": 0, "coverage": None,
+                 "submitted_coverage": None, "submitted_at": None,
+                 "first_day": None, "last_day": None,
+                 "expected_hours": None, "employed_days": None,
+                 "weekly_hours": None, "statuses": None,
+                 "employed_from": None, "employed_to": None,
+                 "terms_known": False}
+    else:
+        cover = dict(cover)
+    if terms:
+        cover.update(dict(terms))
+        cover["terms_known"] = terms["expected_hours"] is not None
     by_month = query("""SELECT month_label, entered_hours, expected_hours,
                                coverage, days_with_time
                           FROM v_timesheet_month

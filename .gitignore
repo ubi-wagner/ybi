@@ -20,3 +20,7 @@ web/dist/
 .venv/
 .hypothesis/
 .pytest_cache/
+
+# First-login password sheets. Never committed: these are real credentials
+# for real people, and the sheet is deleted once everybody has signed in.
+scripts/first_passwords.json

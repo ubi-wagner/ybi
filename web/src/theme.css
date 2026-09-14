@@ -509,6 +509,46 @@ tr.pool td:first-child { box-shadow: inset 3px 0 0 var(--stripe, transparent); }
   background: var(--wash, #fafaf8); transition: border-color .12s, background .12s; }
 .dropzone:hover, .dropzone.on { border-color: var(--accent, #0f6b64);
   background: #f1f6f5; }
+/* What is on the face of a document: the amount, the date, the vendor.
+   Side by side because they are read off one piece of paper in one go, and
+   a column of three stacked fields reads as three separate questions. */
+/* The three things we are asking for, side by side. Each is a whole ask
+   with its own lead time, so they read as cards rather than as rows. */
+/* As many as fit, rather than three. A fourth form arrived and sat alone on
+   a second row looking like an afterthought; auto-fit puts four across on a
+   wide screen and two-by-two on a narrow one, and a fifth needs no change
+   here at all. */
+.ask-grid { display: grid; gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
+.card.ask { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.card.ask p { margin: 0; }
+.card.ask .btn { align-self: flex-start; margin-top: auto; }
+
+.preview { padding: 4px 0 8px; }
+.problems { margin: 8px 0 0; padding-left: 18px; }
+.problems li { margin-bottom: 3px; }
+
+/* A cell that may hold a sentence. Table cells default to not wrapping so
+   figures stay on one line; a reason has to wrap or it is clipped at the
+   card edge, and a reason nobody can read is not a reason. */
+td.wrap { white-space: normal; max-width: 46ch; }
+
+.section-h { margin: 22px 0 8px; font-size: 13px; font-weight: 600;
+             letter-spacing: .02em; color: var(--muted); }
+.unread-note { margin-top: 18px; padding-top: 14px;
+               border-top: 1px solid var(--rule); }
+.unread-list { margin: 10px 0 0; padding-left: 18px; columns: 2; }
+@media (max-width: 720px) { .unread-list { columns: 1; } }
+
+.facts-row { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { .facts-row { grid-template-columns: 1fr; } }
+
+/* A document the matcher would not propose for. Present, legible, and
+   visibly not part of what the button is about to do — the reason it gives
+   is the useful part of the row. */
+tbody tr.unmatched td { color: var(--muted); background: var(--surface-sunk); }
+tbody tr.unmatched td.strong { color: var(--ink); }
+
 .upload-form { display: grid; gap: 12px; margin-top: 16px;
   grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
 .upload-form select, .upload-form input { width: 100%; padding: 8px 10px;
@@ -577,6 +617,23 @@ tbody td.trunc { max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
 .ts-basis select { padding: 6px 9px; border: 1px solid var(--rule);
   border-radius: 6px; font: inherit; font-size: 13px; background: var(--surface); }
 .ts-note { margin: -6px 0 0; max-width: 80ch; }
+/* The rationale behind each line of the reconstruction, folded away: it is
+   what a reviewer asks for and not what the person adopting reads first. */
+/* Two actions that belong to one decision, on one line. */
+.failsection { font-weight: 700; font-size: 12px; letter-spacing: .04em;
+               text-transform: uppercase; margin: 16px 0 6px;
+               padding-top: 12px; border-top: 1px solid var(--rule, #d8d8d8); }
+
+.row-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ts-basis { display: inline-flex; gap: 8px; align-items: center; }
+.ts-basis select { padding: 4px 6px; font: inherit; }
+
+.ts-instead { margin: 4px 0 10px; padding-left: 20px; }
+.ts-instead li { margin-bottom: 4px; max-width: 80ch; }
+
+.ts-draft-why { margin: 8px 0 4px; padding-left: 12px;
+                border-left: 2px solid var(--rule); }
+.ts-draft-why p { margin: 0 0 6px; max-width: 80ch; }
 
 .ts-grid th { white-space: nowrap; }
 .ts-grid th .ts-dnum { display: block; font-size: 14px; font-weight: 400;
@@ -667,6 +724,12 @@ tbody tr.ts-foot td { border-top: 1px solid var(--ink); border-bottom: none;
 .modal > input { width: 100%; padding: 9px 11px; border: 1px solid var(--rule);
   border-radius: 7px; font: inherit; background: var(--surface); color: var(--ink); }
 
+/* A caveat the reader must not miss, and which is not a failure: pencil
+   rather than traffic light, per the annotation rule. */
+.caveat { margin: 10px 0 4px; padding: 9px 12px; max-width: 80ch;
+  border-radius: 7px; background: var(--pencil-wash, #f7f2e4);
+  border-left: 2px solid var(--warn); font-size: 13px; }
+
 /* ── Advice at the point of judgment ──────────────────────────────── */
 .advice { margin-top: 16px; display: grid; gap: 8px; }
 .advice-item { display: grid; grid-template-columns: 92px 1fr; gap: 12px;
@@ -752,6 +815,10 @@ table.buildup tr:last-child th, table.buildup tr:last-child td { border-bottom: 
    and the annotation colours in this system are pencil rather than traffic
    light. */
 .warnish { color: var(--warn, #8a6d1f); }
+/* The annotation colours are warm — pencil, not traffic light — but a
+   provision citing a clause the agreement does not contain is not an
+   annotation. */
+.failish { color: var(--fail); }
 
 tbody tr.total-row td, tbody tr.total-row th {
   border-top: 1px solid var(--ink); border-bottom: none; padding-top: 10px; }
@@ -766,3 +833,72 @@ tbody tr.total-row td, tbody tr.total-row th {
 .checkline { display: flex; align-items: center; gap: 8px; font-size: 13px;
              color: var(--graphite); }
 .checkline input { width: auto; }
+
+/* ── The document library ──────────────────────────────────────────────
+   A filter bar, and a panel that reads a document rather than downloading
+   it. The frame is the only place in this application where bytes somebody
+   uploaded are rendered, which is why it is sandboxed here as well as
+   allowlisted and sandboxed at the server. */
+
+.filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.filter-row > * { min-width: 0; }
+.field.inline { margin-top: 0; flex: 0 1 auto; }
+.field.inline select { min-width: 150px; }
+
+.doc-meta { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--rule); }
+.doc-meta .field-label { display: block; font-size: 11.5px; color: var(--muted);
+  letter-spacing: .02em; margin-bottom: 3px; }
+.doc-meta code { font-size: 12px; background: var(--surface-sunk);
+  padding: 2px 6px; border-radius: 4px; }
+
+/* Tall enough to read a page of a lease without scrolling the panel as well
+   as the document — two nested scrollbars is how a reader loses their
+   place. */
+.doc-frame { width: 100%; height: min(72vh, 900px); border: 1px solid var(--rule);
+  border-radius: var(--r); background: var(--surface-sunk); }
+
+/* "no preview" sits where a Read button would, so it has to occupy the same
+   line rather than pushing Download onto a second one — a column where every
+   other row is one line tall and these are two reads as a rendering fault. */
+.nopreview { font-size: 12px; color: var(--muted); white-space: nowrap;
+  padding: 4px 0; }
+/* The actions cell stays on one line whatever it holds. */
+td .btn-row { flex-wrap: nowrap; align-items: center; }
+
+/* Three toast tones, and a failure that does not look like a confirmation.
+   "bad" and "fail" were both in use and only "bad" had a rule, so nine error
+   toasts rendered in the ordinary dark treatment — a failure notification
+   indistinguishable from a success one. */
+.toast.fail { background: var(--fail); }
+.toast.ok   { background: var(--ok, #1F6F4A); }
+.toast.warn { background: var(--warn); color: var(--ink); }
+.toast.warn button { color: var(--ink); border-color: rgba(0,0,0,.3); }
+.toast.fail strong { font-weight: 700; }
+
+/* --------------------------------------------------- what did not work -- */
+/* Absent entirely when there is nothing to say. A permanent status light
+   that is green all day is one nobody looks at on the day it turns red. */
+.failbell { background: var(--warn-wash); border-color: var(--warn);
+  color: var(--warn); font-weight: 600; font-size: 12px; padding: 5px 11px; }
+.failbell.fault { background: var(--fail-wash); border-color: var(--fail);
+  color: var(--fail); }
+.failbell:hover:not(:disabled) { background: var(--warn); color: #fff; }
+.failbell.fault:hover:not(:disabled) { background: var(--fail); color: #fff; }
+
+.failpanel { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 94vw);
+  background: var(--surface); border-left: 1px solid var(--rule); z-index: 70;
+  display: flex; flex-direction: column; box-shadow: -18px 0 40px rgba(0,0,0,.14); }
+.failpanel header, .failpanel footer { display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid var(--rule); }
+.failpanel footer { border-bottom: none; border-top: 1px solid var(--rule); }
+.failpanel .body { overflow: auto; padding: 6px 20px 20px; }
+
+.failrow { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.failhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.failhead code { font-size: 12px; color: var(--graphite); }
+.failcode { font-size: 11.5px; font-weight: 700; color: var(--warn);
+  background: var(--warn-wash); border-radius: 4px; padding: 1px 7px; }
+.failcode.fault { color: var(--fail); background: var(--fail-wash); }
+.failmsg { margin-top: 5px; font-size: 13px; line-height: 1.5; }

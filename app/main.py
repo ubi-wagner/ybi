@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import psycopg
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,11 +24,12 @@ from fastapi.staticfiles import StaticFiles
 from app import storage
 from app.db import close_pool, open_pool, run_migrations
 from app.domain.segment import SegmentError
+from app.refusals import RecordRefusals
 from app.routers import (auth, awards, certify, chart, classify, contracts,
                          dashboard,
                          documents, evidence, export, facilities, health,
                          imports, lanes, rates, reconcile, restate, review,
-                         timesheet, undo)
+                         requests, timesheet, undo, reports, projects)
 from app.settings import settings
 
 log = logging.getLogger("ybi")
@@ -84,6 +85,12 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+# Outermost of the two, so it sees the status CORS will actually send. A
+# refusal is recorded for every mutating request answered 4xx or 5xx, which
+# is the case audit_log cannot cover: it records changes, and a refusal is
+# the absence of one.
+app.add_middleware(RecordRefusals)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"] if settings.env == "dev" else [],
@@ -95,8 +102,15 @@ app.add_middleware(
 for r in (health, auth, dashboard, imports, chart, classify, lanes,
           rates, evidence, documents, awards, facilities, certify,
           timesheet, undo, restate, review, contracts, reconcile,
-          export):
+          export, reports, requests, projects):
     app.include_router(r.router, prefix="/api")
+# The todo list is its own prefix rather than /projects/todos, because most
+# of it is not about a project: "chase NCDMM for a readable agreement" belongs
+# to the engagement and to no charge code.
+app.include_router(projects.todos, prefix="/api")
+# Claims are their own prefix for the same reason: the controller works
+# a list of claims across every project rather than one project at a time.
+app.include_router(projects.claims, prefix="/api")
 
 
 @app.exception_handler(ValueError)
@@ -239,6 +253,30 @@ if WEB_DIST.exists():
 
     @app.get("/{path:path}", include_in_schema=False)
     async def spa(path: str):
+        """Serve the built app, and hand every unknown route to the router.
+
+        Except under /api, which is the JSON surface and must answer as one.
+
+        Without that exception this catch-all swallows every API path that
+        did not match a route and answers 200 with index.html — so a typo, a
+        renamed endpoint, or a route dropped in a deploy all look *healthy*
+        to anything that checks a status code. A caller gets `res.ok` true
+        and HTML where a figure should be, and only finds out when a JSON
+        parser throws somewhere far away from the cause. A monitor pointed
+        at an endpoint that no longer exists reports green for ever.
+
+        A 404 that says so is the whole fix.
+        """
+        if path == "api" or path.startswith("api/"):
+            # 404 rather than 405 even where the path exists under another
+            # method: this catch-all only sees GETs, so it cannot tell "no
+            # such path" from "not a GET". Saying which is more honest than
+            # guessing, and a caller that meant to POST learns as much from
+            # the wording as from a status code.
+            raise HTTPException(
+                404, f"No GET endpoint at /{path}. The API answers JSON; this "
+                     f"path matched no GET route (it may exist under another "
+                     f"method — see /api/docs).")
         candidate = WEB_DIST / path
         if path and candidate.is_file():
             return FileResponse(candidate)

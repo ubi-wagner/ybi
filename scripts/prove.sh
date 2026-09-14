@@ -28,8 +28,39 @@ run() {
   fi
 }
 
+# Before anything, because a stale interpreter fails two thousand checks in
+# later and reads like a defect in the system. drive_access ended a clean run
+# with "ModuleNotFoundError: No module named 'pypdf'" printed under
+# **The boundaries**, which is where a reader looks for a broken permission
+# gate — the venv simply predated the dependency.
+if ! $PY - <<'PREFLIGHT' 2>/dev/null
+# `import importlib` alone does not bind `importlib.util` — the first
+# draft of this did exactly that, raised AttributeError, exited non-zero
+# and told every reader their environment was broken. A guard that always
+# fires is worse than no guard.
+import importlib.util
+import sys
+missing = [m for m in ("fastapi", "psycopg", "httpx", "openpyxl", "pypdf",
+                       "reportlab", "pytest")
+           if importlib.util.find_spec(m) is None]
+sys.exit(1 if missing else 0)
+PREFLIGHT
+then
+  printf '\n  %s is missing something it needs.\n' "$PY"
+  printf '  This is the environment, not the system:\n\n'
+  printf '      %s -m pip install -r requirements.txt\n\n' "$PY"
+  exit 2
+fi
+
 step "The engine, and the structure of the code"
-run "unit and domain tests" $PY -m pytest -q
+# `tests/test_manual.py` is deliberately excluded here and run on its own
+# below, **after** the walk that produces what it asserts on. Running it
+# twice was not the problem; running it first was: it reads the manifest
+# `walk_manuals.py` writes three steps later, so a run whose previous walk
+# had been interrupted failed on an artefact this same script was about to
+# regenerate — a test arguing against working code, in the one place a
+# reviewer looks to decide whether the system holds.
+run "unit and domain tests" $PY -m pytest -q --ignore=tests/test_manual.py
 
 if ! curl -fsS "$BASE/api/health" >/dev/null 2>&1; then
   printf '\n  nothing serving at %s — start the API and run again\n' "$BASE"
@@ -46,8 +77,67 @@ step "The manual"
 run "screenshots are current" $PY scripts/walk_manuals.py --base "$BASE"
 run "manual tests" $PY -m pytest -q tests/test_manual.py
 
+step "The system as a state machine, one action at a time"
+# Before everything, because it needs the record at rest: every expectation in
+# it is an absolute count from a known start. It walks its own turns back and
+# leaves the live state exactly as it found it.
+run "drive_state_machine" $PY scripts/drive_state_machine.py --base "$BASE"
+
+step "The whole system, as everybody, in six dimensions"
+# Before the drives, for the same reason the manual walk is: the drives seal
+# the decision set, and a sealed set refuses the one classification this
+# makes to measure what a change propagates. It walks that change back
+# afterwards, so it leaves the record as it found it.
+run "system review" $PY scripts/review_system.py --base "$BASE"
+
+step "What one change moves, and what it must not"
+# Before every drive that seals, because its third step is to seal and its
+# fourth is to prove a sealed set refuses a reclassification. Run after
+# drive_everyone it can do neither, and reports a correct refusal as a fault.
+run "drive_propagation" $PY scripts/drive_propagation.py --base "$BASE"
+
+step "What is still being asked for, and the answer coming back"
+# Before the drives that seal, like the others: it writes assets, space and
+# addresses, none of which the seal covers, but it does classify nothing and
+# leaves the decision set exactly as it found it.
+run "drive_requests" $PY scripts/drive_requests.py --base "$BASE"
+
+step "A folder of documents, matched to the cost they support"
+# Before the drives that seal. Its last step makes a judgment citing the
+# document it matched, to prove the grade the whole matcher exists to reach,
+# and a sealed set correctly refuses that — so run after one it reports the
+# guarantee as a gap. It walks every document and attachment back itself.
+run "drive_evidence" $PY scripts/drive_evidence.py --base "$BASE"
+
+step "Two people, one record, the same instant"
+# With drive_propagation, and for the same reason: it seals, and it proves a
+# sealed set refuses a judgment that was already in flight. It leaves the set
+# open and its own judgments reversed, so the drives after it start where they
+# expect to.
+run "drive_concurrency" $PY scripts/drive_concurrency.py --base "$BASE"
+
+step "The rate build-up, and everything that moves it"
+# With the drives that seal, and before drive_everyone, which expects an open
+# set. It seals, computes, judges, recomputes and unseals, and its last step
+# takes the carve-outs out from under a live rate to prove the tie control
+# can fail — so it must run where it can seal freely and put the record back.
+run "drive_buildup" $PY scripts/drive_buildup.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
+
+# After the drives that seal. A restatement is a consequence of the rate and
+# the rate of the judgments, so a drive that sealed to give itself something
+# to measure would be reading its own writing — this one computes over a seal
+# somebody else applied and refuses to make one. Note that sealing is not the
+# same as leaving a rate live: drive_state_machine seals, computes and then
+# unseals, which supersedes every rate. The drive reads the state rather than
+# assuming what the script before it left behind.
+step "The number walked out to NCDMM"
+run "drive_restate" $PY scripts/drive_restate.py --base "$BASE"
+
+step "A piece of work set up, approved, and handed on"
+run "drive_projects" $PY scripts/drive_projects.py --base "$BASE"
 
 step "The income side — charge codes, contracts, milestones, money in"
 run "drive_contracts" $PY scripts/drive_contracts.py --base "$BASE"

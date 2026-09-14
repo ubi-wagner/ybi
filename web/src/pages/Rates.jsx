@@ -24,8 +24,77 @@ export default function Rates() {
     } catch (e) { toast(String(e.message || e), { tone: "bad", sticky: true }); }
   };
 
+  /* **The rate had no door.** `POST /api/rates/compute` was complete on the
+     server and named in the comment below, and nothing in the SPA had ever
+     called it — so the one figure the whole engagement exists to produce
+     could only be made by somebody running a script. That is the
+     restatement's defect and the timesheet draft's, in the place it costs
+     most.
+
+     It sends `{}`. Every field on the body is a policy with a default, and
+     a screen that invented one would be refused — which is the behaviour
+     that is wanted, not a thing to work around. */
+  const unseal = async () => {
+    const reason = window.prompt(
+      "Unsealing supersedes every rate computed against this seal, and the "
+      + "reason goes on the audit trail. Why is it being reopened?");
+    if (reason === null) return;               // cancelled, not a blank
+    try {
+      const r = await api.unseal(reason);
+      const n = r?.superseded ?? 0;
+      toast(`Unsealed — ${n} rate${n === 1 ? "" : "s"} superseded`,
+            { tone: "warn", sticky: true });
+      load();
+    } catch (e) {
+      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
+      let detail = msg;
+      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
+      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+            { tone: "fail", sticky: true });
+    }
+  };
+
+  const [computing, setComputing] = useState(false);
+  /* **The basis is a choice and the screen has to make it.** Migration 068
+     records it on the rate, the way `base_type` records which base a rate was
+     taken over, and it is worth ~9 points of combined rate on the same sealed
+     judgments. The first version of this button sent `{}` and computed
+     OBJECTIVE — the default, correctly, and *not* the basis this engagement
+     settled on. That is the defect `ComputeIn`'s `extra="forbid"` exists to
+     stop one level up: the ordinary failure is not "ignore something
+     harmless", it is "apply a policy the caller did not choose".
+
+     OBJECTIVE stays the default, because nothing may change by default. */
+  const [basis, setBasis] = useState("OBJECTIVE");
+  const compute = async () => {
+    setComputing(true);
+    try {
+      const r = await api.computeRate({ admin_labour: basis });
+      const n = (r.rates || []).length;
+      toast(n ? `Computed ${n} rate${n === 1 ? "" : "s"} on the ${basis} basis, `
+                + `against the seal`
+              : "The computation returned no rate", { tone: n ? "ok" : "warn",
+                                                      sticky: !n });
+      load();
+    } catch (e) {
+      /* A 409 here is the system working: the books do not agree, or the set
+         moved under the read. It carries the reason, so it is shown rather
+         than replaced with a tone. */
+      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
+      let detail = msg;
+      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
+      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+            { tone: "fail", sticky: true });
+    }
+    setComputing(false);
+  };
+
   const pct = Number(cov?.pct_dollars || 0);
   const rates = data?.rates || [];
+  /* Read from the record, never remembered. A flag set when the seal
+     call returns is wrong the moment somebody reloads — or the moment
+     the other controller unseals. */
+  const sealed = Boolean(data?.sealed);
 
   /* Two gates stand in front of a rate and only one of them is coverage.
      The books have to agree with themselves first — POST /api/rates/compute
@@ -46,8 +115,20 @@ export default function Rates() {
 
       <Card variant="raised">
         <div className="card-head">
-          <div className="card-title">Before sealing</div>
-          <span className="rowsub">Two gates: the books must agree, and the queue should be finished</span>
+          {/* The heading is read from the record like everything else here.
+              It said "Before sealing" over a sealed set carrying four rates,
+              which is a screen contradicting the row beneath it. */}
+          <div className="card-title">
+            {sealed ? "Sealed" : "Before sealing"}
+          </div>
+          <span className="rowsub">
+            {sealed
+              ? `Sealed${data?.sealed_by ? ` by ${data.sealed_by}` : ""} — `
+                + "classifications can now change only by unsealing, which "
+                + "supersedes the rate"
+              : "Two gates: the books must agree, and the queue should be "
+                + "finished"}
+          </span>
         </div>
         <div className="stat-row" style={{ marginBottom: 14 }}>
           <Stat label="Dollar coverage" size="xl" value={`${pct.toFixed(1)}%`}
@@ -93,7 +174,61 @@ export default function Rates() {
           )
         )}
 
-        <button className="primary" onClick={seal}>Seal decision set</button>
+        <div className="row-actions">
+          {!sealed && (
+            <button className="primary" onClick={seal}>Seal decision set</button>
+          )}
+          {/* **The way back had no door either.** The runbook's own recovery
+              step — a judgment turns out to be wrong after sealing — says
+              unseal with a written reason, and nothing in the application
+              could. The reason is required and the handler refuses a blank,
+              because an unseal with no reason is a hole in the trail the
+              seal exists to make. */}
+          {sealed && (
+            <button className="btn" onClick={unseal}>Unseal…</button>
+          )}
+          {/* Offered only once something is sealed. Computing against an open
+              set is refused by the trigger, and a button that answers a
+              constraint violation is the nav-stricter-than-the-API defect
+              pointing the other way. */}
+          {sealed && (
+            <button className="btn" onClick={compute} disabled={computing}>
+              {computing ? "Computing…" : "Compute the rate"}
+            </button>
+          )}
+        </div>
+        {sealed && (
+          <div className="rowsub" style={{ marginTop: 8 }}>
+            <p style={{ margin: "0 0 8px" }}>
+              Computing reads the sealed judgments and writes the rate against
+              that seal. It is arithmetic, not a judgment — the judgment was
+              sealing. Recomputing supersedes the rate on file rather than
+              editing it.
+            </p>
+            {/* Stated on the screen rather than defaulted silently: it is
+                recorded on the rate and it moves the combined figure by
+                about nine points on the same judgments. */}
+            <label className="ts-basis">
+              <span>Administrative labour —</span>
+              <select value={basis} onChange={(e) => setBasis(e.target.value)}>
+                <option value="OBJECTIVE">
+                  a cost objective (YBI-GA bears indirect)
+                </option>
+                <option value="POOL">
+                  in the G&amp;A pool (it is the indirect)
+                </option>
+              </select>
+            </label>
+            <p style={{ margin: "6px 0 0" }}>
+              2 CFR 200 Appendix IV B puts the director&apos;s office,
+              accounting and personnel administration <em>in</em> the G&amp;A
+              pool. Treating it as an objective allocates the indirect pool to
+              its own administration, which recovers from nobody. It is
+              recorded on the rate either way, so the workpaper says which was
+              chosen.
+            </p>
+          </div>
+        )}
       </Card>
 
       <div style={{ marginTop: 20 }}>

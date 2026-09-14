@@ -14,6 +14,26 @@ answered the way the contract says, the database moved the way the call
 claimed, and the change is on the audit record under the name of the person
 who made it.
 
+**It writes nothing onto a real award, and leaves the record as it found
+it.** It used to do neither. Each run recorded three provisions onto
+whichever award it happened to pick — upserting on (award, key), so it
+*replaced* what had been read out of the executed agreement with ICAM's
+clause numbers on agreements that do not contain them. It opened a milestone
+named from a random tag and left it there. It attached that milestone to
+invoice 10018 — a real $37,593.90 invoice YBI issued to NCDMM — with a raw
+UPDATE against a column no route in this application writes, so there was no
+audit row for it at all. And it booked $12,000 of receipts against that same
+invoice, every run, money NCDMM never sent.
+
+`drive_reverse`'s third step then passed *because of* that forgery. Which is
+the defect `review_system` was fixed for: coverage climbed 0% to 36.8% across
+five runs and every figure was a review reading its own writing.
+
+So the drive scaffolds its own award, its own objective and its own draft
+invoice, exercises exactly the same routes and gates against them, and takes
+the scaffolding down at the end — checked against a census taken before it
+started rather than assumed.
+
 Exit 0 is a pass. Exit 1 is a finding. Exit 2 means it could not run, which
 is not a pass.
 """
@@ -47,6 +67,102 @@ def finding(msg: str) -> None:
 
 def step(title: str) -> None:
     print(f"\n\033[1m{title}\033[0m", flush=True)
+
+
+#: What this drive must not change. Counted before it starts and again after
+#: it has cleaned up, because "leaves the record as it found it" is a claim
+#: and a claim in a drive is something to check.
+CENSUS = ("award", "award_term", "milestone", "invoice", "receipt",
+          "cost_objective", "charge_authority")
+
+
+def census() -> dict[str, int]:
+    return {t: one(f"SELECT count(*) AS n FROM {t}")["n"] for t in CENSUS}
+
+
+def scaffold(tag: str, period: str) -> dict:
+    """An award of the drive's own to exercise the routes against.
+
+    Written directly rather than through the API because no route creates an
+    award or an invoice — which is itself why the old drive reached for a
+    real one. Everything the drive is actually *testing* still goes through
+    the real endpoints as the real people; this is the bench it stands on,
+    and `unscaffold` takes it away again.
+    """
+    aw = f"DRIVE-AWARD-{tag}"
+    query("""INSERT INTO cost_objective (objective_id, period, label,
+                                         objective_type, is_federal)
+             VALUES (%s, %s, %s, 'CONTRACT', true)""",
+          (aw, period, f"Drive scaffolding {tag} — removed at the end"))
+    query("""INSERT INTO award (award_id, objective_id, sponsor, instrument,
+                                ceiling_federal, period_start, period_end,
+                                rate_method)
+             VALUES (%s,%s,'Drive scaffolding','SUBAWARD',250000,
+                     %s, %s, 'DE_MINIMIS_10')""",
+          (aw, aw, f"{period}-01-01", f"{period}-12-31"))
+    # No invoice of its own: `invoice_no_delete` makes the table append-only,
+    # so anything raised here could not be taken down again, and a drive that
+    # cannot clean up after itself is the thing being fixed. The receipt
+    # below therefore goes against a real invoice and is removed.
+    return {"award": aw}
+
+
+def unscaffold(built: dict, code: str) -> None:
+    """Everything this run made, removed in dependency order.
+
+    Every statement is attempted even if one fails, and a failure is printed
+    rather than raised. The first version stopped at the first refusal — it
+    tried to delete an invoice, met `invoice_no_delete`, and left the award
+    and its objective behind. **A cleanup that gives up halfway leaves worse
+    residue than no cleanup**, because the census then reports a difference
+    nobody can attribute to a particular run.
+    """
+    aw = built["award"]
+    statements = [
+        ("DELETE FROM receipt WHERE receipt_id = %s::uuid",
+         (built.get("receipt_id"),)) if built.get("receipt_id") else None,
+        ("DELETE FROM milestone WHERE award_id = %s", (aw,)),
+        ("DELETE FROM award_term WHERE award_id = %s", (aw,)),
+        ("DELETE FROM award WHERE award_id = %s", (aw,)),
+        ("DELETE FROM charge_authority WHERE objective_id = %s", (code,)),
+        ("DELETE FROM cost_objective WHERE objective_id IN (%s, %s)",
+         (aw, code)),
+    ]
+    for statement in statements:
+        if statement is None:
+            continue
+        sql, params = statement
+        try:
+            query(sql, params)
+        except Exception as exc:                            # noqa: BLE001
+            print(f"  COULD NOT CLEAN UP  {sql.split(' WHERE')[0]}: "
+                  f"{str(exc).splitlines()[0]}", file=sys.stderr)
+
+
+#: Set by main so the teardown can run whatever way main leaves — a finding,
+#: a could-not-run, or an exception. A drive that cleans up only on the happy
+#: path is a drive that pollutes exactly when something has gone wrong.
+BUILT: dict = {}
+BEFORE: dict[str, int] = {}
+CODE = ""
+
+
+def teardown() -> int:
+    """Take the scaffolding down, and prove the record is as it was found."""
+    if not BUILT:
+        return 0
+    unscaffold(BUILT, CODE)
+    after = census()
+    moved = {t: (BEFORE[t], after[t]) for t in CENSUS if BEFORE[t] != after[t]}
+    if moved:
+        print("\n\033[1mThe drive did not leave the record as it found "
+              "it.\033[0m")
+        for table, (was, now) in moved.items():
+            print(f"  FINDING  {table}: {was} before, {now} after")
+        return 1
+    print(f"  ok       the record is as it was found — "
+          f"{', '.join(sorted(CENSUS))} all unchanged")
+    return 0
 
 
 def audit_count() -> int:
@@ -127,6 +243,10 @@ def main() -> int:
     tag = uuid.uuid4().hex[:6].upper()
     code = f"DRV-{tag}"
 
+    global BUILT, BEFORE, CODE
+    CODE = code
+    BEFORE = census()
+
     # ── who is on the payroll, so an assignment can name somebody real ──
     people = query("""SELECT DISTINCT employee_key FROM labor_allocation
                        WHERE period = %s ORDER BY employee_key LIMIT 4""",
@@ -137,6 +257,8 @@ def main() -> int:
         return 2
     assigned = people[0]["employee_key"]
     outsider = people[1]["employee_key"]
+
+    BUILT = scaffold(tag, args.period)
 
     step("Opening a charge code — the project manager's job")
     with mutating("opened a charge code", "Stephanie Gaffney", "CHARGE_CODE_OPEN"):
@@ -214,26 +336,21 @@ def main() -> int:
         finding("the revoked grant is not on the record")
 
     step("The contract, and its terms")
-    # An award that actually carries an invoice, because the milestone and
-    # the receipt later hang off one. Picking the largest ceiling was
-    # brittle: reading Last Tactical Mile's $899,500 off §4.3 made it the
-    # biggest award in the file and it has no invoice, so the drive stopped.
-    award = one("""SELECT a.award_id FROM award a
-                    WHERE EXISTS (SELECT 1 FROM invoice i
-                                   WHERE i.award_id = a.award_id)
-                    ORDER BY a.ceiling_federal DESC LIMIT 1""")
-    if not award:
-        print("\nCOULD NOT RUN — no award on file.", file=sys.stderr)
-        return 2
-    aw = award["award_id"]
+    # The drive's own award, not a real one. Recording a term upserts on
+    # (award, key), so writing "Payment terms" onto AM-HYBRID-P2 *replaced*
+    # what had been read out of the executed agreement — and what it wrote
+    # was ICAM's §26 against an agreement that has no §26. A drive must not
+    # be able to do that to the register an auditor walks back through.
+    aw = BUILT["award"]
 
     for key, value, cite in [
-            ("Payment terms", "Net 30 from receipt of a correct invoice",
-             "§26 Payment"),
-            ("Invoicing frequency", "Monthly, by the fifth business day",
-             "§25 Invoicing"),
-            ("Indirect provision", "10% of ODCs only; no indirect on labor",
-             "Attachment 3, Basis of Estimate")]:
+            ("Payment terms", "Drive: a payment term, on the drive's own "
+                              "award and removed at the end",
+             "Drive scaffolding — read from no document"),
+            ("Invoicing frequency", "Drive: an invoicing term",
+             "Drive scaffolding — read from no document"),
+            ("Indirect provision", "Drive: an indirect term",
+             "Drive scaffolding — read from no document")]:
         with mutating(f"recorded “{key}”", "Tom Metzinger", "AWARD_TERM"):
             call(tom, "PUT", f"/api/contracts/{aw}/terms", 201, f"term {key}",
                  json={"term_key": key, "term_value": value, "citation": cite})
@@ -268,39 +385,71 @@ def main() -> int:
              "accepted", json={"state": "ACCEPTED", "on_date": "2025-07-05",
                                "reason": "Drive: sponsor accepted."})
 
-    step("An invoice against it, and the money in")
-    inv = one("""SELECT invoice_id FROM invoice WHERE award_id = %s
-                  ORDER BY invoice_date LIMIT 1""", (aw,))
+    step("A milestone nothing can be invoiced against, and why")
+    # **There is no route that attaches an invoice to a milestone.** The only
+    # thing that ever wrote `invoice.milestone_id` was this drive, with a raw
+    # UPDATE against invoice 10018 — a real $37,593.90 invoice YBI issued to
+    # NCDMM — and no audit row naming who did it. It is not an oversight that
+    # no route exists: all four America Makes awards are cost reimbursement
+    # invoiced monthly, ICAM says so at §6 CONTRACT TYPE, and not one of the
+    # statements of work carries a CLIN, a deliverable value or an acceptance
+    # date. The column is for a contract shape YBI does not have.
+    #
+    # So the drive asserts what is true rather than arranging for what is
+    # convenient: a milestone with nothing invoiced against it reads zero,
+    # and reads zero rather than NULL, which is the answer that would
+    # actually be wrong.
+    m = call(auditor, "GET", f"/api/contracts/milestones/{ms}", 200,
+             "the milestone, as the auditor sees it", params=P).json()
+    st = m["milestone"]
+    if (st["invoiced"] is not None and st["received"] is not None
+            and st["outstanding"] is not None):
+        ok(f"nothing is invoiced against it and the view says so in figures "
+           f"— {float(st['invoiced']):,.2f} invoiced, "
+           f"{float(st['received']):,.2f} received — rather than in nulls")
+    else:
+        finding(f"a milestone with no invoice reads null rather than zero: "
+                f"invoiced={st['invoiced']} received={st['received']} "
+                f"outstanding={st['outstanding']}")
+
+    step("The money in, against a real invoice, and taken back out")
+    # A receipt is the one write here that has to land on a real invoice,
+    # because the table is append-only and the drive cannot raise one of its
+    # own to take down afterwards. So it measures: what the invoice had
+    # received before, what it has after, and what it has once the receipt is
+    # removed. Three readings rather than one, which is what makes this a
+    # check on the arithmetic rather than on the call having answered 201.
+    inv = one("""SELECT invoice_id, invoice_number, total FROM invoice
+                  ORDER BY invoice_date LIMIT 1""")
     if not inv:
-        print("\nCOULD NOT RUN — no invoice on this award; "
+        print("\nCOULD NOT RUN — no invoice on file; "
               "run scripts/load_invoices.py first.", file=sys.stderr)
         return 2
     inv_id = str(inv["invoice_id"])
-    query("UPDATE invoice SET milestone_id = %s WHERE invoice_id = %s::uuid",
-          (ms, inv_id))
-    ok("an invoice is attached to the milestone")
 
+    def received_on_it() -> float:
+        got = one("""SELECT COALESCE(sum(amount),0) AS n FROM receipt
+                      WHERE invoice_id = %s::uuid""", (inv_id,))
+        return float(got["n"])
+
+    was = received_on_it()
     with mutating("recorded the money in", "Tom Metzinger", "RECEIPT"):
         call(tom, "POST", f"/api/contracts/invoices/{inv_id}/receipts", 201,
              "receipt", json={"received_on": "2025-08-15", "amount": 12000,
                               "method": "ACH", "reference": f"DRV-{tag}",
-                              "note": "Drive: part payment."})
-
-    m = call(auditor, "GET", f"/api/contracts/milestones/{ms}", 200,
-             "the milestone, as the auditor sees it", params=P).json()
-    st = m["milestone"]
-    invoiced, received = float(st["invoiced"]), float(st["received"])
-    outstanding = float(st["outstanding"])
-    if abs((invoiced - received) - outstanding) < 0.005:
-        ok(f"invoiced {invoiced:,.2f} less received {received:,.2f} "
-           f"leaves {outstanding:,.2f} outstanding, and the view agrees")
+                              "note": "Drive: part payment, removed at the "
+                                      "end of this run."})
+    got = one("""SELECT receipt_id FROM receipt WHERE reference = %s""",
+              (f"DRV-{tag}",))
+    if got:
+        BUILT["receipt_id"] = str(got["receipt_id"])
+    now = received_on_it()
+    if abs(now - was - 12000) < 0.005:
+        ok(f"invoice {inv['invoice_number'] or inv_id[:8]} went from "
+           f"{was:,.2f} received to {now:,.2f} — the receipt moved exactly "
+           f"what it said")
     else:
-        finding(f"outstanding {outstanding} does not equal "
-                f"{invoiced} - {received}")
-    if m["receipts"]:
-        ok(f"{len(m['receipts'])} receipt(s) traceable to the deliverable")
-    else:
-        finding("the receipt did not reach the milestone")
+        finding(f"received went {was} to {now} on a receipt of 12,000")
 
     step("The auditor's path — an employee, through to the cost")
     emps = call(auditor, "GET", "/api/contracts/employees", 200,
@@ -342,4 +491,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        _code = main()
+    finally:
+        _left = teardown()
+    raise SystemExit(_code or _left)

@@ -4,9 +4,20 @@ Classification queue.
 This is the screen that decides whether the project succeeds. Everything else
 is reporting. Three rules shape the API:
 
-  1. Work at group grain. 4,020 ledger lines collapse to ~751 account x payee
-     groups, and the top 200 carry 94.7% of the dollars. A row-by-row queue is
-     a workload that does not need to exist and will not finish by November.
+  1. Work at group grain. The 4,038 lines of cost collapse to 757 account x
+     payee groups, and the top 200 carry 95.4% of the dollars — the top 100
+     carry 85.9%. A row-by-row queue is a workload that does not need to
+     exist and will not finish by November.
+
+     Those figures are read off `v_classification_coverage` and the queue
+     itself; the ones here were written against a 4,020-line extract that
+     predates the full ledger, said 751 groups and 94.7%, and were quoted
+     into a status memo for the board before anybody checked them. They were
+     then wrong a second time — 5,096 lines and 999 groups — because the
+     scope counted the whole P&L, and 242 of those groups and 40% of those
+     dollars were **income**, which is not cost and has no answer in a cost
+     pool. `064`. A figure in a comment is read from the record or it is
+     recalled, and this one has now been recalled twice.
 
   2. Propose, never ask blind. Every group arrives pre-filled from the QBO
      Customer:Job segment, the account name, or a prior-year decision. Tom
@@ -22,20 +33,21 @@ from __future__ import annotations
 from decimal import Decimal
 from uuid import uuid4
 
-from decimal import Decimal
-
 from fastapi import Depends, APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.auth import require_controller, require_reader
 from app.audit import record
+from app.domain.core import money
 from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
                        Pool)
 from app.auth import Actor
 from app.db import execute, one, query, transaction
+from app.statelock import turn
 from app.domain.advice import GroupFacts, advise
 from app.domain.chart import pool_for
 from app.domain.crosswalk import CROSSWALK
+from app.domain.classification_log import objective_for
 from app.domain.segment import Part, SegmentError, plan_segments
 
 router = APIRouter(prefix="/classify", tags=["classify"],
@@ -60,7 +72,14 @@ class GroupOut(BaseModel):
     objective_hint: str = ""
     sample_memos: list[str] = []
     decided: bool = False
-    stale: bool = False
+    #: What is live on this group right now — a decision id, "none", or
+    #: "several" where the group is covered by more than one judgment. The
+    #: screen sends it straight back as `based_on` so a judgment made from a
+    #: stale queue is refused with a sentence rather than silently replacing
+    #: a colleague's work.
+    live_decision: str = "none"
+    #: Who made it, for that sentence.
+    decided_by: str = ""
     proposal: dict | None = None
     evidence_count: int = 0
     note_count: int = 0
@@ -83,6 +102,17 @@ class DecideIn(BaseModel):
     #: newer one need not send a field that means nothing.
     decided_by: str = ""
     supersedes: str | None = None
+    #: What the screen believed was live for each group when it was drawn:
+    #: group_key -> the live decision_id it showed, or "none" where it showed
+    #: the group unjudged. Where a key is present and what is actually live
+    #: differs, the judgment is refused and the person is told who changed it
+    #: and when — rather than silently superseding a colleague's work off a
+    #: screen drawn before they did it.
+    #:
+    #: Optional, and absent means "not participating". A script doing a bulk
+    #: reclassification has no screen to be stale, and refusing it would make
+    #: the crosswalk unloadable.
+    based_on: dict[str, str] = {}
 
 
 class CoverageOut(BaseModel):
@@ -102,36 +132,27 @@ class CoverageOut(BaseModel):
 def coverage(period: str = "2025") -> CoverageOut:
     """The only progress metric that matters. Tom stops when dollar coverage
     is high enough to defend, not when the row count reaches zero."""
-    r = one("""
-        WITH d AS (
-          SELECT l.line_id, l.amount, l.account, l.payee,
-                 (dl.decision_id IS NOT NULL) AS decided
-            FROM ledger_line l
-            LEFT JOIN decision_line dl ON dl.line_id = l.line_id
-            LEFT JOIN decision dd ON dd.decision_id = dl.decision_id
-                                 AND dd.reversed_at IS NULL
-           WHERE l.period = %s
-             -- Balance sheet accounts are not cost. Including them makes
-             -- dollar coverage, the measure that gates sealing, meaningless.
-             AND l.statement = 'P&L'
-        )
-        SELECT count(*)                                               AS total_lines,
-               count(*) FILTER (WHERE decided)                        AS decided_lines,
-               coalesce(sum(abs(amount)), 0)                          AS total_dollars,
-               coalesce(sum(abs(amount)) FILTER (WHERE decided), 0)   AS decided_dollars,
-               count(DISTINCT (account, payee))                       AS groups_total,
-               count(DISTINCT (account, payee)) FILTER (WHERE decided) AS groups_decided
-          FROM d
-    """, (period,))
+    # Read, never re-derived. This handler used to carry its own copy of
+    # the scope — the right one, with the reason in a comment — while
+    # v_classification_coverage carried a different one, and the two answered
+    # 13.0% and 2.2% at the same moment over the same decision. The
+    # definition lives in the view now (039); this reads it.
+    r = one("""SELECT total_lines, decided_lines, groups_total, groups_decided,
+                      scope_dollars, classified, pct_dollars_covered
+                 FROM v_classification_coverage WHERE period = %s""",
+            (period,))
     if not r:
         raise HTTPException(404, "No ledger loaded for that period.")
-    total = Decimal(r["total_dollars"] or 0)
-    decided = Decimal(r["decided_dollars"] or 0)
+    total = Decimal(r["scope_dollars"] or 0)
+    decided = Decimal(r["classified"] or 0)
     return CoverageOut(
         period=period,
         total_lines=r["total_lines"], decided_lines=r["decided_lines"],
         total_dollars=total, decided_dollars=decided,
-        pct_dollars=(decided / total * 100).quantize(Decimal("0.1")) if total else Decimal(0),
+        # The percentage comes from the view as well rather than being
+        # computed again here from the same two numbers — which would be a
+        # third implementation of one figure.
+        pct_dollars=Decimal(str(r["pct_dollars_covered"] or 0)),
         groups_total=r["groups_total"], groups_decided=r["groups_decided"],
         groups_remaining=r["groups_total"] - r["groups_decided"],
         dollars_remaining=total - decided,
@@ -140,7 +161,7 @@ def coverage(period: str = "2025") -> CoverageOut:
 
 @router.get("/queue", response_model=list[GroupOut])
 def queue(period: str = "2025",
-          status: str = Query("undecided", pattern="^(undecided|decided|stale|all)$"),
+          status: str = Query("undecided", pattern="^(undecided|decided|all)$"),
           search: str = "",
           limit: int = Query(50, le=200),
           offset: int = 0) -> list[GroupOut]:
@@ -155,26 +176,54 @@ def queue(period: str = "2025",
                (array_agg(l.description ORDER BY abs(l.amount) DESC)
                   FILTER (WHERE l.description <> ''))[1:3] AS sample_memos,
                bool_or(d.decision_id IS NOT NULL)    AS decided,
-               bool_or(rev.revision_id IS NOT NULL)  AS stale,
+               -- What the screen has to send back to prove it was not drawn
+               -- before somebody else's judgment. Exactly one live decision
+               -- is the ordinary case; the other two are named rather than
+               -- collapsed, because "several" and "none" are different
+               -- states and a judgment made against either is stale in a
+               -- different way.
+               --
+               -- There used to be a `stale` column here too, from
+               -- `ledger_revision` — a ledger line amended after somebody
+               -- judged it. The importer inserts lines `ON CONFLICT DO
+               -- NOTHING` and nothing updates one, so that could never
+               -- happen and the table was never written. The queue carried
+               -- an "Amended" filter that always returned nothing and a
+               -- tick that never lit: a control on the screen the whole
+               -- engagement is worked from that doing the work could not
+               -- clear. Migration `063` drops the table; change here is
+               -- expressed by supersession, which `live_decisions` above
+               -- already shows.
+               count(DISTINCT d.decision_id)         AS live_decisions,
+               max(d.decision_id::text)              AS live_decision,
+               max(d.decided_by)                     AS decided_by,
                count(DISTINCT att.attachment_id)     AS evidence_count,
                count(DISTINCT n.note_id)             AS note_count
-          FROM ledger_line l
-          LEFT JOIN decision_line dl ON dl.line_id = l.line_id
+          -- `v_cost_line`, not `ledger_line`: the P&L less its Income
+          -- section. 242 of the 999 groups this used to offer were revenue
+          -- — `3900 Grant Income`, `4015 Program Fees` — four of them among
+          -- the six largest things on the screen, and not one has an answer,
+          -- because grant income does not go in a cost pool. A quarter of
+          -- the queue could not be actioned and the biggest rows were the
+          -- ones that could not.
+          FROM v_cost_line l
+          -- `dl.live` is load-bearing. Without it a line that has been
+          -- reclassified joins once per judgment it has ever carried, and
+          -- every sum in this query multiplies: a group judged four times
+          -- printed four times its amount, on the screen the whole
+          -- engagement is worked from.
+          LEFT JOIN decision_line dl ON dl.line_id = l.line_id AND dl.live
           LEFT JOIN decision d ON d.decision_id = dl.decision_id AND d.reversed_at IS NULL
-          LEFT JOIN ledger_revision rev ON rev.line_id = l.line_id
-                                       AND rev.affects_decision IS NOT NULL
           LEFT JOIN attachment att ON att.target_type = 'LEDGER_LINE'
                                   AND att.target_id = l.line_id
                                   AND att.detached_at IS NULL
           LEFT JOIN note n ON n.target_type = 'LEDGER_LINE' AND n.target_id = l.line_id
          WHERE l.period = %(period)s
-           AND l.statement = 'P&L'
            AND (%(search)s = '' OR l.account ILIKE %(like)s OR l.payee ILIKE %(like)s)
          GROUP BY l.account, l.payee
         HAVING CASE %(status)s
                  WHEN 'undecided' THEN NOT bool_or(d.decision_id IS NOT NULL)
                  WHEN 'decided'   THEN bool_or(d.decision_id IS NOT NULL)
-                 WHEN 'stale'     THEN bool_or(rev.revision_id IS NOT NULL)
                  ELSE true END
          ORDER BY sum(abs(l.amount)) DESC
          LIMIT %(limit)s OFFSET %(offset)s
@@ -190,7 +239,11 @@ def queue(period: str = "2025",
             amount=Decimal(r["amount"] or 0), abs_amount=Decimal(r["abs_amount"] or 0),
             objective_hint=r["objective_hint"] or "",
             sample_memos=[m for m in (r["sample_memos"] or []) if m],
-            decided=bool(r["decided"]), stale=bool(r["stale"]),
+            decided=bool(r["decided"]),
+            live_decision=("none" if not r["live_decisions"]
+                           else r["live_decision"] if r["live_decisions"] == 1
+                           else "several"),
+            decided_by=r["decided_by"] or "",
             evidence_count=r["evidence_count"] or 0, note_count=r["note_count"] or 0,
         )
         g.proposal = propose(g)
@@ -266,18 +319,45 @@ def propose(g: GroupOut) -> dict | None:
     # account number it becomes, and `pool_for()` reads the pool off that
     # number. Sixty-one map one-to-one and are a real signal.
     #
-    # The other twenty-four are splits — depreciation by square footage,
-    # wages by timesheet — and those return nothing. A split needs a
-    # documented driver, which is a judgment with a person's name on it, and
-    # proposing one side of it would be inventing the driver.
+    # The other twenty-four are splits, and the rule for them used to be "a
+    # split proposes nothing" — because a split needs a documented driver and
+    # proposing one side of it would be inventing the driver. That is right
+    # about the driver and **wrong about the pool**, which is what the queue
+    # is asking. Five of the twenty-four split by *natural type*: Rising
+    # Tides, LTM, Drive AM, Digital Engineering and AAMEN each divide labour
+    # to 5100, subawards to 5200, materials to 5300, travel to 5500 — and
+    # every one of those numbers is in the DIRECT range. The split decides
+    # which 2026 account, not which 2025 pool.
+    #
+    # So the test is on the pools rather than on the slash, and $1,382,737 of
+    # the queue stops being refused for punctuation. A split that genuinely
+    # crosses pools — depreciation between OVERHEAD and RENTAL_DIRECT, wages
+    # between direct, administrative and fundraising — still proposes
+    # nothing, which was always the point.
     leaf = (g.account or "").rsplit(":", 1)[-1].strip()
     mapped = CROSSWALK.get(leaf)
-    if mapped and "/" not in mapped[0]:
-        try:
-            pool = pool_for(mapped[0]).value
-        except Exception:                          # noqa: BLE001
-            pool = None
+    if mapped:
+        pools = {pool_for(p.strip()) for p in mapped[0].split("/")}
+        pools.discard(None)
+        pool = pools.pop().value if len(pools) == 1 else None
         if pool:
+            # DIRECT needs an objective, and this branch used to send
+            # `objective_id: None` with it — a proposal that
+            # `direct_needs_objective` refuses outright, on 24 of the
+            # accounts in the live ledger. So pressing Enter on the queue's
+            # own suggestion answered an error, which is the nav-stricter-
+            # than-the-API defect pointing the other way: a screen offering
+            # what the server will not take.
+            #
+            # 2025 buries programme identity in the account *name* — the
+            # structural defect the 2026 chart fixes — so the path is the
+            # objective signal, and `customer_job_hint` is empty on all 4,038
+            # cost lines, so it is the only one. Where the path names no
+            # objective there is nothing to charge it to, and the honest
+            # answer is no proposal rather than a refusable one.
+            objective = objective_for(g.account) if pool == "DIRECT" else None
+            if pool == "DIRECT" and objective is None:
+                return None
             return {
                 "pool": pool,
                 # The 990 function and the federal treatment do not fall out
@@ -288,11 +368,13 @@ def propose(g: GroupOut) -> dict | None:
                 "function_990": "PROGRAM" if pool in ("DIRECT", "OVERHEAD")
                                 else "NOT_APPLICABLE",
                 "federal": "PENDING",
-                "objective_id": None,
+                "objective_id": objective,
                 "grade": "CORROBORATED",
                 "citation": "2026 chart crosswalk",
                 "rationale": (f"The 2026 crosswalk maps {leaf} to account "
-                              f"{mapped[0]}, which is a {pool} account"),
+                              f"{mapped[0]}, which is a {pool} account"
+                              + (f", and the account path names {objective}"
+                                 if objective else "")),
                 "source": "crosswalk", "confidence": "medium"}
 
     return None
@@ -443,26 +525,143 @@ def decide(body: DecideIn, period: str = "2025",
     if body.grade not in ("UNSUPPORTED", "TEST_ASSUMPTION") and not body.rationale.strip():
         raise ValueError("A supported grade requires a written rationale.")
 
-    st = one("""SELECT set_id FROM decision_set
-                 WHERE period = %s AND seal_hash IS NULL
-                 ORDER BY set_id LIMIT 1""", (period,))
-    if not st:
-        raise ValueError("No open decision set for this period. "
-                         "A sealed set cannot be modified — unseal it, with a reason.")
-    set_id = st["set_id"]
-
     created = 0
-    for key in body.group_keys:
-        account, _, payee = key.partition("\x1f")
-        with_lines = query("""SELECT line_id FROM ledger_line
-                               WHERE period = %s AND account = %s AND payee = %s""",
-                           (period, account, payee))
-        if not with_lines:
-            continue
-        # One transaction: the VERIFIED gate is a deferred constraint trigger
-        # that fires at COMMIT, so the decision and the evidence it cites must
-        # land together or an evidenced judgment is refused as unevidenced.
-        with transaction() as cur:
+    replaced = 0
+    lines_covered = 0
+    amount_covered = Decimal(0)
+    # One turn for the whole request, not one per group.
+    #
+    # Two reasons. The VERIFIED gate is a deferred constraint trigger that
+    # fires at COMMIT, so a decision and the evidence it cites have to land
+    # together or an evidenced judgment is refused as unevidenced. And a
+    # refusal partway through a batch used to leave the groups before it
+    # recorded while the response said nothing was — so a bulk judgment over
+    # eleven groups could half happen. Either all of it is on the record or
+    # none of it is, which is what the message below is entitled to claim.
+    with turn(period) as cur:
+        # Inside the turn, not before it.
+        #
+        # This lookup used to sit above, on its own connection, and that is
+        # how a judgment got into a sealed set: seven requests all read "set
+        # X is open", the seal took the lock and froze X, and the four
+        # judgments still queued behind it inserted into X afterwards — so
+        # the stored hash covered two judgments and the set held six. The
+        # concurrency drive reproduces it exactly. Read under the lock, a
+        # judgment arriving after the seal finds no open set and is refused,
+        # which is the whole meaning of sealing.
+        cur.execute("""SELECT set_id FROM decision_set
+                        WHERE period = %s AND seal_hash IS NULL
+                        ORDER BY set_id LIMIT 1""", (period,))
+        st = cur.fetchone()
+        if not st:
+            raise HTTPException(409, {
+                "error": "SET_IS_SEALED",
+                "message": ("The classifications for this period are sealed, so "
+                            "nothing can be added to them. Unsealing takes a "
+                            "written reason and supersedes any rate computed "
+                            "from them.")})
+        set_id = st["set_id"]
+
+        skipped: list[str] = []
+        for key in body.group_keys:
+            account, _, payee = key.partition("\x1f")
+            # `amount` as well as `line_id`, so the response can say what
+            # the judgment covered without a second round trip — and from
+            # the same rows the decision is attached to, rather than from a
+            # separate sum that could disagree with them.
+            # `coalesce(payee,'')` the way `advice`, `segment` and the
+            # evidence attach all spell it. `payee` is NOT NULL DEFAULT ''
+            # today so the two agree, and a rule with one exception is the
+            # one somebody gets wrong the day the column changes.
+            cur.execute("""SELECT line_id, amount FROM ledger_line
+                            WHERE period = %s AND account = %s
+                              AND coalesce(payee, '') = %s""",
+                        (period, account, payee))
+            with_lines = cur.fetchall()
+            if not with_lines:
+                # A group key that matches no line in this period. Skipping
+                # it is right — the rest of the batch is real work — but
+                # skipping it *silently* was the shape this handler was
+                # already fixed for once, one level up: the group is
+                # swallowed rather than the lines, `decisions_created` counts
+                # the ones that landed, and a screen judging a single stale
+                # group is told "Recorded" over nothing at all.
+                skipped.append(key)
+                continue
+            # Reclassifying supersedes; it does not stack.
+            #
+            # `one_live_decision_per_unit` means a line already carrying a
+            # live decision cannot take a second, and the line insert below
+            # used to swallow that with ON CONFLICT DO NOTHING. So a second
+            # judgment on a decided group produced a live decision with *no
+            # lines*, the handler answered 200 "decisions_created: 1", and
+            # nothing moved: the pools still read the old pool, two live
+            # decisions disagreed with each other, and the controller was
+            # told it had worked.
+            #
+            # That is the worst shape a bug can take here. Not a refusal —
+            # a refusal is visible — but a success that does nothing, over
+            # the figures a rate is built from.
+            cur.execute("""SELECT DISTINCT d.decision_id
+                             FROM decision d
+                             JOIN decision_line dl USING (decision_id)
+                            WHERE dl.live
+                              AND d.reversed_at IS NULL
+                              AND dl.line_id = ANY(%s)""",
+                        ([l["line_id"] for l in with_lines],))
+            superseded = [r["decision_id"] for r in cur.fetchall()]
+
+            # Is the screen this came from still describing the record?
+            #
+            # Two controllers work the queue at once. Tom judges 5227 at
+            # 10:31; Barb's queue was drawn at 10:29 and still shows it
+            # unjudged, so her Enter at 10:32 silently replaces a judgment
+            # she never saw. The lock makes that ordering deterministic —
+            # it does not make it comprehensible. This does.
+            expected = body.based_on.get(key)
+            if expected is not None:
+                actual = str(superseded[0]) if len(superseded) == 1 else (
+                    "none" if not superseded else "several")
+                if expected != actual:
+                    cur.execute("""SELECT d.decided_by, d.decided_at, d.pool::text
+                                          AS pool
+                                     FROM decision d
+                                     JOIN decision_line dl USING (decision_id)
+                                    WHERE dl.live AND d.reversed_at IS NULL
+                                      AND dl.line_id = ANY(%s)
+                                    ORDER BY d.decided_at DESC LIMIT 1""",
+                                ([l["line_id"] for l in with_lines],))
+                    cur_live = cur.fetchone()
+                    if cur_live:
+                        detail = (f"{cur_live['decided_by'] or 'Somebody'} "
+                                  f"classified it as {cur_live['pool']} at "
+                                  f"{cur_live['decided_at']:%H:%M}")
+                    else:
+                        detail = "the judgment it carried has since been undone"
+                    raise HTTPException(409, {
+                        "error": "GROUP_MOVED",
+                        "group_key": key,
+                        "message": (f"{account} changed while this screen was "
+                                    f"open — {detail}. Nothing was recorded. "
+                                    f"Reload the queue and decide again if you "
+                                    f"still want to replace it."),
+                        "expected": expected, "actual": actual})
+
+            for old_id in superseded:
+                # A trigger flips decision_line.live when reversed_at is set,
+                # which is what frees the lines for the judgment replacing
+                # them. Reversing is the same mechanism undo uses; there is
+                # deliberately not a second one.
+                # `decision` carries reversed_at and reversal_reason; who
+                # did it comes from the audit entry, which names the session.
+                cur.execute("""UPDATE decision
+                                  SET reversed_at = now(),
+                                      reversal_reason = %s
+                                WHERE decision_id = %s
+                                  AND reversed_at IS NULL""",
+                            (f"Superseded by {decided_by}, judging the same "
+                             f"group again: {body.rationale}"[:500], old_id))
+
             cur.execute("""
                 INSERT INTO decision (set_id, scope, pool, function_990, federal,
                                       objective_id, grade, rationale, citation,
@@ -471,23 +670,83 @@ def decide(body: DecideIn, period: str = "2025",
                 RETURNING decision_id
             """, (set_id, f"account={account}|payee={payee}", body.pool,
                   body.function_990, body.federal, body.objective_id, body.grade,
-                  body.rationale, body.citation, decided_by, body.supersedes))
+                  body.rationale, body.citation, decided_by,
+                  # Which judgment this one replaces. Only where exactly one
+                  # did: a group covered by two is a state worth seeing in
+                  # the audit reason rather than half-recorded in a column
+                  # that holds one.
+                  body.supersedes or (str(superseded[0])
+                                      if len(superseded) == 1 else None)))
             did = cur.fetchone()["decision_id"]
             for l in with_lines:
                 cur.execute("""INSERT INTO decision_line (decision_id, line_id)
                                VALUES (%s,%s) ON CONFLICT DO NOTHING""",
                             (did, l["line_id"]))
+            # Prove it landed. ON CONFLICT DO NOTHING is how the silent
+            # failure above was possible, so the handler now checks rather
+            # than assumes — a judgment that did not attach to the cost it
+            # judges is not a judgment, and it must not be reported as one.
+            cur.execute("SELECT count(*) AS n FROM decision_line "
+                        "WHERE decision_id = %s AND live", (did,))
+            attached = cur.fetchone()["n"]
+            if attached != len(with_lines):
+                raise HTTPException(
+                    409,
+                    f"That judgment would have covered {attached} of "
+                    f"{len(with_lines)} lines in {account}. Something else "
+                    f"holds the rest — most likely they are split into "
+                    f"segments judged separately. Nothing was recorded.")
             for ev in body.evidence_ids:
                 cur.execute("""INSERT INTO decision_evidence (decision_id, evidence_id)
                                VALUES (%s,%s) ON CONFLICT DO NOTHING""", (did, ev))
             # Inside the transaction: an audit row that survived a rolled
             # back decision would describe something that never happened.
             record(actor, "CLASSIFY", "decision", str(did),
+                   before=({"superseded": [str(x) for x in superseded]}
+                           if superseded else None),
                    after=body.model_dump(mode="json"), reason=body.rationale,
                    cursor=cur)
-        created += 1
+            created += 1
+            replaced += len(superseded)
+            lines_covered += attached
+            amount_covered += sum(l["amount"] for l in with_lines)
 
-    return {"decisions_created": created, "set_id": str(set_id)}
+    # `superseded` says so plainly, because "decisions_created: 1" read the
+    # same whether a group was judged for the first time or rejudged — and
+    # the screen has no other way to tell a person their change replaced
+    # something.
+    #
+    # `lines` and `amount` for the same reason one step along. **Classifying
+    # a group of forty-five lines records one decision with a scope, not
+    # forty-five** — which is right, and which from the outside is
+    # indistinguishable from a judgment that only landed on one of them. The
+    # system review's proportion check could not tell the difference, and
+    # neither can a person reading "1 decision recorded" after judging
+    # $1.2m across thirteen lines. The count is already computed to prove
+    # the lines landed; this is saying it out loud.
+    # And nothing at all is a refusal, not a result. Every other way this
+    # handler can record nothing already answers 409; a batch where no group
+    # matched a line answered 200 with zeroes, which the screen printed as a
+    # judgment. The transaction has already committed by here and it wrote
+    # nothing, so there is nothing to roll back — the answer is simply to say
+    # so in the one place a person is looking.
+    if not created:
+        raise HTTPException(
+            409,
+            f"Nothing was recorded. "
+            + (f"No line in {period} matches "
+               + (f"{skipped[0].split(chr(31))[0]}." if len(skipped) == 1
+                  else f"any of those {len(skipped)} groups.")
+               + " The queue has moved on since this screen was drawn — "
+                 "reload it."
+               if skipped else "No group in this request had any lines."))
+
+    return {"decisions_created": created, "superseded": replaced,
+            "lines": lines_covered, "amount": str(money(amount_covered)),
+            # Named, not counted: a batch of eight where one group has gone
+            # is a different thing to see than a number.
+            "skipped": skipped,
+            "set_id": str(set_id)}
 
 
 @router.post("/defer")
@@ -565,7 +824,7 @@ def segment(body: SegmentIn, period: str = "2025",
     plan = plan_segments({r["line_id"]: r["amount"] for r in rows}, parts)
 
     batch_key = f"SEG-{uuid4().hex[:12]}"
-    with transaction() as cur:
+    with turn(period) as cur:
         for line_id, entries in plan.by_line.items():
             for index, amount in entries:
                 part = parts[index]
@@ -611,7 +870,14 @@ def reverse_segment(batch_key: str, reason: str, reversed_by: str = "",
     reversed_by = actor.display_name or reversed_by
     if not reason.strip():
         raise HTTPException(422, "A reversal needs a reason.")
-    with transaction() as cur:
+    # The period comes off the batch rather than from the caller: a reversal
+    # names the segmentation it undoes, and the period is a property of that,
+    # not something a client should be able to disagree with.
+    b = one("""SELECT DISTINCT period FROM ledger_segment WHERE batch_key = %s""",
+            (batch_key,))
+    if not b:
+        raise HTTPException(404, "No segmentation with that key.")
+    with turn(b["period"]) as cur:
         cur.execute("""UPDATE ledger_segment
                           SET reversed_at = now(), reversed_by = %s,
                               reversal_reason = %s

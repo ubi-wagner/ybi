@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, money } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
 import Manual from "../components/Manual.jsx";
+import { forKind } from "../worklistKinds.js";
 
 /* Where each person lands.
  *
@@ -47,12 +48,18 @@ const PORTFOLIO_WORK = {
 export default function Home({ actor }) {
   const [docs, setDocs] = useState(null);
   const [dash, setDash] = useState(null);
+  const [lib, setLib] = useState(null);
   const [inbox, setInbox] = useState(null);
   const [gaps, setGaps] = useState(null);
 
   useEffect(() => {
     api.myDocuments().then(setDocs).catch(() => {});
-    if (actor.can_read) api.dashboard().then(setDash).catch(() => {});
+    if (actor.can_read) {
+      api.dashboard().then(setDash).catch(() => {});
+      // Only the counts are wanted here; the rows stay on the library
+      // screen, where there is room to read them.
+      api.documentLibrary({ limit: 1 }).then(setLib).catch(() => {});
+    }
     if ((actor.portfolios || []).includes("OFFICE"))
       api.documentInbox().then(setInbox).catch(() => {});
     if (actor.is_admin) api.rosterGaps().then(setGaps).catch(() => {});
@@ -98,14 +105,47 @@ export default function Home({ actor }) {
         </Card>
       )}
 
-      <Card title="Documents">
-        <div className="grid three">
-          <Stat label="Sent in" value={docs?.uploaded ?? "—"} size="lg" />
-          <Stat label="Put to work" value={docs?.in_use ?? "—"} size="lg"
-                note="attached to a cost by somebody who holds the portfolio" />
-          <Stat label="Waiting" value={docs?.waiting ?? "—"} size="lg"
-                note={docs?.waiting ? "not yet attached to anything" : "nothing outstanding"} />
-        </div>
+      {/* ── The record, in document form ─────────────────────── */}
+      {actor.can_read && (
+        <Card title="The papers behind the numbers"
+              aside={lib ? `${lib.total} on file` : null}>
+          <p className="lede" style={{ marginTop: 0 }}>
+            Every document anybody has sent in — the agreements, the leases,
+            the invoices, the register — readable here rather than only
+            downloadable. Open one to read it in the page, or take a copy if
+            it is going into a workpaper.
+          </p>
+          {lib && (
+            <div className="grid three">
+              <Stat label="On file" value={lib.total} />
+              <Stat label="Supporting a figure" value={lib.total_attached}
+                    note="somebody has said what these prove" />
+              <Stat label="Waiting to be filed"
+                    value={lib.total - lib.total_attached}
+                    tone={lib.total - lib.total_attached ? "warn" : ""}
+                    note={lib.total - lib.total_attached
+                      ? "nobody has said what these prove yet" : "nothing outstanding"} />
+            </div>
+          )}
+          <Link className="btn primary" to="/library">Open the library</Link>
+        </Card>
+      )}
+
+      {/* Quiet when there is nothing in it. An auditor sends no
+          documents in, so for them this was three zeroes at the
+          top of the page, above the work — a card that teaches
+          people to scroll past the first card. */}
+      <Card title="What I have sent in"
+            variant={docs?.uploaded ? "" : "quiet"}>
+        {docs?.uploaded ? (
+          <div className="grid three">
+            <Stat label="Sent in" value={docs.uploaded} size="lg" />
+            <Stat label="Put to work" value={docs.in_use} size="lg"
+                  note="attached to a cost by somebody who holds the portfolio" />
+            <Stat label="Waiting" value={docs.waiting} size="lg"
+                  note={docs.waiting ? "not yet attached to anything" : "nothing outstanding"} />
+          </div>
+        ) : null}
         <p className="rowsub" style={{ marginTop: 12 }}>
           Receipts, invoices, project plans, photographs of a nameplate, a
           comparable lease — anything that shows what a cost was for. You do
@@ -159,7 +199,10 @@ export default function Home({ actor }) {
               </tr>
             ))}
           </Table>
-          <Link className="btn" to="/evidence">Open the document library</Link>
+          {/* This goes to Evidence, which is where a document is filed
+              against a cost — not to the Library, which is where one is
+              read. They were both called "the document library". */}
+          <Link className="btn" to="/evidence">Open the filing queue</Link>
         </Card>
       )}
 
@@ -262,22 +305,6 @@ function describe(actor) {
  * the portfolio means rather than a special case — and it is why the card
  * says whose work each row is, even to somebody who holds all of them. */
 
-const KIND_LABEL = {
-  UNCLASSIFIED: ["Cost to classify", "In scope, with no live decision"],
-  BLOCKS_SEAL: ["Judgments that block the seal", "Graded unsupported"],
-  STALE_DECISION: ["Stale decisions", "The line moved underneath the judgment"],
-  NEEDS_EVIDENCE: ["Judgments with no document", "Federally chargeable, nothing cited"],
-  NEEDS_CERTIFICATION: ["Effort not yet certified", "Only the person whose effort it was can sign"],
-  EMPLOYMENT_UNKNOWN: ["Employment terms missing", "No weekly hours to measure a timesheet against"],
-  SPACE_UNMEASURED: ["Square footage not on file", "The facilities carve-out is sized by area"],
-  SPACE_UNATTRIBUTED: ["Space with nobody in it", "Measured, but no partition saying who uses it"],
-  FACILITY_UNPARTITIONED: ["Buildings not partitioned", "No space schedule, no carve-out"],
-  ASSET_FUNDING_UNKNOWN: ["Assets with no funding source", "Depreciation reads as fully allowable"],
-  INVOICE_NO_INDIRECT: ["Invoices billing no indirect", "Recovery forgone on the face of it"],
-  INVOICE_NO_AWARD: ["Invoices with no award", "No ceiling to test against"],
-  CHARGE_CODE_UNASSIGNED: ["Codes with nobody assigned", "Hours booked that nobody authorised"],
-};
-
 const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
 
 function MyWork({ actor }) {
@@ -300,7 +327,7 @@ function MyWork({ actor }) {
         { label: "", align: "left", width: "110px" },
       ]}>
         {d.groups.map((g) => {
-          const [label, note] = KIND_LABEL[g.kind] || [g.kind, ""];
+          const { plural: label, short: note } = forKind(g.kind);
           return (
             <tr key={g.kind}>
               <td className="l">

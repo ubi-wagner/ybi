@@ -1,0 +1,268 @@
+<!doctype html><meta charset="utf-8">
+<title>Verification worksheet</title>
+<style>
+  @page { size: letter; margin: 15mm 14mm 12mm; }
+  :root { --ink:#1a1a1a; --mute:#5f6b6b; --rule:#cfd6d2; --accent:#1f4e4a;
+           --warm:#7a5b00; }
+  body { font: 9.4pt/1.38 Georgia, "Times New Roman", serif; color: var(--ink);
+          margin: 0; }
+  h1 { font-size: 16pt; margin: 0 0 1pt; }
+  .sub { color: var(--mute); font-size: 8.6pt; margin: 0 0 4pt; }
+  .intro { font-size: 9pt; margin: 0 0 10pt; }
+  h2 { font-size: 10.5pt; color: var(--accent); margin: 13pt 0 5pt;
+        border-bottom: 1px solid var(--rule); padding-bottom: 2pt;
+        break-after: avoid; }
+  .item { break-inside: avoid; border: 1px solid var(--rule);
+           border-left: 3px solid var(--accent); padding: 6pt 9pt 7pt;
+           margin: 0 0 7pt; }
+  .item.done { border-left-color: #6f8f76; background: #f6faf7; }
+  .hd { display: flex; align-items: baseline; gap: 8pt; margin-bottom: 3pt; }
+  .ref { font-weight: bold; color: var(--accent); min-width: 22pt; }
+  .ttl { font-weight: bold; flex: 1; }
+  .fig { font-variant-numeric: tabular-nums; color: var(--mute);
+          white-space: nowrap; }
+  .found { margin: 0 0 3pt; }
+  .ask { margin: 0 0 2pt; }
+  .moves { margin: 0 0 5pt; font-size: 8.4pt; color: var(--warm);
+            font-style: italic; }
+  .ticks { display: flex; gap: 12pt; margin: 0 0 5pt; font-size: 8.2pt;
+            color: var(--mute); }
+  .tick b { display: inline-block; width: 8pt; height: 8pt; border: 1px solid #97a29d;
+             margin-right: 3.5pt; vertical-align: -.5pt; background: #fff; }
+  .tick.on b { background: var(--accent); border-color: var(--accent); }
+  .tick.on { color: var(--ink); font-weight: bold; }
+  .lines span { display: block; border-bottom: 1px solid #dfe5e1; height: 15pt; }
+  .pre { font-size: 8.8pt; background: #fff; border: 1px solid #dfe5e1;
+          padding: 4pt 6pt; }
+  .by { color: var(--mute); font-size: 8pt; }
+  .sig { display: flex; gap: 24pt; margin-top: 6pt; font-size: 7.6pt;
+          color: var(--mute); }
+  .sig span { flex: 1; border-top: 1px solid #b9c2bd; padding-top: 2pt; }
+  .sig span:last-child { flex: 0 0 110pt; }
+  footer { margin-top: 10pt; padding-top: 4pt; border-top: 1px solid var(--rule);
+            font-size: 7.6pt; color: var(--mute); }
+</style>
+<h1>Discrepancies to settle</h1>
+<p class="sub">Youngstown Business Incubator · 2025 cost allocation ·
+for Tom Metzinger · figures as at 11 September 2026</p>
+<p class="intro">19 items, each found by a control rather than by
+somebody reading, and each answerable from what you already know or can reach
+this week. Ordered by how much each moves the rate — the six depreciation items
+are worth roughly three points of the indirect rate between them. Tick a status,
+write what you found. <strong>Leave anything unsettled blank</strong>: we record
+an empty box as unanswered and come back to it.</p>
+<h2>Example</h2>
+<section class="item done">
+  <div class="hd"><span class="ref">0</span>
+    <span class="ttl">The Bacon $45,000 — confirmed</span>
+    <span class="fig">45,000.00</span></div>
+  <p class="found">A pledge from Vince and Phyllis Bacon to fund interns was booked as a credit against 5142 Intern Wages rather than as contributions income. Ten of the eleven cross-reference controls were blind to it; only the payroll register could see it.</p>
+  <p class="ask"><strong>Confirmed on 11 September 2026. Still open: the entry has not been reposted in QuickBooks. When it is, tell us — the reconciling item has to come off with it, and the two must not both be there.</strong></p>
+  <p class="moves">Fringe rate: 22.45% against the defensible 21.90%.</p>
+  <div class="ticks"><span class="tick  on"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="pre">Confirmed 11 Sep 2026. QuickBooks entry still to be reposted.<br><span class="by">— Tom Metzinger, 11 September 2026</span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section><h2>Depreciation</h2>
+<section class="item">
+  <div class="hd"><span class="ref">1.1</span>
+    <span class="ttl">Three reimbursements netted against Tech Block Building 5</span>
+    <span class="fig">157,739.00</span></div>
+  <p class="found">The 2026 asset schedule carries Fitz Reimbursement −117,739.00 (30 Jun 2019), NCDMM Reimbursement −25,000.00 (26 Sep 2019) and YSU Reimbursement −15,000.00 (31 Dec 2019) against Building 5. This is Finding 2024-001 in the flesh.</p>
+  <p class="ask"><strong>Is the recorded cost of Building 5 gross or net of these three? And is NCDMM's $25,000 federal money?</strong></p>
+  <p class="moves">If the cost is net, the gross basis is understated and the federal share cannot be derived from the books at all.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">1.2</span>
+    <span class="ttl">Two aggregates the register's own totals exclude</span>
+    <span class="fig">1,516,695.00</span></div>
+  <p class="found">BUILDINGS at 180,000.00 and CAPITAL IMPROVEMENTS at 1,336,695.00 are printed on their sheets and left out of the Total Cost/Basis those sheets carry. They look like opening aggregates the itemised rows below them replaced.</p>
+  <p class="ask"><strong>Confirm these were superseded by the detail rather than dropped by accident.</strong></p>
+  <p class="moves">Reading them as assets overstates the basis by $1.5m; dropping them silently is a $1.5m hole nobody could see.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">1.3</span>
+    <span class="ttl">The register is above the balance sheet</span>
+    <span class="fig">122,921.14</span></div>
+  <p class="found">Register 23,419,573.64 plus construction in progress 438,355.19 = 23,857,928.83, against gross fixed assets of 23,735,007.69 on the 31 December 2025 balance sheet.</p>
+  <p class="ask"><strong>Can we have the register as at 31 December 2025? Failing that, confirm the 122,921.14 is 2026 additions.</strong></p>
+  <p class="moves">The register is a 2026 export, so this is probably timing — and the rate should not rest on 'probably'.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">1.4</span>
+    <span class="ttl">Depreciation differs</span>
+    <span class="fig">22,429.02</span></div>
+  <p class="found">2025 P&amp;L account 5010 reads 850,382.89. The register's Current Depreciation totals 872,811.91.</p>
+  <p class="ask"><strong>Same likely cause as 1.3 — a 2026 export — and the same answer settles both.</strong></p>
+  <p class="moves">The depreciation figure feeds the facilities pool directly.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">1.5</span>
+    <span class="ttl">Xjet Ceramic Printer carried at zero</span>
+    <span class="fig">0.00</span></div>
+  <p class="found">System no. 174, in service 25 January 2018, seven-year life, cost 0.00, no accumulated and no current depreciation. A real number and a real date with no money against them. There is also an XJET cost objective on the record.</p>
+  <p class="ask"><strong>Donated? Fully reimbursed and netted, like 1.1? Or written off?</strong></p>
+  <p class="moves">An asset at zero that should carry cost is missing basis.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">1.6</span>
+    <span class="ttl">Two True Up Entry rows</span>
+    <span class="fig">16,931.13</span></div>
+  <p class="found">On the Building 5 sheet, dated 30 and 31 December 2019, carrying accumulated depreciation of 7,173.29 and 9,757.84 and no cost at all.</p>
+  <p class="ask"><strong>What were these correcting?</strong></p>
+  <p class="moves">Accumulated depreciation with no asset behind it distorts net book value by class.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section><h2>The books</h2>
+<section class="item">
+  <div class="hd"><span class="ref">2.1</span>
+    <span class="ttl">Every ledger-to-P&amp;L difference is Rising Tides</span>
+    <span class="fig">7,469.87</span></div>
+  <p class="found">Five accounts differ and all five are one account bleeding into four others: Rising Tides +7,469.87 against ESP −6,300.00, Travel −622.26, Advertising −280.40 and Staff Training −267.21. Ten specific lines, all named on the record.</p>
+  <p class="ask"><strong>Were these reclassified out of Rising Tides after the general ledger was exported and before the P&amp;L was?</strong></p>
+  <p class="moves">If yes the record is right as it stands. If not, one of the two exports is wrong.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">2.2</span>
+    <span class="ttl">Is Rising Tides federally funded?</span>
+    <span class="fig">1,386,355.56</span></div>
+  <p class="found">The objective master says not federal. The controller's workbook says it is. 137 ledger lines.</p>
+  <p class="ask"><strong>Which is right, and what is the award?</strong></p>
+  <p class="moves">Changes the SEFA and the scope of the Single Audit — not just a rate. The biggest open question outside depreciation.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">2.3</span>
+    <span class="ttl">4801 IH Grant Income</span>
+    <span class="fig">451,170.39</span></div>
+  <p class="found">The P&amp;L reports it under Innovation Hub. The revenue ledger attributes it to NCDMM.</p>
+  <p class="ask"><strong>Which? </strong></p>
+  <p class="moves">If it is not America Makes money, the America Makes reconciliation changes by nearly half a million dollars.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">2.4</span>
+    <span class="ttl">Hybrid is out by a hundred dollars</span>
+    <span class="fig">100.02</span></div>
+  <p class="found">P&amp;L revenue 3900 Grant Income:Hybrid Energy reads 191,638.05. The grant tabs read 191,738.17.</p>
+  <p class="ask"><strong>Which is right?</strong></p>
+  <p class="moves">Small, and Hybrid's over-billing conclusion stands either way — but worth closing rather than leaving in a workpaper.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section><h2>Space</h2>
+<section class="item">
+  <div class="hd"><span class="ref">3.1</span>
+    <span class="ttl">Four buildings named once each</span>
+    <span class="fig">4 buildings</span></div>
+  <p class="found">The 2025 lease book names AM, Taft, Semple and Taft/semple once each. The other twenty-two tenants are in YBI or TBB5.</p>
+  <p class="ask"><strong>Are these YBI buildings, and are Taft, Semple and Taft/semple two buildings or three?</strong></p>
+  <p class="moves">Square footage per building is what sizes the facilities carve-out.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">3.2</span>
+    <span class="ttl">One tenant across two buildings</span>
+    <span class="fig">1 tenancy</span></div>
+  <p class="found">Taft/semple is a single row in the lease book.</p>
+  <p class="ask"><strong>Which building does it belong to, or how should the square footage split between the two?</strong></p>
+  <p class="moves">A tenancy in no building cannot be carved out of the pool.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">3.3</span>
+    <span class="ttl">Eight tenancies with no start date</span>
+    <span class="fig">18,592.56</span></div>
+  <p class="found">Azanna Elise, Equipment Appraisal Services, Greg Babinack, JSO Technologies, M. Jones, Made by Morgan, Parallax and Ralph Zerbonia say 'monthly' where a start date belongs.</p>
+  <p class="ask"><strong>Month-to-month arrangements, or start dates that were never recorded?</strong></p>
+  <p class="moves">A suite occupied for part of the year is a part of a suite of cost.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">3.4</span>
+    <span class="ttl">MVMC starts 1 April 2026</span>
+    <span class="fig">1 lease</span></div>
+  <p class="found">It is in the 2025 lease book and contributes no 2025 rent.</p>
+  <p class="ask"><strong>Should it be in the 2025 book at all?</strong></p>
+  <p class="moves">A future tenancy counted as 2025 space overstates occupied area.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section><h2>People</h2>
+<section class="item">
+  <div class="hd"><span class="ref">4.1</span>
+    <span class="ttl">The payroll register keys people by surname</span>
+    <span class="fig">43 people</span></div>
+  <p class="found">EWING, RUBY, GAFFNEY. The register carries surnames and no payroll identifier.</p>
+  <p class="ask"><strong>Any duplicate surnames on the 2025 register?</strong></p>
+  <p class="moves">If yes, two people's hours are already joined together and every effort figure for both is wrong. It would be a change to the ingest, not to a form.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section><h2>Invoices</h2>
+<section class="item">
+  <div class="hd"><span class="ref">5.1</span>
+    <span class="ttl">The invoice dates on file are ours, not YBI's</span>
+    <span class="fig">3 invoices</span></div>
+  <p class="found">10018, 10023 and 10039 all carry 2026-05-01 with an April 2026 service period, sitting in period 2025. Those dates are a placeholder in our loader — the line items and totals are real, the dates were never supplied.</p>
+  <p class="ask"><strong>The real invoice dates and service periods for the three.</strong></p>
+  <p class="moves">A restatement is measured per invoice within a period, so a wrong date puts a claim in the wrong year.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">5.2</span>
+    <span class="ttl">No cash recorded against any invoice</span>
+    <span class="fig">57,961.42</span></div>
+  <p class="found">37,593.90 + 1,374.00 + 18,993.52 issued, and zero receipts on the record.</p>
+  <p class="ask"><strong>Have these been paid, in whole or in part?</strong></p>
+  <p class="moves">Collections are unknowable from the system today. A receipt may be negative, so a clawback would show here too.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<section class="item">
+  <div class="hd"><span class="ref">5.3</span>
+    <span class="ttl">The full invoice register does not exist</span>
+    <span class="fig">4 objectives</span></div>
+  <p class="found">The system holds three invoices — 10018, 10023 and 10039, 57,961.42 between them. The 2025 ledger recognises America Makes revenue on four objectives: Drive AM 579,240.87, Digital Engineering 579,074.25, Last Tactical Mile 368,222.24 and Hybrid 191,638.05 — 1,718,175.41 in all.</p>
+  <p class="ask"><strong>Every invoice issued to NCDMM in 2025, across all four objectives.</strong></p>
+  <p class="moves">A restatement is measured per invoice. With three on file the exercise can be demonstrated and not completed, and invoiced against recognised cannot be reconciled at all.</p>
+  <div class="ticks"><span class="tick"><b></b>CONFIRMED</span><span class="tick"><b></b>CORRECTED</span><span class="tick"><b></b>STILL CHECKING</span><span class="tick"><b></b>SOMEBODY ELSE HAS TO ANSWER</span><span class="tick"><b></b>NOT APPLICABLE</span></div>
+  <div class="lines"><span></span><span></span><span></span></div>
+  <div class="sig"><span>Answered by</span><span>Date</span></div>
+</section>
+<footer>The narrative version, with the working behind every figure, is
+docs/FOR_TOM_TO_VERIFY.md. Not on this list and not yours to settle: the Drive
+AM cost-share contradiction (counsel), the $617,065 of untracked cost share
+(partner evidence), asset funding source and square footage (those are the
+request workbooks), and the three untranscribed award budgets (ours).</footer>

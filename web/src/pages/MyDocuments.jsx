@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { Card, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* The module everybody gets.
  *
@@ -35,8 +35,20 @@ export default function MyDocuments({ actor }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [open, setOpen] = useState(null);
   const input = useRef(null);
   const toast = useToast();
+
+  /* A link the browser follows itself, so the session cookie goes
+     with it and the bytes never pass through JavaScript. */
+  function take(d) {
+    const a = document.createElement("a");
+    a.href = api.documentDownloadUrl(d.evidence_id);
+    a.download = d.filename || d.evidence_id;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 
   const load = useCallback(() => {
     api.myDocuments().then(setData).catch(() => setData({ documents: [] }));
@@ -165,6 +177,7 @@ export default function MyDocuments({ actor }) {
             { label: "Kind", align: "left" },
             { label: "Sent", align: "left" },
             { label: "Status", align: "left" },
+            { label: "", align: "left", width: "150px" },
           ]}>
             {data.documents.map((d) => (
               <tr key={d.evidence_id}>
@@ -183,11 +196,51 @@ export default function MyDocuments({ actor }) {
                     ? <Pill tone="accent">supporting {d.attachments} item{d.attachments === 1 ? "" : "s"}</Pill>
                     : <Pill>waiting to be filed</Pill>}
                 </td>
+                {/* Your own document, always — the route allows the uploader
+                    whatever else they hold. Somebody who sent in a receipt
+                    six weeks ago and wants to check which one it was should
+                    not have to ask the controller. */}
+                <td className="l">
+                  <div className="btn-row">
+                    {d.inline_safe && (
+                      <button className="btn sm" onClick={() => setOpen(d)}>
+                        Read
+                      </button>
+                    )}
+                    <button className="btn sm ghost" onClick={() => take(d)}>
+                      Download
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </Table>
         )}
       </Card>
+
+      <Drawer open={Boolean(open)} wide
+              title={open?.filename || open?.evidence_id || ""}
+              subtitle={open && [open.kind, open.period,
+                                 String(open.received_at).slice(0, 10)]
+                                .filter(Boolean).join(" · ")}
+              onClose={() => setOpen(null)}
+              footer={open && (
+                <div className="btn-row">
+                  <button className="btn primary" onClick={() => take(open)}>
+                    Download a copy
+                  </button>
+                  <button className="ghost" onClick={() => setOpen(null)}>Close</button>
+                </div>
+              )}>
+        {/* No `sandbox` attribute on the frame below — see the note in
+            Library.jsx. It stops Chromium rendering a PDF, and the
+            Content-Security-Policy the server puts on the response does the
+            same job without that cost. */}
+        {open && (
+          <iframe className="doc-frame" title={open.filename || open.evidence_id}
+                  src={api.documentViewUrl(open.evidence_id)} />
+        )}
+      </Drawer>
     </div>
   );
 }

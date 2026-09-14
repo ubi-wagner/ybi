@@ -115,6 +115,28 @@ def main() -> int:
               "four portfolios do not add up to sealing", json={"note": "drive"})
         check(heidi2, "POST", "/api/rates/compute", 403,
               "nor to computing a rate", json={})
+        # A lane is a sandbox and still takes the portfolio to write in one:
+        # an override is a reading of the cost record with somebody's name on
+        # it, and `v_lane_disclosure` puts it in the audit package.
+        lane = heidi2.get("/api/lanes").json()
+        if lane:
+            lid = lane[0]["lane_id"]
+            check(heidi2, "POST", f"/api/lanes/{lid}/overrides", 403,
+                  "nor to trying a reading in a lane",
+                  json={"pool": "G&A", "reason": "Access drive: refused."})
+            check(heidi2, "PUT", f"/api/lanes/{lid}/assumptions", 403,
+                  "nor to varying an assumption in one",
+                  json={"key": "drive", "value": 1})
+            check(heidi2, "GET", f"/api/lanes/{lid}/overrides", 200,
+                  "though she may read what a lane has tried — a lane is "
+                  "disclosure, and disclosure is for reading")
+        # Setting a project up is the project manager's job and the
+        # controller's, and she still holds PROJECT — so this is the other
+        # direction: a narrow portfolio that *does* reach its own work.
+        check(heidi2, "GET", "/api/projects", 200,
+              "she may still read the projects she manages")
+        check(heidi2, "GET", "/api/todos", 200,
+              "and the list of who is doing what by when")
         check(heidi2, "GET", "/api/facilities", 200,
               "her facilities work is untouched")
         check(heidi2, "GET", "/api/facilities/equipment", 200,
@@ -190,6 +212,115 @@ def main() -> int:
               "but the organisation administrator does not work the inbox")
         check(heidi, "GET", "/api/documents/inbox", 200,
               "Heidi does — she holds OFFICE")
+
+        # ── The library, and what a browser may do with a document ──
+        print("\nThe shelf is open to whoever may read the record")
+        # The library is the cost record in document form, so it takes the
+        # same gate the review screens take — not a portfolio, and not rank.
+        for who, client in (("the auditor", auditor), ("Tom", tom),
+                            ("Heidi", heidi),
+                            ("the organisation administrator", barb),
+                            ("the system administrator, on his grant", eric)):
+            check(client, "GET", "/api/documents/library", 200,
+                  f"{who} opens the library")
+
+        anon = httpx.Client(base_url=args.base, timeout=60)
+        try:
+            check(anon, "GET", "/api/documents/library", 401,
+                  "nobody signed in gets nothing")
+        finally:
+            anon.close()
+
+        # Somebody uploads, then reads their own back. The uploader is not a
+        # reader of the record and must not become one by having sent a file
+        # in — nor be locked out of the thing they sent.
+        r = tom.get("/api/documents/library?q=Drive-AM")
+        rows = r.json().get("documents", []) if r.status_code == 200 else []
+        pdf = next((d for d in rows if d["inline_safe"]), None)
+        if not pdf:
+            bad("no previewable document on file — the library cannot be "
+                "proved against real rows")
+        else:
+            eid = pdf["evidence_id"]
+            head = auditor.get(f"/api/documents/{eid}/file?inline=1")
+            disp = head.headers.get("content-disposition", "")
+            (ok if disp.startswith("inline") else bad)(
+                f"a PDF is offered to read in the page — {disp[:40]}")
+            (ok if head.headers.get("x-content-type-options") == "nosniff"
+             else bad)("and the browser is told not to sniff past the type")
+            (ok if "sandbox" in head.headers.get("content-security-policy", "")
+             else bad)("and to treat it as its own origin")
+
+            plain = auditor.get(f"/api/documents/{eid}/file")
+            (ok if plain.headers.get("content-disposition", "").startswith(
+                "attachment") else bad)(
+                "and asked for plainly, it comes back as a copy to keep")
+
+        # A type not on the allowlist downloads however it is asked for.
+        sheet = next((d for d in tom.get("/api/documents/library?limit=500")
+                      .json()["documents"] if not d["inline_safe"]), None)
+        if sheet:
+            r = auditor.get(f"/api/documents/{sheet['evidence_id']}/file?inline=1")
+            (ok if r.headers.get("content-disposition", "").startswith(
+                "attachment") else bad)(
+                f"a {sheet['mime_type'].rsplit('.', 1)[-1][:24]} is refused "
+                f"the page even when the page asks for it")
+
+        # ── Two documents, and who may make one ─────────────────────
+        print("\nA report is a read; filing one is not")
+        for who, client in (("the auditor", auditor), ("Tom", tom),
+                            ("the organisation administrator", barb)):
+            check(client, "GET", "/api/reports/timesheet", 200,
+                  f"{who} takes the timesheet report")
+
+        r = tom.get("/api/reports/invoices")
+        rows = r.json().get("invoices", []) if r.status_code == 200 else []
+        if not rows:
+            bad("no invoices on the register — regeneration cannot be proved "
+                "against real rows")
+        else:
+            number = rows[0]["invoice_number"]
+            pdf = check(auditor, "GET", f"/api/reports/invoice/{number}", 200,
+                        f"the auditor renders invoice {number}")
+            (ok if pdf.content[:5] == b"%PDF-" else bad)(
+                "and what comes back is a PDF")
+            # The whole point of the provenance band: an invoice already
+            # issued must not come back as something that could pass for the
+            # document the sponsor holds.
+            #
+            # Read through pypdf rather than searched for in the raw bytes.
+            # PDF text is compressed, so a byte search for a phrase that is
+            # plainly on the page finds nothing and the drive reports a
+            # failure against working code — which is what the first version
+            # of this check did.
+            from io import BytesIO
+            from pypdf import PdfReader
+            issued = (rows[0].get("status") or "").upper() == "ISSUED"
+            face = "".join(pg.extract_text()
+                           for pg in PdfReader(BytesIO(pdf.content)).pages)
+            marked = "NOT THE DOCUMENT OF RECORD" in face
+            if issued:
+                (ok if marked else bad)(
+                    "an issued invoice renders as a reproduction and says so")
+
+            # Filing is a write into the evidence volume. Reading the record
+            # is not enough; this is the controller's to do.
+            check(auditor, "POST", f"/api/reports/invoice/{number}/file", 403,
+                  "the auditor may read it and may not file it")
+            filed = check(tom, "POST", f"/api/reports/invoice/{number}/file",
+                          201, "Tom files the rendering")
+            if filed.status_code == 201:
+                eid = filed.json().get("evidence_id")
+                again = tom.post(f"/api/reports/invoice/{number}/file")
+                (ok if again.json().get("deduplicated") else bad)(
+                    "filing the same rendering twice files one document")
+                lib = tom.get(f"/api/documents/library?q={eid}")
+                row = next((d for d in lib.json().get("documents", [])
+                            if d["evidence_id"] == eid), None)
+                (ok if row else bad)("and it reaches the library")
+                if row:
+                    (ok if row.get("is_generated") else bad)(
+                        "marked as made from the record rather than sent in")
 
         # ── Reading the books is granted, not assumed ────────────────
         print("\nReading the books is granted by whoever owns them")
@@ -301,9 +432,23 @@ def main() -> int:
         execute("""UPDATE actor SET is_active = false
                     WHERE email LIKE 'drive-newcomer-%@ybi.org'
                        OR email LIKE 'peer%@ybi.org'""")
+        # The documents this drive sends in are litter too, and since the
+        # library shows every document to every reader they are litter on a
+        # screen the manual photographs. They were invisible until there was
+        # a screen that listed the whole shelf.
+        execute("""DELETE FROM attachment
+                    WHERE evidence_id IN (SELECT evidence_id FROM evidence
+                                           WHERE filename LIKE 'drive-%')""")
+        # Never one a judgment cited. The decision may have been walked back and
+        # it is still on the record as what it was decided on; deleting the
+        # document behind it would leave the trail saying somebody graded a
+        # judgment against nothing, which is the one thing the grade exists to
+        # make impossible. `drive_evidence` leaves exactly one such document.
+        execute("""DELETE FROM evidence e
+                    WHERE e.filename LIKE 'drive-%'
+                      AND NOT EXISTS (SELECT 1 FROM decision_evidence de
+                                       WHERE de.evidence_id = e.evidence_id)""")
         execute("""DELETE FROM space_unit
-                    WHERE facility_id LIKE 'DRIVE%'""")
-        execute("""DELETE FROM space_partition
                     WHERE facility_id LIKE 'DRIVE%'""")
         execute("DELETE FROM facility WHERE facility_id LIKE 'DRIVE%'")
         for c in (eric, barb, tom, heidi, auditor):

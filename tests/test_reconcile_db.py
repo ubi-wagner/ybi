@@ -28,11 +28,47 @@ def cur():
                 yield cursor
 
 
-def some_lines(cur, account: str, n: int):
-    cur.execute("""SELECT line_id, amount FROM ledger_line
-                    WHERE period='2025' AND account=%s ORDER BY line_id LIMIT %s""",
-                (account, n))
-    return cur.fetchall()
+@pytest.fixture
+def lines(cur):
+    """Ledger lines this file makes for itself, rolled back with the rest.
+
+    These tests prove a *trigger*, and a trigger needs some ledger rows rather
+    than the real ledger. Reading whatever happened to be in the database made
+    them pass on a developer's seeded copy and fail in CI, which applies the
+    migrations to an empty database and loads nothing — three of them failed
+    on `assert 0 == 2`, and CI had been red on `main` for long enough that
+    nobody was reading it.
+
+    Worse than the failures were two that *passed*. `test_a_plug_is_refused`
+    summed nought lines to nought, claimed a dollar, and was refused for
+    having no lines at all — which is the next test's job. It proved the
+    wrong guarantee and reported success, on an empty database, for as long
+    as it has existed.
+
+    So the rows are made here: known amounts, in the account the item names,
+    inside the transaction that is thrown away.
+    """
+    from decimal import Decimal
+
+    cur.execute("""INSERT INTO ledger_import
+                     (period, source_name, sha256, row_count, imported_by)
+                   VALUES ('2025', 'tests/test_reconcile_db.py',
+                           md5(random()::text), 0, 'test@ybi.org')
+                   RETURNING import_id""")
+    import_id = cur.fetchone()["import_id"]
+
+    def make(account: str, amount: Decimal, tag: str):
+        line_id = f"TEST-{tag}"
+        cur.execute("""INSERT INTO ledger_line
+                         (line_id, import_id, period, txn_date, account,
+                          amount, statement, section, source_key)
+                       VALUES (%s,%s,'2025','2025-06-30',%s,%s,'P&L',
+                               'Expense',%s)
+                       RETURNING line_id, amount""",
+                    (line_id, import_id, account, amount, line_id))
+        return cur.fetchone()
+
+    return make
 
 
 ACCOUNT = "Grant Expenses:Rising Tides Expense"
@@ -50,26 +86,34 @@ def insert_item(cur, amount: Decimal, from_account: str = ACCOUNT,
     return cur.fetchone()["item_id"]
 
 
-def test_an_item_whose_lines_add_up_is_accepted(cur):
-    lines = some_lines(cur, ACCOUNT, 2)
-    assert len(lines) == 2
-    total = sum(l["amount"] for l in lines)
-    item_id = insert_item(cur, total)
-    for l in lines:
-        cur.execute("INSERT INTO reconciling_item_line (item_id,line_id) VALUES (%s,%s)",
-                    (item_id, l["line_id"]))
+def attach(cur, item_id: int, *rows):
+    for row in rows:
+        cur.execute("INSERT INTO reconciling_item_line (item_id,line_id) "
+                    "VALUES (%s,%s)", (item_id, row["line_id"]))
+
+
+def test_an_item_whose_lines_add_up_is_accepted(cur, lines):
+    a = lines(ACCOUNT, Decimal("4200.00"), "adds-a")
+    b = lines(ACCOUNT, Decimal("3269.87"), "adds-b")
+    item_id = insert_item(cur, a["amount"] + b["amount"])
+    attach(cur, item_id, a, b)
     cur.execute("SET CONSTRAINTS ALL IMMEDIATE")     # force the deferred check
 
 
-def test_a_plug_is_refused(cur):
-    """An amount with no lines behind it is the thing this exists to stop."""
+def test_a_plug_is_refused(cur, lines):
+    """Lines that are real and do not add up to what the item claims.
+
+    The distinction from the next test is the whole point: this one names its
+    lines and is still a dollar out, which is a plug dressed as an
+    attribution. Before the fixture existed this test found no lines at all
+    and was refused for that instead, so it proved the next test's guarantee
+    and passed.
+    """
     import psycopg
-    lines = some_lines(cur, ACCOUNT, 2)
-    total = sum(l["amount"] for l in lines)
-    item_id = insert_item(cur, total + Decimal("1.00"))
-    for l in lines:
-        cur.execute("INSERT INTO reconciling_item_line (item_id,line_id) VALUES (%s,%s)",
-                    (item_id, l["line_id"]))
+    a = lines(ACCOUNT, Decimal("4200.00"), "plug-a")
+    b = lines(ACCOUNT, Decimal("3269.87"), "plug-b")
+    item_id = insert_item(cur, a["amount"] + b["amount"] + Decimal("1.00"))
+    attach(cur, item_id, a, b)
     with pytest.raises(psycopg.errors.RaiseException) as exc:
         cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
     assert "plug" in str(exc.value)
@@ -82,19 +126,19 @@ def test_an_item_with_no_lines_at_all_is_refused(cur):
         cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
 
 
-def test_lines_must_sit_in_the_account_the_item_moves_money_out_of(cur):
-    """Otherwise the item describes something other than what it says."""
+def test_lines_must_sit_in_the_account_the_item_moves_money_out_of(cur, lines):
+    """Otherwise the item describes something other than what it says.
+
+    The line named here adds up to the amount claimed exactly — so the only
+    thing wrong with it is where it is posted, which is what isolates this
+    guarantee from the one above. It used to hunt the real ledger for an
+    equal-amount line in another account and skip when it found none.
+    """
     import psycopg
-    mine = some_lines(cur, ACCOUNT, 1)
-    cur.execute("""SELECT line_id, amount FROM ledger_line
-                    WHERE period='2025' AND account <> %s AND amount = %s
-                    LIMIT 1""", (ACCOUNT, mine[0]["amount"]))
-    other = cur.fetchone()
-    if not other:
-        pytest.skip("no equal-amount line in another account to test with")
-    item_id = insert_item(cur, other["amount"])
-    cur.execute("INSERT INTO reconciling_item_line (item_id,line_id) VALUES (%s,%s)",
-                (item_id, other["line_id"]))
+    elsewhere = lines("5080 Fundraising:5085 Advertising",
+                      Decimal("1500.00"), "elsewhere")
+    item_id = insert_item(cur, elsewhere["amount"])
+    attach(cur, item_id, elsewhere)
     with pytest.raises(psycopg.errors.RaiseException) as exc:
         cur.execute("SET CONSTRAINTS ALL IMMEDIATE")
     assert "posted elsewhere" in str(exc.value)
@@ -249,7 +293,28 @@ def test_a_control_that_cannot_be_evaluated_has_not_passed(cur):
 
 
 def test_a_loaded_period_still_evaluates(cur):
-    """The guard must not make everything unevaluable."""
+    """The guard must not make everything unevaluable.
+
+    This is the other half of the test above and it needs what that one does
+    not: a period with books in it. CI applies the migrations to an empty
+    database, where 2025 has no ledger and nought of eleven controls are
+    evaluable — which is the guard working, not failing. Asserting otherwise
+    made the test fail for being right.
+
+    So it states its premise rather than assuming it.
+
+    The loaded direction is no longer only covered elsewhere:
+    `tests/test_reconciliation_loaded.py` builds a period from the control
+    definitions and proves all eleven evaluable and tying, then breaks each
+    one on purpose. That runs in CI. This one stays because it is about the
+    *real* period when there is one — a developer's seeded copy, and the
+    deployment.
+    """
+    cur.execute("SELECT count(*) AS n FROM ledger_line WHERE period = '2025'")
+    if not cur.fetchone()["n"]:
+        pytest.skip("2025 has no ledger loaded, so there is nothing for the "
+                    "controls to evaluate — see scripts/reconcile.py")
+
     cur.execute("""SELECT count(*) FILTER (WHERE evaluable) AS ok,
                           count(*)                          AS total
                      FROM v_statement_reconciliation WHERE period = '2025'""")

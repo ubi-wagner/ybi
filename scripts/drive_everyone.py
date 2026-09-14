@@ -120,11 +120,13 @@ def sign_in(base: str, email: str, password: str) -> httpx.Client:
 def tidy_up() -> None:
     """Remove the fixtures this drive invented.
 
-    Not the record — a classification, a timesheet entry or a document is a
-    judgment somebody made and stays. But a building called "Drive Test
-    Building" is litter: it sits on the Space screen where a real one should
-    be, and it ends up photographed into the user manual, where a new person
-    reads it as an example of how YBI keeps its estate.
+    Not the record — a classification or a timesheet entry is a judgment
+    somebody made and stays. But a building called "Drive Test Building" is
+    litter: it sits on the Space screen where a real one should be, and it
+    ends up photographed into the user manual, where a new person reads it
+    as an example of how YBI keeps its estate. A file called
+    drive-receipt-2026-09-11.txt is the same thing on the library shelf —
+    which was invisible until there was a screen listing every document.
 
     Only rows whose id this drive generated, and only the ones nothing else
     has come to depend on.
@@ -138,11 +140,28 @@ def tidy_up() -> None:
                 WHERE email LIKE 'drive.%@ybi.org'
                    OR email LIKE 'drive-%@ybi.org'
                    OR email LIKE 'corrected.%@ybi.org'""")
+    # A document this drive invented is litter by the same argument as the
+    # building, and the docstring above only exempted documents because when
+    # it was written nothing listed them. The library lists all of them, to
+    # every reader, and photographs the list into the manual — so a file
+    # called drive-receipt-2026-09-11.txt now sits at the top of the shelf
+    # where the lease should be.
+    execute("""DELETE FROM attachment
+                WHERE evidence_id IN (SELECT evidence_id FROM evidence
+                                       WHERE filename LIKE 'drive-%')""")
+    # Never one a judgment cited. The decision may have been walked back and
+    # it is still on the record as what it was decided on; deleting the
+    # document behind it would leave the trail saying somebody graded a
+    # judgment against nothing, which is the one thing the grade exists to
+    # make impossible. `drive_evidence` leaves exactly one such document.
+    execute("""DELETE FROM evidence e
+                WHERE e.filename LIKE 'drive-%'
+                  AND NOT EXISTS (SELECT 1 FROM decision_evidence de
+                                   WHERE de.evidence_id = e.evidence_id)""")
     execute("""DELETE FROM asset
                 WHERE unit_id IN (SELECT unit_id FROM space_unit
                                    WHERE facility_id LIKE 'DRIVE-%')""")
     execute("DELETE FROM space_unit WHERE facility_id LIKE 'DRIVE-%'")
-    execute("DELETE FROM space_partition WHERE facility_id LIKE 'DRIVE-%'")
     execute("DELETE FROM facility WHERE facility_id LIKE 'DRIVE-%'")
 
 
@@ -712,7 +731,14 @@ def drive_auditor(args, c):
                        ("/api/export/exceptions", "every place the standard bent"),
                        ("/api/classify/queue?limit=3", "the classification queue"),
                        ("/api/evidence", "the document register"),
-                       ("/api/rates", "the rates on file")):
+                       # /api/rates is not a route and never was. This check
+                       # passed for as long as it has existed because the SPA
+                       # catch-all answered every unmatched /api path with
+                       # index.html and a 200, so the drive asserted that an
+                       # auditor could read the rates and received a web page.
+                       # The catch-all answers 404 now, which is what turned a
+                       # green check into a finding.
+                       ("/api/rates/current", "the rates on file")):
         call(c, "GET", path, 200, f"reads {what}")
 
     pkg = call(c, "GET", "/api/export/audit-package", 200,

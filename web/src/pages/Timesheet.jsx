@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
-import { Card, Empty, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
+import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
 import TimeRoster from "./TimeRoster.jsx";
 
 /*
@@ -68,11 +68,30 @@ export default function Timesheet({ actor }) {
      no timesheet of its own. It gets the roster instead, and can open anyone's
      sheet from there to read. */
   const [viewing, setViewing] = useState(null);
+
+  /* Donated time sits above both, because it is the organisation's record
+     rather than this sheet's — and because the person who has to value it is
+     very often the one with no timesheet of their own.
+     `Donated` lived inside `Sheet` for about ten minutes, which meant Tom —
+     a controller with no payroll key — could not see it at all, and the
+     worklist item pointing him here would have sent him to a screen with
+     nothing on it. The same defect as a nav stricter than the API, one
+     component further in. */
+  const [given, setGiven] = useState(null);
+  const loadGiven = useCallback(
+    () => api.donations().then(setGiven).catch(() => setGiven(null)), []);
+  useEffect(() => { loadGiven(); }, [loadGiven]);
+
+  const donated = given && given.people.length > 0 && (
+    <Donated given={given} actor={actor} onDone={loadGiven} />
+  );
+
   if (!actor?.employee_key && !viewing) {
-    return <TimeRoster onOpen={setViewing} />;
+    return <>{donated}<TimeRoster onOpen={setViewing} /></>;
   }
-  return <Sheet actor={actor} viewing={viewing}
-                onBack={() => setViewing(null)} />;
+  return <>{donated}
+    <Sheet actor={actor} viewing={viewing} onBack={() => setViewing(null)} />
+  </>;
 }
 
 function Sheet({ actor, viewing, onBack }) {
@@ -84,6 +103,7 @@ function Sheet({ actor, viewing, onBack }) {
   const [cursor, setCursor] = useState(() => new Date(2025, 2, 3));
   const [basis, setBasis] = useState("CALENDAR");
   const [openDay, setOpenDay] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [error, setError] = useState("");
 
   const year = cursor.getFullYear();
@@ -106,10 +126,22 @@ function Sheet({ actor, viewing, onBack }) {
     } catch (e) {
       setError(String(e.message || e));
     }
+    /* The draft is only ever the caller's own — `adopt` writes under the
+       calling actor and takes no employee key, so offering it while reading
+       somebody else's sheet would be a button that cannot mean what it says.
+       It is loaded separately from the pair above because a person with no
+       reconstruction is a normal state and must not blank the screen. */
+    if (viewing) { setDraft(null); return; }
+    try {
+      setDraft(await api.timesheetDraft());
+    } catch {
+      setDraft(null);
+    }
   }, [range.start, range.end, viewing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { api.timesheetObjectives().then(setVocab).catch(() => {}); }, []);
   useEffect(() => { load(); }, [load]);
+
 
   /* Entries indexed by day and objective, so a cell is a lookup. */
   const byCell = useMemo(() => {
@@ -365,6 +397,10 @@ function Sheet({ actor, viewing, onBack }) {
         </Card>
       )}
 
+      {editable && !viewing && (
+        <DraftCard draft={draft} onDone={load} />
+      )}
+
       {editable && <SubmitCard summary={summary} onDone={load} />}
 
       <Card title="What this adds up to"
@@ -440,6 +476,229 @@ function Sheet({ actor, viewing, onBack }) {
 /* Calling the sheet finished is a separate act from filling it in, and it is
    the act that makes the timesheet speak for the year instead of the
    controller's reconstruction. So it says what it is claiming, in hours. */
+/*
+  The controller's reconstruction, shown to the person whose work it was.
+
+  2 CFR 200.430(i) does not require a contemporaneous record — it requires one
+  that reflects the work actually performed, supported, and reviewed after the
+  fact. A reconstruction the person reads, corrects and signs meets that; a
+  reconstruction nobody ever saw does not, which is where 2025 has been
+  sitting: 43 people, zero entries, zero certifications.
+
+  So this is a **proposal**, in the same sense every other proposal in this
+  system is one. Nothing here is on the sheet. Adopting writes it under the
+  person's own name, and the router takes no employee key, because nobody
+  enters time for anybody else.
+
+  Two rules the restatement screen already follows, and this one keeps:
+
+  - **"Not yet, because", never an empty list.** Where the draft cannot be
+    adopted the server says why, and the reason is the work — usually that
+    nobody has recorded the employment terms the hours are divided by.
+  - **Nothing is computed here.** Every figure is read from the answer,
+    including the hours, the working days and the share. A screen that
+    divided the shares itself would be a second implementation of the
+    distribution, free to disagree with the one that gets written.
+*/
+function DraftCard({ draft, onDone }) {
+  const toast = useToast();
+  const [ack, setAck] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  if (!draft) return null;
+
+  const lines = draft.lines || [];
+  const alreadyEntered = Number(draft.already_entered || 0);
+  /* Adopted is read from the sheet rather than remembered in this component:
+     a flag set on success would be wrong the moment somebody reloads, and
+     the answer is already on the record. Every proposed hour is on the sheet
+     when the entered total has reached what the draft proposes. */
+  const proposed = lines.reduce((a, l) => a + Number(l.hours || 0), 0);
+  const adopted = proposed > 0 && alreadyEntered >= proposed - 0.005;
+
+  async function adopt() {
+    setBusy(true);
+    try {
+      const r = await api.adoptDraft({ acknowledged: true });
+      toast(`Adopted — ${hours(r.hours)} hours across ${r.working_days} working days`,
+            { tone: "ok" });
+      setAck(false);
+      await onDone();
+    } catch (e) {
+      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
+      let detail = msg;
+      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
+      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+            { tone: "fail", sticky: true });
+    }
+    setBusy(false);
+  }
+
+  /* Not adoptable is the ordinary state until the roster reply comes back,
+     and it is worth as much screen as the adoptable one: the sentence names
+     the thing somebody has to go and get. */
+  if (!draft.adoptable) {
+    return (
+      <Card title="The reconstruction of your year"
+            aside="Not yet — and here is why">
+        <p className="quiet small">{draft.because}</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="The reconstruction of your year" variant="raised"
+          aside={`${hours(draft.expected_hours)} contracted hours · ${draft.working_days} working days`}>
+      {/* **Optional, and it says so before it says anything else.** The one
+          way this exercise produces forty-three worthless signatures is a
+          convenience that reads as an instruction, so the alternatives come
+          from the server (`instead`) rather than being written here — a
+          second copy of what the routes allow is one free to drift from
+          them. */}
+      {draft.optional && (
+        <p className="caveat">
+          <strong>This is optional.</strong> It is a starting point offered to
+          save you rebuilding a year from memory — not a form you have to
+          accept. Any of these is a complete answer:
+        </p>
+      )}
+      {(draft.instead || []).length > 0 && (
+        <ul className="quiet small ts-instead">
+          {draft.instead.map((t, i) => <li key={i}>{t}</li>)}
+        </ul>
+      )}
+
+      <p className="quiet small">{draft.because}</p>
+
+      {adopted && (
+        <p className="quiet small">
+          You have adopted this. It is on your sheet above as your own record —
+          correct any day that is wrong, then submit. Adopting again would be
+          refused, because the hours are already there.
+        </p>
+      )}
+      {!adopted && alreadyEntered > 0 && (
+        <p className="quiet small">
+          You already have {hours(alreadyEntered)} hours on this sheet.
+          Adopting adds the reconstruction alongside them and will be refused
+          where the two land on the same day and objective — so correct or
+          remove those first if you want the reconstruction to stand instead.
+        </p>
+      )}
+
+      <Table columns={[
+        { label: "Objective", align: "left" }, { label: "Share" },
+        { label: "Hours" }, { label: "Grade", align: "left" },
+      ]}>
+        {lines.map((l) => (
+          <tr key={l.objective_id}>
+            <td className="l"><strong>{l.objective_id}</strong></td>
+            <td className="num">{(Number(l.share) * 100).toFixed(1)}%</td>
+            <td className="num">{hours(l.hours)}</td>
+            <td className="l quiet small">{GRADE[l.grade] || l.grade}</td>
+          </tr>
+        ))}
+      </Table>
+
+      <p className="quiet small">
+        {draft.from_hours_log
+          ? <>Adopting records these as <strong>recalled</strong>, each
+              month&apos;s hours placed in that month and spread across its
+              working days — about {hours(draft.hours_per_day)} a day. It is
+              not a diary, but the months are yours: they come from the hours
+              log, not from a figure smeared over the year.</>
+          : <>Adopting records these as <strong>recalled</strong>, spread
+              evenly across the {draft.working_days} working days — about{" "}
+              {hours(draft.hours_per_day)} a day. There is no month-by-month
+              record of your hours, so this is the year&apos;s distribution
+              and it says so rather than pretending to a shape it has not
+              got.</>}
+      </p>
+
+      {(draft.months || []).length > 0 && (
+        <Table columns={[
+          { label: "Month", align: "left" }, { label: "Work days" },
+          { label: "Available" }, { label: "On the log" },
+          { label: "Objectives" },
+        ]}>
+          {draft.months.map((m) => (
+            <tr key={m.month_start}>
+              <td className="l">{m.month}</td>
+              <td className="num">{m.days}</td>
+              <td className="num">{hours(m.available)}</td>
+              <td className="num">{hours(m.hours)}</td>
+              <td className="num">{m.lines.length}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
+
+      {/* **Contracted hours are not project hours**, and a sheet that spends
+          all of them on cost objectives says nobody took a day off all year.
+          The public holidays are the part the record can defend; the rest is
+          the person's to correct, and saying so is the whole point of
+          showing them a draft. */}
+      <div className="stat-row">
+        <Stat label="Available" size="lg" value={hours(draft.available_hours)}
+              note={`${draft.working_days} work days, YBI's calendar`} />
+        <Stat label="On the log" value={hours(draft.work_hours)}
+              note={draft.from_hours_log
+                    ? `${(draft.months || []).length} months on file`
+                    : "no monthly record"} />
+        <Stat label="Contracted" value={hours(draft.expected_hours)}
+              note="from your terms" />
+      </div>
+      {/* Not a failure — a caveat the reader must not miss. Warm, per the
+          annotation rule: pencil, not traffic light. */}
+      {draft.not_known && <p className="caveat">{draft.not_known}</p>}
+
+      <button className="linkish" onClick={() => setOpen(!open)}>
+        {open ? "Hide" : "Where these figures come from"}
+      </button>
+      {open && (
+        <div className="ts-draft-why">
+          {lines.map((l) => (
+            <p key={l.objective_id} className="quiet small">
+              <strong>{l.objective_id}</strong> — {l.rationale}
+              {l.source ? ` (${l.source})` : ""}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* **A button that would answer 409 is the lesson the nav already
+          learned.** Once the reconstruction is on the sheet, adopting again
+          is refused by the day-and-objective collision, so the card stops
+          offering it and says what the state is instead. */}
+      {!adopted && (
+        <>
+          <label className="cert-ack">
+            <input type="checkbox" checked={ack}
+                   onChange={(e) => setAck(e.target.checked)} />
+            <span>
+              I have read this and it is a fair record of my own work. I
+              understand I can correct any day before I submit the sheet.
+            </span>
+          </label>
+          <button className="btn primary" disabled={!ack || busy} onClick={adopt}>
+            {busy ? "Adopting…" : "Adopt this as my sheet"}
+          </button>
+          {/* Adopting and certifying are two acts and live on two screens.
+              Collapsing them into one button would take a signature from
+              somebody who had only meant to accept a starting point. */}
+          <p className="quiet small">
+            This does not certify anything. It puts the hours on your sheet so
+            you can correct them. Signing happens later and separately, under
+            <strong> My effort</strong>, once the sheet says what you mean.
+          </p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+
 function SubmitCard({ summary, onDone }) {
   const toast = useToast();
   const [ack, setAck] = useState(false);
@@ -616,5 +875,121 @@ function DayPanel({ day, entries, onClose }) {
         </ul>
       )}
     </div>
+  );
+}
+
+
+/* Hours given rather than paid, and what they are worth.
+ *
+ * They never enter the paid labour distribution — that would move every
+ * other share — so they are valued separately or not at all.
+ *
+ * The rate is the controller's judgment and **never for their own hours**:
+ * 2 CFR 200.306(e) wants a rate consistent with what YBI pays for similar
+ * work, and that is a judgment about somebody's time rather than theirs to
+ * make. The schema refuses it and so does the handler; this just does not
+ * offer the box, so nobody meets a refusal they could not have predicted.
+ */
+function Donated({ given, actor, onDone }) {
+  const [open, setOpen] = useState(null);
+  const [rate, setRate] = useState("");
+  const [basis, setBasis] = useState("");
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const isController = (actor?.portfolios || []).includes("CONTROLLER");
+  const mine = (actor?.employee_key || "").toUpperCase();
+
+  async function save(key) {
+    setBusy(true);
+    try {
+      const r = await api.putDonationRate({
+        employee_key: key, hourly_rate: rate, basis,
+      });
+      toast.ok(`${r.hours} donated hours valued at $${r.valued_at}`
+               + (r.superseded ? " — the earlier rate is superseded" : ""));
+      setOpen(null); setRate(""); setBasis("");
+      await onDone();
+    } catch (e) { toast.fail(String(e.message || e)); }
+    setBusy(false);
+  }
+
+  return (
+    <Card title="Donated time"
+          aside={given.unvalued
+            ? `${given.unvalued} person${given.unvalued === 1 ? "" : "s"} not yet valued`
+            : `valued at $${Number(given.valued_total).toLocaleString()}`}>
+      <p className="quiet small" style={{ marginTop: -4, marginBottom: 12 }}>
+        Hours given rather than paid. They never enter the paid labour
+        distribution — that would move every other share — so they are valued
+        separately, at a rate consistent with what YBI pays for similar work
+        (2 CFR 200.306(e)). Nobody values their own.
+      </p>
+      <Table columns={[
+        { label: "Who", align: "left" },
+        { label: "Hours" },
+        { label: "Rate" },
+        { label: "Worth" },
+        { label: "On what basis", align: "left" },
+      ]}>
+        {given.people.map((p) => (
+          <React.Fragment key={p.employee_key}>
+            <tr>
+              <td className="l strong">{p.employee_key}
+                <div className="quiet small">
+                  {p.objectives.map((o) => o.objective_id).join(", ")}
+                </div>
+              </td>
+              <td className="num">{Number(p.hours).toFixed(2)}</td>
+              <td className="num">{p.hourly_rate ? `$${p.hourly_rate}` : "—"}</td>
+              <td className="num">
+                {p.valued_at ? `$${Number(p.valued_at).toLocaleString()}`
+                             : <span className="quiet">not valued</span>}
+              </td>
+              <td className="l wrap quiet small">
+                {p.rate_basis || (
+                  isController && p.employee_key !== mine ? (
+                    <button className="btn sm"
+                            onClick={() => { setOpen(p.employee_key); setRate(""); setBasis(""); }}>
+                      Set the rate
+                    </button>
+                  ) : isController && p.employee_key === mine
+                    ? "Yours to give, somebody else's to value."
+                    : "Not yet valued."
+                )}
+              </td>
+            </tr>
+            {open === p.employee_key && (
+              <tr className="subrow">
+                <td className="l" colSpan={5}>
+                  <div className="upload-form">
+                    {/* The narrow column of `.upload-form` is 220px, so
+                        the short label belongs to the short field. The
+                        200.306(e) guidance is on the card above rather than
+                        crammed into a hint that wraps to four lines. */}
+                    <Field label="An hour is worth" hint="In dollars.">
+                      <input value={rate} inputMode="decimal"
+                             onChange={(e) => setRate(e.target.value)}
+                             placeholder="72.50" />
+                    </Field>
+                    <Field label="On what basis"
+                           hint="What YBI pays for similar work, or the labour market where it has no such work. This is what an auditor reads — 'market' is not a statement of anything, and the schema will not take it.">
+                      <input value={basis} onChange={(e) => setBasis(e.target.value)}
+                             placeholder="Comparable is programme delivery; Ohio market, 2025 survey." />
+                    </Field>
+                    <div className="upload-actions">
+                      <button className="btn primary" disabled={busy || !rate || basis.length < 11}
+                              onClick={() => save(p.employee_key)}>
+                        {busy ? "Recording…" : "Record the rate"}
+                      </button>
+                      <button className="btn quiet" onClick={() => setOpen(null)}>Cancel</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </React.Fragment>
+        ))}
+      </Table>
+    </Card>
   );
 }

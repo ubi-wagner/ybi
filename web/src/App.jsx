@@ -5,6 +5,7 @@ import { api, Unauthorized } from "./api.js";
 import SignIn from "./pages/SignIn.jsx";
 import PasswordDialog from "./components/PasswordDialog.jsx";
 import UndoTrail from "./components/UndoTrail.jsx";
+import FailureBell from "./components/FailureBell.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Worklist from "./pages/Worklist.jsx";
 import Certify from "./pages/Certify.jsx";
@@ -16,15 +17,20 @@ import Reconcile from "./pages/Reconcile.jsx";
 import MyDocuments from "./pages/MyDocuments.jsx";
 import People from "./pages/People.jsx";
 import Home from "./pages/Home.jsx";
+import Requests from "./pages/Requests.jsx";
 import FirstPassword from "./components/FirstPassword.jsx";
 import Evidence from "./pages/Evidence.jsx";
 import Facilities from "./pages/Facilities.jsx";
 import Chart from "./pages/Chart.jsx";
+import Projects from "./pages/Projects.jsx";
 import Lanes from "./pages/Lanes.jsx";
+import Restate from "./pages/Restate.jsx";
 import Rates from "./pages/Rates.jsx";
 import Review from "./pages/Review.jsx";
 import Contracts from "./pages/Contracts.jsx";
 import Awards from "./pages/Awards.jsx";
+import Library from "./pages/Library.jsx";
+import Reports from "./pages/Reports.jsx";
 
 /* Navigation carries the schedule each step eventually prints as in the audit
    package. Someone who has seen the workpapers already knows where they are.
@@ -46,18 +52,44 @@ const ALL_TABS = [
   ["/",          "Home",       "·",   null],
   ["/timesheet", "My time",    "G",   "staff"],
   ["/certify",   "My effort",  "G",   "staff"],
-  ["/documents", "Documents",  "E",   null],
+  /* Three tabs live on Schedule E and they are easy to confuse, so each one
+     is named for what you do there rather than for what it holds. "My
+     documents" is where you send yours in; the "Library" is the whole shelf,
+     to read; "Evidence" is where somebody says what a document proves. The
+     first of those was called "Documents", which is the generic word for all
+     three and matched neither its own heading nor its job. */
+  ["/documents", "My documents", "E", null],
+  ["/library",   "Library",    "E",   "reader"],
   ["/people",    "People",     "·",   "admin"],
   ["/imports",   "Import",     "A",   "CONTROLLER"],
   ["/reconcile", "Reconcile",  "A-1", "CONTROLLER"],
   ["/chart",     "Chart",      "H",   "CONTROLLER"],
   ["/classify",  "Classify",   "B",   "CONTROLLER"],
   ["/evidence",  "Evidence",   "E",   "OFFICE"],
+  /* Reading what has been asked for takes the same gate the router asks for,
+     `require_reader`. Accepting a reply takes the portfolio that owns the
+     data, which the screen itself decides — so somebody who may read this
+     and not write it sees everything and is told whose judgment the last
+     step is, rather than meeting a 403 they could not have predicted. */
+  ["/requests",  "Requests",   "E",   "reader"],
   ["/space",     "Space",      "I",   "FACILITIES"],
   ["/inventory", "Inventory",  "I",   "INVENTORY"],
   ["/contracts", "Contracts",  "F",   "PROJECT"],
+  /* Setting a piece of work up, and the list of who is doing what by when.
+     Same gate as Contracts, because it is the same job: a project IS a
+     charge code somebody set up, and the people on it are the people the
+     charge-code routes authorise. */
+  ["/projects",  "Projects",   "F",   "PROJECT"],
   ["/lanes",     "Lanes",      "C",   "CONTROLLER"],
   ["/rates",     "Rates",      "D",   "CONTROLLER"],
+  /* The point of the whole system, and it had no tab for as long as it has
+     existed: five routes, complete, and no page, no route and no call in
+     api.js. Everything upstream — the classification, the seal, the rate,
+     the allocation — exists so that a number put in front of NCDMM can be
+     traced back to a judgment somebody signed their name to, and nobody
+     could reach the screen that puts it there. */
+  ["/restate",   "Restate",    "F",   "CONTROLLER"],
+  ["/reports",   "Reports",    "G",   "reader"],
   ["/review",    "Review",     "A-1", "reader"],
   ["/help",      "Help",       "?",   null],
 ];
@@ -75,7 +107,16 @@ function tabsFor(actor) {
     // An auditor reads the whole record and writes none of it, so the
     // reviewing screens are theirs even with no portfolio.
     if (actor.role === "AUDITOR") return true;
-    return held.has(needs);
+    // CONTROLLER reaches everything. Every narrow gate in auth.py is
+    // `require_portfolio(X, Portfolio.CONTROLLER)`, so the API already lets
+    // a controller into Evidence, Space, Inventory and Contracts — and this
+    // function did not, which left Tom holding the portfolio that reaches
+    // everything and offered four screens fewer than he is entitled to. A
+    // nav stricter than the API is the same defect as one looser than it:
+    // both mean the screen and the server disagree about who you are. The
+    // looser direction shows a tab that answers 403; this direction hides
+    // work somebody has to know a URL to reach.
+    return held.has(needs) || held.has("CONTROLLER");
   });
 }
 
@@ -142,6 +183,7 @@ export default function App() {
         <header className="topbar">
           <span className="wordmark">Youngstown Business Incubator</span>
           <span className="period-chip">Cost allocation · 2025</span>
+          <FailureBell />
           <span className="topbar-actor">
             {actor.display_name}
             <span className="role-chip" title={
@@ -185,20 +227,27 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home actor={actor} />} />
           <Route path="/documents" element={<MyDocuments actor={actor} />} />
+          <Route path="/library" element={<Library />} />
+          <Route path="/reports" element={<Reports actor={actor} />} />
           <Route path="/people" element={<People actor={actor} />} />
           <Route path="/inventory" element={<Facilities actor={actor} tab="equipment" />} />
           <Route path="/timesheet" element={<Timesheet actor={actor} />} />
           <Route path="/certify" element={<Certify />} />
           <Route path="/help" element={<Help />} />
-          <Route path="/worklist/:kind" element={<Worklist />} />
+          <Route path="/worklist/:kind" element={<Worklist actor={actor} />} />
           <Route path="/imports" element={<Imports />} />
           <Route path="/reconcile" element={<Reconcile actor={actor} />} />
           <Route path="/chart" element={<Chart />} />
           <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
           <Route path="/evidence" element={<Evidence actor={actor} />} />
+          <Route path="/requests" element={<Requests actor={actor} />} />
           <Route path="/space" element={<Facilities actor={actor} />} />
+          <Route path="/projects" element={<Projects actor={actor} />} />
+          <Route path="/projects/:objectiveId" element={<Projects actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
           <Route path="/rates" element={<Rates />} />
+          <Route path="/restate" element={<Restate actor={actor} />} />
+          <Route path="/restate/:restatementId" element={<Restate actor={actor} />} />
           <Route path="/review" element={<Review />} />
           <Route path="/review/:pane" element={<Review />} />
           <Route path="/awards" element={<Awards />} />

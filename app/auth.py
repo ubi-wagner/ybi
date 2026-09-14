@@ -38,6 +38,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import secrets
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -204,6 +205,88 @@ def jwt_secret() -> str:
     return secret
 
 
+#: The shortest organisational default worth having. A six-character shared
+#: password reads as a control and is not one, so a value below this is
+#: ignored entirely rather than honoured — the door is shut, not ajar.
+MIN_PASSWORD = 12
+
+
+def shared_initial_password() -> str:
+    """The organisation's first-login password, or "" if there is not one.
+
+    Read from the setting on every call rather than captured at import, so
+    clearing the Railway variable takes effect on the next request instead of
+    on the next deploy.
+    """
+    candidate = (settings.initial_password or "").strip()
+    return candidate if len(candidate) >= MIN_PASSWORD else ""
+
+
+def unusable_password_hash() -> str:
+    """A hash for an account opened on the shared password.
+
+    The shared value is deliberately **not** what is stored. Writing it into
+    every row would put one secret at rest in forty places, make withdrawing
+    it forty resets, and leave a copy of the database a copy of the
+    credential. The row gets a random nobody holds; `check_credential` is
+    what lets the setting through.
+    """
+    return hash_password(secrets.token_urlsafe(32))
+
+
+def check_credential(candidate: str, password_hash: str,
+                     password_set_by: str) -> str | None:
+    """Which credential was presented: the account's own, the shared one, or
+    neither.
+
+    `OWN` and `SHARED` are different facts and the trail records them
+    differently: a sign-in on a password the whole organisation holds does not
+    identify one person, which is the same reason `refuse_issued_password`
+    will not let that session write anything but its own new password.
+
+    **Only `SEED`.** `password_origin` has three values and the first draft
+    admitted everything that was not `SELF`, which swept in `ADMIN` — a
+    password an administrator deliberately chose for one named person, and
+    the origin `reset_password` writes when *"the account may be in the wrong
+    hands"*. Admitting the organisation's value there meant a reset no longer
+    restored exclusive control: anybody holding the shared password could
+    sign into the reset account, and `change_password` — the documented exit
+    from the write gate — would hand it over and revoke the owner's sessions.
+    `SEED` is the origin that means *shared, identifies nobody*, which is
+    exactly and only what this is for. An `ADMIN` account has a usable
+    password of its own, so nothing is locked out by the narrowing.
+
+    Three rules keep it from becoming an oracle, and the third was missing.
+    The stored hash is always verified first, so a present and an absent
+    account cost the same; the shared value is offered only against `SEED`,
+    which the caller passes as `SELF` for an account that does not exist; and
+    **the comparison cannot raise.** `secrets.compare_digest` refuses two
+    `str` arguments where either is non-ASCII — it raises `TypeError` — and
+    nothing above catches it, so a password with an umlaut in it answered
+    *500 where an account was unclaimed and 401 everywhere else*. That is a
+    sharper oracle than the one this was written to avoid: it named the
+    accounts still claimable rather than merely the ones that exist, and it
+    raised before `login` records the failed attempt, so the lockout never
+    counted it and the sweep was unmetered. Comparing bytes has no such
+    restriction, and the blanket guard is the same fail-closed rule
+    `verify_password` already applies a few lines down.
+    """
+    if verify_password(candidate, password_hash):
+        return "OWN"
+    shared = shared_initial_password()
+    if not shared or password_set_by != "SEED":
+        return None
+    try:
+        if secrets.compare_digest(candidate.encode("utf-8"),
+                                  shared.encode("utf-8")):
+            return "SHARED"
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException:
+        log.exception("the shared-password comparison refused its arguments")
+    return None
+
+
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -308,7 +391,7 @@ def current_actor(request: Request) -> Actor:
     if not row:
         raise HTTPException(401, "Session is no longer valid.")
 
-    return Actor(
+    actor = Actor(
         actor_id=str(row["actor_id"]),
         email=row["email"],
         display_name=row["display_name"],
@@ -318,6 +401,12 @@ def current_actor(request: Request) -> Actor:
         portfolios=frozenset(Portfolio(p) for p in row["portfolios"]),
         record_access=bool(row["record_access"]),
     )
+    # Stashed so middleware can name the person on a request that never
+    # reaches a handler. A refusal recorded as "anonymous" when the caller was
+    # signed in and merely lacked a portfolio is the least useful kind of
+    # record: it says something was refused and not to whom.
+    request.state.actor = actor
+    return actor
 
 
 def require_role(*roles: Role):
@@ -411,6 +500,44 @@ require_inventory = require_portfolio(Portfolio.INVENTORY, Portfolio.CONTROLLER)
 require_project = require_portfolio(Portfolio.PROJECT, Portfolio.CONTROLLER)
 require_facilities = require_portfolio(Portfolio.FACILITIES, Portfolio.CONTROLLER)
 require_office = require_portfolio(Portfolio.OFFICE, Portfolio.CONTROLLER)
+
+#: Any authority over any part of the record. Not a sixth portfolio and not a
+#: way round the five: every route that writes to an *area* still takes that
+#: area's gate. This is for the acts that are about the work rather than
+#: about the cost — recommending an outstanding item to the person who can
+#: clear it. Whichever part of the record you hold, you can see something
+#: nobody has picked up and say so.
+require_any_portfolio = require_portfolio(*Portfolio)
+
+
+def require_own_work(actor: Actor = Depends(current_actor)) -> Actor:
+    """The part of the outstanding list that is *yours to do*.
+
+    Deliberately not `require_reader`. Reading the cost record and being
+    shown your own jobs are different permissions, and `/worklist/mine` had
+    the first — so the endpoint whose docstring is written about Heidi
+    ("Heidi should open the application and see that the buildings have no
+    square footage") would have answered Heidi 403, because a portfolio does
+    not make somebody a reader and `FACILITIES` is not a rank.
+
+    It never showed, because every portfolio holder in the seeded record
+    also holds CONTROLLER rank. That is the shape of a defect masked by
+    data rather than by luck: the day somebody is granted one narrow
+    portfolio and nothing else — which is the 2026 arrangement and arguably
+    the right 2025 one — their own list is the first screen they cannot
+    open.
+
+    What it does *not* loosen: the handler filters to
+    `owner_portfolio = ANY(held)`, so a FACILITIES-only account sees the
+    space items and no ledger. The narrow portfolios reach their own area,
+    which is what they have always meant.
+    """
+    if not (actor.can_read or actor.portfolios):
+        raise HTTPException(
+            403, f"{actor.display_name} holds no portfolio and does not read "
+                 f"the cost record, so there is no list of outstanding work "
+                 f"to show. An administrator can grant a portfolio.")
+    return actor
 
 def _admin_guard(actor: Actor = Depends(current_actor)) -> Actor:
     if actor.role not in ADMINS:

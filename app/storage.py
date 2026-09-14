@@ -41,10 +41,13 @@ the original name after it is what makes the directory readable.
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
 from app.settings import settings
+
+log = logging.getLogger("ybi.storage")
 
 #: Every path in the system hangs off this. On Railway it must equal the
 #: volume mount path — anything written outside it is on the container
@@ -222,3 +225,153 @@ def ensure_skeleton() -> list[str]:
     if current != README:
         readme.write_text(README)
     return made
+
+
+# ── What a file actually is ──────────────────────────────────────────
+
+#: Leading bytes that identify a type, longest signature first so a longer
+#: match is never shadowed by a shorter prefix of it.
+#:
+#: This is deliberately small. It is not a general file-type library; it is
+#: the set of types this system is willing to make a positive claim about,
+#: and everything outside it is `application/octet-stream` — a file, offered
+#: as a download, which is the safe answer.
+_SIGNATURES: tuple[tuple[bytes, str], ...] = (
+    (b"%PDF-",                       "application/pdf"),
+    (b"\x89PNG\r\n\x1a\n",           "image/png"),
+    (b"\xff\xd8\xff",                "image/jpeg"),
+    (b"GIF87a",                      "image/gif"),
+    (b"GIF89a",                      "image/gif"),
+)
+
+#: Zip-container formats, told apart by their extension once the container is
+#: confirmed. None of these is shown inline, so the extension is doing
+#: display work only — it decides a label, never a permission.
+_ZIP_KINDS = {
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
+
+
+def sniff_type(raw: bytes, filename: str | None = None) -> str:
+    """What these bytes are, read from the bytes.
+
+    The content type a client sends is a claim, and an unreliable one: the
+    seeding script sent `application/octet-stream` for fourteen PDFs and the
+    document library had nothing it could show. Worse in the other
+    direction, a claim is the uploader's to make, and an inline render
+    decided by the uploader's own word is not a decision at all.
+
+    So the type is determined here, from the first bytes, and the claim is
+    discarded. A file this cannot identify is `application/octet-stream`,
+    which downloads — an unrecognised file being offered as a download is
+    the right outcome, not a gap to fill with a guess.
+
+    The one case decided by reading rather than by signature is text, which
+    has no signature to read: bytes that decode as UTF-8 with nothing
+    unprintable in them are text, and `.csv` says which kind. That check is
+    a real one — it is the bytes being examined, not a label being believed.
+    """
+    head = raw[:512]
+    for signature, mime in _SIGNATURES:
+        if head.startswith(signature):
+            return mime
+    # RIFF....WEBP — the size sits between the two markers.
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    suffix = Path(filename or "").suffix.lower()
+    if head[:4] in (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"):
+        return _ZIP_KINDS.get(suffix, "application/zip")
+    if head[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":     # OLE2: .xls, .doc
+        return "application/vnd.ms-excel" if suffix in (".xls", ".xlt") \
+            else "application/x-ole-storage"
+
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return "application/octet-stream"
+    # A tab, a newline and a carriage return are text; the rest of the C0
+    # range is a binary file that happens to decode.
+    if any(ord(c) < 32 and c not in "\t\n\r" for c in text[:4096]):
+        return "application/octet-stream"
+    return "text/csv" if suffix == ".csv" else "text/plain"
+
+
+#: Beyond this a document is being stored rather than read. LTM's 54-page
+#: agreement is 150 kB of text; a million characters is two hundred pages of
+#: dense prose and nothing in this record is that.
+TEXT_LIMIT = 1_000_000
+
+
+def read_text(raw: bytes, mime: str) -> tuple[str | None, int | None]:
+    """What a document says, taken from the bytes as it arrives.
+
+    Forty-three documents were on file and the system had read the text of
+    **none** of them: ``evidence.extracted_text`` and ``evidence.page_count``
+    were columns four things could have used and nothing had ever written.
+    The same shape as ``rate.superseded_by``, ``space_partition``,
+    ``award_budget_line`` and the three document-fact columns — a column that
+    looks usable and is filled by nothing is an invitation.
+
+    It cost more than the others. Nothing could check a citation against the
+    document it cites, so ``award_term`` carried ``§25 Invoicing`` and
+    ``§26 Payment`` on two agreements that contain neither clause, and
+    nothing in the system was in a position to notice.
+
+    Three answers, and keeping them apart is the whole point:
+
+        NULL    nobody has read it — a format with no text in it to read, or
+                a file that could not be opened
+        ''      read, and there is nothing extractable in it. Drive AM's
+                agreement is thirty-six pages of image; that is a **fact
+                about the document**, and the one that explains why nobody
+                has ever cited a clause of it
+        text    read
+
+    *Unread* and *nothing to read* are different facts, exactly as a blank on
+    an intake form is not a zero, and collapsing them would turn "this award
+    cannot be checked" into "this award checks out".
+
+    Never raises. A document that cannot be parsed is still a document, and
+    an upload that fails because a PDF is malformed would lose the one copy
+    somebody had.
+    """
+    if mime == "application/pdf":
+        try:
+            from pypdf import PdfReader
+            from io import BytesIO
+            reader = PdfReader(BytesIO(raw))
+            pages = len(reader.pages)
+            parts, total = [], 0
+            for page in reader.pages:
+                got = page.extract_text() or ""
+                parts.append(got)
+                total += len(got)
+                if total >= TEXT_LIMIT:
+                    break
+            return "\n".join(parts)[:TEXT_LIMIT], pages
+        except Exception:                                   # noqa: BLE001
+            log.warning("could not read text from a PDF (%d bytes)", len(raw))
+            return None, None
+    if mime in ("text/plain", "text/csv"):
+        try:
+            return raw.decode("utf-8")[:TEXT_LIMIT], None
+        except UnicodeDecodeError:
+            return None, None
+    # An image, a spreadsheet, a zip. There is text in a workbook, but it is
+    # cells rather than prose and `request_intake.py` reads it properly where
+    # it matters; a flattened dump of it here would be a second, worse
+    # reading of the same file.
+    return None, None
+
+
+def original_name(stored: str) -> str:
+    """The name a document arrived under, recovered from its stored name.
+
+    The one place a path is read backwards, and it exists for exactly one
+    job: repairing rows written before `evidence.filename` was a column. The
+    index owns the name now — `scripts/retype_documents.py` is the last
+    caller, and nothing on a live path should grow a second one.
+    """
+    return re.sub(r"^[0-9a-f]{16}_", "", stored)

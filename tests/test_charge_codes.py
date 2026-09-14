@@ -7,8 +7,12 @@ somebody would otherwise have to remember.
 
 from __future__ import annotations
 
+import os
 import re
+from decimal import Decimal
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SQL = ROOT / "app" / "sql"
@@ -136,16 +140,51 @@ def test_the_crosswalk_proposes_but_never_decides():
         "cannot say where the suggestion came from.")
 
 
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"),
+                    reason="propose() reads the prior year, so it needs a "
+                           "database; the source-level half of this rule is "
+                           "in tests/test_classification_log.py, which does "
+                           "not")
 def test_the_crosswalk_refuses_to_guess_a_split():
-    """Twenty-four accounts divide and need a documented driver.
+    """An account that divides *across pools* needs a documented driver.
 
-    Depreciation splits by square footage, wages by timesheet. Proposing one
-    side of a split would be inventing the driver, which is the judgment the
-    split exists to force somebody to make.
+    Depreciation splits OVERHEAD from RENTAL_DIRECT by square footage, wages
+    split three ways by timesheet. Proposing one side would be inventing the
+    driver, which is the judgment the split exists to force somebody to make.
+
+    This used to assert the literal source `'"/" not in mapped[0]'`, and that
+    is a different claim from the one in the docstring — it tests the
+    punctuation rather than the rule. Five of the twenty-four entries divide
+    by *natural type* (Rising Tides, LTM, Drive AM, Digital Engineering,
+    AAMEN): labour to 5100, subawards to 5200, materials to 5300, travel to
+    5500, **every branch in the DIRECT range**. The split decides which 2026
+    account and the queue is asking which 2025 pool, so refusing those was
+    refusing $1,382,737 on a slash. Asserting the property instead lets the
+    rule be right and keeps the guarantee the docstring actually states.
     """
-    src = (ROOT / "app" / "routers" / "classify.py").read_text()
-    assert '"/" not in mapped[0]' in src, (
-        "a split account is being proposed as if it mapped one-to-one.")
+    from app.domain.chart import pool_for
+    from app.domain.crosswalk import CROSSWALK
+    from app.routers.classify import propose, GroupOut
+
+    def group(account: str) -> GroupOut:
+        return GroupOut(group_key=f"{account}\x1fx", account=account,
+                        payee="x", line_count=1, amount=Decimal("100.00"),
+                        abs_amount=Decimal("100.00"))
+
+    crossing = []
+    for leaf, (target, _) in CROSSWALK.items():
+        pools = {pool_for(p.strip()) for p in target.split("/")}
+        pools.discard(None)
+        if len(pools) > 1:
+            crossing.append(leaf)
+    assert len(crossing) > 5, "no cross-pool splits left to check"
+
+    for leaf in crossing:
+        p = propose(group(leaf))
+        assert p is None or p.get("source") != "crosswalk", (
+            f"{leaf} divides across pools ({CROSSWALK[leaf][0]}) and the "
+            f"crosswalk proposed {p.get('pool') if p else None} for it "
+            f"anyway — that is inventing the driver.")
 
 
 def test_a_crosswalk_proposal_leaves_the_990_function_and_federal_open():

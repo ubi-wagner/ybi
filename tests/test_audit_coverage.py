@@ -102,3 +102,52 @@ def test_mutating_route_takes_its_actor_from_the_session(router, method, route,
         f"{method} /api/{router}{route} ({handler}) does not resolve an actor "
         f"from the session. An audit entry whose actor came from the request "
         f"body records a claim, not a fact.")
+
+
+#: A name in a request is a label. ``upload`` says so in a comment two
+#: hundred lines above ``accept``, which is the route that did not.
+ACTOR_NAME = re.compile(r"\b(\w+_by)\b")
+
+
+def actor_named_parameters(body: str) -> set[str]:
+    """Every ``*_by`` the handler takes from the request.
+
+    Two spellings, because both are written: a query or form parameter in the
+    signature (``accepted_by: str = ""``), and a field on the body model read
+    as ``body.created_by``.
+    """
+    signature = body.split(")", 1)[0]
+    found = {n for n in ACTOR_NAME.findall(signature)}
+    found |= set(re.findall(r"\bbody\.(\w+_by)\b", body))
+    return found
+
+
+@pytest.mark.parametrize(
+    "router,method,route,handler,body", ROUTES,
+    ids=[f"{r[0]}:{r[1]}:{r[2] or '/'}" for r in ROUTES])
+def test_a_name_in_the_request_is_only_ever_a_label(router, method, route,
+                                                    handler, body):
+    """Resolving an Actor is not the same as using one.
+
+    The test above proves every mutating handler resolves an Actor through a
+    dependency. ``POST /api/imports/{batch_id}/accept`` did — and then wrote
+    ``accepted_by`` straight from the query string into ``staging_batch`` and
+    into ``ledger_import.imported_by``, which is the permanent provenance
+    record every ledger line points back to. The screen sent the literal
+    string ``tom``, so who promoted the general ledger was whatever the URL
+    said, and the trail could not disagree.
+
+    Eight of the nine routes carrying such a parameter already reassigned it
+    from the session; one did not, and nothing could tell them apart. This is
+    that check. Keeping the parameter is deliberate — a document can be
+    received on somebody else's behalf — but it is a label the session
+    overrides, never an identity the caller asserts.
+    """
+    if (router, handler) in EXEMPT:
+        pytest.skip(EXEMPT[(router, handler)])
+    for name in sorted(actor_named_parameters(body)):
+        assert re.search(rf"^\s*{name} = actor\.display_name", body, re.M), (
+            f"{method} /api/{router}{route} ({handler}) takes `{name}` from "
+            f"the request and never overrides it from the session, so a "
+            f"caller names whoever they like on the record. Write "
+            f"`{name} = actor.display_name or {name}` before using it.")

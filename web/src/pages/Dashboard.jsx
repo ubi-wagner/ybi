@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { Card, Stat, Pill, Tick, Meter, Table, Empty } from "../components/ui.jsx";
+import { forKind } from "../worklistKinds.js";
 
 const money = (v) =>
   v === null || v === undefined
@@ -14,20 +15,6 @@ const money = (v) =>
 const when = (t) =>
   !t ? "" : new Date(t).toLocaleString(undefined,
     { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-
-/* Human labels for the work-list kinds. The database names them for the query
-   plan; the controller should read what the item actually is. */
-const KIND = {
-  UNCLASSIFIED: ["Unclassified cost", "In scope, no live decision"],
-  BLOCKS_SEAL: ["Blocks the seal", "Graded unsupported or test assumption"],
-  NEEDS_EVIDENCE: ["Needs evidence", "Federally chargeable, nothing cited"],
-  NEEDS_CERTIFICATION: ["Needs certification", "Effort not attested by the employee"],
-  ASSET_FUNDING_UNKNOWN: ["Asset funding unknown", "Depreciation reads as fully allowable"],
-  FACILITY_UNPARTITIONED: ["Facility not partitioned", "No space schedule, no carve-out"],
-  INVOICE_NO_INDIRECT: ["Invoice without indirect", "Recovery forgone on the face"],
-  INVOICE_NO_AWARD: ["Invoice without an award", "No ceiling to test against"],
-  STALE_DECISION: ["Stale decision", "Source line changed underneath it"],
-};
 
 const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
 
@@ -154,7 +141,7 @@ export default function Dashboard() {
               { label: "", align: "left" },
             ]}>
             {worklist.map((w) => {
-              const [title, sub] = KIND[w.kind] || [w.kind, ""];
+              const { title, short: sub } = forKind(w.kind);
               return (
                 <tr
                   key={w.kind}

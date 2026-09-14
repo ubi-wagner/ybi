@@ -33,6 +33,7 @@ from pydantic import BaseModel, Field
 from app.audit import record
 from app.auth import Actor, require_controller, require_reader
 from app.db import one, query, transaction
+from app.statelock import turn
 from app.domain.invoice import Category, Invoice, InvoiceLine, assess
 from app.settings import settings
 
@@ -196,7 +197,21 @@ def restate(body: RestateIn, period: str = None,
         headroom = Decimal(str(award["ceiling_federal"])) - Decimal(str(claimed_to_date))
         capped = under > headroom
 
-    with transaction() as cur:
+    # Held, like every other act on the cost record. A restatement is measured
+    # against a rate read a few milliseconds ago; the rate can be superseded by
+    # an unseal in between, so this re-reads it under the lock before writing.
+    with turn(period) as cur:
+        cur.execute("""SELECT status::text AS status FROM rate WHERE rate_id = %s""",
+                    (rate["rate_id"],))
+        still = cur.fetchone()
+        if not still or still["status"] == 'SUPERSEDED':
+            raise HTTPException(409, {
+                "error": "RATE_SUPERSEDED",
+                "message": ("The rate this restatement was measured against was "
+                            "superseded while it was being computed — most "
+                            "likely the classifications were reopened. Nothing "
+                            "was written."),
+                "rate_id": str(rate["rate_id"])})
         cur.execute("""UPDATE restatement SET status = 'SUPERSEDED'
                         WHERE period = %s AND objective_id = %s
                           AND status = 'PROPOSED'""",
@@ -297,13 +312,33 @@ def decide(restatement_id: str, body: DecideIn,
     """
     if body.status not in ("SUBMITTED", "ACCEPTED", "REJECTED"):
         raise HTTPException(422, f"Unknown status {body.status!r}.")
-    head = one("SELECT status::text AS status FROM restatement "
-               "WHERE restatement_id = %s", (restatement_id,))
+    head = one("""SELECT status::text AS status, modification_ref, objective_id
+                    FROM restatement WHERE restatement_id = %s""",
+               (restatement_id,))
     if not head:
         raise HTTPException(404, "No such restatement.")
     if head["status"] == "SUPERSEDED":
         raise HTTPException(409, "That restatement has been superseded by a "
                                  "later computation.")
+    # `acceptance_names_its_modification` holds this in the schema, which is
+    # where it belongs — it has to hold when a handler is wrong. But the
+    # schema's refusal reaches the person as the constraint's name, and this
+    # is the one place in the whole exercise where that is least affordable:
+    # the docstring above calls the omission the most likely thing here to
+    # become a finding, and what it answered was
+    # "The database refused this write: acceptance_names_its_modification."
+    if (body.status == "ACCEPTED"
+            and not (body.modification_ref.strip()
+                     or (head["modification_ref"] or "").strip())):
+        raise HTTPException(
+            422, f"Accepting this needs the modification that authorised the "
+                 f"change of basis — neither America Makes agreement was "
+                 f"billed under a provisional rate, so moving off the de "
+                 f"minimis election is a §4.4 change of basis rather than a "
+                 f"corrected invoice. Name the modification (its number and "
+                 f"the date it was signed) and try again. Until then "
+                 f"{head['objective_id']} stays a proposal, which is what it "
+                 f"is.")
 
     with transaction() as cur:
         cur.execute("""UPDATE restatement

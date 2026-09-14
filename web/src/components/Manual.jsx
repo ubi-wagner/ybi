@@ -105,6 +105,31 @@ const CHAPTERS = [
     shot: ["m-documents", "Drop a file, say what it relates to, send it."],
   },
   {
+    id: "requests",
+    needs: "reader",
+    title: "Asking for what is missing",
+    lede: "Three things are not on the record and none can be worked out.",
+    steps: [
+      ["Ask, and a workbook comes back to send.",
+       "Which assets federal money paid for, who uses which square foot, and " +
+       "an address for everybody who has to sign their own effort. Each goes " +
+       "out pre-filled from what YBI already holds, so the ask collapses to " +
+       "the one column those files do not carry."],
+      ["Anybody may send the filled one back.",
+       "The same door as sending a document in. Writing it onto the record " +
+       "is a judgment and takes the portfolio that owns the data."],
+      ["The preview says what it will do before it does it.",
+       "Every cell that will not read, named by sheet, row and column, and " +
+       "the rows that will land. A bad cell costs that cell; a bad cell in a " +
+       "required column holds the row back, because a figure somebody " +
+       "guessed is worse than one nobody recorded."],
+      ["A blank is unanswered, and unanswered is a value.",
+       "\"There is no federal money in this asset\" and \"nobody has looked\" " +
+       "stay different facts all the way onto the record."],
+    ],
+    shot: ["m-requests", "What has been asked for, of whom, and how long ago."],
+  },
+  {
     id: "classify",
     needs: "CONTROLLER",
     title: "Classifying cost",
@@ -151,7 +176,7 @@ const CHAPTERS = [
        "A rate over a ledger that does not match its own statements is a " +
        "rate over the wrong numbers, however carefully the pools were built."],
     ],
-    shot: ["m-reconcile", "Ten cross-reference points, and what is left at " +
+    shot: ["m-reconcile", "Eleven cross-reference points, and what is left at " +
                           "each."],
   },
   {
@@ -286,9 +311,67 @@ const CHAPTERS = [
                              "charged to it."],
   },
   {
+    id: "reports",
+    needs: "reader",
+    title: "Reports and invoices",
+    lede: "The two things the reconciliation needs on paper.",
+    steps: [
+      ["The timesheet report is the labour evidence.",
+       "Coverage, the distribution, who has certified, and every entry with " +
+       "what it was reconstructed from. The eleventh control is on the first " +
+       "sheet — the payroll register against the ledger's wage accounts — " +
+       "because the fringe base comes from the distribution and a difference " +
+       "there is two denominators for one rate."],
+      ["It says what is unfinished before it says anything else.",
+       "Who has not certified, how much of the distribution is reconstructed " +
+       "rather than contemporaneous, and any difference nobody has named. A " +
+       "workbook travels, so the caveat travels with it."],
+      ["An invoice renders onto the face it was issued on.",
+       "The America Makes invoices are the template. The header and the " +
+       "total are fixed; the middle expands to however many lines the " +
+       "invoice has, and paginates when it has to."],
+      ["A reproduction says it is one.",
+       "An invoice already issued has a document of record and it is the one " +
+       "the sponsor holds. That renders with a band saying so. Only a draft " +
+       "or a restatement — something YBI is issuing now — renders as an " +
+       "original."],
+      ["Filing one puts it in the library with a hash.",
+       "Where an auditor finds it without asking anybody. The same invoice " +
+       "filed twice is one document; a changed one files alongside the " +
+       "first rather than over it."],
+    ],
+    shot: ["m-reports", "The invoice register, and the timesheet report."],
+  },
+  {
+    id: "library",
+    needs: "reader",
+    title: "The document library",
+    lede: "Reading the papers behind the numbers.",
+    steps: [
+      ["Everything anybody has sent in is here.",
+       "Filed or not. The inbox is a queue of work; this is the whole shelf, " +
+       "and it is where you go when you want to read a particular document " +
+       "rather than deal with a backlog."],
+      ["Open one to read it, or take a copy.",
+       "A PDF, a photograph or a plain file opens in the page, which is what " +
+       "you want when you are checking eleven attachments against eleven " +
+       "figures. Download the one that is going into a workpaper."],
+      ["A spreadsheet says so rather than doing nothing.",
+       "Anything the page cannot show is marked no preview and downloads. " +
+       "That is not a fault — it opens in the application it belongs to."],
+      ["Search the way you remember it.",
+       "The name, the vendor, who sent it, what they said it related to, or " +
+       "the EV- identifier from a workpaper."],
+      ["Every open and every copy is recorded against your name.",
+       "Which is what makes it safe for this screen to show the whole shelf " +
+       "rather than only what you filed yourself."],
+    ],
+    shot: ["m-library", "Everything on file, with what it is and who sent it."],
+  },
+  {
     id: "evidence",
     needs: "OFFICE",
-    title: "The document library",
+    title: "Filing what people send in",
     lede: "Turning what people sent in into evidence.",
     steps: [
       ["The inbox is what nobody has filed yet.",
@@ -336,8 +419,17 @@ function visible(actor, needs) {
   if (!needs) return true;
   if (needs === "staff") return Boolean(actor.employee_key);
   if (needs === "admin") return Boolean(actor.is_admin);
+  // The same rule the nav follows. Without it "reader" falls through to the
+  // portfolio test and is false for everybody but the auditor — so the
+  // organisation's administrator would be given the Library tab and no
+  // chapter explaining it, which is the mismatch this function exists to
+  // prevent, running the other way.
+  if (needs === "reader") return Boolean(actor.can_read);
   if (actor.role === "AUDITOR") return true;
-  return (actor.portfolios || []).includes(needs);
+  // Same rule as the nav: CONTROLLER reaches every narrow portfolio, so a
+  // controller gets the chapter for every screen they are offered.
+  const held = actor.portfolios || [];
+  return held.includes(needs) || held.includes("CONTROLLER");
 }
 
 export default function Manual({ actor }) {

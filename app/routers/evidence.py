@@ -51,16 +51,23 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
     if existing:
         eid = existing["evidence_id"]
     else:
+        safe = Path(file.filename or "document").name
+        # Same rule as the inbox door: the type is read from the bytes. This
+        # route is how the foundational documents are filed, and the seeding
+        # script sends every one of them as application/octet-stream — which
+        # is what left fourteen PDFs unreadable in the library.
+        mime = storage.sniff_type(raw, safe)
         dest = storage.place(
-            storage.evidence_path(period, kind, sha, file.filename), raw)
+            storage.evidence_path(period, kind, sha, safe), raw)
         eid = f"EV-{sha[:12]}"
+        text, pages = storage.read_text(raw, mime)
         execute("""INSERT INTO evidence (evidence_id,period,kind,uri,sha256,
                                          received_from,byte_size,mime_type,
-                                         ingest_channel,uploaded_by)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s)""",
+                                         ingest_channel,uploaded_by,filename,
+                                         extracted_text,page_count)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s)""",
                 (eid, period, kind, str(dest), sha, uploaded_by,
-                 len(raw), file.content_type or "application/octet-stream",
-                 actor.actor_id))
+                 len(raw), mime, actor.actor_id, safe, text, pages))
 
     attached = 0
     if target_type and target_id:

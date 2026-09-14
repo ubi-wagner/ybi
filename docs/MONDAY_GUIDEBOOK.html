@@ -1,0 +1,220 @@
+<!doctype html><meta charset="utf-8">
+<title>Monday, illustrated</title>
+<style>
+  :root { --ink:#1a1a1a; --muted:#5f5f5f; --rule:#d8d8d8; --accent:#1f4e5f;
+           --paper:#fbfbfa; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.55 "Helvetica Neue", Helvetica, Arial, sans-serif;
+         color: var(--ink); margin: 0; background: var(--paper); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 30px; margin: 0 0 6px; color: var(--accent);
+       letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 28px; padding-bottom: 18px;
+         border-bottom: 2px solid var(--accent); max-width: 80ch; }
+  h2.phase { font-size: 13px; text-transform: uppercase; letter-spacing: .10em;
+             color: var(--accent); margin: 44px 0 12px;
+             padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  section.step { margin: 0 0 38px; break-inside: avoid; }
+  .meta { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+          margin-bottom: 6px; }
+  .badge { background: var(--accent); color: #fff; font-size: 11px;
+           font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+           padding: 3px 8px; border-radius: 3px; }
+  .who { font-weight: 700; }
+  code { background: #eceeef; padding: 1px 5px; border-radius: 3px;
+         font-size: .88em; }
+  .what { margin: 0 0 12px; max-width: 85ch; }
+  figure { margin: 0 0 14px; border: 1px solid var(--rule); border-radius: 6px;
+           overflow: hidden; background: #fff;
+           box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+  img { display: block; width: 100%; }
+  .note { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px;
+          color: #333; max-width: 88ch; }
+  .banner { background: #f2f5f6; border-left: 3px solid var(--accent);
+            padding: 14px 18px; margin: 0 0 30px; max-width: 88ch; }
+  footer { margin-top: 50px; padding-top: 18px; border-top: 1px solid var(--rule);
+           color: var(--muted); font-size: 13px; max-width: 88ch; }
+  @media print { body { background: #fff; } .wrap { padding: 0; }
+                  section.step { page-break-inside: avoid; } }
+</style>
+<div class="wrap">
+<h1>Monday, illustrated</h1>
+<p class="sub">Every screen below was driven by <code>scripts/walk_runbook.py</code>
+against a sandbox built from an empty database — signed in as the person the
+step belongs to, clicking the controls a person clicks. Nothing here is a
+mock-up and nothing was photographed from the live record.</p>
+
+<div class="banner">
+<p style="margin:0 0 8px"><strong>The walk found one thing before its first
+screenshot.</strong> <code>POST /api/rates/compute</code> was complete on the
+server, named in a comment on the rates screen, and <strong>called by nothing
+in the application</strong> — so the one figure the whole engagement exists to
+produce could only be made by somebody running a script. Step 4 could not be
+performed. It can now.</p>
+<p style="margin:0">A runbook nobody has walked is a list of things somebody
+believes.</p>
+</div>
+
+<div class="banner" style="border-left-color:#8c6a1f;background:#faf6ec">
+<p style="margin:0"><strong>This walks a sandbox from an empty database, so it
+shows what each screen looks like and what each step means.</strong> The live
+record is further along — already reconciled, classified, sealed and computed
+— so Monday is a <em>review</em> rather than a build. What is actually
+outstanding, and what to do if a judgment has to change, is
+<code>docs/MONDAY_RUNBOOK.md</code> §0 and §C.</p>
+</div>
+
+<h2 class="phase">Getting in</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 0</span>
+    <span class="who">Anybody</span>
+    <code>/</code>
+  </div>
+  <p class="what">The door. Everything below is behind somebody&#x27;s own account.</p>
+  <figure><img src="runbook-walk/00-sign-in.png" alt="The door. Everything below is behind somebody&#x27;s own account."></figure>
+  <div class="note">Everything below is behind somebody's own account. An account on a password an administrator chose cannot write anything — not a classification, not a timesheet, not a certification — until the person changes it. The one exit from that gate is changing your own password.</div>
+</section>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 0</span>
+    <span class="who">Tom · controller</span>
+    <code>/</code>
+  </div>
+  <p class="what">What you hold, and what is yours to do today.</p>
+  <figure><img src="runbook-walk/01-home.png" alt="What you hold, and what is yours to do today."></figure>
+  <div class="note">The landing page is assembled from what you hold, not switched on a role. The tabs are what is <em>yours to do</em>; a screen you may read but have no work on is still reachable by URL. Tom holds CONTROLLER, so he sees everything — that is what the portfolio means, not a special case.</div>
+</section>
+<h2 class="phase">Reconcile</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 1</span>
+    <span class="who">Tom · controller</span>
+    <code>/reconcile</code>
+  </div>
+  <p class="what">Schedule A-1 — the eleven points where the ledger, the P&amp;L, the balance sheet and the payroll register have to agree. This is the gate: a rate is refused while any of them is open.</p>
+  <figure><img src="runbook-walk/02-reconcile.png" alt="Schedule A-1 — the eleven points where the ledger, the P&amp;L, the balance sheet and the payroll register have to agree. This is the gate: a rate is refused while any of them is open."></figure>
+  <div class="note"><strong>Step 1, and the gate.</strong> Eleven points where the general ledger, the profit and loss, the balance sheet and the payroll register have to agree. <code>POST /api/rates/compute</code> answers 409 while any of them is open, so nothing downstream can start here. <br><br>Read <em>state</em>, never a variance of zero: both sides of most controls are <code>COALESCE(..., 0)</code>, so an empty period compares zero against zero and looks green. A control that cannot be evaluated has not passed. <br><br>The eleventh is the payroll register, and it is the one that pays for itself — it is how a $45,053 donor credit sitting in an intern wage account for a year was found, which moved the fringe rate from 22.45% to 21.90%.</div>
+</section>
+<h2 class="phase">Review</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 2</span>
+    <span class="who">Tom · controller</span>
+    <code>/classify</code>
+  </div>
+  <p class="what">The queue, in Sweep. Every group carries its recommendation; nothing has been accepted on anybody&#x27;s behalf.</p>
+  <figure><img src="runbook-walk/03-classify-sweep.png" alt="The queue, in Sweep. Every group carries its recommendation; nothing has been accepted on anybody&#x27;s behalf."></figure>
+  <div class="note"><strong>Step 2.</strong> 757 cost groups, each carrying a recommendation and none of them accepted. The log beside this screen (<code>docs/CLASSIFICATION_LOG.md</code>) gives a reasoned treatment for every one, with a citation and a rationale — and a named reason where there is none. <br><br>Sweep is the dense mode for the many groups with an obvious answer. <code>j</code>/<code>k</code> move, <code>Enter</code> accepts the proposal, <code>1</code>–<code>8</code> jump to a pool. Every second saved compounds across two hundred meaningful decisions.</div>
+</section>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 2</span>
+    <span class="who">Tom · controller</span>
+    <code>/classify</code>
+  </div>
+  <p class="what">Focus — one group at a time, the amount set large, the proposal as a single button. This is where the judgments that need thought are made.</p>
+  <figure><img src="runbook-walk/04-classify-focus.png" alt="Focus — one group at a time, the amount set large, the proposal as a single button. This is where the judgments that need thought are made."></figure>
+  <div class="note">Focus mode — <code>f</code> — for the few that need real thought. One group, the amount set large, sample memos for context, and the proposal as a single button. <br><br>Note what is <em>not</em> here: no rate, no preview of what this judgment would do to the rate. That absence is the guarantee. A reviewer will ask whether the rate was honest or reverse-engineered, and the answer has to be documentary rather than a promise.</div>
+</section>
+<h2 class="phase">Seal</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 3</span>
+    <span class="who">Tom · controller</span>
+    <code>/rates</code>
+  </div>
+  <p class="what">Before sealing. Coverage and the reconciliation gate are both shown, and no rate exists — that is the guarantee, not a gap.</p>
+  <figure><img src="runbook-walk/05-before-seal.png" alt="Before sealing. Coverage and the reconciliation gate are both shown, and no rate exists — that is the guarantee, not a gap."></figure>
+  <div class="note">Before sealing, with the queue finished. Two gates are shown and only one of them is coverage: the books must agree <em>and</em> the queue should be done. Coverage is the softer of the two — sealing below 80% is a judgment, while an open control is a refusal. <br><br>No rate exists yet. That is the design, not a gap.</div>
+</section>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 3</span>
+    <span class="who">Tom · controller</span>
+    <code>/rates</code>
+  </div>
+  <p class="what">Sealed. The hash covers every live judgment in the set. Only now does computing become possible.</p>
+  <figure><img src="runbook-walk/06-sealed.png" alt="Sealed. The hash covers every live judgment in the set. Only now does computing become possible."></figure>
+  <div class="note"><strong>Step 3 — the judgment the whole system rests on.</strong> Sealing hashes every live classification and freezes the set. Only CONTROLLER may do it and nothing automated may do it at all: a script that sealed would put the machine's name on the assertion that the rate was not fitted to a target. <br><br>Afterwards a classification can only change by unsealing with a written reason, which supersedes any rate already computed. The card now reads from the record — it said “Before sealing” over a sealed set until this walk photographed it.</div>
+</section>
+<h2 class="phase">Compute</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 4</span>
+    <span class="who">Tom · controller</span>
+    <code>/rates</code>
+  </div>
+  <p class="what">Computed. The basis for administrative labour is chosen on the screen rather than defaulted silently — it is worth about nine points of combined rate on the same judgments — and it is recorded on the rate. A trigger refuses any rate whose seal does not match a sealed set.</p>
+  <figure><img src="runbook-walk/07-computed.png" alt="Computed. The basis for administrative labour is chosen on the screen rather than defaulted silently — it is worth about nine points of combined rate on the same judgments — and it is recorded on the rate. A trigger refuses any rate whose seal does not match a sealed set."></figure>
+  <div class="note"><strong>Step 4, and the step that could not be taken until this walk.</strong> <code>POST /api/rates/compute</code> was complete on the server, named in a comment on this very screen, and <strong>called by nothing in the application</strong> — so the one figure the whole engagement produces could only be made by running a script. <br><br>The basis for administrative labour is chosen here rather than defaulted silently. It is worth about nine points of combined rate on the same judgments and it is recorded on the rate, so the workpaper says which was chosen. The first version of this button sent an empty body and computed 34.82% — the default, correctly, and not the basis this engagement settled on. <br><br>Every rate carries the seal hash. A database trigger refuses one whose seal does not match a sealed set.</div>
+</section>
+<h2 class="phase">Check</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">Step 5</span>
+    <span class="who">Tom · controller</span>
+    <code>/review/rate</code>
+  </div>
+  <p class="what">The build-up an auditor reads. Nothing on it is computed — every figure is read from the row it was recorded in.</p>
+  <figure><img src="runbook-walk/08-buildup.png" alt="The build-up an auditor reads. Nothing on it is computed — every figure is read from the row it was recorded in."></figure>
+  <div class="note"><strong>Step 5.</strong> The build-up an auditor reads. <strong>Nothing on this screen is computed</strong> — every figure is read from the row it was recorded in, because a figure derived twice is one that can disagree with itself. <br><br>Read <code>pool_variance</code> and the four anchor rows. And read what it says above the figures: the rate is a working figure while anything is unfinished, and no 200.465 facilities carve-out is in it, because no facility on the record carries measured space.</div>
+</section>
+<h2 class="phase">In parallel</h2>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">In parallel</span>
+    <span class="who">Heidi · employee</span>
+    <code>/timesheet</code>
+  </div>
+  <p class="what">The pre-filled sheet, offered as a convenience. It says it is optional before it says anything else, and names the three complete answers. Nothing here has been adopted for anybody.</p>
+  <figure><img src="runbook-walk/09-timesheet-draft.png" alt="The pre-filled sheet, offered as a convenience. It says it is optional before it says anything else, and names the three complete answers. Nothing here has been adopted for anybody."></figure>
+  <div class="note"><strong>Running in parallel, at their own pace.</strong> The controller's reconstruction of a person's year, offered to the person whose work it was. <br><br>It says <strong>this is optional</strong> before it says anything else, and names three complete answers: type your own days and ignore it, adopt it and correct what is wrong, or leave it. A convenience that reads as an instruction is the one way this exercise produces forty-three signatures worth nothing. <br><br>2 CFR 200.430(i) does not require a contemporaneous record — it requires one that reflects the work performed, supported and reviewed after the fact. A reconstruction the person reads, corrects and signs meets that. One nobody ever saw does not, which is where 2025 has been sitting.</div>
+</section>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">In parallel</span>
+    <span class="who">Heidi · employee</span>
+    <code>/certify</code>
+  </div>
+  <p class="what">Certifying is a separate act on a separate screen, and only the person whose effort it was can perform it.</p>
+  <figure><img src="runbook-walk/10-certify.png" alt="Certifying is a separate act on a separate screen, and only the person whose effort it was can perform it."></figure>
+  <div class="note">Certifying is a <strong>separate act on a separate screen</strong>. Adopting puts hours on a sheet; signing says the sheet is true. One button doing both would take a signature from somebody who had only meant to accept a starting point. <br><br>Nobody signs for anybody else. A project manager cannot sign on their team's behalf — <code>v_certification_chase</code> is a list to go and ask, never an action.</div>
+</section>
+
+<section class="step">
+  <div class="meta">
+    <span class="badge">In parallel</span>
+    <span class="who">Tom · controller</span>
+    <code>/worklist</code>
+  </div>
+  <p class="what">What is outstanding, routed to the portfolio that can act on it.</p>
+  <figure><img src="runbook-walk/11-worklist.png" alt="What is outstanding, routed to the portfolio that can act on it."></figure>
+  <div class="note">What is outstanding, routed to the portfolio that can act on it. A CONTROLLER sees everything; an item whose portfolio nobody holds still reaches the controller rather than falling off the end. <br><br>Anybody holding a portfolio can recommend an item to somebody else with a reason — and that raises work, never a number.</div>
+</section>
+
+<footer>
+<p><strong>What is deliberately missing from these pictures.</strong> No rate
+appears on any classification screen. No timesheet was adopted and no
+certification signed — those belong to the forty-three people whose effort it
+was, and this walk photographs the screens where they would act rather than
+acting for them. The sealing and the computing <em>were</em> performed,
+because they are controller steps being tested, and they ran against a
+throwaway database that was dropped afterwards.</p>
+<p>Regenerate: <code>scripts/walk_runbook.py</code> then
+<code>scripts/runbook_guidebook.py</code>. The walk fails on a step that
+cannot be performed or a screen that comes up blank, so a picture of nothing
+cannot pass for a picture.</p>
+</footer>
+</div>

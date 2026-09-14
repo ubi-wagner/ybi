@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, money } from "../api.js";
 import {
-  Card, Drawer, Empty, Field, Keys, Meter, Pill, Search, Segmented, Stat, Table, Tick, useToast,
+  Card, Drawer, Empty, Field, Keys, Meter, PageHead, Pill, Search, Segmented,
+  Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
 
 /*
@@ -92,19 +93,60 @@ export default function ClassifyQueue({ actor }) {
     if (!groups.length) return;
     setBusy(true);
     try {
-      await api.decide({
+      const got = await api.decide({
         group_keys: groups.map((g) => g.group_key),
         ...decision,
         objective_id: decision.pool === "DIRECT" ? decision.objective_id || null : null,
         decided_by: actor?.display_name || "",
+        /* What this screen believed was live when it was drawn. Two people
+           work this queue at once; if one of them judges a group while the
+           other's list is still showing it as it was, the server refuses
+           rather than letting the second judgment silently replace a
+           judgment nobody saw. */
+        based_on: Object.fromEntries(
+          groups.map((g) => [g.group_key, g.live_decision || "none"])),
       });
-      const label = groups.length === 1
+      /* What the judgment covered, said out loud.
+       *
+       * Classifying a group of forty-five lines records **one** decision
+       * with a scope, not forty-five. That is right, and from the outside it
+       * is indistinguishable from a judgment that landed on one line — the
+       * system review's proportion check could not tell the difference, and
+       * neither can somebody reading "Recorded" after judging $1.2m across
+       * thirteen lines. So the toast says the lines and the money. */
+      /* The server refuses a batch that judged nothing, so reaching here
+         with no lines means *some* groups landed and some did not. Both
+         halves have to be said: the suffix used to simply vanish when
+         `lines` was 0, which left "Recorded 5227 → G&A" reading as a clean
+         judgment over nothing. */
+      const covered = got?.lines
+        ? ` · ${got.lines} line${got.lines === 1 ? "" : "s"}`
+          + (got.amount ? `, $${Number(got.amount).toLocaleString(undefined,
+              { maximumFractionDigits: 0 })}` : "")
+        : " · no lines";
+      const missed = got?.skipped?.length || 0;
+      const label = (groups.length === 1
         ? `${groups[0].account} → ${decision.pool}`
-        : `${groups.length} groups → ${decision.pool}`;
+        : `${groups.length} groups → ${decision.pool}`) + covered
+        + (got?.superseded ? ` · replaced ${got.superseded} earlier judgment`
+                             + (got.superseded === 1 ? "" : "s") : "");
+      if (missed) {
+        /* Named rather than counted, and sticky: a group that has gone is
+           the queue having moved under this screen, and the next thing to do
+           is reload it rather than press Enter again. */
+        toast.warn(`Recorded ${label}. ${missed} group${missed === 1 ? "" : "s"} `
+                   + `matched no line and ${missed === 1 ? "was" : "were"} not `
+                   + `judged: ${got.skipped.map((k) => k.split("\u001f")[0]).join(", ")}. `
+                   + "Reload the queue.", { sticky: true });
+        load();
+        return;
+      }
       /* The undo here reverses the decision that was just recorded. It used
          to show a message saying a reversal had been recorded while recording
          nothing at all, which is worse than having no undo: it told somebody
-         their mistake was fixed. */
+         their mistake was fixed. It is not offered on the branch above: some
+         of that batch landed and some did not, and "undo" over a partial
+         result is a promise about which half. */
       toast(`Recorded ${label}`, {
         onUndo: async () => {
           try {
@@ -131,6 +173,12 @@ export default function ClassifyQueue({ actor }) {
       await load();
     } catch (e) {
       toast(String(e.message || e), { tone: "bad", sticky: true });
+      /* A refusal because the record moved is the one error where the right
+         next step is automatic: redraw the queue so the person is looking at
+         what is actually there before they decide again. */
+      if (/changed while this screen was open/.test(String(e.message || e))) {
+        await load();
+      }
     } finally {
       setBusy(false);
     }
@@ -243,7 +291,7 @@ export default function ClassifyQueue({ actor }) {
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "18px 0 12px" }}>
         <Segmented value={mode} onChange={setMode} options={[["sweep", "Sweep"], ["focus", "Focus"]]} />
         <Segmented value={status} onChange={setStatus}
-                   options={[["undecided", "Open"], ["decided", "Done"], ["stale", "Amended"], ["all", "All"]]} />
+                   options={[["undecided", "Open"], ["decided", "Done"], ["all", "All"]]} />
         <div ref={searchRef}>
           <Search value={search} onChange={setSearch} placeholder="Account or vendor   /" />
         </div>
@@ -304,8 +352,10 @@ export default function ClassifyQueue({ actor }) {
                 </td>
               )}
               <td className="l">
-                <Tick state={r.stale ? "flagged" : r.decided ? "done" : "open"}
-                      title={r.stale ? "Amended in QuickBooks since it was classified" : undefined} />
+                {/* No "Amended" state: a ledger line cannot change after it
+                    is written — the importer inserts ON CONFLICT DO NOTHING —
+                    so the flag it read could never light. Migration `063`. */}
+                <Tick state={r.decided ? "done" : "open"} />
               </td>
               <td className="l trunc">{r.account}</td>
               <td className="l trunc" style={{ color: "var(--graphite)" }}>{r.payee || "—"}</td>
@@ -604,7 +654,19 @@ function GroupRecord({ row, canWrite }) {
       form.append("target_id", row.group_key);
       form.append("relevance", `supports ${row.account}`);
       const r = await api.uploadEvidence(form);
-      toast(`Attached to ${r.attached_to} line${r.attached_to === 1 ? "" : "s"}`);
+      /* The document is filed either way — the upload succeeded, so a
+         failure would be the wrong answer. But attachment is per line, and
+         `attached_to` is simply how many lines the group key matched. Zero
+         means the file is in the record and on nothing: findable in the
+         library, and not evidence for this cost. "Attached to 0 lines" in
+         the tone used for success is the same sentence as success. */
+      if (r.attached_to === 0) {
+        toast.warn("Filed, and attached to nothing — no ledger line in this "
+                   + "period matches this group. The document is in the "
+                   + "library; attach it from there.", { sticky: true });
+      } else {
+        toast(`Attached to ${r.attached_to} line${r.attached_to === 1 ? "" : "s"}`);
+      }
       load();
     } catch (e) {
       toast(String(e.message || e), { tone: "bad" });

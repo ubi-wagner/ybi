@@ -1,0 +1,282 @@
+{
+  "01-signin": {
+    "path": "/",
+    "as": "signed out",
+    "shows": "The sign-in screen",
+    "bytes": 26977,
+    "characters": 173,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "02-dashboard": {
+    "path": "/",
+    "as": "tom@ybi.org",
+    "shows": "The dashboard, and the activity feed under it",
+    "bytes": 359037,
+    "characters": 4428,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "03-worklist": {
+    "path": "/worklist/UNCLASSIFIED",
+    "as": "tom@ybi.org",
+    "shows": "One class of open work",
+    "bytes": 2279805,
+    "characters": 28295,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "05-import": {
+    "path": "/imports",
+    "as": "tom@ybi.org",
+    "shows": "Importing each report",
+    "bytes": 109975,
+    "characters": 1187,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "05a-reconcile": {
+    "path": "/reconcile",
+    "as": "tom@ybi.org",
+    "shows": "The eleven cross-reference points",
+    "bytes": 268178,
+    "characters": 3976,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "05b-reconcile-gl-pl": {
+    "path": "/reconcile",
+    "as": "tom@ybi.org",
+    "shows": "Ledger against the P&L, account by account",
+    "bytes": 116953,
+    "characters": 1466,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "05c-reconcile-items": {
+    "path": "/reconcile",
+    "as": "tom@ybi.org",
+    "shows": "Each named difference and the lines behind it",
+    "bytes": 208803,
+    "characters": 3503,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "06-classify-sweep": {
+    "path": "/classify",
+    "as": "tom@ybi.org",
+    "shows": "Sweep mode \u2014 the dense table",
+    "bytes": 1524228,
+    "characters": 17135,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "07-classify-focus": {
+    "path": "/classify",
+    "as": "tom@ybi.org",
+    "shows": "Focus mode \u2014 one group, set large",
+    "bytes": 147652,
+    "characters": 1627,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "08-note": {
+    "path": "/classify",
+    "as": "tom@ybi.org",
+    "shows": "A note on the record, and the box for the next one",
+    "bytes": 159522,
+    "characters": 1682,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "11-editor": {
+    "path": "/classify",
+    "as": "tom@ybi.org",
+    "shows": "Classifying differently",
+    "bytes": 183722,
+    "characters": 2481,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "12-split": {
+    "path": "/classify",
+    "as": "tom@ybi.org",
+    "shows": "A split being composed \u2014 shares, drivers and citations",
+    "bytes": 179334,
+    "characters": 1810,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "14-evidence": {
+    "path": "/evidence",
+    "as": "hruby@ybi.org",
+    "shows": "Schedule E \u2014 what supports which figure",
+    "bytes": 191898,
+    "characters": 2193,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "17-certify": {
+    "path": "/certify",
+    "as": "hruby@ybi.org",
+    "shows": "An employee's whole year, not just the funded part",
+    "bytes": 112609,
+    "characters": 1396,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "19-auditor": {
+    "path": "/",
+    "as": "auditor@ybi.org",
+    "shows": "The auditor's dashboard",
+    "bytes": 199236,
+    "characters": 2513,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "20-auditor-classify": {
+    "path": "/classify",
+    "as": "auditor@ybi.org",
+    "shows": "The queue with nothing to press",
+    "bytes": 1309031,
+    "characters": 15806,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "22-timesheet-week": {
+    "path": "/timesheet",
+    "as": "hruby@ybi.org",
+    "shows": "The week grid",
+    "bytes": 207131,
+    "characters": 2801,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "23-timesheet-month": {
+    "path": "/timesheet",
+    "as": "hruby@ybi.org",
+    "shows": "The month view",
+    "bytes": 207800,
+    "characters": 2692,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-certify": {
+    "path": "/certify",
+    "as": "hruby@ybi.org",
+    "shows": "Signing for your own effort",
+    "bytes": 112609,
+    "characters": 1396,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-charge-codes": {
+    "path": "/contracts/codes",
+    "as": "sgaffney@ybi.org",
+    "shows": "Charge codes and who may charge them",
+    "bytes": 159800,
+    "characters": 1710,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-classify": {
+    "path": "/classify",
+    "as": "tom@ybi.org",
+    "shows": "The classification queue",
+    "bytes": 1524654,
+    "characters": 17135,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-contracts": {
+    "path": "/contracts",
+    "as": "sgaffney@ybi.org",
+    "shows": "Contracts and what each earns",
+    "bytes": 116101,
+    "characters": 1427,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-documents": {
+    "path": "/documents",
+    "as": "hruby@ybi.org",
+    "shows": "Sending a document in",
+    "bytes": 100777,
+    "characters": 1173,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-evidence": {
+    "path": "/evidence",
+    "as": "hruby@ybi.org",
+    "shows": "Filing what people send in",
+    "bytes": 191898,
+    "characters": 2193,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-imports": {
+    "path": "/imports",
+    "as": "tom@ybi.org",
+    "shows": "Importing from QuickBooks",
+    "bytes": 109975,
+    "characters": 1187,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-inventory": {
+    "path": "/inventory",
+    "as": "hruby@ybi.org",
+    "shows": "The equipment register",
+    "bytes": 88296,
+    "characters": 1143,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-library": {
+    "path": "/library",
+    "as": "auditor@ybi.org",
+    "shows": "The document library",
+    "bytes": 322784,
+    "characters": 3654,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-people": {
+    "path": "/people",
+    "as": "bewing@ybi.org",
+    "shows": "The roster",
+    "bytes": 157135,
+    "characters": 1659,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-rates": {
+    "path": "/rates",
+    "as": "tom@ybi.org",
+    "shows": "Sealing, and the rate",
+    "bytes": 90970,
+    "characters": 1029,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-reconcile": {
+    "path": "/reconcile",
+    "as": "tom@ybi.org",
+    "shows": "Schedule A-1",
+    "bytes": 268178,
+    "characters": 3976,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-reports": {
+    "path": "/reports",
+    "as": "auditor@ybi.org",
+    "shows": "Reports and invoices",
+    "bytes": 124455,
+    "characters": 1512,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-requests": {
+    "path": "/requests",
+    "as": "tom@ybi.org",
+    "shows": "Asking for what is missing",
+    "bytes": 719990,
+    "characters": 11178,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-space": {
+    "path": "/space",
+    "as": "hruby@ybi.org",
+    "shows": "Buildings and the rent roll",
+    "bytes": 88361,
+    "characters": 1143,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "m-timesheet": {
+    "path": "/timesheet",
+    "as": "hruby@ybi.org",
+    "shows": "Building a timesheet",
+    "bytes": 207131,
+    "characters": 2801,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  },
+  "role-06-first-password": {
+    "path": "/",
+    "as": "manual-newcomer-1789324465@ybi.org",
+    "shows": "The first screen anybody sees",
+    "bytes": 57499,
+    "characters": 553,
+    "commit": "48ec2d33bd22bab3e3d8dcac8363e8f5498d7426"
+  }
+}
