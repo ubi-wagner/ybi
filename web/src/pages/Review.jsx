@@ -21,7 +21,7 @@ const PANES = [
   ["form-990", "Form 990"],
 ];
 
-export default function Review() {
+export default function Review({ actor }) {
   const { pane } = useParams();
   const nav = useNavigate();
   const current = PANES.some(([v]) => v === pane) ? pane : "report";
@@ -37,7 +37,7 @@ export default function Review() {
       </PageHead>
 
       {current === "report" && <Auditor embedded />}
-      {current === "rate" && <RateReview embedded />}
+      {current === "rate" && <RateReview embedded actor={actor} />}
       {current === "form-990" && <Form990 embedded />}
     </div>
   );

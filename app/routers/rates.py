@@ -5,13 +5,15 @@ in this handler or anywhere else — a database trigger enforces it too, so the
 guarantee survives a bug here.
 """
 
+import json
+
 from fastapi import Depends, APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.auth import Actor
-from app.db import one, query
+from app.db import one, query, transaction
 from app.statelock import turn
 
 router = APIRouter(prefix="/rates", tags=["rates"],
@@ -560,6 +562,179 @@ def current(period: str = "2025") -> dict:
             "sealed": bool(state and state["sealed"]),
             "sealed_at": state.get("sealed_at") if state else None,
             "sealed_by": state.get("sealed_by") if state else None}
+
+
+class CertifyIn(BaseModel):
+    """Typing your own name is the signature. Nothing else is."""
+    signature: str = Field(..., min_length=2, max_length=120)
+    note: str = ""
+
+
+@router.post("/certify")
+def certify(body: CertifyIn, period: str = "2025",
+            actor: Actor = Depends(require_controller)) -> dict:
+    """Put your name on the rate build-up.
+
+    Everything up to here is free-order and nothing after here is blocked.
+    What this changes is whether the paper that comes out says it is
+    certified: an invoice regenerated or a workbook produced without a
+    signature carries **NOT CERTIFIED**, which is the rule
+    `invoice_document.py` already follows for a reproduction, pointed at the
+    one fact every output depends on.
+
+    It is not `rate.status`. That is the sponsor conversation — PROPOSED means
+    YBI has put the rate to NCDMM. This is the controller asserting the rate
+    is final and his.
+
+    **The signature does not wait for the record to be complete.** Tom may
+    certify with the square footage still missing; refusing would stop him
+    signing for as long as a document somebody else holds is outstanding. What
+    must not happen is the caveat being lost, so the certificate records the
+    walk's unfinished steps as they stood and every document rendered under it
+    can say what the signature covered.
+
+    Signing for somebody else is not possible: the actor comes from the
+    session, `require_controller` refuses anybody else, and
+    `refuse_issued_password` refuses an account still on a password somebody
+    else chose.
+    """
+    with turn(period):
+        rates = query("""SELECT rate_id, kind, seal_hash FROM rate
+                          WHERE period = %s AND status <> 'SUPERSEDED'
+                          ORDER BY computed_at DESC""", (period,))
+        if not rates:
+            raise HTTPException(
+                409, "No rate stands for this period. Seal the "
+                     "classifications and compute before signing — a "
+                     "signature on an arithmetic nobody has done yet is a "
+                     "signature on nothing.")
+        seals = {r["seal_hash"] for r in rates}
+        if len(seals) > 1:
+            raise HTTPException(
+                409, "The live rates carry more than one seal, so there is "
+                     "no single build-up to sign. Recompute and try again.")
+        seal_hash = seals.pop()
+
+        # What the signature covers. Read inside the turn, because a step
+        # that clears between the read and the write would leave the
+        # certificate describing a record that never existed.
+        # Everything still open **except this act**. The certification step
+        # is necessarily open at the instant it is read — it is the thing
+        # being done — and listing it put "The rate certified — open" on the
+        # face of the certificate, which is a document contradicting itself.
+        # Excluded by key rather than by number: the sequence has already been
+        # renumbered once and a literal 9 here would have followed it silently.
+        outstanding = query(
+            """SELECT seq, key, step, state, detail FROM v_audit_walk
+                WHERE period = %s AND state <> 'DONE' AND key <> 'CERTIFY'
+                ORDER BY seq""",
+            (period,))
+
+        # Read the one definition, not a second copy of it. A first draft
+        # checked `withdrawn_at IS NULL` on the same seal here, which refused
+        # a perfectly good signature on a *recomputed* build-up: the
+        # judgments were unchanged so the seal came back the same, and the
+        # dead certificate was not withdrawn — it was superseded, which is a
+        # different fact. The schema holds the same rule through the same
+        # view, so the handler and the trigger cannot disagree.
+        live = one("""SELECT cert_id FROM v_rate_certified
+                       WHERE period = %s AND certified""", (period,))
+        if live:
+            raise HTTPException(
+                409, "This build-up is already certified. Withdraw the "
+                     "signature first if it needs to be made again.")
+
+        with transaction() as cur:
+            cur.execute(
+                """INSERT INTO rate_certification
+                       (period, seal_hash, signature, certified_by,
+                        outstanding, note)
+                   VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                RETURNING cert_id, certified_at""",
+                (period, seal_hash, body.signature.strip(), actor.actor_id,
+                 json.dumps([dict(o) for o in outstanding], default=str),
+                 body.note.strip()))
+            row = cur.fetchone()
+            # The rate rows this signature is on. Recomputing supersedes them
+            # and the certificate dies with them, which is what stops an
+            # unseal-and-reseal cycle silently reviving a signature on
+            # arithmetic nobody signed.
+            cur.executemany(
+                """INSERT INTO rate_certification_line (cert_id, rate_id)
+                   VALUES (%s, %s)""",
+                [(row["cert_id"], r["rate_id"]) for r in rates])
+            record(actor, "RATE_CERTIFY", "rate_certification",
+                   str(row["cert_id"]),
+                   after={"seal_hash": seal_hash,
+                          "signature": body.signature.strip(),
+                          "rates": [r["kind"] for r in rates],
+                          "outstanding": len(outstanding)},
+                   reason=body.note.strip() or
+                          "Certified the 2025 rate build-up.",
+                   cursor=cur)
+
+    return {"period": period, "cert_id": str(row["cert_id"]),
+            "certified_at": row["certified_at"], "seal_hash": seal_hash,
+            "signature": body.signature.strip(),
+            "rates": [r["kind"] for r in rates],
+            "outstanding": outstanding}
+
+
+class WithdrawIn(BaseModel):
+    reason: str = Field(..., min_length=20)
+
+
+@router.post("/certify/withdraw")
+def withdraw(body: WithdrawIn, period: str = "2025",
+             actor: Actor = Depends(require_controller)) -> dict:
+    """Take your name off it again.
+
+    A lock nobody can open is a lock somebody works around, so this exists;
+    and a signature withdrawn without a reason is the next person's puzzle, so
+    the schema refuses one under twenty characters. The certificate is not
+    deleted — it stands as the record that a position was taken and then
+    withdrawn, which is the rule `restatement` already follows.
+    """
+    with turn(period):
+        # The *live* certificate, from the one definition. Reading
+        # `withdrawn_at IS NULL` here picked the wrong row the moment a
+        # recompute had superseded an earlier signature: that certificate is
+        # not withdrawn, it is dead, and withdrawing it left the live one
+        # standing while the route answered 200. Superseded and withdrawn are
+        # different facts and only one view knows which is which.
+        live = one("""SELECT cert_id, seal_hash FROM v_rate_certified
+                       WHERE period = %s AND certified""", (period,))
+        if not live:
+            raise HTTPException(
+                409, "There is no live signature on this period's rate.")
+        with transaction() as cur:
+            cur.execute(
+                """UPDATE rate_certification
+                      SET withdrawn_at = now(), withdrawn_by = %s,
+                          withdrawn_reason = %s
+                    WHERE cert_id = %s""",
+                (actor.actor_id, body.reason.strip(), live["cert_id"]))
+            record(actor, "RATE_CERTIFY_WITHDRAW", "rate_certification",
+                   str(live["cert_id"]),
+                   after={"withdrawn": True},
+                   reason=body.reason.strip(), cursor=cur)
+    return {"period": period, "cert_id": str(live["cert_id"]),
+            "withdrawn": True}
+
+
+@router.get("/certification")
+def certification(period: str = "2025") -> dict:
+    """Whether the rate is certified right now, and the sentence if not.
+
+    One fact, read from one view, by every screen and every renderer — so a
+    footer cannot say one thing while a screen says another.
+    """
+    row = one("""SELECT period, certified, cert_id, signature, certified_at,
+                        certified_by, seal_hash, outstanding, note, why_not
+                   FROM v_rate_certified WHERE period = %s""", (period,))
+    if not row:
+        raise HTTPException(404, "No such period.")
+    return row
 
 
 @router.get("/allocation")

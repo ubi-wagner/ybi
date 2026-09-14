@@ -154,6 +154,16 @@ class InvoiceDocument:
     #: know before they act on the figure — that classification is open,
     #: that an indirect line was never billed.
     caveats: tuple[str, ...] = ()
+    #: Whether the rate this invoice is built on carries the controller's
+    #: signature, and the sentence that says so either way.
+    #:
+    #: Everything upstream is free-order and **nothing is blocked**: an
+    #: invoice can be regenerated at any time, because testing and evaluating
+    #: the system is ordinary work and a machine that refused it is one people
+    #: route around. What changes is whether the paper says it is certified.
+    #: Passed in rather than looked up, because `domain/` holds no database.
+    certified: bool = False
+    certification_line: str = ""
 
     @property
     def footing(self) -> Decimal:
@@ -445,6 +455,37 @@ def _provenance(c, doc: InvoiceDocument) -> None:
                  + (f", status {doc.status}." if doc.status else "."))
 
 
+def _certification(c, doc: InvoiceDocument) -> None:
+    """Whether the rate underneath this figure has been signed.
+
+    The reproduction band above answers *is this the document of record*. This
+    answers a different question — *has anybody put their name to the
+    arithmetic* — and both can be true at once, which is why they are two
+    bands rather than one cleverer one.
+
+    It prints in **both** directions on purpose. A document that says nothing
+    when uncertified and nothing when certified leaves the reader to assume,
+    and the assumption a reader makes about a figure on a letterhead is the
+    generous one.
+    """
+    y = MARGIN - 44
+    if doc.certified:
+        c.setFillColor(MUTED)
+        c.setFont("Helvetica", 7.5)
+        c.drawString(MARGIN, y, doc.certification_line
+                     or "Certified against the rate on file.")
+        return
+
+    c.setFillColor(colors.HexColor("#F8E7E4"))
+    c.rect(MARGIN, y - 7, TABLE_W, 24, stroke=0, fill=1)
+    c.setFillColor(colors.HexColor("#8C2A1E"))
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(MARGIN + 6, y + 6, "NOT CERTIFIED")
+    c.setFont("Helvetica", 7.5)
+    c.drawString(MARGIN + 6, y - 3, doc.certification_line
+                 or "The rate this is built on carries no signature.")
+
+
 def _page_number(c, page: int, pages: int | None) -> None:
     c.setFillColor(MUTED)
     c.setFont("Helvetica", 7.5)
@@ -484,6 +525,7 @@ def _draw(doc: InvoiceDocument, pages: int | None) -> tuple[bytes, int]:
             c.setFont("Helvetica-Oblique", 8)
             c.drawString(MARGIN, y - 12, "continued \u2192")
             _provenance(c, doc)
+            _certification(c, doc)
             _page_number(c, page, pages)
             c.showPage()
             page += 1
@@ -496,6 +538,7 @@ def _draw(doc: InvoiceDocument, pages: int | None) -> tuple[bytes, int]:
 
     _foot(c, doc, y - 26)
     _provenance(c, doc)
+    _certification(c, doc)
     _page_number(c, page, pages)
     c.showPage()
     c.save()

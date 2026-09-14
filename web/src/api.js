@@ -162,6 +162,16 @@ export const api = {
      Read, never computed — `v_audit_walk` owns it. */
   walk: (period = "2025") =>
     req(`/dashboard/walk?period=${encodeURIComponent(period)}`),
+  /* The one fact every output reads: does the rate carry a signature.
+     Certifying blocks nothing — it decides whether the paper says so. */
+  certification: (period = "2025") =>
+    req(`/rates/certification?period=${encodeURIComponent(period)}`),
+  certify: (signature, note = "", period = "2025") =>
+    req(`/rates/certify?period=${encodeURIComponent(period)}`,
+        { method: "POST", body: JSON.stringify({ signature, note }) }),
+  withdrawCertification: (reason, period = "2025") =>
+    req(`/rates/certify/withdraw?period=${encodeURIComponent(period)}`,
+        { method: "POST", body: JSON.stringify({ reason }) }),
   worklist: (params) => req("/dashboard/worklist?" + new URLSearchParams(params)),
   activity: (params) => req("/dashboard/activity?" + new URLSearchParams(params)),
   timesheetObjectives: (period = "2025") =>

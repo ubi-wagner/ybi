@@ -108,9 +108,9 @@ const ALL_TABS = [
      opened first. Nothing on it is computed — every figure is read from the
      row the computation recorded — which is the whole reason a reviewer can
      be told the rate was not reverse-engineered. */
-  ["/review/rate", "Rate",     "7–8",     "reader",     "audit"],
-  ["/restate",   "Restate",    "9",     "CONTROLLER", "audit"],
-  ["/reports",   "Reports",    "10",     "reader",     "audit"],
+  ["/review/rate", "Rate",     "7–9",     "reader",     "audit"],
+  ["/restate",   "Restate",    "10",     "CONTROLLER", "audit"],
+  ["/reports",   "Reports",    "11",     "reader",     "audit"],
   /* Reading what has been asked for takes the same gate the router asks for,
      `require_reader`. Accepting a reply takes the portfolio that owns the
      data, which the screen itself decides — so somebody who may read this
@@ -384,8 +384,8 @@ export default function App() {
           <Route path="/rates" element={<Rates />} />
           <Route path="/restate" element={<Restate actor={actor} />} />
           <Route path="/restate/:restatementId" element={<Restate actor={actor} />} />
-          <Route path="/review" element={<Review />} />
-          <Route path="/review/:pane" element={<Review />} />
+          <Route path="/review" element={<Review actor={actor} />} />
+          <Route path="/review/:pane" element={<Review actor={actor} />} />
           <Route path="/awards" element={<Awards />} />
           <Route path="/contracts" element={<Contracts actor={actor} />} />
           <Route path="/contracts/:pane" element={<Contracts actor={actor} />} />

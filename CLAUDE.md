@@ -1980,6 +1980,86 @@ administrative objective. The test that caught it then failed again because
 the fixture said `INDIRECT` from memory; *read the schema, never recall it*
 applies to the test as much as to the code.
 
+## Tom's signature on the rate, and what it does not block
+
+Migration `082`, `rate_certification`, `POST /api/rates/certify`,
+`Certification.jsx`. The rule, in the words it was asked for: *fill in and
+classify and upload and seal anywhere and anytime, but anything after rates
+has to have everything up to rates locked and Tom certify the rates — and
+anything used to test or evaluate without his seal just says NOT CERTIFIED on
+the footer.*
+
+**Nothing downstream is blocked, and that is the design rather than a
+shortcut.** An invoice can be regenerated and a workbook produced at any
+time, because testing against real figures is ordinary work and a machine
+that refused it is one people route around. What changes is whether the paper
+says it is certified — which is the rule `invoice_document.py` already follows
+for a reproduction (*a reproduction says it is one*), pointed at one fact every
+output reads.
+
+**It is not `rate.status`.** That column is the sponsor conversation —
+`PROPOSED` means YBI has put the rate to NCDMM and they have not answered.
+Certification is the other axis: the controller asserting the rate is final
+and his. Overloading one word with both would leave a reviewer unable to tell
+a position the organisation has taken from a signature on its own arithmetic,
+which is exactly what `062` refused to do to `PROPOSED`.
+
+**The signature does not wait for the record to be complete.** Tom may certify
+with the square footage still missing; refusing would stop him signing for as
+long as a document somebody else holds is outstanding. What must not happen is
+the caveat being lost, so the certificate records the walk's unfinished steps
+**as they stood** and the screen shows them before he signs. On the live
+record it covers three: space, assets, and the citations.
+
+Four defects came out of driving it, and the first is the one that mattered:
+
+- **The signature revived on its own.** The first draft named only the seal —
+  and the seal hash is a function of the judgments, so unseal, re-seal the
+  identical judgments, recompute, and the certificate re-attached. Worse,
+  `POST /rates/compute` takes `admin_labour`, so the *same seal* yields 34.82%
+  or 43.99%: the revived signature would have been on a rate Tom never saw.
+  `rate_certification_line` names the rate rows, recomputing supersedes them,
+  and the certificate dies with them. **This system's own model of change,
+  used for what it is for.**
+- **Two definitions of "live", twice.** The certify handler and the withdraw
+  handler each carried their own `withdrawn_at IS NULL` test, which is the
+  wrong question: a certificate killed by a recompute is not withdrawn, it is
+  superseded, and those are different facts. Certifying a recomputed build-up
+  answered 409, and withdrawing took the *dead* certificate and left the live
+  one standing while answering 200. Both read `v_rate_certified` now, and so
+  does the trigger that enforces one live signature per period — a partial
+  unique index cannot express liveness that depends on another table, and a
+  `superseded_at` column would be derived state stored beside what it is
+  derived from, which is what `rate.superseded_by` turned out to be.
+- **`why_not` answered with the first matching branch, not the latest fact.**
+  After Tom withdrew a signature it said *"the rate has been recomputed since
+  it was certified"* — true of an older certificate, and a reader deciding
+  whether to go and ask him would have asked the wrong question. It describes
+  the most recent certificate now.
+- **The certificate listed the act that creates it.** The certification step is
+  necessarily open at the instant the snapshot is read, so *"The rate certified
+  — open"* appeared on the face of the certificate: a document contradicting
+  itself. Excluded by a **stable key** rather than by number, because the walk
+  had already been renumbered once in this same change and a literal `9` would
+  have followed it silently. Every step carries a key now — `LEDGER`,
+  `RECONCILE`, `CLASSIFY`, `SPACE`, `ASSETS`, `EVIDENCE`, `SEAL`, `RATE`,
+  `CERTIFY`, `RESTATE`, `REPORT`.
+
+And two smaller things worth carrying. `081` is applied, so `082` **lifts** its
+view body rather than retyping it — `070` records what retyping costs. And the
+walk gained a step, so Rate is `7–9`, Restate `10`, Reports `11`; the test that
+derives both sides caught the renumbering without being told.
+
+**The band prints in both directions**, verified by reading the rendered PDF
+back with `pypdf`: uncertified carries `NOT CERTIFIED` and the reason,
+certified names who signed and when. A document silent either way leaves the
+reader to assume, and the assumption made about a figure on a letterhead is
+the generous one.
+
+Still to wire: the workbook first sheets (`package.py`, `timesheet_report.py`)
+carry their own caveats and not yet this one, and the Restate and Reports
+screens show the state but do not yet repeat the band.
+
 ## The audit is a walk, not a to-do list
 
 Migration `081`, `v_audit_walk`, `GET /api/dashboard/walk`, `Walk.jsx`. The

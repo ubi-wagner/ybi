@@ -1046,3 +1046,13 @@ td .btn-row { flex-wrap: nowrap; align-items: center; }
 .walk-state.s-no-data { color: var(--warn); font-weight: 600; }
 .walk-next { margin-top: 14px; padding-top: 12px;
              border-top: 1px solid var(--rule); font-size: 13px; }
+
+/* Whether the rate carries a signature. Two states, and the unsigned one is
+   not an alarm — producing uncertified output is ordinary work. */
+.cert-chip { font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+             border: 1px solid var(--rule); border-radius: 3px;
+             padding: 1px 6px; color: var(--muted); }
+.cert-chip.is-on { color: var(--pass); border-color: var(--pass);
+                   background: var(--pass-wash); font-weight: 600; }
+.cert-covers { margin-top: 12px; padding: 10px 12px;
+               background: var(--warn-wash); border-radius: var(--r); }
