@@ -33,7 +33,7 @@ The third errs **against** YBI. The first two err for it.
        of which the tenants have already repaid            133,998.11
   ×  the share of the estate that is YBI's own
   +  overhead that floor area does not drive                181,276.15
-  −  200.436(b) depreciation on federally funded assets     156,235.27
+  −  200.436(b), scaled to the share that is YBI's own
   =  the federal overhead pool
                                             MTDC base    4,736,602.11
 ```
@@ -50,11 +50,11 @@ Common area — corridors, restrooms, conference rooms — serves tenants and th
 incubator both. Heidi's floor plan separates two kinds of it, and they are not
 the same question.
 
-| reading | let share | federal pool | overhead |
-| --- | ---: | ---: | ---: |
-| all common follows the tenants | 94.01% of 103,909 sq ft | 111,936.24 | **2.36%** |
-| **shared facilities ours, circulation pro rata** | **86.27% of 113,235 sq ft** | **224,256.28** | **4.73%** |
-| all common is the incubator's own | 63.92% of 152,814 sq ft | 548,366.98 | **11.58%** |
+| reading | let share | YBI's own occupancy | less 436(b) in it | + non-space | federal pool | overhead |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| all common follows the tenants | 94.01% of 103,909 sq ft | 86,895.36 | (9,358.96) | 181,276.15 | 258,812.55 | **5.46%** |
+| **shared facilities ours, circulation pro rata** | **86.27% of 113,235 sq ft** | **199,215.40** | **(21,456.26)** | **181,276.15** | **359,035.29** | **7.58%** |
+| all common is the incubator's own | 63.92% of 152,814 sq ft | 523,326.10 | (56,364.22) | 181,276.15 | 648,238.03 | **13.69%** |
 
 **Take the middle, and not because it is the middle.** Splitting the difference
 between two arguments is an average, not an argument. The middle row is the one
@@ -71,16 +71,94 @@ rather than assumed.
 | | | |
 | --- | ---: | --- |
 | **Fringe** | **21.90%** | of salaries and wages |
-| **Overhead** | **4.73%** | of MTDC · band 2.36% – 11.58% |
+| **Overhead** | **7.58%** | of MTDC · band 5.46% – 13.69% |
 | **G&A** | **12.37%** | of MTDC |
-| **Indirect, combined** | **17.10%** | of MTDC · band 14.73% – 23.95% |
-| Fully loaded on labour | **1.4275×** | |
+| **Indirect, combined** | **19.95%** | of MTDC · band 17.83% – 26.05% |
+| Fully loaded on labour | **1.4622×** | |
 
 **Fringe and G&A are not in the band and cannot be.** Fringe is anchored at
 both ends to source documents — the P&L's six accounts over the payroll
 register, 401,783.60 / 1,835,047.17 = 0.2190 — so no floor plan touches it.
 G&A carries no occupancy, so the carve cannot reach it. **Only overhead moves
 on a measurement**, which is the check that the construction is sound.
+
+
+---
+
+## 4a. The 436(b) correction, and why it matters for reading the rest
+
+The first version of this workpaper said **4.73%**. It subtracted the whole
+$156,235.27 of 200.436(b) depreciation from a pool the space split had already
+reduced to 13.73% — **the same money out twice**, costing YBI **2.85 points of
+overhead**.
+
+Depreciation on federally funded assets sits *inside* occupancy. The let share
+of it left with the let share of everything else; only the part riding on YBI's
+own floor was still there to remove. The asset register names no building on
+any of the eighteen, so they are spread like the estate — if they sit
+disproportionately on YBI's own floor the adjustment is larger, and
+`b436_ours` is the line to argue about.
+
+---
+
+## 4b. Which way each judgment runs
+
+The fair question about a rate that has moved from 43.99% to 19.95% in one week
+is whether the assumptions have quietly stacked in one direction. They have
+not, and this is the check rather than the assurance:
+
+| judgment | taken | alternative | points | runs |
+| --- | --- | --- | ---: | --- |
+| Administrative labour | POOL | OBJECTIVE | 6.81 | **for YBI** |
+| Tenant reimbursements | grossed up before the split | carve the net | 2.44 | **for YBI** |
+| Overhead floor area does not drive | left uncarved | carve it | 3.30 | **for YBI** |
+| 200.436(b) | scaled to YBI's share | subtract whole | 2.85 | **for YBI** |
+| Insurance | left in the federal pool | carve as occupancy | 1.05 | **for YBI** |
+| Common space | shared ours, circulation pro rata | all common ours | 6.11 | against |
+| Common space | shared ours, circulation pro rata | all common to tenants | 2.12 | **for YBI** |
+
+**18.57 points already sit in YBI's favour**, at five of the six forks. The one
+place the construction gives ground is common space, and it gives it to a
+reason rather than to caution.
+
+**What moved the rate was the measurement, not the assumptions.** 43.99% was a
+rate with no facilities carve-out at all, because no building was on the
+record. Take every remaining fork against YBI and the overhead pool goes
+negative — which is the same thing the engine said when it refused to record a
+rate on Heidi's literal reading, and it is why the pool needs resizing rather
+than the rate defending.
+
+---
+
+## 4c. $313,605.35 turns on a determination nobody has made
+
+Migration `115`, `party_determination`, `v_subaward_exposure`,
+`scripts/load_party_determinations.py`.
+
+2 CFR 200.1 takes **the first $25,000 of each subaward** into MTDC and a
+contract for services whole. So the same payment sits in the base or mostly
+outside it depending on a 200.331 determination — and this system had never
+recorded one. `burdened_buildup.py` shipped a `SUBAWARD_CAP` that **never
+fired**, because these invoices categorise every one of them as `CONSULTANT`.
+
+| objective | payee | amount | at stake |
+| --- | --- | ---: | ---: |
+| LTM | Defense & Energy Systems LLC | 102,000.00 | 77,000.00 |
+| Drive AM | Elevate Systems | 101,075.89 | 76,075.89 |
+| Digital Engineering | *(no payee on the ledger line)* | 100,000.00 | 75,000.00 |
+| AAMEN | *(no payee on the ledger line)* | 77,710.46 | 52,710.46 |
+| AAMEN | NezTech Corp. | 51,319.00 | 26,319.00 |
+| LTM | *(no payee on the ledger line)* | 31,500.00 | 6,500.00 |
+| | | | **313,605.35** |
+
+Every one is `UNDETERMINED`, which the register reports as **NO DATA and never
+a pass**. The schema refuses a half-made determination: one that is made
+carries who made it, when, and forty characters of substance, because 200.331
+turns on the substance of the relationship and not on what an invoice called
+it.
+
+Three of the six name **no payee at all** on the ledger line, which is a
+separate question and a worse one.
 
 ---
 
@@ -91,12 +169,12 @@ organisation's, not the contract's — Appendix IV gives YBI one. What differs
 per award is the MTDC it carries, the ceiling it sits under, and what its own
 schedule budgets.
 
-| award | MTDC | indirect @ 17.10% | ceiling | headroom |
+| award | MTDC | indirect @ 19.95% | ceiling | headroom |
 | --- | ---: | ---: | ---: | ---: |
-| Drive AM | 361,451.88 | 61,821.28 | 1,103,594.00 | 680,320.84 |
-| Last Tactical Mile | 330,513.06 | 56,529.63 | 899,500.00 | 512,457.31 |
-| Hybrid Phase 2 | 91,788.13 | 15,699.07 | 512,409.00 | 404,921.80 |
-| Digital Engineering | 207,398.87 | 35,472.67 | 1,000,690.00 | 757,818.46 |
+| Drive AM | 361,451.88 | 72,106.40 | 1,103,594.00 | 670,035.72 |
+| Last Tactical Mile | 330,513.06 | 65,934.38 | 899,500.00 | 503,052.56 |
+| Hybrid Phase 2 | 91,788.13 | 18,310.91 | 512,409.00 | 402,309.96 |
+| Digital Engineering | 207,398.87 | 41,374.21 | 1,000,690.00 | 751,916.92 |
 
 **Every award has headroom**, which is the useful fact: the rate is not
 constrained by any ceiling. What constrains it is what each schedule budgets —

@@ -157,9 +157,24 @@ def estate_share(common: str) -> tuple[D, D, D]:
 
 
 def rate_for(share: D, occ_gross: D, other: D, b436: D, base: D) -> dict:
+    """YBI's own share of occupancy, less the 200.436(b) depreciation **in it**.
+
+    The first draft subtracted the whole 156,235.27 from a figure the space
+    split had already cut to 13.73% — the same money out twice, costing 2.85
+    points of overhead against YBI. Depreciation on federally funded assets
+    sits *inside* occupancy, so the let share of it is already gone with the
+    let share of everything else; only the part riding on YBI's own floor is
+    still there to remove.
+
+    The asset register names no building on any of the eighteen, so this
+    spreads them like the estate. If they turn out to sit disproportionately
+    on YBI's own floor the adjustment is larger, and `b436_ours` is the line
+    to argue about.
+    """
     ours = (occ_gross * (1 - share)).quantize(D("0.01"))
-    pool = ours + other - b436
-    return dict(share=share, ours=ours, pool=pool,
+    b436_ours = (b436 * (1 - share)).quantize(D("0.01"))
+    pool = ours + other - b436_ours
+    return dict(share=share, ours=ours, b436_ours=b436_ours, pool=pool,
                 rate=(pool / base).quantize(D("0.000001")) if base else D(0))
 
 
@@ -188,6 +203,8 @@ def main() -> int:
     print(f"      of which tenants have already repaid    {credits:>14,.2f}")
     print(f"    overhead floor area does not drive        {other:>14,.2f}")
     print(f"    200.436(b) federally funded depreciation  {-b436:>14,.2f}")
+    print("      spread like the estate, so only the share riding on YBI's")
+    print("      own floor is still in the pool to remove")
     print(f"    MTDC base                                 {base:>14,.2f}\n")
 
     print("  THE BAND, AND WHAT SETS ITS WIDTH")
@@ -199,6 +216,8 @@ def main() -> int:
         r = rate_for(share, occ_gross, other, b436, base)
         scen.append((label, r, rental, estate))
         print(f"    {label:38}{share*100:>7.2f}% of {estate:,.0f} sq ft let")
+        print(f"      YBI's own share of occupancy          {r['ours']:>14,.2f}")
+        print(f"      less 200.436(b) in that share         {-r['b436_ours']:>14,.2f}")
         print(f"      federal overhead pool                 {r['pool']:>14,.2f}")
         print(f"      overhead rate                         {r['rate']*100:>13.2f}%")
     lo = min(s[1]["rate"] for s in scen)
