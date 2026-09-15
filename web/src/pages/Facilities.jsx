@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, count, explain, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import Propose from "../components/Propose.jsx";
+import SubjectNotes from "../components/SubjectNotes.jsx";
 
 /*
   Five buildings, the space in them, and what it is all worth.
@@ -21,22 +23,50 @@ const USES = ["TENANT", "PROGRAM", "ADMINISTRATIVE", "SHARED_LAB", "COMMON",
               "VACANT", "COMMITTED"];
 const STATUSES = ["OCCUPIED", "VACANT", "INTERNAL", "COMMITTED", "COMMON"];
 
-export default function Facilities({ actor }) {
-  const canWrite = actor?.role === "CONTROLLER";
-  const [tab, setTab] = useState("buildings");
+const USE_HINT = {
+  TENANT: "Let to somebody outside YBI. Comes out of the federal pool.",
+  PROGRAM: "Delivering a programme. Names the cost objective it serves.",
+  ADMINISTRATIVE: "YBI's own offices.",
+  SHARED_LAB: "Shared equipment floor.",
+  COMMON: "Corridors, stairs, plant.",
+  VACANT: "Nobody in it. Comes out of the federal pool like tenant space.",
+  COMMITTED: "Let from a date but not yet occupied.",
+};
+
+export default function Facilities({ actor, tab: initialTab }) {
+  /* Portfolio, not rank.
+     `actor.role === "CONTROLLER"` was rank, and CONTROLLER is the name of a
+     portfolio *and* of a rank — the one place this file's rules say is
+     easiest to collapse. Every facilities route is
+     require_portfolio(FACILITIES, CONTROLLER) and every equipment route is
+     require_portfolio(INVENTORY, CONTROLLER), so reading rank hid the write
+     forms from exactly the person who holds the portfolio and nothing else:
+     a nav stricter than the API, which is the same defect as one looser. */
+  const held = new Set(actor?.portfolios || []);
+  const canSpace = held.has("FACILITIES") || held.has("CONTROLLER");
+  const canKit = held.has("INVENTORY") || held.has("CONTROLLER");
+  const canWrite = canSpace;
+  /* The tab was a prop that nothing read, so `/classify/assets` — the
+     destination the worklist and the walk both print for the asset register —
+     opened on Buildings. */
+  const [tab, setTab] = useState(initialTab || "buildings");
   const [data, setData] = useState(null);
   const [space, setSpace] = useState(null);
   const [kit, setKit] = useState(null);
   const [inKind, setInKind] = useState(null);
+  const [funding, setFunding] = useState(null);
+  const [notesOn, setNotesOn] = useState(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const [f, s, e, k] = await Promise.all([
+      const [f, s, e, k, fu] = await Promise.all([
         api.facilities(), api.spaceUnits({}), api.equipment(), api.inKind(),
+        api.assetFunding(),
       ]);
-      setData(f); setSpace(s); setKit(e); setInKind(k); setError("");
-    } catch (err) { setError(String(err.message || err)); }
+      setData(f); setSpace(s); setKit(e); setInKind(k); setFunding(fu);
+      setError("");
+    } catch (err) { setError(explain(err)); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -83,9 +113,35 @@ export default function Facilities({ actor }) {
 
       {tab === "buildings" && (
         <Card title="Buildings" aside="Square footage has to account for itself">
+          <Propose
+            subject="FACILITY"
+            title="a building"
+            subjectLabel="Building reference"
+            /* A count belongs on a screen that reads it from the record.
+               This asserted one — "no building carries square footage" — and
+               went on saying it with a building on the table underneath. The
+               rule is what is worth saying anyway, and the rule does not
+               expire. */
+            hint="Until a building carries its area the 200.465 carve-out
+                  cannot be sized, and every dollar of tenant and vacant
+                  occupancy cost stays in the federal pool. It is the single
+                  largest adjustment in the rate model."
+            fields={[
+              { name: "name", label: "Name", type: "text", required: true },
+              { name: "usable_sqft", label: "Usable square feet",
+                type: "number", required: true,
+                hint: "What the carve-out is sized by." },
+              { name: "rentable_sqft", label: "Rentable square feet",
+                type: "number", hint: "Optional; never less than usable." },
+              { name: "address", label: "Address", type: "text" },
+              { name: "owned", label: "Owned by YBI", type: "bool" },
+            ]}
+            onDone={load} />
           {f.length === 0 ? (
             <Empty mark="—" title="No buildings recorded">
-              Add the five buildings and their usable area, then the rent roll.
+              Nothing is on the record yet. Propose a building above, or record
+              one directly if the measurement is settled — both end in the same
+              place and only one of them puts it in front of the controller.
             </Empty>
           ) : (
             <Table columns={[
@@ -117,6 +173,12 @@ export default function Facilities({ actor }) {
                     <td className="num strong">{money(r.subsidy)}</td>
                     <td className="num quiet">{sqft(r.equipment_sqft)}</td>
                     <td className="l quiet small">
+                      <a href="#" onClick={(e) => {
+                           e.preventDefault();
+                           setNotesOn({ subject: "FACILITY", id: r.facility_id,
+                                        title: r.name });
+                         }}>Notes</a>
+                      {" · "}
                       {r.owned ? "owned" : `leased · ${r.landlord}`}
                       {r.units_without_market > 0 &&
                         <div className="amt neg">{r.units_without_market} without a market rate</div>}
@@ -133,6 +195,36 @@ export default function Facilities({ actor }) {
       {tab === "space" && (
         <Card title="Rent roll"
               aside={`${(space?.space || []).length} spaces · market beside actual`}>
+          <Propose
+            subject="SPACE_UNIT"
+            title="a space"
+            subjectLabel="Space reference"
+            hint="Every square foot of a building has to be accounted for —
+                  tenant, programme, administrative, shared lab, common or
+                  vacant. A building that does not add up drops out of the
+                  carve-out entirely, and all of its occupancy cost reaches the
+                  federal pool unchallenged."
+            fields={[
+              { name: "facility_id", label: "Building", type: "select",
+                required: true, options: f.map((x) => x.facility_id),
+                hint: "Or a building you have just proposed." },
+              { name: "label", label: "What it is called", type: "text",
+                required: true },
+              { name: "usable_sqft", label: "Usable square feet",
+                type: "number", required: true },
+              { name: "use", label: "Use", type: "select", required: true,
+                options: USES,
+                hint: "Tenant and vacant space is what comes out of the pool." },
+              { name: "status", label: "Status", type: "select",
+                required: true, options: STATUSES },
+              { name: "occupant", label: "Occupant", type: "text",
+                hint: "Required where the status is OCCUPIED." },
+              { name: "objective_id", label: "Cost objective", type: "text",
+                hint: "Required where the use is PROGRAM." },
+              { name: "floor", label: "Floor", type: "text" },
+            ]}
+            onDone={load} />
+
           {(space?.space || []).length === 0 ? (
             <Empty mark="—" title="No spaces recorded" />
           ) : (
@@ -170,6 +262,83 @@ export default function Facilities({ actor }) {
 
       {tab === "equipment" && (
         <>
+          <Card title="Who paid for each asset"
+                variant="raised"
+                aside={funding?.totals
+                  ? `${count(funding.totals.unanswered)} of ${count(funding.totals.assets)} unanswered`
+                  : "the register is empty"}>
+            <p className="muted">
+              2 CFR 200.313(d)(1) requires the funding source on the property
+              record and the fixed-asset schedule has no such column — which is
+              a finding of its own. It decides 200.436(b): depreciation on a
+              federally funded asset is unallowable, and{" "}
+              <strong>$850,383</strong> of depreciation is waiting on it.{" "}
+              <em>A blank is unanswered, and unanswered is a value</em> — there
+              is no federal money in this asset and nobody has looked are
+              different facts, so the second is never written as 0.00.
+            </p>
+            <Propose
+              subject="ASSET_FUNDING"
+              title="a funding source"
+              subjectLabel="Asset id"
+              hint="One source for one asset. An asset may carry several; each
+                    is proposed on its own, because a federal share and a
+                    private share are two answers and not one."
+              fields={[
+                { name: "kind", label: "Source", type: "select", required: true,
+                  options: ["FEDERAL", "STATE", "LOCAL", "PRIVATE", "DEBT",
+                            "UNRESTRICTED"] },
+                { name: "amount", label: "Amount", type: "number",
+                  required: true,
+                  hint: "0.00 is a real answer: this source paid nothing." },
+                { name: "award_reference", label: "Award reference",
+                  type: "text",
+                  hint: "Required for a federal source — 200.313(d)(1)." },
+                { name: "funder", label: "Funder", type: "text" },
+              ]}
+              onDone={load} />
+            {!funding || (funding.assets || []).length === 0 ? (
+              <Empty mark="—" title="The asset register is empty">
+                It arrives whole, from the fixed-asset schedule YBI already
+                holds — ask for it on the Requests screen. The funding source is
+                the one column that schedule does not carry, and it is the
+                column that answers 200.436(b).
+              </Empty>
+            ) : (
+              <Table columns={[
+                { label: "Asset", align: "left" },
+                { label: "Gross cost" }, { label: "Depreciation" },
+                { label: "Funding on file", align: "left" },
+              ]}>
+                {funding.assets.map((a) => (
+                  <tr key={a.asset_id}>
+                    <td className="l">
+                      <span className="strong">{a.description}</span>
+                      <div className="rowsub">{a.asset_id}</div>
+                    </td>
+                    <td className="num">{money(a.gross_cost)}</td>
+                    <td className="num">{money(a.depreciation)}</td>
+                    <td className="l">
+                      <a href="#" onClick={(e) => {
+                           e.preventDefault();
+                           setNotesOn({ subject: "ASSET_FUNDING",
+                                        id: a.asset_id,
+                                        title: a.description });
+                         }}>Notes</a>{" · "}
+                      {Number(a.sources) === 0
+                        ? <Pill tone="warn">nobody has looked</Pill>
+                        : (a.funding || []).map((x, n) => (
+                            <div key={n} className="rowsub">
+                              {x.kind} {money(x.amount)}
+                              {x.award_reference ? ` · ${x.award_reference}` : ""}
+                            </div>))}
+                    </td>
+                  </tr>
+                ))}
+              </Table>
+            )}
+          </Card>
+
           <Card title="Equipment"
                 aside="What its use was worth, against what was charged">
             {(kit?.equipment || []).length === 0 ? (
@@ -270,6 +439,9 @@ export default function Facilities({ actor }) {
           )}
         </Card>
       )}
+      <SubjectNotes subject={notesOn?.subject} subjectId={notesOn?.id}
+                    title={notesOn?.title}
+                    onClose={() => setNotesOn(null)} />
     </div>
   );
 }
@@ -297,11 +469,8 @@ function FacilityForm({ onSaved }) {
       setOpen(false);
       await onSaved();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { const p = JSON.parse(msg); detail = p.message || p.detail || msg; }
-      catch { /* plain */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "bad", sticky: true });
     }
   }
@@ -375,11 +544,8 @@ function SpaceForm({ facilities, onSaved }) {
       setOpen(false);
       await onSaved();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { const p = JSON.parse(msg); detail = p.message || p.detail || msg; }
-      catch { /* plain */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "bad", sticky: true });
     }
   }

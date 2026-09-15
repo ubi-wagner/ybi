@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table } from "../components/ui.jsx";
 
 const pct = (v) => `${(Number(v) * 100).toFixed(1)}%`;
@@ -18,7 +18,7 @@ export default function Certify() {
   const load = () =>
     api.myCertification()
       .then((d) => { setData(d); setError(""); })
-      .catch((e) => setError(String(e.message || e)));
+      .catch((e) => setError(explain(e)));
 
   useEffect(() => { load(); }, []);
 
@@ -30,7 +30,7 @@ export default function Certify() {
       setSigned(r);
       await load();
     } catch (e) {
-      setError(String(e.message || e));
+      setError(explain(e));
     }
     setBusy(false);
   }

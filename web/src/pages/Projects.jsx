@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 /* What a kind means is written down once — three screens each kept
    their own map of it and every one was missing different kinds. */
 import { KINDS } from "../worklistKinds.js";
@@ -283,7 +283,7 @@ function ProjectDetail({ d, canWrite, toast, onChange }) {
                   await api.setProjectStatus(p.objective_id, { status: s, note: closing });
                   toast.ok(`Moved to ${STATUS[s].says.toLowerCase()}`);
                   onChange();
-                } catch (e) { toast.fail(String(e.message || e)); }
+                } catch (e) { toast.fail(explain(e)); }
               }}>{STATUS[s].says}</button>
             ))}
             <button className="primary" disabled={closing.trim().length < 10}
@@ -293,7 +293,7 @@ function ProjectDetail({ d, canWrite, toast, onChange }) {
                           { status: "CLOSED", note: closing });
                         toast.ok("Closed out");
                         onChange();
-                      } catch (e) { toast.fail(String(e.message || e)); }
+                      } catch (e) { toast.fail(explain(e)); }
                     }}>Close the project</button>
           </div>
         </Card>
@@ -355,7 +355,7 @@ function TodoList({ rows, canWrite, toast, onChange, objectiveId, title, aside }
       setAdding(false);
       setF({ title: "", detail: "", assignee: "", due_on: "" });
       onChange();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   const change = async (id, body, said) => {
@@ -363,7 +363,7 @@ function TodoList({ rows, canWrite, toast, onChange, objectiveId, title, aside }
       await api.changeTodo(id, body);
       toast.ok(said);
       onChange();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   return (
@@ -633,7 +633,7 @@ function Covering({ canWrite, toast }) {
               toast.ok("Taken");
               setTaking(null);
               load();
-            } catch (e) { toast.fail(String(e.message || e)); }
+            } catch (e) { toast.fail(explain(e)); }
           }} />
         )}
       </Drawer>
@@ -708,7 +708,7 @@ function Setup({ f, setF, toast, onDone }) {
                + `${got.todos} thing(s) to do`
                + (got.gate_live ? "" : " · nobody assigned, so the authority gate is off"));
       onDone();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   return (
@@ -931,7 +931,7 @@ function Claims({ d, toast, onChange }) {
                 : `Approved — ${got.why_unassigned}`);
               setApproving(false);
               onChange();
-            } catch (e) { toast.fail(String(e.message || e)); }
+            } catch (e) { toast.fail(explain(e)); }
           }} />
         )}
       </Drawer>
@@ -955,7 +955,7 @@ function Claims({ d, toast, onChange }) {
                        }
                        setActing(null);
                        onChange();
-                     } catch (e) { toast.fail(String(e.message || e)); }
+                     } catch (e) { toast.fail(explain(e)); }
                    }} />
         )}
       </Drawer>

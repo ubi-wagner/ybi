@@ -148,7 +148,20 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.012
 
 /* ---------------------------------------------------------------- stat -- */
 
-.stat-row { display: flex; gap: 34px; flex-wrap: wrap; align-items: flex-end; }
+/* A row of figures reads as a row only where the labels line up.
+   `align-items: flex-end` lined up the *bottoms*, so a large value pushed its
+   own label 14px above its neighbours' and five stats printed on four
+   baselines — ragged in a way a reader registers as carelessness before they
+   read a number. Aligning the tops lines up the labels, which is the part a
+   reader scans; the values below may be any size they like.
+
+   A grid with a row each for label, value and note is the tidier idea and is
+   wrong here: `stat-note` is optional, so a stat without one leaves a cell
+   empty and the next stat's label falls into it. Watched doing exactly that —
+   five stats and their labels ran together on one line. */
+.stat-row { display: flex; gap: 30px 34px; flex-wrap: wrap;
+            align-items: flex-start; }
+.stat { display: flex; flex-direction: column; gap: 3px; }
 .stat-label { font-size: 12px; color: var(--muted); }
 .stat-value { font-family: var(--serif); line-height: 1.05; font-variant-numeric: tabular-nums; }
 .stat-value.xl { font-size: 40px; color: var(--accent); }
@@ -263,6 +276,8 @@ input[type="checkbox"] { width: auto; accent-color: var(--accent); }
 .field > .field-label { font-size: 11.5px; color: var(--muted); margin-bottom: 4px;
                         display: flex; justify-content: space-between; gap: 8px; }
 .field .req { color: var(--warn); }
+.field-hint { font-size: 11.5px; color: var(--muted); margin-top: 4px;
+              line-height: 1.5; max-width: 58ch; }
 
 .search { position: relative; min-width: 230px; }
 .search input { padding-left: 30px; }
@@ -327,10 +342,17 @@ kbd { font-family: var(--sans); font-size: 10.5px; font-weight: 600;
 
 /* --------------------------------------------------------------- empty -- */
 
-.empty { text-align: center; padding: 52px 24px; color: var(--muted); }
-.empty .mark { font-family: var(--serif); font-size: 30px; color: var(--rule); }
-.empty h3 { font-size: 16px; color: var(--ink); margin: 10px 0 4px; }
-.empty p { margin: 0 auto; max-width: 46ch; font-size: 13px; }
+/* "Nothing here yet" is the most common state in a system being filled in,
+   and it was taking 200px to say so — a screen that is mostly absence reads
+   as a screen that is mostly broken. It says the same thing in a third of the
+   height, and the mark is a rule rather than a glyph so it stops competing
+   with the heading. */
+.empty { text-align: center; padding: 22px 20px; color: var(--muted); }
+.empty .mark { font-family: var(--serif); font-size: 17px; color: var(--rule);
+               line-height: 1; }
+.empty h3 { font-size: 14.5px; color: var(--ink); margin: 6px 0 3px;
+            font-weight: 600; }
+.empty p { margin: 0 auto; max-width: 62ch; font-size: 12.5px; line-height: 1.55; }
 
 /* -------------------------------------------------------------- drawer -- */
 
@@ -1056,3 +1078,42 @@ td .btn-row { flex-wrap: nowrap; align-items: center; }
                    background: var(--pass-wash); font-weight: 600; }
 .cert-covers { margin-top: 12px; padding: 10px 12px;
                background: var(--warn-wash); border-radius: var(--r); }
+
+
+/* ------------------------------------------------------------- propose -- */
+
+/* Proposing a measurement. The bar is what somebody sees first on a screen
+   whose registers are empty, so the action is the strong thing on it and the
+   sentence beside it is the quiet thing — the reverse of what a paragraph
+   above a button does, where the reader has finished reading before they find
+   out what they are being asked to do. */
+.propose-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+               margin: 0 0 14px; }
+.propose-bar .rowsub { max-width: 68ch; }
+
+.card.propose { border-color: var(--accent); }
+
+/* Two columns at a comfortable width and one when there is not room, so a
+   form is never a single column of short boxes down a wide screen. */
+.form-grid { display: grid; gap: 12px 20px;
+             grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+             margin-bottom: 4px; }
+
+.row-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+               margin-top: 12px; }
+
+/* A refusal is printed where it happened, not only in a toast that fades
+   while somebody is reading the form. Warm, because the annotation colours
+   here are pencil rather than traffic light. */
+.refusal { margin: 12px 0 0; padding: 9px 12px; font-size: 13px;
+           color: var(--warn); background: var(--warn-wash);
+           border-left: 3px solid var(--warn); border-radius: 0 3px 3px 0; }
+
+button.primary { background: var(--accent); border-color: var(--accent);
+                 color: #fff; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: var(--accent-deep);
+                                      border-color: var(--accent-deep); }
+/* White on grey read as an empty box rather than a button somebody cannot
+   press yet. A disabled control still has to say what it is. */
+button.primary:disabled { background: var(--surface-sunk);
+                          border-color: var(--rule); color: var(--muted); }

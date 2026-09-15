@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import { Card, Drawer, Empty, PageHead, Pill } from "../components/ui.jsx";
 
 /* The guidebook.
@@ -111,7 +111,7 @@ export default function Guidebook() {
           a question for the administrator and a shrug. */}
       {state.failed && (
         <Empty mark="!" title="The guidebook could not be read">
-          {String(state.failed.message || state.failed)}
+          {explain(state.failed)}
         </Empty>
       )}
       {!state.failed && !guides.length && (

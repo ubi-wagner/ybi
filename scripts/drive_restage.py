@@ -123,8 +123,8 @@ def seal_of(period: str) -> str | None:
 
 def census(period: str) -> dict:
     return {
-        "notes": one("SELECT count(*) AS n FROM classification_note")["n"],
-        "recs": one("SELECT count(*) AS n FROM reclass_recommendation")["n"],
+        "notes": one("SELECT count(*) AS n FROM record_note")["n"],
+        "recs": one("SELECT count(*) AS n FROM recommendation")["n"],
         "confs": one("SELECT count(*) AS n FROM position_confirmation")["n"],
         "decisions": one("SELECT count(*) AS n FROM decision "
                          "WHERE reversed_at IS NULL")["n"],
@@ -153,10 +153,10 @@ def main() -> int:
     # said out loud. A drive that only works once is one nobody re-runs on the
     # day something breaks — and silently tolerating its own residue is how a
     # drive stops measuring the system and starts measuring its own state.
-    stale = one("""SELECT count(*) AS n FROM reclass_recommendation
+    stale = one("""SELECT count(*) AS n FROM recommendation
                     WHERE disposition = 'OPEN'""")["n"]
     if stale:
-        execute("DELETE FROM reclass_recommendation WHERE disposition = 'OPEN'")
+        execute("DELETE FROM recommendation WHERE disposition = 'OPEN'")
         print(f"  cleared {stale} open recommendation(s) from an earlier run")
 
     before = census(period)
@@ -288,12 +288,19 @@ def main() -> int:
     mine_rec = [x for x in rv["recommendations"] if x["item_id"] == rec_id]
     if len(mine_rec) == 1:
         rec = mine_rec[0]
-        if rec["proposed_pool"] == proposed and rec["current_pool"] == pos["pool"] \
-                and rec["raised_by"] == "Engagement Auditor" and rec["still_agrees"]:
+        # `084` made the proposal a payload rather than four columns, so a
+        # recommendation about a building and one about a classification are
+        # one row shape. What the row has to carry is unchanged: what is
+        # proposed, what is there now, and who asked.
+        if rec["proposal"].get("pool") == proposed \
+                and rec["current"].get("pool") == pos["pool"] \
+                and rec["subject"] == "CLASSIFICATION" \
+                and rec["raised_by"] == "Engagement Auditor" \
+                and rec["still_agrees"] and not rec["is_new"]:
             ok("the proposal, what is there now, and who raised it, on one row")
         else:
-            bad(f"the review row reads {rec['proposed_pool']} over "
-                f"{rec['current_pool']} raised by {rec['raised_by']}")
+            bad(f"the review row reads {rec['proposal']} over "
+                f"{rec['current']} raised by {rec['raised_by']}")
     else:
         bad("the recommendation is not on the controller's list")
 
@@ -357,7 +364,7 @@ def main() -> int:
     else:
         bad(f"accepting answered {r.status_code}: {r.text[:160]}")
 
-    still = one("""SELECT disposition FROM reclass_recommendation
+    still = one("""SELECT disposition FROM recommendation
                     WHERE rec_id = %s""", (rec_id,))["disposition"]
     if still == "OPEN":
         ok("and the recommendation is still open, so nobody has to remember it")
@@ -382,8 +389,8 @@ def main() -> int:
     else:
         bad(f"declining answered {r.status_code}: {r.text[:140]}")
 
-    for action in ("RECLASS_RECOMMEND", "RECLASS_DECLINE",
-                   "POSITION_CONFIRM", "CLASSIFICATION_NOTE"):
+    for action in ("RECOMMEND", "RECOMMEND_DECLINE",
+                   "POSITION_CONFIRM", "RECORD_NOTE"):
         n = one("""SELECT count(*) AS n FROM audit_log
                     WHERE action = %s AND actor_id IS NOT NULL
                       AND session_id IS NOT NULL""", (action,))["n"]
@@ -404,7 +411,7 @@ def main() -> int:
     for sql, arg in (
             ("DELETE FROM position_confirmation WHERE decision_id = %s",
              other["decision_id"]),
-            ("DELETE FROM reclass_recommendation WHERE rec_id = %s", rec_id)):
+            ("DELETE FROM recommendation WHERE rec_id = %s", rec_id)):
         try:
             execute(sql, (arg,))
         except Exception as e:                                # noqa: BLE001

@@ -24,16 +24,22 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATION = ROOT / "app" / "sql" / "083_a_working_position_is_not_a_judgment.sql"
+GENERAL = ROOT / "app" / "sql" / "084_one_register_for_a_recommendation.sql"
 POSITIONS = ROOT / "app" / "routers" / "positions.py"
 
 
 def body() -> str:
-    """The migration with its comments stripped.
+    """Both migrations with their comments stripped.
 
-    `081`'s test passed with the view renamed because the migration's own
-    header names all three views in prose.
+    `083` built the register and `084` generalised it to four subjects; a
+    guarantee is held by whichever of them holds it, and a test that read only
+    the first would pass over a rule the second moved.
+
+    Comments go because `081`'s test passed with the view renamed — the
+    migration's own header names all three views in prose.
     """
-    return re.sub(r"--[^\n]*", "", MIGRATION.read_text())
+    return re.sub(r"--[^\n]*", "",
+                  MIGRATION.read_text() + "\n" + GENERAL.read_text())
 
 
 def _code(path: Path, func: str) -> str:
@@ -124,7 +130,7 @@ def test_changing_what_a_note_discloses_is_a_recorded_act():
     assert "redesignation_says_why" in b
     fn = _code(POSITIONS, "redesignate")
     assert "redesignated_at = now()" in fn
-    assert "CLASSIFICATION_NOTE_REDESIGNATE" in fn, (
+    assert "RECORD_NOTE_REDESIGNATE" in fn, (
         "re-designating writes no audit row, so the row keeps only the last "
         "change and the history of them is gone")
 
@@ -269,7 +275,7 @@ def test_no_new_worklist_kind_lands_on_the_else():
     from app.db import query
 
     defn = query("SELECT pg_get_viewdef('v_worklist_owned', true) AS d")[0]["d"]
-    for kind in ("POSITION_UNCONFIRMED", "RECLASS_RECOMMENDED"):
+    for kind in ("POSITION_UNCONFIRMED", "RECOMMENDATION_OPEN"):
         assert defn.count(f"'{kind}'::text") == 3, (
             f"{kind} is not routed in all three of owner, destination and "
             f"product, so it falls onto an ELSE in whichever it is missing")

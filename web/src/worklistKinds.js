@@ -36,11 +36,11 @@ export const KINDS = {
     where: "Adopted in Classify \u203a Review.",
     to: "/classify/review",
   },
-  RECLASS_RECOMMENDED: {
-    title: "Reclassification recommended",
+  RECOMMENDATION_OPEN: {
+    title: "Recommendation to answer",
     plural: "Recommendations to answer",
-    short: "Somebody has proposed a different pool",
-    why: "Somebody who may read the cost record has proposed a different classification, with a reason. It writes nothing to the record: accepting it records a fresh judgment through the ordinary route, under the controller's name, citing the recommendation.",
+    short: "Somebody has proposed a change",
+    why: "Somebody who may read the cost record has proposed a change — to a classification, to a building's area, to what a space is used for, or to who paid for an asset — with a reason. It writes nothing: accepting it records the change through the ordinary route for that register, under the controller's name, citing the recommendation.",
     where: "Answered in Classify \u203a Review.",
     to: "/classify/review",
   },

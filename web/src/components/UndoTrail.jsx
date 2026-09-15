@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import { Empty, Pill, useToast } from "./ui.jsx";
 
 /*
@@ -25,7 +25,7 @@ export default function UndoTrail({ onClose, onChanged }) {
   const load = useCallback(() =>
     api.undoable({ limit: 25 })
       .then((r) => { setRows(r); setError(""); })
-      .catch((e) => setError(String(e.message || e))), []);
+      .catch((e) => setError(explain(e))), []);
   useEffect(() => { load(); }, [load]);
 
   const toggle = (id) => setPicked((p) => {
@@ -49,10 +49,8 @@ export default function UndoTrail({ onClose, onChanged }) {
       await load();
       onChanged?.();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "bad", sticky: true });
     }
     setBusy(false);

@@ -140,6 +140,14 @@ step "A restaged year: a note, a recommendation, an adoption"
 # are none, rather than manufacturing some to measure.
 run "drive_restage" $PY scripts/drive_restage.py --base "$BASE"
 
+step "Heidi measures, Tom verifies, and the carve-out fires"
+# After drive_restage, which is the same mechanism pointed at classification.
+# This is the pair the walk reports as NO DATA — the square footage the 200.465
+# carve-out is sized by, and the funding source 200.436(b) turns on — proposed
+# by the portfolio that holds them and accepted by the controller who signs the
+# rate they feed. It puts its building back and says what it could not.
+run "drive_partitions" $PY scripts/drive_partitions.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

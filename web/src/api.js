@@ -538,8 +538,22 @@ export const api = {
   withdrawConfirmation: (decision_id, reason, period = "2025") =>
     req(`/positions/confirm/withdraw?period=${period}`,
         { method: "POST", body: JSON.stringify({ decision_id, reason }) }),
+  /* Notes and recommendations reach four subjects: a classification group, a
+     building, a space inside it, and one asset's funding. `decision_id` is
+     the classification convenience the queue screens already send. */
   positionNotes: (decision_id, period = "2025") =>
     req(`/positions/notes?period=${period}&decision_id=${encodeURIComponent(decision_id)}`),
+  subjectNotes: (subject, subject_id, period = "2025") =>
+    req(`/positions/notes?period=${period}&subject=${subject}` +
+        `&subject_id=${encodeURIComponent(subject_id)}`),
+  recommend: (body, period = "2025") =>
+    req(`/positions/recommend?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  assetFunding: (period = "2025") =>
+    req(`/facilities/asset-funding?period=${period}`),
+  putAssetFunding: (body, period = "2025") =>
+    req(`/facilities/asset-funding?period=${period}`,
+        { method: "PUT", body: JSON.stringify(body) }),
   writeNote: (body, period = "2025") =>
     req(`/positions/notes?period=${period}`,
         { method: "POST", body: JSON.stringify(body) }),

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* Schedule A-1 — the three source documents against each other.
@@ -50,7 +50,7 @@ export default function Reconcile({ actor }) {
       setProps(await api.reconcilePropose());
       setView("propose");
     } catch (e) {
-      toast.show(String(e.message || e), { tone: "fail" });
+      toast.show(explain(e), { tone: "fail" });
     } finally { setBusy(false); }
   };
 
@@ -73,7 +73,7 @@ export default function Reconcile({ actor }) {
       setProps({ ...props, proposals: props.proposals.filter((x) => x !== p) });
       load();
     } catch (e) {
-      toast.show(String(e.message || e), { tone: "fail" });
+      toast.show(explain(e), { tone: "fail" });
     }
   };
 

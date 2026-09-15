@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast }
   from "../components/ui.jsx";
 
@@ -74,7 +74,7 @@ export default function Requests({ actor }) {
   const load = useCallback(() =>
     Promise.all([api.requestForms(), api.requests(), api.verificationStatus()])
       .then(([f, d, v]) => { setForms(f); setData(d); setChecks(v); setError(""); })
-      .catch((e) => setError(String(e.message || e))), []);
+      .catch((e) => setError(explain(e))), []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -88,7 +88,7 @@ export default function Requests({ actor }) {
       setAsking(null); setSentTo(""); setNote("");
       await load();
       window.location.href = api.requestWorkbookUrl(r.request_id);
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
     setBusy(false);
   }
 
@@ -103,7 +103,7 @@ export default function Requests({ actor }) {
       replyTo.current = null;
       await load();
       await show(id);
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
     setBusy(false);
   }
 
@@ -111,7 +111,7 @@ export default function Requests({ actor }) {
     if (open === id) { setOpen(null); setPreview(null); return; }
     setOpen(id); setPreview(null);
     try { setPreview(await api.requestPreview(id)); }
-    catch (e) { toast.fail(String(e.message || e)); setOpen(null); }
+    catch (e) { toast.fail(explain(e)); setOpen(null); }
   }, [open, toast]);
 
   async function accept(id) {
@@ -138,7 +138,7 @@ export default function Requests({ actor }) {
       }
       setOpen(null); setPreview(null);
       await load();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
     setBusy(false);
   }
 

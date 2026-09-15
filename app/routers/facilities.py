@@ -27,7 +27,8 @@ from app.auth import (Actor, require_facilities, require_inventory,
                       require_reader)
 from app.db import execute, one, query
 from app.settings import settings
-from app.vocab import AccessPolicy, InKindKind, OccupancyStatus, SpaceUse
+from app.vocab import (AccessPolicy, FundingKind, InKindKind,
+                       OccupancyStatus, SpaceUse)
 
 router = APIRouter(prefix="/facilities", tags=["facilities"],
                    dependencies=[Depends(require_reader)])
@@ -65,6 +66,16 @@ class UnitIn(BaseModel):
     market_rate_psf: float | None = None
     market_basis: str = ""
     market_source: str = ""
+    note: str = ""
+
+
+class AssetFundingIn(BaseModel):
+    asset_id: str
+    kind: FundingKind
+    amount: float = Field(ge=0)
+    award_reference: str = ""
+    funder: str = ""
+    counted_as_cost_share: bool = False
     note: str = ""
 
 
@@ -241,6 +252,82 @@ def put_equipment_use(body: EquipmentUseIn, period: str = None,
                   "objective_id": body.objective_id},
            reason=body.source_document or "equipment use recorded")
     return {"use_id": r["use_id"]}
+
+
+@router.put("/asset-funding")
+def put_asset_funding(body: AssetFundingIn, period: str = None,
+                      actor: Actor = Depends(require_inventory)) -> dict:
+    """Record where the money for one asset came from.
+
+    The door this register never had. `asset_funding` was written by exactly
+    one thing — the workbook that comes back through `/requests` — so the only
+    way to answer 200.313(d)(1) for a single asset was a spreadsheet round
+    trip. That is the capability-with-no-door shape pointed at the register
+    holding up $850,383 of depreciation under 200.436(b).
+
+    A blank stays a blank. *There is no federal money in this asset* and
+    *nobody has looked* are different facts all the way down: the first is a
+    row at 0.00 and the second is no row, which is the intake's own rule and
+    the reason `v_depreciation_basis` can state the gap rather than imply it.
+    """
+    period = period or settings.period
+    if not one("SELECT 1 FROM asset WHERE asset_id = %s AND period = %s",
+               (body.asset_id, period)):
+        raise HTTPException(404, f"No asset {body.asset_id} in {period}.")
+    execute("""INSERT INTO asset_funding
+                 (asset_id, kind, amount, award_reference, funder,
+                  counted_as_cost_share, note)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (asset_id, kind, award_reference) DO UPDATE SET
+                 amount = EXCLUDED.amount, funder = EXCLUDED.funder,
+                 counted_as_cost_share = EXCLUDED.counted_as_cost_share,
+                 note = EXCLUDED.note""",
+            (body.asset_id, body.kind.value, body.amount,
+             body.award_reference, body.funder, body.counted_as_cost_share,
+             body.note))
+    record(actor, "ASSET_FUNDING", "asset", body.asset_id,
+           after={"kind": body.kind.value, "amount": body.amount,
+                  "award_reference": body.award_reference,
+                  "funder": body.funder},
+           reason=body.note or "funding source recorded")
+    return {"asset_id": body.asset_id, "kind": body.kind.value}
+
+
+@router.get("/asset-funding")
+def asset_funding(period: str = None) -> dict:
+    """Every asset with what is known about who paid for it.
+
+    Ordered by what is *not* answered first, because the register is empty and
+    the whole question is which assets nobody has been through.
+    """
+    period = period or settings.period
+    rows = query("""SELECT a.asset_id, a.description, a.serial_number,
+                           a.gross_cost, a.depreciation, a.in_service_on,
+                           a.gl_account,
+                           COALESCE(sum(f.amount), 0) AS funded,
+                           count(f.*) AS sources,
+                           COALESCE(jsonb_agg(jsonb_build_object(
+                               'kind', f.kind, 'amount', f.amount,
+                               'award_reference', f.award_reference,
+                               'funder', f.funder))
+                                    FILTER (WHERE f.asset_id IS NOT NULL),
+                                    '[]'::jsonb) AS funding
+                      FROM asset a
+                      LEFT JOIN asset_funding f ON f.asset_id = a.asset_id
+                     WHERE a.period = %s
+                     GROUP BY a.asset_id, a.description, a.serial_number,
+                              a.gross_cost, a.depreciation, a.in_service_on,
+                              a.gl_account
+                     ORDER BY count(f.*) = 0 DESC, a.gross_cost DESC""",
+                 (period,))
+    totals = one("""SELECT count(*) AS assets,
+                           COALESCE(sum(a.gross_cost), 0) AS gross_cost,
+                           COALESCE(sum(a.depreciation), 0) AS depreciation,
+                           count(*) FILTER (WHERE NOT EXISTS (
+                               SELECT 1 FROM asset_funding f
+                                WHERE f.asset_id = a.asset_id)) AS unanswered
+                      FROM asset a WHERE a.period = %s""", (period,))
+    return {"period": period, "assets": rows, "totals": totals}
 
 
 @router.get("/in-kind")

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
 import TimeRoster from "./TimeRoster.jsx";
 
@@ -122,7 +122,7 @@ function Sheet({ actor, viewing, onBack }) {
       ]);
       setData(d); setSummary(s); setError("");
     } catch (e) {
-      setError(String(e.message || e));
+      setError(explain(e));
     }
     /* The draft is only ever the caller's own — `adopt` writes under the
        calling actor and takes no employee key, so offering it while reading
@@ -175,13 +175,8 @@ function Sheet({ actor, viewing, onBack }) {
       }
       await load();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try {
-        const parsed = JSON.parse(msg);
-        detail = parsed.detail?.message || parsed.detail || msg;
-      } catch { /* not JSON, use it as it stands */ }
-      toast(detail, { tone: "bad", sticky: true });
+      const msg = explain(e);
+      toast(msg, { tone: "bad", sticky: true });
       await load();
     }
   }
@@ -524,10 +519,8 @@ function DraftCard({ draft, onDone }) {
       setAck(false);
       await onDone();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "fail", sticky: true });
     }
     setBusy(false);
@@ -722,10 +715,8 @@ function SubmitCard({ summary, onDone }) {
       toast(`Submitted — ${(r.coverage * 100).toFixed(0)}% of the period`);
       await onDone();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
-      toast(detail, { tone: "bad", sticky: true });
+      const msg = explain(e);
+      toast(msg, { tone: "bad", sticky: true });
     }
     setBusy(false);
   }
@@ -738,7 +729,7 @@ function SubmitCard({ summary, onDone }) {
       setWithdrawing(false); setReason("");
       await onDone();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad" });
+      toast(explain(e), { tone: "bad" });
     }
     setBusy(false);
   }
@@ -907,7 +898,7 @@ function Donated({ given, actor, onDone }) {
                + (r.superseded ? " — the earlier rate is superseded" : ""));
       setOpen(null); setRate(""); setBasis("");
       await onDone();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
     setBusy(false);
   }
 

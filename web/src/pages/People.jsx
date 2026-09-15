@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* The roster, and the two things an administrator actually does with it.
@@ -322,7 +322,7 @@ function CreateDrawer({ actor, seed, onClose, onDone, onError }) {
       });
       setIssued({ name: name.trim(), email: email.trim().toLowerCase(), password });
     } catch (err) {
-      onError(String(err.message || err).replace(/^\d+:\s*/, ""));
+      onError(explain(err));
       setBusy(false);
     }
   }
@@ -442,7 +442,7 @@ function AccessDrawer({ actor, person, onClose, onDone, onError }) {
         onDone(`${p} granted to ${person.display_name}`);
       }
     } catch (err) {
-      onError(String(err.message || err).replace(/^\d+:\s*/, ""));
+      onError(explain(err));
       setBusy(false);
     }
   }
@@ -454,7 +454,7 @@ function AccessDrawer({ actor, person, onClose, onDone, onError }) {
       onDone(next ? `${person.display_name} reactivated`
                   : `${person.display_name} deactivated`);
     } catch (err) {
-      onError(String(err.message || err).replace(/^\d+:\s*/, ""));
+      onError(explain(err));
       setBusy(false);
     }
   }
@@ -537,7 +537,7 @@ function AmendDrawer({ person, onClose, onDone, onError }) {
       });
       onDone(`${name.trim()} can sign in at ${email.trim().toLowerCase()}`);
     } catch (err) {
-      onError(String(err.message || err).replace(/^\d+:\s*/, ""));
+      onError(explain(err));
       setBusy(false);
     }
   }

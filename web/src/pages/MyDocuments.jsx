@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* The module everybody gets.
@@ -75,7 +75,7 @@ export default function MyDocuments({ actor }) {
       if (input.current) input.current.value = "";
       load();
     } catch (err) {
-      toast.show(String(err.message || err).replace(/^\d+:\s*/, ""), { tone: "fail" });
+      toast.show(explain(err), { tone: "fail" });
     } finally {
       setBusy(false);
     }

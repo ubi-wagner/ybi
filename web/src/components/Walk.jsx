@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import { Card, Tick } from "./ui.jsx";
 
 /* The 2025 audit as the one ordered journey it is.
@@ -49,7 +49,7 @@ export default function Walk({ period = "2025" }) {
           screens once loaded with `.catch(() => {})` and printed "nothing
           yet" for both; `req()` records it underneath, and this says so
           rather than rendering an empty page. */
-       .catch((e) => live && setFailed(String(e.message || e)));
+       .catch((e) => live && setFailed(explain(e)));
     return () => { live = false; };
   }, [period]);
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 
-import { api, count } from "../api.js";
+import { api, count, explain } from "../api.js";
 import { Card, Drawer, Empty, Field, PageHead, Pill, Segmented, Table,
          useToast } from "./ui.jsx";
 
@@ -36,15 +36,46 @@ import { Card, Drawer, Empty, Field, PageHead, Pill, Segmented, Table,
  * shown, because a list of four where three are identical is the same defect
  * wearing the opposite sign.
  */
+const SUBJECT = {
+  CLASSIFICATION: { label: "Classification", where: "/classify" },
+  FACILITY:       { label: "Building",       where: "/classify/space" },
+  SPACE_UNIT:     { label: "Space",          where: "/classify/space" },
+  ASSET_FUNDING:  { label: "Asset funding",  where: "/classify/assets" },
+};
+
+const FIELD = {
+  pool: "pool", function_990: "990 function", federal: "federal treatment",
+  objective_id: "objective", grade: "grade",
+  name: "name", usable_sqft: "usable sq ft", rentable_sqft: "rentable sq ft",
+  address: "address", owned: "owned", landlord: "landlord",
+  facility_id: "building", label: "name", use: "use", status: "status",
+  occupant: "occupant", floor: "floor",
+  kind: "source", amount: "amount", award_reference: "award", funder: "funder",
+};
+
+/* What a recommendation actually proposes.
+ *
+ * A judgment is four dimensions and a building is five, so printing one
+ * column produced rows reading "OVERHEAD → OVERHEAD" on a real proposal that
+ * moved the 990 function: the screen showing a column where the reader needs
+ * a change. Everything that differs is named, nothing that does not is shown,
+ * and where the row is not on the record at all there is nothing to differ
+ * from — so the whole proposal is the change, which is the normal case for
+ * space and assets.
+ */
 function changes(r) {
-  const pairs = [
-    ["pool", r.current_pool, r.proposed_pool],
-    ["990 function", r.current_function, r.proposed_function],
-    ["federal", r.current_federal, r.proposed_federal],
-    ["objective", r.current_objective, r.proposed_objective],
-  ];
-  return pairs.filter(([, a, b]) => (a || "—") !== (b || "—"))
-              .map(([what, a, b]) => ({ what, from: a || "—", to: b || "—" }));
+  const proposed = r.proposal || {};
+  const current = r.current || {};
+  /* `true` is what JSON calls it and not what a person does. A blank stays a
+     blank, because there is no amount and nobody has read one off are
+     different facts everywhere else in this system. */
+  const shown = (v) => v === null || v === undefined || v === ""
+    ? "\u2014" : v === true ? "yes" : v === false ? "no" : String(v);
+  return Object.keys(proposed)
+    .filter((k) => r.is_new || shown(current[k]) !== shown(proposed[k]))
+    .map((k) => ({ what: FIELD[k] || k,
+                   from: r.is_new ? null : shown(current[k]),
+                   to: shown(proposed[k]) }));
 }
 
 
@@ -55,6 +86,7 @@ export default function PositionReview({ actor }) {
   const [reason, setReason] = useState({});
   const [panel, setPanel] = useState(null);
   const [adopted, setAdopted] = useState(null);
+  const [showing, setShowing] = useState(25);
 
   const load = useCallback(() => {
     api.positionReview().then(setData).catch(() => setData(null));
@@ -76,7 +108,7 @@ export default function PositionReview({ actor }) {
       await api.withdrawConfirmation(decision_id, wy);
       toast.ok("Signature withdrawn, with the reason on the record.");
       load(); loadAdopted();
-    } catch (e) { toast.fail(e?.message || "That was refused."); }
+    } catch (e) { toast.fail(explain(e) || "That was refused."); }
   }
 
   const mayDecide = (actor?.portfolios || []).includes("CONTROLLER");
@@ -91,7 +123,7 @@ export default function PositionReview({ actor }) {
     } catch (e) {
       // A batch where everything was already adopted answers 409 and changed
       // nothing. It is never reported in the tone used for success.
-      toast.fail(e?.message || "Nothing was adopted.");
+      toast.fail(explain(e) || "Nothing was adopted.");
     } finally { setBusy(false); }
   }
 
@@ -108,7 +140,7 @@ export default function PositionReview({ actor }) {
       }
       load();
     } catch (e) {
-      toast.fail(e?.message || "That was refused.");
+      toast.fail(explain(e) || "That was refused.");
     } finally { setBusy(false); }
   }
 
@@ -133,28 +165,32 @@ export default function PositionReview({ actor }) {
           </p>
         ) : (
           <Table columns={[
-            { label: "Group", align: "left" },
-            { label: "Now", align: "left" },
-            { label: "Proposed", align: "left" },
+            { label: "What", align: "left" },
+            { label: "Proposed change", align: "left" },
             { label: "Raised by", align: "left" },
-            { label: "", width: 220, align: "left" },
+            { label: "", width: 200, align: "left" },
           ]}>
             {recs.map((r) => (
               <React.Fragment key={r.item_id}>
               <tr>
                 <td className="l">
-                  <a href="#" onClick={(e) => {
-                       e.preventDefault();
-                       setPanel(r.decision_id);
-                     }}><strong>{r.account}</strong></a>
-                  {r.payee && <div className="rowsub">{r.payee}</div>}</td>
-                <td className="l">{changes(r).map((c) => (
-                  <div key={c.what}><Pill>{c.from}</Pill></div>))}</td>
-                <td className="l">{changes(r).map((c) => (
-                  <div key={c.what}>
-                    <Pill tone="warn">{c.to}</Pill>
-                    <span className="rowsub"> {c.what}</span>
-                  </div>))}</td>
+                  <Pill>{(SUBJECT[r.subject] || {}).label || r.subject}</Pill>
+                  <div><strong>{r.title}</strong></div>
+                  {r.detail && <div className="rowsub">{r.detail}</div>}
+                  {r.is_new && (
+                    <div className="rowsub">
+                      not on the record — this would put it there
+                    </div>)}
+                </td>
+                <td className="l">
+                  {changes(r).map((c) => (
+                    <div key={c.what}>
+                      {c.from !== null && (
+                        <><Pill>{c.from}</Pill><span className="rowsub"> → </span></>)}
+                      <Pill tone="warn">{c.to}</Pill>
+                      <span className="rowsub"> {c.what}</span>
+                    </div>))}
+                </td>
                 <td className="l rowsub">{r.raised_by}</td>
                 <td className="l">
                   {mayDecide ? (
@@ -176,18 +212,17 @@ export default function PositionReview({ actor }) {
                   exactly what `v_gl_accounted`'s screen did to the two rows
                   whose whole job was to say why. A row cannot overlap a row. */}
               <tr className="sub">
-                <td className="l wrap" colSpan={5}>
+                <td className="l wrap" colSpan={4}>
                   <div className="rowsub">{r.note}</div>
                   {!r.still_agrees && (
                     <div className="rowsub warnish">
-                      Overtaken — the classification has moved since this was
-                      written, so accepting it would apply a proposal to
-                      something it was never about. Decline it and ask for a
-                      fresh one.
+                      Overtaken — the record has moved since this was written,
+                      so accepting it would apply a proposal to something it was
+                      never about. Decline it and ask for a fresh one.
                     </div>
                   )}
                   {mayDecide && (
-                    <Field label="Your reason, which the judgment or the refusal carries">
+                    <Field label="Your reason, which the change or the refusal carries">
                       <input value={reason[r.item_id] || ""}
                              onChange={(e) => setReason(
                                { ...reason, [r.item_id]: e.target.value })} />
@@ -218,17 +253,17 @@ export default function PositionReview({ actor }) {
             { label: "Pool", align: "left" },
             { label: "", width: 90, align: "left" },
           ]}>
-            {open.slice(0, 100).map((p) => (
+            {open.slice(0, showing).map((p) => (
               <React.Fragment key={p.item_id}>
               <tr>
                 <td className="l">
                   <a href="#" onClick={(e) => {
                        e.preventDefault();
                        setPanel(p.decision_id);
-                     }}><strong>{p.account}</strong></a>
-                  {p.payee && <div className="rowsub">{p.payee}</div>}
+                     }}><strong>{p.title}</strong></a>
+                  {p.detail && <div className="rowsub">{p.detail}</div>}
                 </td>
-                <td className="l"><Pill>{p.current_pool}</Pill></td>
+                <td className="l"><Pill>{(p.current || {}).pool}</Pill></td>
                 <td className="l">
                   {mayDecide && (
                     <button className="sm" disabled={busy}
@@ -245,11 +280,33 @@ export default function PositionReview({ actor }) {
             ))}
           </Table>
         )}
-        {open.length > 100 && (
-          <p className="muted small">
-            Showing 100 of {count(open.length)}. The count is read from the
-            record rather than from this page.
-          </p>
+        {open.length > 0 && (
+          <div className="row-actions">
+            {open.length > showing && (
+              <button onClick={() => setShowing(showing + 25)}>
+                Show 25 more
+              </button>
+            )}
+            {mayDecide && (
+              /* Adopting 756 positions one at a time is not a job anybody
+                 does, and a screen that only offers that is one people route
+                 around — by sealing without reviewing, which is the thing
+                 this whole exercise is against. So the page can be adopted
+                 as a page, after it has been read: the button says how many
+                 and the list above it is what they are. */
+              <button className="primary" disabled={busy}
+                      onClick={() => adopt(
+                        open.slice(0, showing).map((p) => p.decision_id),
+                        "Read on the review screen and adopted as a page.")}>
+                Adopt the {count(Math.min(showing, open.length))} shown
+              </button>
+            )}
+            <span className="rowsub">
+              {count(Math.min(showing, open.length))} of {count(open.length)}{" "}
+              shown. The count is read from the record rather than from this
+              page.
+            </span>
+          </div>
         )}
       </Card>
 
@@ -339,7 +396,7 @@ function PositionPanel({ decisionId, onClose }) {
         ? "Noted on the cost record, where every reader of it sees it."
         : "Noted. It stays out of the audit package; its count does not.");
       setText(""); load();
-    } catch (e) { toast.fail(e?.message || "That note was refused."); }
+    } catch (e) { toast.fail(explain(e) || "That note was refused."); }
   }
 
   async function flip(n) {
@@ -352,7 +409,7 @@ function PositionPanel({ decisionId, onClose }) {
         n.note_id, n.kind === "RECORD" ? "WORKING" : "RECORD", reason);
       toast.ok("Changed, and the change is on the record.");
       load();
-    } catch (e) { toast.fail(e?.message || "That was refused."); }
+    } catch (e) { toast.fail(explain(e) || "That was refused."); }
   }
 
   async function recommend() {
@@ -367,7 +424,7 @@ function PositionPanel({ decisionId, onClose }) {
       toast.ok("Raised. It is on the controller's list, and nothing on the "
                + "record has moved.");
       setWhy(""); setPool("");
-    } catch (e) { toast.fail(e?.message || "That was refused."); }
+    } catch (e) { toast.fail(explain(e) || "That was refused."); }
   }
 
   return (

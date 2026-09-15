@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, count, money } from "../api.js";
+import { api, count, explain, money } from "../api.js";
 import {
   Card, Drawer, Empty, Field, Keys, Meter, PageHead, Pill, Search, Segmented,
   Stat, Table, Tick, useToast,
@@ -230,7 +230,7 @@ export default function ClassifyQueue({ actor }) {
       setExhausted(q.length < PAGE);
       setCursor((i) => Math.min(i, Math.max(0, q.length - 1)));
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad" });
+      toast(explain(e), { tone: "bad" });
     } finally {
       setLoading(false);
     }
@@ -259,7 +259,7 @@ export default function ClassifyQueue({ actor }) {
       setRows((prev) => [...prev, ...q]);
       setExhausted(q.length < PAGE);
     } catch (e) {
-      toast(String(e.message || e), { tone: "fail" });
+      toast(explain(e), { tone: "fail" });
     } finally {
       setFetchingMore(false);
     }
@@ -345,7 +345,7 @@ export default function ClassifyQueue({ actor }) {
                                   : "Nothing was walked back", { tone: r.undone.length ? undefined : "bad" });
             await load();
           } catch (e) {
-            toast(String(e.message || e), { tone: "bad", sticky: true });
+            toast(explain(e), { tone: "bad", sticky: true });
           }
         },
       });
@@ -353,11 +353,11 @@ export default function ClassifyQueue({ actor }) {
       setEditing(null);
       await load();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad", sticky: true });
+      toast(explain(e), { tone: "bad", sticky: true });
       /* A refusal because the record moved is the one error where the right
          next step is automatic: redraw the queue so the person is looking at
          what is actually there before they decide again. */
-      if (/changed while this screen was open/.test(String(e.message || e))) {
+      if (/changed while this screen was open/.test(explain(e))) {
         await load();
       }
     } finally {
@@ -765,7 +765,7 @@ function Splitter({ row, onDone }) {
             `${r.lines_segmented} lines · ${r.segments_created} segments`);
       onDone?.();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad", sticky: true });
+      toast(explain(e), { tone: "bad", sticky: true });
     }
     setBusy(false);
   }
@@ -849,7 +849,7 @@ function GroupRecord({ row, canWrite }) {
       toast("Note recorded");
       load();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad" });
+      toast(explain(e), { tone: "bad" });
     }
     setBusy(false);
   }
@@ -881,7 +881,7 @@ function GroupRecord({ row, canWrite }) {
       }
       load();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad" });
+      toast(explain(e), { tone: "bad" });
     }
     setBusy(false);
   }

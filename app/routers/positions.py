@@ -1,20 +1,28 @@
-"""Working positions: adopting one, writing against one, recommending against
-one.
+"""Working positions, notes and recommendations, over every part of the record.
 
-The 757 judgments on the 2025 record were written by
-`scripts/classification_log.py --apply` through the real API signed in as the
-controller — which is the right way for a script to write, and which leaves
-every one of them reading `decided_by = 'Tom Metzinger'` across six seconds.
-`083` gave the schema a word for what kind of act that was. These are the
-doors onto it, and there are three of them because there are three acts:
+`083` built *somebody who may read the cost record proposes a change and the
+controller disposes of it*, pointed at classification. `084` generalises the
+register, because the same act is wanted for the two partitions the walk
+reports as NO DATA — **no building carries square footage** and **no asset
+carries a funding source** — and because three registers of one idea would
+mean three review lists when the whole point is that the controller has one.
+
+Four subjects, each mapping to exactly one register and exactly one door:
+
+    CLASSIFICATION   -> decision       via classify.decide
+    FACILITY         -> facility       via facilities.put_facility
+    SPACE_UNIT       -> space_unit     via facilities.put_unit
+    ASSET_FUNDING    -> asset_funding  via facilities.put_asset_funding
+
+Three acts, and each is here for a different reason:
 
   * **adopting** — the controller reading a working position and making it his
     own judgment. It moves no figure, by construction: the confirmation is a
     row in its own table and touches no judgment, so adopting under a seal
-    leaves the seal reproducing and the rate exactly where it was. That is the property `POST
-    /api/timesheet/adopt` has one level down, and it is the reason the
-    exercise is honest — if adopting moved the rate, the rate would depend on
-    who had got round to reviewing.
+    leaves the seal reproducing and the rate exactly where it was. That is the
+    property `POST /api/timesheet/adopt` has one level down, and it is the
+    reason the exercise is honest — if adopting moved the rate, the rate would
+    depend on who had got round to reviewing.
 
   * **noting** — anybody who may read the cost record writing down what they
     see. Two kinds, and the kind is the visibility: a RECORD note is part of
@@ -24,11 +32,11 @@ doors onto it, and there are three of them because there are three acts:
     one, and a switch that can be flipped after somebody asks for the file is
     the difference.
 
-  * **recommending** — somebody who is not the controller saying *this is
-    classified wrong, here is what it should be, here is why*. It is never a
-    decision and never becomes one: accepting it records a fresh judgment
-    through `classify.decide`, under the controller's name, citing this row.
-    There is one door onto the cost record and this is not a second one.
+  * **recommending** — somebody saying *this is wrong, here is what it should
+    be, here is why*. It is never a decision and never becomes one: accepting
+    records the change through that register's ordinary route, under the
+    controller's name, citing this row. There is one door onto each register
+    and this is not a second one.
 
 Recommending and noting take `require_reader` rather than a portfolio, which
 departs from `062` on purpose. That migration offered its Recommend button
@@ -40,6 +48,8 @@ where the auditor cannot record the ask has put it back in an email.
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -48,8 +58,12 @@ from app.auth import (Actor, Portfolio, Role, current_actor,
                       require_controller, require_reader)
 from app.db import one, query, transaction
 from app.statelock import turn
-from app.vocab import FederalTreatment, Function990, Pool
+from app.vocab import (FederalTreatment, Function990, FundingKind,
+                       OccupancyStatus, Pool, SpaceUse)
 from app.routers.classify import DecideIn, decide
+from app.routers.facilities import (AssetFundingIn, FacilityIn, UnitIn,
+                                    put_asset_funding, put_facility,
+                                    put_unit)
 
 router = APIRouter(prefix="/positions", tags=["positions"],
                    dependencies=[Depends(require_reader)])
@@ -106,11 +120,23 @@ def positions(period: str = "2025",
 
 
 @router.get("/review")
-def review(period: str = "2025") -> dict:
+def review(period: str = "2025", subject: str | None = None) -> dict:
     """The controller's list. Recommendations first — somebody is waiting on
-    each of those — then the working positions nobody has adopted."""
+    each of those — then the working positions nobody has adopted.
+
+    A building sorts above the rooms in it, because `put_unit` answers 404 on
+    a facility that is not there yet and a list that offered them the other
+    way round would be handing somebody a refusal in the order it printed
+    them.
+    """
     rows = query("""SELECT * FROM v_controller_review WHERE period = %s
-                     ORDER BY item DESC, raised_at""", (period,))
+                      AND (%s::text IS NULL OR subject = %s::text)
+                     ORDER BY item DESC,
+                              CASE subject WHEN 'FACILITY' THEN 1
+                                           WHEN 'SPACE_UNIT' THEN 2
+                                           WHEN 'ASSET_FUNDING' THEN 3
+                                           ELSE 4 END,
+                              raised_at""", (period, subject, subject))
     items = [dict(r) for r in rows]
     return {
         "period": period,
@@ -203,11 +229,9 @@ def withdraw_confirmation(body: WithdrawIn, period: str = "2025",
 
 # --------------------------------------------------------------- notes ------
 
-class NoteIn(BaseModel):
-    scope: str | None = None
-    decision_id: str | None = None
-    kind: str = Field("RECORD", pattern="^(RECORD|WORKING)$")
-    body: str
+
+SUBJECTS = ("CLASSIFICATION", "FACILITY", "SPACE_UNIT", "ASSET_FUNDING")
+SUBJECT_RE = "^(CLASSIFICATION|FACILITY|SPACE_UNIT|ASSET_FUNDING)$"
 
 
 def _scope_of(cur, decision_id: str, period: str) -> str:
@@ -221,31 +245,55 @@ def _scope_of(cur, decision_id: str, period: str) -> str:
     return row["scope"]
 
 
+def _subject(cur, subject: str | None, subject_id: str | None,
+             decision_id: str | None, period: str) -> tuple[str, str]:
+    """Which part of the record this is about.
+
+    `decision_id` is the classification convenience the queue screens already
+    send. It resolves to the group key here rather than in four callers.
+    """
+    if decision_id and not subject_id:
+        return "CLASSIFICATION", _scope_of(cur, decision_id, period)
+    if not subject_id:
+        raise HTTPException(422, "Name what this is about: subject_id, or "
+                                 "decision_id for a classification group.")
+    return (subject or "CLASSIFICATION"), subject_id
+
+
+class NoteIn(BaseModel):
+    subject: str = Field("CLASSIFICATION", pattern=SUBJECT_RE)
+    subject_id: str | None = None
+    decision_id: str | None = None
+    kind: str = Field("RECORD", pattern="^(RECORD|WORKING)$")
+    body: str
+
+
 @router.get("/notes")
-def notes(scope: str | None = None, decision_id: str | None = None,
+def notes(subject: str = Query("CLASSIFICATION", pattern=SUBJECT_RE),
+          subject_id: str | None = None, decision_id: str | None = None,
           period: str = "2025",
           actor: Actor = Depends(current_actor)) -> dict:
-    """The notes on a group.
+    """The notes on one subject.
 
     A WORKING note the caller may not read comes back with its body withheld
     and everything else intact — who wrote it and when. Dropping the row would
     make three notes look like one, which is concealment; this is disclosure
     without the contents.
     """
-    if not scope and not decision_id:
-        raise HTTPException(422, "Name a group: scope or decision_id.")
     with transaction() as cur:
-        if not scope:
-            scope = _scope_of(cur, decision_id, period)
+        subject, subject_id = _subject(cur, subject, subject_id, decision_id,
+                                       period)
         cur.execute("""SELECT n.note_id, n.kind, n.body, n.written_at,
                               n.written_by, a.display_name AS author,
                               n.redesignated_at, n.redesignated_reason,
                               w.display_name AS redesignated_by
-                         FROM classification_note n
+                         FROM record_note n
                          JOIN actor a ON a.actor_id = n.written_by
                          LEFT JOIN actor w ON w.actor_id = n.redesignated_by
-                        WHERE n.period = %s AND n.scope = %s
-                        ORDER BY n.written_at""", (period, scope))
+                        WHERE n.period = %s AND n.subject = %s
+                          AND n.subject_id = %s
+                        ORDER BY n.written_at""",
+                    (period, subject, subject_id))
         rows = [dict(r) for r in cur.fetchall()]
     may = reads_working_notes(actor)
     out = []
@@ -255,36 +303,34 @@ def notes(scope: str | None = None, decision_id: str | None = None,
         out.append({**{k: v for k, v in r.items() if k != "written_by"},
                     "body": r["body"] if readable else None,
                     "withheld": not readable})
-    return {"scope": scope, "period": period, "notes": out,
-            "withheld": sum(1 for r in out if r["withheld"])}
+    return {"subject": subject, "subject_id": subject_id, "period": period,
+            "notes": out, "withheld": sum(1 for r in out if r["withheld"])}
 
 
 @router.post("/notes")
 def write_note(body: NoteIn, period: str = "2025",
                actor: Actor = Depends(require_reader)) -> dict:
-    """Write a note against a group. Anybody who may read the cost record may
-    write one — including the auditor, whose observations are the reason this
-    register exists."""
+    """Write a note against any part of the cost record. Anybody who may read
+    it may write one — including the auditor, whose observations are the
+    reason this register exists."""
     if len(body.body.strip()) < 12:
         raise HTTPException(422, "A note under twelve characters is not one. "
                                  "Say what you saw.")
     with turn(period) as cur:
-        scope = body.scope
-        about = body.decision_id
-        if not scope:
-            if not about:
-                raise HTTPException(422, "Name a group: scope or decision_id.")
-            scope = _scope_of(cur, about, period)
-        cur.execute("""INSERT INTO classification_note
-                         (period, scope, kind, body, written_by, about_decision)
-                       VALUES (%s,%s,%s,%s,%s,%s) RETURNING note_id""",
-                    (period, scope, body.kind, body.body, actor.actor_id, about))
+        subject, subject_id = _subject(cur, body.subject, body.subject_id,
+                                       body.decision_id, period)
+        cur.execute("""INSERT INTO record_note
+                         (period, subject, subject_id, kind, body, written_by,
+                          about_decision)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING note_id""",
+                    (period, subject, subject_id, body.kind, body.body,
+                     actor.actor_id, body.decision_id))
         note_id = cur.fetchone()["note_id"]
-        record(actor, "CLASSIFICATION_NOTE", "decision", about or scope,
-               after={"note_id": str(note_id), "kind": body.kind,
-                      "scope": scope},
+        record(actor, "RECORD_NOTE", subject.lower(), subject_id,
+               after={"note_id": str(note_id), "kind": body.kind},
                reason=body.body[:500], cursor=cur)
-    return {"note_id": str(note_id), "scope": scope, "kind": body.kind}
+    return {"note_id": str(note_id), "subject": subject,
+            "subject_id": subject_id, "kind": body.kind}
 
 
 class RedesignateIn(BaseModel):
@@ -306,9 +352,8 @@ def redesignate(note_id: str, body: RedesignateIn, period: str = "2025",
     if len(body.reason.strip()) < 12:
         raise HTTPException(422, "Say why this is changing what it discloses.")
     with turn(period) as cur:
-        cur.execute("""SELECT note_id, kind, scope, written_by
-                         FROM classification_note WHERE note_id = %s""",
-                    (note_id,))
+        cur.execute("""SELECT note_id, kind, subject, subject_id, written_by
+                         FROM record_note WHERE note_id = %s""", (note_id,))
         n = cur.fetchone()
         if n is None:
             raise HTTPException(404, "No note with that id.")
@@ -319,14 +364,14 @@ def redesignate(note_id: str, body: RedesignateIn, period: str = "2025",
                                      "it discloses.")
         if n["kind"] == body.kind:
             raise HTTPException(409, f"That note is already {body.kind}.")
-        cur.execute("""UPDATE classification_note
+        cur.execute("""UPDATE record_note
                           SET kind = %s, redesignated_at = now(),
                               redesignated_by = %s, redesignated_reason = %s
                         WHERE note_id = %s""",
                     (body.kind, actor.actor_id, body.reason, note_id))
-        record(actor, "CLASSIFICATION_NOTE_REDESIGNATE", "decision", n["scope"],
-               before={"kind": n["kind"]}, after={"kind": body.kind,
-                                                  "note_id": note_id},
+        record(actor, "RECORD_NOTE_REDESIGNATE", n["subject"].lower(),
+               n["subject_id"], before={"kind": n["kind"]},
+               after={"kind": body.kind, "note_id": note_id},
                reason=body.reason, cursor=cur)
     return {"note_id": note_id, "kind": body.kind}
 
@@ -334,80 +379,99 @@ def redesignate(note_id: str, body: RedesignateIn, period: str = "2025",
 # ----------------------------------------------------- recommendations ------
 
 class RecommendIn(BaseModel):
-    decision_id: str
-    pool: Pool
-    function_990: Function990
-    federal: FederalTreatment
-    objective_id: str | None = None
+    subject: str = Field("CLASSIFICATION", pattern=SUBJECT_RE)
+    subject_id: str | None = None
+    #: The classification convenience the queue screens already send.
+    decision_id: str | None = None
+    #: What is being proposed, in the shape the target register uses. The
+    #: schema validates it per subject — casting every enum to its real type —
+    #: so a proposal the register would refuse is refused here rather than at
+    #: the moment somebody presses Accept.
+    proposal: dict = {}
     note: str
+    # The classification fields, kept because `083`'s screens send them flat
+    # and an older client is not rejected. They fold into `proposal`.
+    pool: str | None = None
+    function_990: str | None = None
+    federal: str | None = None
+    objective_id: str | None = None
 
 
 @router.post("/recommend")
 def recommend(body: RecommendIn, period: str = "2025",
               actor: Actor = Depends(require_reader)) -> dict:
-    """Recommend a different classification for a group.
+    """Recommend a change to any part of the cost record.
 
-    It writes nothing to the cost record — not a decision, not a pool, not a
+    It writes nothing to the record — not a decision, not a square foot, not a
     dollar. `062` refused to express a helper's suggestion as a `PROPOSED`
     decision row because `PROPOSED` already means *YBI has put this to a
     sponsor and they have not answered*; this is its own register for the same
     reason.
 
-    `saw_decision` is the position it was written against, so a recommendation
+    `saw` is what the record said when this was written, so a recommendation
     that has been overtaken says so on the controller's list rather than being
-    applied to whatever is there now.
+    applied to whatever is there now. **NULL means the row is not there at
+    all**, which for space and assets is the normal case rather than an edge:
+    both registers are empty, and Heidi's first act is to put a building on
+    the record rather than to amend one.
 
     A controller may recommend, which is worth saying because the first draft
     refused it: Heidi and Stephanie both hold CONTROLLER and could simply
-    reclassify, and a rule that forced them to would turn *flag this for Tom*
-    into *overrule Tom*. What the record actually needs is the narrower rule,
-    and it is in the schema: nobody disposes of their own recommendation.
+    write the row, and a rule that forced them to would turn *flag this for
+    Tom* into *overrule Tom*. What the record actually needs is the narrower
+    rule, and it is in the schema: nobody disposes of their own.
     """
-    if (body.pool == Pool.DIRECT) != bool(body.objective_id):
-        raise HTTPException(422, "Direct cost names a cost objective; pooled "
-                                 "cost must not carry one. The queue would "
-                                 "refuse this, so it is refused here.")
+    proposal = dict(body.proposal or {})
+    for k in ("pool", "function_990", "federal", "objective_id"):
+        v = getattr(body, k)
+        if v is not None and k not in proposal:
+            proposal[k] = v
+    if not proposal:
+        raise HTTPException(422, "A recommendation proposes something. Say "
+                                 "what the record should say instead.")
     with turn(period) as cur:
-        scope = _scope_of(cur, body.decision_id, period)
-        cur.execute("""SELECT 1 FROM reclass_recommendation
-                        WHERE period = %s AND scope = %s
+        subject, subject_id = _subject(cur, body.subject, body.subject_id,
+                                       body.decision_id, period)
+        cur.execute("""SELECT 1 FROM recommendation
+                        WHERE period = %s AND subject = %s AND subject_id = %s
                           AND recommended_by = %s AND disposition = 'OPEN'""",
-                    (period, scope, actor.actor_id))
+                    (period, subject, subject_id, actor.actor_id))
         if cur.fetchone():
             raise HTTPException(409, "You already have an open recommendation "
-                                     "on that group. Withdraw it and make the "
-                                     "one you mean; two from one person reads "
-                                     "as two people having looked.")
-        cur.execute("""INSERT INTO reclass_recommendation
-                         (period, scope, pool, function_990, federal,
-                          objective_id, note, recommended_by, saw_decision)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING rec_id""",
-                    (period, scope, body.pool.value, body.function_990.value,
-                     body.federal.value, body.objective_id, body.note,
-                     actor.actor_id, body.decision_id))
+                                     "on that. Withdraw it and make the one "
+                                     "you mean; two from one person reads as "
+                                     "two people having looked.")
+        cur.execute("SELECT subject_digest(%s, %s, %s) AS d",
+                    (subject, subject_id, period))
+        saw = cur.fetchone()["d"]
+        cur.execute("""INSERT INTO recommendation
+                         (period, subject, subject_id, proposal, note,
+                          recommended_by, saw)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING rec_id""",
+                    (period, subject, subject_id, json.dumps(proposal), body.note,
+                     actor.actor_id, saw))
         rec_id = cur.fetchone()["rec_id"]
-        record(actor, "RECLASS_RECOMMEND", "decision", body.decision_id,
-               after={"rec_id": str(rec_id), "pool": body.pool.value,
-                      "function_990": body.function_990.value,
-                      "federal": body.federal.value,
-                      "objective_id": body.objective_id, "scope": scope},
+        record(actor, "RECOMMEND", subject.lower(), subject_id,
+               after={"rec_id": str(rec_id), **proposal},
                reason=body.note[:500], cursor=cur)
-    return {"rec_id": str(rec_id), "scope": scope, "disposition": "OPEN"}
+    return {"rec_id": str(rec_id), "subject": subject,
+            "subject_id": subject_id, "disposition": "OPEN",
+            "is_new": saw is None}
 
 
 class DisposeIn(BaseModel):
     reason: str = ""
-    #: The rationale the resulting judgment carries. Accepting writes a real
-    #: decision and a decision states its own reasons; without this the
-    #: judgment would inherit the recommender's words under the controller's
-    #: name, which is not what either of them said.
+    #: The rationale the resulting change carries. Accepting writes a real row
+    #: and a row states its own reasons; without this the change would inherit
+    #: the recommender's words under the controller's name, which is not what
+    #: either of them said.
     rationale: str = ""
     citation: str | None = None
     grade: str = "CORROBORATED"
 
 
 def _rec(cur, rec_id: str, period: str) -> dict:
-    cur.execute("""SELECT * FROM reclass_recommendation
+    cur.execute("""SELECT * FROM v_recommendation
                     WHERE rec_id = %s AND period = %s""", (rec_id, period))
     r = cur.fetchone()
     if r is None:
@@ -424,9 +488,9 @@ def decline(rec_id: str, body: DisposeIn, period: str = "2025",
     """Decline a recommendation, with a reason.
 
     The reason is required and accepting's is not, because accepting says why
-    by producing a judgment that carries its own rationale. A declined
-    recommendation is the only one of the two where the record would otherwise
-    hold the ask and not the answer.
+    by producing a row that carries its own. A declined recommendation is the
+    only one of the two where the record would otherwise hold the ask and not
+    the answer.
     """
     if len(body.reason.strip()) < 12:
         raise HTTPException(422, "Say why. Somebody went and looked at this, "
@@ -434,13 +498,13 @@ def decline(rec_id: str, body: DisposeIn, period: str = "2025",
                                  "disappearing.")
     with turn(period) as cur:
         r = _rec(cur, rec_id, period)
-        cur.execute("""UPDATE reclass_recommendation
+        cur.execute("""UPDATE recommendation
                           SET disposition = 'DECLINED', disposed_by = %s,
                               disposed_at = now(), disposition_reason = %s
                         WHERE rec_id = %s""", (actor.actor_id, body.reason,
                                                rec_id))
-        record(actor, "RECLASS_DECLINE", "reclass_recommendation", rec_id,
-               before={"scope": r["scope"], "pool": r["pool"]},
+        record(actor, "RECOMMEND_DECLINE", "recommendation", rec_id,
+               before={"subject": r["subject"], "subject_id": r["subject_id"]},
                reason=body.reason, cursor=cur)
     return {"rec_id": rec_id, "disposition": "DECLINED"}
 
@@ -453,86 +517,164 @@ def withdraw_recommendation(rec_id: str, body: DisposeIn, period: str = "2025",
     so on the record."""
     with turn(period) as cur:
         r = _rec(cur, rec_id, period)
-        if str(r["recommended_by"]) != str(actor.actor_id):
+        if str(r["raised_by_actor"]) != str(actor.actor_id):
             raise HTTPException(403, "Only the person who made a "
                                      "recommendation withdraws it.")
-        cur.execute("""UPDATE reclass_recommendation
+        cur.execute("""UPDATE recommendation
                           SET disposition = 'WITHDRAWN', disposed_by = %s,
                               disposed_at = now(), disposition_reason = %s
                         WHERE rec_id = %s""",
                     (actor.actor_id, body.reason or None, rec_id))
-        record(actor, "RECLASS_WITHDRAW", "reclass_recommendation", rec_id,
+        record(actor, "RECOMMEND_WITHDRAW", "recommendation", rec_id,
                reason=body.reason, cursor=cur)
     return {"rec_id": rec_id, "disposition": "WITHDRAWN"}
+
+
+def _merged(rec: dict) -> dict:
+    """What accepting this would write.
+
+    Computed in the database by `subject_merged()`, which is also what the
+    validation trigger checks — so the row the route receives is the row the
+    schema already said yes to. A merge done again here would be a second
+    opinion about what a partial proposal means, and the first version of it
+    held one: it carried a DIRECT objective across into a G&A proposal and the
+    accept was refused by a constraint the recommendation had already passed.
+    """
+    return dict(rec.get("merged") or {})
 
 
 @router.post("/recommendations/{rec_id}/accept")
 def accept(rec_id: str, body: DisposeIn, period: str = "2025",
            actor: Actor = Depends(require_controller)) -> dict:
-    """Accept a recommendation: record the judgment it proposes.
+    """Accept a recommendation: record the change it proposes.
 
-    It goes through `classify.decide` rather than writing a decision here.
-    That route holds the seal check, the stale-screen check, the supersession,
-    the line-level fan-out and the proof that the lines landed — and a second
-    path to the cost record is a second place all of that can be missing. One
-    door.
+    Every subject goes through **the route that owns its register** — the
+    classification queue, the facilities routes — rather than writing here.
+    Those routes hold the seal check, the stale-screen check, the
+    supersession, the line-level fan-out, the audit row and the proof that
+    what was written landed, and a second path to a register is a second place
+    all of that can be missing. One door, four times.
 
-    So this is refused under a seal, and refused *by the seal*, in the words
-    the seal uses. Unsealing is a deliberate act with a reason, which is the
-    whole point of the guarantee: the auditor's ask does not get to move a
-    sealed judgment quietly.
+    So a classification accept is refused under a seal, and refused *by the
+    seal*, in the words the seal uses. Unsealing is a deliberate act with a
+    reason, which is the whole point of the guarantee: the auditor's ask does
+    not get to move a sealed judgment quietly.
     """
     with transaction() as cur:
         r = _rec(cur, rec_id, period)
-        cur.execute("""SELECT account, payee, decision_id
-                         FROM v_classification_standing
-                        WHERE period = %s AND scope = %s""",
-                    (period, r["scope"]))
-        st = cur.fetchone()
-        if st is None:
-            raise HTTPException(409, "That group no longer carries a live "
-                                     "judgment. Nothing was recorded.")
-        if r["saw_decision"] and str(r["saw_decision"]) != str(st["decision_id"]):
+        # Every refusal is settled *before* anything is written.
+        #
+        # Found by driving it: Heidi holds CONTROLLER, so her own accept
+        # passed the portfolio gate, ran the dispatch, **created the
+        # building**, and only then met the trigger that says nobody disposes
+        # of their own recommendation. The refusal was correct and it arrived
+        # one write too late — a person told nothing happened, with a row on
+        # the record. The schema still stands behind this; the handler answers
+        # first, which is `acceptance_names_its_modification`'s lesson in a
+        # second place.
+        if str(r["raised_by_actor"]) == str(actor.actor_id):
+            raise HTTPException(
+                409, "A recommendation is somebody asking somebody else to "
+                     "look at it. You raised this one — withdraw it, or "
+                     "record the change directly, which is yours to do.")
+        if not r["still_agrees"]:
             raise HTTPException(409, {
-                "error": "POSITION_MOVED",
-                "message": ("The classification has changed since this was "
+                "error": "SUBJECT_MOVED",
+                "message": ("The record has changed since this was "
                             "recommended, so accepting it would apply a "
                             "proposal to something it was never about. "
                             "Decline it and ask for a fresh one.")})
-        group_key = f"{st['account']}\x1f{st['payee'] or ''}"
-        live_id = str(st["decision_id"])
+        subject, subject_id = r["subject"], r["subject_id"]
+        merged = _merged(r)
+        if subject == "CLASSIFICATION":
+            cur.execute("""SELECT account, payee, decision_id
+                             FROM v_classification_standing
+                            WHERE period = %s AND scope = %s""",
+                        (period, subject_id))
+            st = cur.fetchone()
+            if st is None:
+                raise HTTPException(409, "That group no longer carries a live "
+                                         "judgment. Nothing was recorded.")
+            group_key = f"{st['account']}\x1f{st['payee'] or ''}"
+            live_id = str(st["decision_id"])
 
-    out = decide(DecideIn(
-        group_keys=[group_key],
-        pool=Pool(r["pool"]),
-        function_990=Function990(r["function_990"]),
-        federal=FederalTreatment(r["federal"]),
-        objective_id=r["objective_id"],
-        grade=body.grade,
-        rationale=(body.rationale.strip()
-                   or f"Accepted the recommendation of {r['recommended_at']:%d %b %Y}: "
-                      f"{r['note']}")[:2000],
-        citation=body.citation,
-        based_on={group_key: live_id},
-    ), period=period, actor=actor)
+    why = (body.rationale.strip()
+           or f"Accepted the recommendation of "
+              f"{r['raised_at']:%d %b %Y} by {r['raised_by']}: {r['note']}")[:2000]
+
+    if subject == "CLASSIFICATION":
+        out = decide(DecideIn(
+            group_keys=[group_key],
+            pool=Pool(merged["pool"]),
+            function_990=Function990(merged["function_990"]),
+            federal=FederalTreatment(merged["federal"]),
+            objective_id=merged.get("objective_id") or None,
+            grade=body.grade,
+            rationale=why,
+            citation=body.citation,
+            based_on={group_key: live_id},
+        ), period=period, actor=actor)
+        result_id = live_id
+
+    elif subject == "FACILITY":
+        out = put_facility(FacilityIn(
+            facility_id=subject_id,
+            name=merged.get("name") or subject_id,
+            code=merged.get("code") or "",
+            address=merged.get("address") or "",
+            owned=bool(merged.get("owned", True)),
+            landlord=merged.get("landlord") or "",
+            usable_sqft=float(merged["usable_sqft"]),
+            rentable_sqft=(float(merged["rentable_sqft"])
+                           if merged.get("rentable_sqft") not in (None, "")
+                           else None),
+            source_document=body.citation or "",
+            note=why,
+        ), period=period, actor=actor)
+        result_id = subject_id
+
+    elif subject == "SPACE_UNIT":
+        out = put_unit(UnitIn(
+            unit_id=subject_id,
+            facility_id=merged["facility_id"],
+            label=merged.get("label") or subject_id,
+            floor=merged.get("floor") or "",
+            usable_sqft=float(merged["usable_sqft"]),
+            use=SpaceUse(merged["use"]),
+            status=OccupancyStatus(merged["status"]),
+            objective_id=merged.get("objective_id") or None,
+            occupant=merged.get("occupant") or "",
+            market_source=body.citation or "",
+            note=why,
+        ), period=period, actor=actor)
+        result_id = subject_id
+
+    else:  # ASSET_FUNDING
+        out = put_asset_funding(AssetFundingIn(
+            asset_id=subject_id,
+            kind=FundingKind(merged["kind"]),
+            amount=float(merged["amount"]),
+            award_reference=merged.get("award_reference") or "",
+            funder=merged.get("funder") or "",
+            counted_as_cost_share=bool(merged.get("counted_as_cost_share",
+                                                  False)),
+            note=why,
+        ), period=period, actor=actor)
+        result_id = subject_id
 
     with transaction() as cur:
-        # The judgment this ask produced, named on the row that asked for it.
-        # A recommendation that says it was accepted and does not say what
-        # came of it is the citation-with-no-document shape — and the reader
-        # who wants it is the person who raised it.
-        cur.execute("""SELECT decision_id FROM v_classification_standing
-                        WHERE period = %s AND scope = %s""",
-                    (period, r["scope"]))
-        made = cur.fetchone()
-        cur.execute("""UPDATE reclass_recommendation
+        # The row this ask produced, named on the row that asked for it. A
+        # recommendation that says it was accepted and does not say what came
+        # of it is the citation-with-no-document shape — and the reader who
+        # wants it is the person who raised it.
+        cur.execute("""UPDATE recommendation
                           SET disposition = 'ACCEPTED', disposed_by = %s,
                               disposed_at = now(), disposition_reason = %s,
-                              resulting_decision = %s
+                              result_id = %s
                         WHERE rec_id = %s AND disposition = 'OPEN'""",
-                    (actor.actor_id, body.reason or None,
-                     made["decision_id"] if made else None, rec_id))
-        record(actor, "RECLASS_ACCEPT", "reclass_recommendation", rec_id,
-               after={"scope": r["scope"], "pool": r["pool"]},
+                    (actor.actor_id, body.reason or None, result_id, rec_id))
+        record(actor, "RECOMMEND_ACCEPT", "recommendation", rec_id,
+               after={"subject": subject, "subject_id": subject_id},
                reason=body.reason, cursor=cur)
-    return {"rec_id": rec_id, "disposition": "ACCEPTED", "decision": out}
+    return {"rec_id": rec_id, "disposition": "ACCEPTED", "subject": subject,
+            "result": out}

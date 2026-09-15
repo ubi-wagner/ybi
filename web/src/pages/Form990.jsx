@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
 
 /* Form 990 Part IX — the Statement of Functional Expenses, and the documents
@@ -29,7 +29,7 @@ export default function Form990({ embedded = false }) {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    api.reviewForm990().then(setD).catch((e) => setErr(String(e.message || e)));
+    api.reviewForm990().then(setD).catch((e) => setErr(explain(e)));
     api.reviewAttachments().then(setDocs).catch(() => {});
   }, []);
 

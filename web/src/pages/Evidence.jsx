@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 const size = (b) =>
@@ -52,7 +52,7 @@ export default function Evidence({ actor }) {
   const load = useCallback(() =>
     api.evidenceRegister()
       .then((d) => { setRows(d); setError(""); })
-      .catch((e) => setError(String(e.message || e))), []);
+      .catch((e) => setError(explain(e))), []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -97,8 +97,8 @@ export default function Evidence({ actor }) {
       await load();
       await loadProposals();
     } catch (e) {
-      setError(String(e.message || e));
-      toast.fail(String(e.message || e));
+      setError(explain(e));
+      toast.fail(explain(e));
     }
     setBusy(false);
   }
@@ -108,7 +108,7 @@ export default function Evidence({ actor }) {
     return api.documentProposals()
       .then((d) => { setProposals(d); setPicked(new Set(
         d.documents.filter((x) => x.proposes).map((x) => x.evidence_id))); })
-      .catch((e) => setError(String(e.message || e)));
+      .catch((e) => setError(explain(e)));
   }, [canWrite]);
 
   useEffect(() => { loadProposals(); }, [loadProposals]);
@@ -135,7 +135,7 @@ export default function Evidence({ actor }) {
       await load();
       await loadProposals();
     } catch (e) {
-      toast.fail(String(e.message || e));
+      toast.fail(explain(e));
     }
     setBusy(false);
   }

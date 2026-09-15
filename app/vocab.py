@@ -86,6 +86,23 @@ class OccupancyStatus(StrEnum):
     COMMON = "COMMON"
 
 
+class FundingKind(StrEnum):
+    """Where the money for an asset came from.
+
+    2 CFR 200.313(d)(1) requires the source on the property record, and
+    200.436(b) makes depreciation on a federally funded asset unallowable —
+    which is why the fixed-asset schedule having no such column is a finding
+    of its own rather than a missing convenience.
+    """
+
+    FEDERAL = "FEDERAL"
+    STATE = "STATE"
+    LOCAL = "LOCAL"
+    PRIVATE = "PRIVATE"
+    DEBT = "DEBT"
+    UNRESTRICTED = "UNRESTRICTED"
+
+
 class AccessPolicy(StrEnum):
     FREE = "FREE"
     SUBSIDIZED = "SUBSIDIZED"

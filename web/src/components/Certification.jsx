@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import { Card, Field, useToast } from "./ui.jsx";
 
 /* Whether the rate carries the controller's signature — and the one place he
@@ -41,7 +41,7 @@ export default function Certification({ actor }) {
   const load = useCallback(() => {
     api.certification("2025")
        .then(setState)
-       .catch((e) => toast.fail(String(e.message || e)));
+       .catch((e) => toast.fail(explain(e)));
   }, [toast]);
   useEffect(load, [load]);
 
@@ -104,7 +104,7 @@ export default function Certification({ actor }) {
                           toast.ok("Signature withdrawn. Anything issued from "
                                    + "now on says NOT CERTIFIED.");
                           setWithdrawing(false); setReason(""); load();
-                        } catch (e) { toast.fail(String(e.message || e)); }
+                        } catch (e) { toast.fail(explain(e)); }
                         finally { setBusy(false); }
                       }}>
                 {busy ? "Withdrawing…" : "Withdraw"}
@@ -152,7 +152,7 @@ export default function Certification({ actor }) {
                       toast.ok(`Rate certified. ${r.outstanding.length} step(s) `
                                + "were outstanding and are recorded with it.");
                       setSignature(""); setNote(""); load();
-                    } catch (e) { toast.fail(String(e.message || e)); }
+                    } catch (e) { toast.fail(explain(e)); }
                     finally { setBusy(false); }
                   }}>
             {busy ? "Signing…" : "Certify this rate"}

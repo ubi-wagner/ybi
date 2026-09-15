@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 export default function Rates() {
@@ -21,7 +21,7 @@ export default function Rates() {
       const r = await api.seal({ sealed_by: "tom" });
       toast(`Sealed — ${r.seal_hash.slice(0, 16)}…`);
       load();
-    } catch (e) { toast(String(e.message || e), { tone: "bad", sticky: true }); }
+    } catch (e) { toast(explain(e), { tone: "bad", sticky: true }); }
   };
 
   /* **The rate had no door.** `POST /api/rates/compute` was complete on the
@@ -46,10 +46,8 @@ export default function Rates() {
             { tone: "warn", sticky: true });
       load();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "fail", sticky: true });
     }
   };
@@ -80,10 +78,8 @@ export default function Rates() {
       /* A 409 here is the system working: the books do not agree, or the set
          moved under the read. It carries the reason, so it is shown rather
          than replaced with a tone. */
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "fail", sticky: true });
     }
     setComputing(false);

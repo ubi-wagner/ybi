@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import {
   Card, Drawer, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
@@ -212,7 +212,7 @@ export default function Restate({ actor }) {
               setProposing(null);
               await load();
               nav(`/restate/${got.restatement_id}`);
-            } catch (e) { toast.fail(String(e.message || e)); }
+            } catch (e) { toast.fail(explain(e)); }
           }} />
         )}
       </Drawer>
@@ -347,7 +347,7 @@ function Detail({ d, canWrite, toast, onChange }) {
               toast.ok(`Moved to ${deciding.toLowerCase()}`);
               setDeciding(null);
               onChange();
-            } catch (e) { toast.fail(String(e.message || e)); }
+            } catch (e) { toast.fail(explain(e)); }
           }} />
         )}
       </Drawer>

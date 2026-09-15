@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /* A ceiling of zero is not a ceiling of zero. Two of the three awards on file
@@ -73,7 +73,7 @@ export default function Awards() {
       setDetail({ award: a, constraints, trueup });
     } catch (e) {
       setDetail(null);
-      toast.fail(String(e.message || e));
+      toast.fail(explain(e));
     }
   };
 

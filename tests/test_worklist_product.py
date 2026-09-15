@@ -141,6 +141,17 @@ def test_space_is_a_row_even_where_no_building_exists():
     assert rows == {"COST", "SPACE", "ASSETS"}
 
 
+
+def _without_comments(src: str) -> str:
+    """JSX with its comments removed.
+
+    `//`, `/* */` and `{/* */}`. Strings are left alone, which is good enough
+    here: what this has to stop is a sentence in a comment deciding what a
+    test looks at.
+    """
+    src = re.sub(r"/\*[\s\S]*?\*/", "", src)
+    return re.sub(r"(?m)^\s*//.*$", "", src)
+
 def test_no_screen_renders_a_worklist_kind_raw():
     """What a kind means is written down once, in `worklistKinds.js`.
 
@@ -157,9 +168,19 @@ def test_no_screen_renders_a_worklist_kind_raw():
     offenders: list[str] = []
     for path in sorted(web.rglob("*.jsx")):
         src = path.read_text()
-        # Only files that actually handle worklist rows; `kind` is a column on
-        # reconciling items, evidence and advice too, and those are not this.
-        if "worklist" not in src.lower() and "forKind" not in src:
+        # Which files handle worklist rows, decided from code rather than from
+        # prose. The first version searched the raw text for "worklist", so a
+        # *comment* mentioning the worklist made `Facilities.jsx` eligible and
+        # the sweep then reported its in-kind table — `in_kind_claim.kind`,
+        # nothing to do with this — as a defect. A test that argues against
+        # correct code is worse than no test, and it is the same root cause as
+        # a test that passes over a defect: asserting over words rather than
+        # over what runs.
+        #
+        # A screen that renders worklist kinds reads the one map. That is the
+        # rule this test is about, so that is what decides whether it applies.
+        code = _without_comments(src)
+        if "worklistKinds" not in code and "forKind" not in code:
             continue
         for n, line in enumerate(src.splitlines(), 1):
             if re.search(r"\.kind\s*\.\s*(replaceAll|toLowerCase|replace)\(", line):

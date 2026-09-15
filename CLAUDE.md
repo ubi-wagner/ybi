@@ -2120,6 +2120,224 @@ Still to wire: the workbook first sheets (`package.py`, `timesheet_report.py`)
 carry their own caveats and not yet this one, and the Restate and Reports
 screens show the state but do not yet repeat the band.
 
+## One register for a recommendation, whatever it is about
+
+Migration `084`, `app/routers/positions.py`, `Propose.jsx`. `083` built
+*somebody who may read the cost record proposes a change and the controller
+disposes of it* and pointed it at classification, because that is where the
+757 working positions were. The same act is wanted for the two partitions the
+walk has reported as **NO DATA for the life of the system**: no building
+carries square footage, so the 200.465 carve-out cannot fire at all, and no
+asset carries a funding source, so 200.436(b) cannot be answered on $850,383
+of depreciation. Heidi holds FACILITIES and INVENTORY and is who goes and
+measures; Tom signs the rate those measurements feed.
+
+**The obvious build is `space_recommendation` and `asset_funding_
+recommendation` beside `reclass_recommendation`.** That is three structures
+describing one thing — this repository's most expensive lesson in somebody
+else's words (`project_wbs_nodes` beside `project_milestones`, collapsed and
+dropped) and in its own (`space_partition` beside `space_unit`; *the cost
+objective is the charge code and there is deliberately no second register of
+codes*). It would also mean three review lists, when the whole point is that
+the controller has **one**.
+
+So one register carrying a **subject** and a **proposal**. Four subjects, each
+naming exactly one register and exactly one door:
+
+| | | |
+| --- | --- | --- |
+| `CLASSIFICATION` | `decision` | `POST /api/classify/decide` |
+| `FACILITY` | `facility` | `PUT /api/facilities` |
+| `SPACE_UNIT` | `space_unit` | `PUT /api/facilities/space` |
+| `ASSET_FUNDING` | `asset_funding` | `PUT /api/facilities/asset-funding` |
+
+`083`'s rows move across with their dispositions intact and its table is
+dropped — superseded rather than edited, which is this system's own model of
+change.
+
+**The proposal is `jsonb` and the schema still checks it.** A wide table with
+four columns for one subject and five for another is sparse by construction
+and every column is dead for three subjects out of four — the shape
+`test_no_register_is_dead.py` exists to catch. So the payload is one column
+and `recommendation_is_well_formed()` validates it per subject, **casting
+every enum to its real type**, and re-checks the target register's own
+invariants: DIRECT names an objective, PROGRAM space names an objective,
+OCCUPIED space names an occupant, federal money names its award. *A
+recommendation the server would refuse is a screen offering what the API will
+not take*, which this repository shipped once on 24 accounts.
+
+**`saw` is a digest and NULL is the interesting value.** `subject_digest()` is
+one definition of *what the record says about this right now*, for all four
+subjects, so an overtaken proposal says so rather than being applied to
+something it was never about. NULL means **the row is not on the record at
+all** — which for space and assets is not an edge case but the normal one:
+both registers are empty and Heidi's first act is to put a building up, not
+amend one.
+
+### The door the asset register never had
+
+`asset_funding` was written by exactly one thing — the workbook that comes
+back through `/requests` — so the only way to answer 200.313(d)(1) for a
+single asset was a spreadsheet round trip. `PUT /api/facilities/asset-funding`
+is the door, gated `INVENTORY`, and `GET` beside it lists every asset with
+what is known about who paid for it, **ordered by what is not answered**.
+
+### Four defects, and the first two were found by driving it
+
+- **A refused accept wrote the row anyway.** Heidi holds CONTROLLER, so her
+  own accept passed the portfolio gate, ran the dispatch, **created the
+  building**, and only then met the trigger saying nobody disposes of their
+  own recommendation. The refusal was correct and arrived one write too late:
+  a person told nothing happened, with a row on the record. Every refusal is
+  settled in the handler before anything is written now; the schema still
+  stands behind it. `acceptance_names_its_modification`'s lesson in a second
+  place.
+- **A bad enum answered 500.** `(p->>'use')::space_use` raises
+  `invalid_text_representation`, which the API's schema-gate handler does not
+  recognise — so a typo in a space use reached a person as *the system broke*
+  rather than *you picked something that does not exist*.
+  `enum_or_refuse()` names the allowed values, **read out of `pg_enum`**,
+  because a hand-kept copy of an enum is the map this file has been wrong
+  about four times in one run.
+- **The merge invented a combination nobody proposed.** A proposal names only
+  what changes, so it is laid over the row that is there — otherwise
+  correcting a square footage blanks the address. The auditor proposed
+  `pool: G&A` on a group classified DIRECT to Xjet, the merge carried the
+  objective across, and `direct_needs_objective` refused the accept. On a
+  classification the objective is not independent: `direct_needs_objective` is
+  an *equivalence*, so a pool that stops being DIRECT takes the objective with
+  it. **And validating the proposal alone refuses legitimate partial changes**
+  — `status: OCCUPIED` on a space that already names its occupant. Both are
+  checking something other than what would be written, so `subject_merged()`
+  says what would be written, the trigger validates *that*, and the handler
+  reads *that* rather than merging again in Python.
+- **The walk printed a state nothing renders.** Step 4 passed
+  `v_partition_coverage.state` straight through, and that view's vocabulary is
+  the control register's — **TIES**, OPEN, NO DATA — while the walk's is DONE,
+  OPEN, NO DATA, WAITING. Nobody had ever seen it, because with no building on
+  the record the partition was NO DATA in every run there has ever been; the
+  first square footage anybody entered made it print `TIES`. Found by
+  `tests/test_the_walk.py`, which derives the four states from the view rather
+  than keeping a list of its own.
+
+### One kind on the worklist, not three
+
+`SPACE_RECOMMENDED` and `ASSET_RECOMMENDED` beside `RECLASS_RECOMMENDED` would
+be three kinds with one owner and one destination — three copies of one fact.
+What differs between them is the *subject*, which is on the row.
+`RECOMMENDATION_OPEN` replaces it.
+
+### What it does to the rate
+
+`scripts/drive_partitions.py`, in `prove.sh` after `drive_restage`: **18
+checks, 0 findings.** Heidi proposes a building and the four rooms in it in
+one sitting — the schema lets a space name a building that is only *proposed*,
+because a building and its rooms are one afternoon's work and making her wait
+for Tom between the two would be friction with nothing behind it. Tom's list
+sorts the building above the rooms, because `put_unit` answers 404 on a
+facility that is not there and a list that offered them the other way round
+would hand somebody a refusal in the order it printed them.
+
+Then, against the live record, **the 200.465 carve-out fires for the first
+time**:
+
+        5,400 usable square feet, of which 2,000 tenant and 1,000 vacant
+        carve-out recorded                              832,155.73
+        INDIRECT_COMBINED   43.99%  ->  26.42%
+        every pool still ties at pool_variance 0.00
+
+That is 17.57 points from measuring one building, which is what
+`RATE_RECOMMENDATION.md` means by *one missing measurement is worth 24 points
+of the width*.
+
+And the drive was reading its own writing. Its first version left the carved
+rate standing at cleanup and called that deference to a judgment — so a second
+run took 26.42% as its baseline, added the same building, produced the same
+26.42%, and reported *the combined rate did not move on a carve-out*: a drive
+finding a fault in working code by measuring its own leftover. It recomputes
+at the end now, because **computing is arithmetic and sealing is a judgment**
+and this drive may recompute over a set it did not seal. `review_system` was
+fixed for exactly this, and I wrote it again one file away.
+
+### And what the screens said instead
+
+Reviewing every screen for capability turned up four things, three of them
+older than this change:
+
+- **`canWrite` was rank, not portfolio.** `Facilities.jsx` read
+  `actor.role === "CONTROLLER"` — and CONTROLLER is the name of a portfolio
+  *and* of a rank, which this file calls the easiest place to collapse them.
+  Every facilities route is `require_portfolio(FACILITIES, CONTROLLER)`, so
+  reading rank hid the write forms from exactly the person who holds the
+  portfolio and nothing else: a nav stricter than the API.
+- **The `tab` prop was passed and never read**, so `/classify/assets` — the
+  destination the worklist and the walk both print for the asset register —
+  opened on Buildings.
+- **Forty screens printed `"409: …"` into a toast.** `api.js::explain()`
+  exists to turn what the server threw into what a person reads, and its own
+  comment says why a screen must not do that itself; five files used it and
+  forty did `String(e.message || e)`. Ten then hand-rolled the strip and the
+  unwrap `explain` already does, one of them through a `JSON.parse` of a
+  string `explain` had already parsed. It is `money()` in the error path —
+  eight spellings of one formatter — and the fix is the same: one definition,
+  and `tests/test_one_way_to_say_it_failed.py` fails a ninth.
+- **The bulk edit that fixed it left a `ReferenceError`**, in one file of
+  thirty-one — `explain()` called without being imported, inside a `catch`,
+  where the build cannot see it and only the failure path runs it. Found by
+  asking every file whether it imports what it uses, which is the same check
+  that found the last one, at the same ratio: twenty-six of twenty-seven then,
+  thirty of thirty-one now. That check is a test now rather than a thing I
+  remembered to run.
+
+And one test that argued against correct code. `test_no_screen_renders_a_
+worklist_kind_raw` decides which files to look at by searching the raw text
+for "worklist" — so a *comment* I wrote made `Facilities.jsx` eligible and the
+sweep reported its in-kind table, which renders `in_kind_claim.kind` and has
+nothing to do with worklists. It strips comments and asks whether the file
+reads `worklistKinds.js` now, which is what *handles worklist rows* actually
+means. Same root cause as a test that passes over a defect: asserting over
+words rather than over what runs.
+
+### Polish
+
+- **A row of figures printed on four baselines.** `.stat-row` aligned the
+  *bottoms*, so a large value pushed its own label above its neighbours'.
+  Aligning the tops lines up the labels, which is the part a reader scans. The
+  grid that gives each a row is the tidier idea and is wrong here: `stat-note`
+  is optional, so a stat without one leaves a cell empty and the next stat's
+  label falls into it — watched doing exactly that.
+- **"Nothing here yet" took 200px to say so.** A screen that is mostly absence
+  reads as a screen that is mostly broken, and on a system being filled in
+  that is most of them.
+- **A hint beside a label competes with it.** "Required where the status is
+  OCCUPIED" squeezed "Cost objective" onto two lines. A short hint still sits
+  on the label line; anything longer goes under the control. And a hint is no
+  longer dropped when the field is required, which silently lost the sentence
+  saying what the field wants.
+- **The reference field asked somebody to invent an id**, first, before
+  anything else. It is derived from what they are typing and stays editable.
+- **A refusal prints where it happened**, in warm pencil, not only in a toast
+  that fades while somebody is reading the form.
+- **756 positions made the review page 11,895px** and the two things Tom had
+  to act on were 2% of it. Twenty-five at a time, with *Adopt the 25 shown* —
+  because adopting 756 one at a time is not a job anybody does, and a screen
+  that only offers that is one people route around by sealing without
+  reviewing, which is the thing the whole exercise is against.
+- **`true` is what JSON calls it and not what a person does.**
+- **A count belongs on a screen that reads it from the record.** The propose
+  bar asserted *no building carries square footage* and went on saying it with
+  a building on the table underneath. The rule is what is worth saying anyway,
+  and the rule does not expire.
+- **`subjectNotes` was defined and called by nothing** — a dead helper in
+  `api.js`, an hour old, the shape `test_no_register_is_dead.py` sweeps for.
+  `SubjectNotes.jsx` is its door: a note against a building or an asset,
+  reached from the row, with the same two kinds and the same rule — the
+  auditor is told a working note is there and not what it says.
+- **A drawer mounted in the wrong component.** `rindex` found the last
+  `</div>` in the file rather than the last one in the *component*, so the
+  panel lived inside `SpaceForm` and the link opened nothing. Caught in a
+  browser rather than by the build, which cannot see it.
+
 ## A working position is not a judgment
 
 Migration `083`, `app/routers/positions.py`, `/classify/review`. **All 757 live

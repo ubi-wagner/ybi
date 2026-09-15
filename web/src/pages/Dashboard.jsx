@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Stat, Pill, Tick, Meter, Table, Empty } from "../components/ui.jsx";
 import { forKind } from "../worklistKinds.js";
 
@@ -19,7 +19,7 @@ export default function Dashboard() {
   useEffect(() => {
     api.dashboard()
       .then(setData)
-      .catch((e) => setError(String(e.message || e)));
+      .catch((e) => setError(explain(e)));
   }, []);
 
   if (error) return <Empty mark="!" title="Could not load">{error}</Empty>;
