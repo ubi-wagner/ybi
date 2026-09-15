@@ -154,12 +154,26 @@ def parse(pdf: Path) -> list[dict]:
         body = flat.split("AMOUNT", 1)[-1].split("PAYMENT")[0]
         # Each line is <label> <qty> <rate> <amount>; the label is whatever
         # sits between the previous amount and this one.
+        #
+        # **And a line may print without its quantity and rate.** AAMEN 9079 —
+        # the first invoice in its file — reads `AAMEN Grant Monthly Invoice
+        # 26,087.57` where the other eleven read `... 1 26,087.57 26,087.57`.
+        # Requiring the three-column form found no lines at all on it, so the
+        # invoice landed with a header total and nothing under it, and the
+        # restatement measured eleven invoices while counting twelve. The
+        # amount is the figure on the page either way; the rate is the amount
+        # where the face does not state one separately.
         lines, cursor = [], 0
         for m in re.finditer(rf"\b1\s+({NUM})\s+({NUM})", body):
             label = body[cursor:m.start()].strip(" .:-")
             cursor = m.end()
             lines.append(dict(label=label, rate=money(m.group(1)),
                               amount=money(m.group(2))))
+        if not lines:
+            for m in re.finditer(rf"({NUM})\s*$", body.strip()):
+                label = body.strip()[:m.start()].strip(" .:-")
+                amount = money(m.group(1))
+                lines.append(dict(label=label, rate=amount, amount=amount))
         out.append(dict(
             number=num.group(1),
             date=dt.datetime.strptime(date.group(1), "%m/%d/%Y").date(),
@@ -175,7 +189,15 @@ def check_footing(stream: dict, invoices: list[dict]) -> list[str]:
     faults = []
     for inv in invoices:
         lines = sum(x["amount"] for x in inv["lines"])
-        if inv["lines"] and abs(lines - inv["payment"]) > Decimal("0.01"):
+        # **An invoice with no lines is the case this check exists for**, and
+        # `if inv["lines"] and ...` excluded exactly it: AAMEN 9079 carried a
+        # stated payment with nothing under it and passed silently. A payment
+        # with no line is not a tidier invoice, it is an unreadable one.
+        if not inv["lines"]:
+            faults.append(f"invoice {inv['number']} states a payment of "
+                          f"{inv['payment']:,.2f} and carries no line at all — "
+                          f"nothing on the face was read")
+        elif abs(lines - inv["payment"]) > Decimal("0.01"):
             faults.append(f"invoice {inv['number']} lines total {lines:,.2f} "
                           f"against a stated {inv['payment']:,.2f}")
     billed = sum(i["payment"] for i in invoices)
