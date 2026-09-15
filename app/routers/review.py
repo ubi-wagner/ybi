@@ -205,3 +205,32 @@ def auditors_report(period: str | None = None,
             "exceptions": exceptions, "coverage": coverage,
             "evidence_coverage": evidence, "rates": rates,
             "reconciling_items": items}
+
+
+@router.get("/ties")
+def report_ties(period: str | None = None) -> dict:
+    """Whether everything this system publishes ties to the financials.
+
+    Twenty-two control-shaped views and nothing collecting them, so the
+    question a reviewer actually arrives with — *does all of this tie to the
+    books* — had twenty-two answers on twenty-two screens and the reader kept
+    the list. `v_report_tie` is one row per report and anchor, each reading
+    the control that already owns its figure.
+
+    Nothing is computed here or on the screen, for the reason every review
+    route gives: a figure derived twice is one that can disagree with itself.
+    """
+    period = period or settings.period
+    return {
+        "period": period,
+        "summary": one("""SELECT anchors, ties, open, no_data, state,
+                                 open_anchors
+                            FROM v_report_tie_summary WHERE period = %s""",
+                       (period,)) or {"anchors": 0, "ties": 0, "open": 0,
+                                      "no_data": 0, "state": "NO DATA",
+                                      "open_anchors": ""},
+        "anchors": query("""SELECT seq, report, anchor, ties_to, state,
+                                   variance, needs
+                              FROM v_report_tie WHERE period = %s
+                             ORDER BY seq, anchor""", (period,)),
+    }

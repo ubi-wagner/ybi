@@ -265,6 +265,9 @@ export const api = {
   reviewForm990: (period = "2025") => req(`/review/form-990?period=${period}`),
   reviewAttachments: (period = "2025") => req(`/review/attachments?period=${period}`),
   auditorsReport: (period = "2025") => req(`/review/auditors-report?period=${period}`),
+  // Whether everything above ties to the financials. One row per report
+  // and anchor, each read from the control that already owns its figure.
+  reportTies: (period = "2025") => req(`/review/ties?period=${period}`),
   rateBuildupUrl: (period = "2025") => `/api/export/rate-buildup?period=${period}`,
   auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
   form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,

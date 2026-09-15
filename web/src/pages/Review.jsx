@@ -6,6 +6,7 @@ import Form990 from "./Form990.jsx";
 import Auditor from "./Auditor.jsx";
 
 import CertificationBand from "../components/CertificationBand.jsx";
+import ReportTies from "../components/ReportTies.jsx";
 /* Final review — the three things that leave the building.
  *
  * One tab rather than three. They are read together: a reviewer checks the
@@ -38,6 +39,11 @@ export default function Review({ actor }) {
       </PageHead>
 
       <CertificationBand />
+      {/* Whether the three below tie to the books, above them rather than
+          under them: a reviewer handed a total has formed a view before they
+          reach a footnote, which is the rule every one of these screens
+          already keeps about what is unfinished. */}
+      <ReportTies />
       {current === "report" && <Auditor embedded />}
       {current === "rate" && <RateReview embedded actor={actor} />}
       {current === "form-990" && <Form990 embedded />}

@@ -3066,6 +3066,114 @@ including certify-and-upload as the fallback, with the rule that **nothing
 downstream is blocked by an unsigned certification** and every paper says so
 instead.
 
+## Does all of it tie to the financials?
+
+Migrations `101`–`108`, `v_report_tie`, `GET /api/review/ties`,
+`ReportTies.jsx`, `docs/REPORT_TIES_2025.md`. The system carries
+twenty-two control-shaped views and, until this, **nothing that collected
+them** — so the question a reviewer actually arrives with had twenty-two
+answers on twenty-two screens and *the reader kept the list*. That is the
+hand-kept map at its purest, and it is the shape this file has been wrong
+about more often than any other.
+
+One row per report and anchor, and **each arm reads the control that already
+owns its figure**. Nothing in the view, the route, the panel or the document
+computes a tie; a second derivation of a control is one figure computed
+twice, which is the thing that can disagree with itself.
+
+**Twenty anchors, eighteen tie, two do not, none is unevaluable.** The two
+are named to the cent rather than netted away, because a difference is
+closed by naming it and which of the two records is right is a judgment with
+a person's name on it:
+
+| | |
+| --- | ---: |
+| the asset register against the ledger's depreciation | **22,429.02** |
+| the invoice register against grant income | **128,581.04** |
+
+And a tie nobody had ever made, which is the anchor the register should have
+been measured against all along: **the balance sheet's accumulated
+depreciation movement across five contra accounts equals the profit and
+loss's depreciation expense at $850,382.89, to the cent.** Measuring the
+263-asset register against the expense account alone was measuring it
+against one side of an entry nobody had proved balanced.
+
+Six defects came out of building it, and five are shapes already in this
+file:
+
+- **A control that never read the register built to explain it.** `072`
+  reported Tom Metzinger as `HOURS WITHOUT WAGES` — 781 hours, no payroll
+  row — and `073` answered it: he is 1099, paid as `Metz Consulting, LLC.`,
+  and `contractor_identity` holds the link and the note reconciling both
+  differences exactly. **The control went on reporting HOURS WITHOUT WAGES
+  ever since.** The dead-register shape pointed the other way: not a table
+  nothing writes, but a table nothing *reads* — which
+  `test_no_register_is_dead.py` cannot see, because that register does have
+  a reader in `v_contractor_effort_check`. It surfaced only because
+  something finally asked all twenty-two at once.
+- **`EXPLAINED` is a fourth state and not a pass dressed up.** The hours
+  genuinely do not tie to wages; they tie to a contractor payment, and
+  `explained_by` carries the payee and the note. The register maps it to
+  TIES **with the name in `needs`**, explicitly — `084` shipped a walk step
+  that passed a view's private vocabulary straight through and printed a
+  state nothing renders, so every arm maps, and `NO DATA` is never softened.
+- **OPEN with nothing saying why**, for the third time in this family after
+  `086` and `093`. `085` gave `v_asset_control.needs` a branch for a register
+  nobody had answered the funding source on, because until then that was the
+  only way it could be open; the close answered all 263, the branch fell
+  through to the empty string, and the control reported OPEN in silence on
+  the figure the 200.436(b) carve-out turns on.
+- **One column answering two questions** (`106`). `v_asset_control` serves
+  two readers: `v_partition_coverage` reads `needs` for *does every asset
+  name where its money came from*, and the register reads it for *does the
+  register equal the ledger*. Filling the second in made a **finished**
+  partition print a sentence about depreciation — `093` in as many words,
+  one view along. Caught by `test_worklist_product.py`, which has now failed
+  for this shape twice, which is the rule being kept. Two asks, two columns.
+- **The register was speaking SQL on four of its twenty rows** (`107`).
+  `v_rate_anchor` names its controls the way a database does, and `103`
+  passed `control` straight into `anchor` — `WAGE_BASE_IS_THE_REGISTER`
+  beside *The depreciation entry balances*, on the panel a reviewer reads
+  first. Worse in a second way visible only with all four on one page: every
+  one said it ties to *the ledger's live judgments and the payroll register*,
+  because one `ties_to` served four anchors that answer to different things.
+  **Ties with the wrong thing named is worse than a blank** — the blank is
+  visibly missing, the wrong one checks out and is about something else. The
+  map is data rather than a `CASE`, a LEFT JOIN so nothing falls off the end,
+  and a test fails an anchor that reaches the register still speaking SQL.
+- **Six grants were named by hand and there are ten** (`108`).
+  `v_invoice_income_tie` mapped income to an objective through a six-row
+  list, and the ledger carries ten `3900 Grant Income` sub-accounts — so
+  **$348,402.98** of MBAC, AM Workforce, CDBG and DLA was not covered by the
+  anchor called *the invoice register is the grant income* at all. The
+  universe is the ledger's own accounts now; the transcription of which
+  account is which objective stays hand-written, deliberately, the way the
+  six fringe accounts are. What changes is that an account the list does not
+  name still appears, under its own name — **as `NO REGISTER`, not as OPEN.**
+  Reporting it as a difference would say YBI over-billed every dollar of
+  MBAC, when what is true is that nobody has loaded MBAC's invoices.
+
+- **Two anchors read green over nothing at all** (`109`), and only a
+  database built from empty could show it. On a period with no ledger,
+  `FRINGE_POOL_IS_THE_PAYROLL_FRINGE` read **TIES** — the P&L names no
+  fringe, no pool holds any, `0 = 0` — and Part VII read **OPEN**, reporting
+  every officer as one the payroll register does not carry, because `096`
+  seeds the roster and a person loads the register. `029` in both
+  directions, inside anchors written to catch exactly that. `066`'s guard
+  does not fire either, because nought of nought is a complete
+  classification. Neither moves a figure on 2025; on an empty record the
+  register now reads **13 anchors, 0 ties, 0 open, 13 NO DATA**, which is the
+  honest answer, and a test fails any anchor that answers over a period with
+  no books.
+
+**And there is one door.** `GET /api/review/ties` is `require_reader`, the
+same gate as the deliverables it sits above, and the panel is on the `/review`
+shell — above the three things that leave the building rather than under
+them, because a reviewer handed a total has formed a view before they reach a
+footnote. `scripts/report_ties.py` writes the same register as a document for
+the reader who is not at a screen, and reads every figure from the row the
+control recorded it in.
+
 ## The audit is a walk, not a to-do list
 
 Migration `081`, `v_audit_walk`, `GET /api/dashboard/walk`, `Walk.jsx`. The
