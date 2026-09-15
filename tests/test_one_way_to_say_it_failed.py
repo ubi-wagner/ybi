@@ -86,3 +86,38 @@ def test_every_screen_imports_what_it_uses():
     assert not missing, (
         "these call explain() without importing it, which is a "
         "ReferenceError in a catch block:\n  " + "\n  ".join(missing))
+
+
+# ------------------------------------------- and the same check for Python --
+
+def test_no_python_module_uses_a_name_it_does_not_have():
+    """A `NameError` in a `catch` is invisible to everything but the failure.
+
+    Three times in one sitting: a bulk edit left `explain()` called in a file
+    that does not import it; `Decimal` was used in a new facilities helper
+    with no import; and `AllocationBase` had been an unresolvable annotation
+    on `_build_model` since it was written — the one undefined name in the
+    application, sitting there because nobody had ever run the check.
+
+    Python's is `pyflakes`, restricted to **undefined names**. The other
+    things it reports — an unused local, an f-string with no placeholder —
+    are style, and a sweep that mixes style into a correctness gate is one
+    people learn to ignore, which is how the real entry gets dismissed.
+    """
+    import subprocess
+    import sys
+
+    try:
+        import pyflakes  # noqa: F401
+    except ImportError:                                   # pragma: no cover
+        import pytest
+        pytest.skip("pyflakes is not installed")
+
+    out = subprocess.run([sys.executable, "-m", "pyflakes",
+                          str(ROOT / "app"), str(ROOT / "scripts"),
+                          str(ROOT / "tests")],
+                         capture_output=True, text=True).stdout
+    undefined = [ln for ln in out.splitlines() if "undefined name" in ln]
+    assert not undefined, (
+        "these use a name the module does not have, which is a NameError on "
+        "the line that runs:\n  " + "\n  ".join(undefined))

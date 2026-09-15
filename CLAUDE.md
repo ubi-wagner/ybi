@@ -1223,7 +1223,7 @@ and computed:
 | | | | |
 | --- | --- | --- | --- |
 | FRINGE | **21.90%** | $401,783.60 | over the register's $1,835,047.18 (salaries and wages) |
-| OVERHEAD | 29.61% | $1,497,879.12 | over $5,058,960.45 MTDC |
+| OVERHEAD | 29.61% | $1,497,879.12 | over $5,058,960.43 MTDC |
 | G&A | 5.21% | $263,517.59 | over the same base |
 | **INDIRECT_COMBINED** | **34.82%** | $1,761,396.71 | over the same base |
 
@@ -2483,6 +2483,174 @@ Two things from building the screen:
 - **The panel reads the position rather than being handed it.** Both lists that
   open it carry different fields, and passing a partial object through printed
   a heading with nothing under it.
+
+## Heidi recommends the space and the assets; Tom verifies
+
+Migration `084`, `085`. `083` gave the auditor a way to ask for a
+reclassification; this is the same act over the other two partitions —
+**one `recommendation` register with a subject, not three sibling tables.**
+`space_partition` beside `space_unit`, `project_wbs_nodes` beside
+`project_milestones`: a second structure describing one thing produces two
+answers to one question, and this file has paid for that lesson twice.
+
+Four subjects — `CLASSIFICATION`, `FACILITY`, `SPACE_UNIT`, `ASSET_FUNDING`
+— and the proposal is `jsonb` validated **per subject** by a trigger that
+casts every enum to its real type and re-checks the target register's own
+invariants. So a proposal the register would refuse is refused when it is
+written, not at the moment somebody presses Accept. `subject_merged()` is
+one definition of *what would actually be written*: the trigger validates
+it and the handler reads it, so neither holds its own opinion about a
+partial proposal.
+
+**Accepting goes through the route that owns the register.** `083`'s rule,
+kept: `classify.decide` for a judgment, `PUT /api/facilities/space` for a
+room, `PUT /api/facilities/asset-funding` for a funding source. There is
+one door, and a second path to a register is a second place its rules can
+be missing.
+
+**`is_new` is NULL, not false, where the row is not on the record** — which
+for space and assets is the *normal* case rather than an edge. Heidi is
+proposing a building that has never existed, so the card says *not on the
+record — this would put it there* instead of printing a change from
+nothing.
+
+### And the inventory half had nothing to point at
+
+The mechanism was complete and **`asset` had zero rows**, so the schema
+correctly refused every funding proposal and the whole inventory side was a
+door onto an empty room. `2026_YBI_Fixed-Asset-Schedule.xls` has been on
+file since the foundation was loaded. `scripts/load_assets.py` loads it —
+263 assets, $23,419,573.64 of gross cost, $872,811.91 of depreciation, all
+seven printed subtotals tying — and **writes no funding row at all**, because
+200.313(d)(1)'s funding source is the one column the schedule does not carry
+and is exactly what Heidi answers.
+
+Two defects surfaced the moment there was data, and neither could have been
+found without it:
+
+- **System number 165 is two assets, in two accounts.** Keyed `FA-<system>`
+  the register loaded 262 of 263 and lost **$35,414.95 of cost and $1,770.75
+  of depreciation** — and *every printed subtotal still tied*, because the
+  parser saw both rows and only the database collapsed them. The key is
+  `FA-<gl account>-<system>` now, and the loader compares what landed against
+  what it parsed rather than trusting the totals it just checked.
+- **`v_partition_coverage` subtracted a count from dollars.** The ASSETS arm
+  was `a.gross_cost - a.funding_unknown::numeric` — $23.4m of cost less 263
+  *assets* — so the partition read **100.0% covered** over a register where
+  nobody had answered anything. `085` adds `funded_cost` to
+  `v_asset_control`, which is the cost of the assets somebody has answered
+  for, in dollars; and `needs` gained a second branch, because once the
+  register existed the reason went blank and the step read OPEN with nothing
+  saying what it wanted.
+
+On the live record 200.436(b) now fires for the first time: Heidi proposes
+FEDERAL on the Tech Block building, Tom accepts, and `v_asset_allowability`
+reads **$143,440.00 of depreciation, $0.00 allowable.**
+
+### `--help` is not an import check, and neither is a NameError
+
+Three `NameError`s shipped in one sitting — all inside branches nothing took,
+which is why the build and every test were green. `pyflakes` is pinned now
+and `test_no_python_module_uses_a_name_it_does_not_have` fails on **undefined
+name** and on nothing else: a lint that also reports unused imports is one
+somebody turns off.
+
+### A drive that restores a policy it chose
+
+`drive_partitions` recomputed the rate with `admin_labour: "POOL"`
+hard-coded, at both call sites. Against the reference record, which is
+already on POOL, that restored the right thing by luck. Against a record
+built from nothing — which is OBJECTIVE, the schema's default — it restored
+**43.99% over a record that was on 34.82%**: nine points of combined rate,
+chosen by a drive rather than by anybody. It reads `admin_basis(period)` off
+the rate on file now. *Read the record, never recall it*, pointed at a
+policy the instrument has no business holding an opinion about.
+
+### The backfill that was mistaken for a writer
+
+And the one this turn's from-nothing replay actually found.
+`scripts/classification_log.py --apply` records its 757 judgments through the
+real API as the controller — which is right — and **nothing set
+`decision.origin`.** `083` created the column, gave it its meaning and
+filled the rows already on the record with a single `UPDATE`; no live path
+has ever written it. So a replay from an empty database recorded all 757 as
+`CONTROLLER`, and `/classify/review` — the screen the whole restaging exists
+for — **had nothing to show him.** The migration corrected a history and the
+writer was never built.
+
+`DecideIn.origin` takes it, defaulting to `CONTROLLER` so nothing changes by
+default, and the log sends `MACHINE_PROPOSAL`. The column stays write-once.
+
+**Two things in the instruments were wrong, and the second is the more
+interesting:**
+
+- **`test_no_register_is_dead` read the migration and called the column
+  written.** A backfill is not a writer, and a one-time `UPDATE` in an
+  applied migration looks exactly like one. Only `UPDATE` is dropped, and
+  only inside `app/sql` — an `INSERT` there is how `fiscal_period` and
+  `labor_objective_map` come to exist at all and the boot replays it on
+  every recovery. The sweep kept **two copies of its own file walk**, so
+  fixing one left the column half still reading the migration.
+- **A column with a default is never empty, so the sweep cannot see it.**
+  `unwritten_columns()` skips anything with a `column_default` — *the
+  database writes it* — which is literally true and is precisely why
+  `origin` survived. It was never blank; it was always wrong.
+  `test_no_enum_column_answers_with_its_default_for_ever` is the other half,
+  scoped to enums because an enum default is a claim about the domain where
+  a timestamp default is bookkeeping. **It found one on its first run:**
+  `asset.access` defaults to `INTERNAL`, nothing has ever written it, all
+  263 assets read INTERNAL, and `v_equipment_subsidy` can therefore only
+  ever report zero given equipment. Recorded with the screen its door
+  belongs on rather than fixed blind — which machines are lent out and on
+  what terms is Heidi's answer, not a default's.
+
+### Proved from an empty database
+
+Not from the record it was built against, because a drive reading its own
+writing proves nothing. Dropped, recreated, migrated, and walked:
+
+    seed.sh              7 steps, every control tying, the asset register in
+    classification_log   757 judgments, all MACHINE_PROPOSAL
+    seal                 757, sealed
+    compute              FRINGE 21.90% over the register's 1,835,047.17
+                         INDIRECT_COMBINED 34.82% over 5,058,960.43 MTDC
+    drive_restage        28 checks, 0 findings
+    drive_partitions     25 checks, 0 findings
+    pytest               1,430 passed
+
+All four `v_rate_anchor` rows tie and all four pools tie at `pool_variance`
+0.00, from nothing. The MTDC base is **$5,058,960.43**; this file and
+`docs/RECOMMENDATIONS.md` both carried `.45`, which is `069`'s cent — the
+figure moved when per-row rounding became largest remainder and the prose
+did not follow. Nothing published moves; the rates are identical.
+
+### A figure in a proposal is still a figure
+
+`PositionReview` renders four subjects generically and a `jsonb` value
+arrives as a string, so `String(v)` put **`5594162.00`** on the card Tom
+presses Accept on, beside `$1,835,047.17` everywhere else — the
+eight-spellings defect in the one place a controller is about to commit.
+Which keys carry a figure is a fact about the registers, so `MONEY` and
+`AREA` are written down beside `FIELD` and
+`test_a_proposed_figure_is_printed_by_the_formatter_too` derives the other
+side from `information_schema`.
+
+**And that test passed over the defect on its first run**, because it read
+the `FIELD` map with a line-anchored regex and `amount:` shares a line with
+three other keys. Fourth instance of a test that cannot fail for the thing
+it names, found the only way any of them are: by restoring the defect and
+watching.
+
+### Both long cards are paged
+
+`/classify/assets` rendered 263 funding rows and 263 equipment rows, and the
+page measured **17,244 pixels**. Both are 25 at a time now with *Show 25
+more*, which is the classification queue's own paging.
+
+And each card's caption names **the ordering the handler actually uses** —
+unanswered first then by cost, and programme equipment first then by name. A
+caption asserting an order the query does not have is a screen the reader
+trusts once.
 
 ## The audit is a walk, not a to-do list
 

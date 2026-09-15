@@ -18,6 +18,7 @@ refuses the wrong combination rather than trusting anyone to remember.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -26,6 +27,7 @@ from app.audit import record
 from app.auth import (Actor, require_facilities, require_inventory,
                       require_reader)
 from app.db import execute, one, query
+from app.domain.core import money
 from app.settings import settings
 from app.vocab import (AccessPolicy, FundingKind, InKindKind,
                        OccupancyStatus, SpaceUse)
@@ -102,6 +104,42 @@ class InKindIn(BaseModel):
     agency_approval: str = ""
 
 
+def _known_buildings(period: str) -> list[dict]:
+    """The buildings YBI's own lease book names, with their tenants.
+
+    `2025_YBI_Lease-Schedule.xlsx` has been on file since the foundation was
+    loaded and carries twenty-six tenancies across six buildings — who, which
+    building, the term and the rent. What it does not carry is **square
+    footage**, which is the one number the 200.465 carve-out is sized by and
+    the one thing somebody has to go and measure.
+
+    So it cannot create a `facility`: `usable_sqft` is NOT NULL and CHECKed
+    above zero, and inventing an area to get a row in would be inventing the
+    driver of the largest adjustment in the rate model. What it can do is stop
+    Heidi typing a building's name from memory — the ask collapses from *tell
+    us about your space* to *here are your buildings; how many square feet is
+    each one?*
+
+    A document that will not parse is a thing to fix and not a reason for the
+    screen to fail, so this answers empty and the form takes a free-typed name.
+    """
+    from app.routers.requests import _lease_book
+
+    seen: dict[str, dict] = {}
+    for t in _lease_book(period):
+        b = seen.setdefault(t.building, {"name": t.building, "tenancies": 0,
+                                         "annual_rent": Decimal(0),
+                                         "on_the_record": False})
+        b["tenancies"] += 1
+        b["annual_rent"] += t.annual_rent or Decimal(0)
+    on_record = {r["name"] for r in
+                 query("SELECT name FROM facility WHERE period = %s", (period,))}
+    for b in seen.values():
+        b["on_the_record"] = b["name"] in on_record
+        b["annual_rent"] = str(money(b["annual_rent"]))
+    return sorted(seen.values(), key=lambda b: b["name"])
+
+
 @router.get("")
 def facilities(period: str = None) -> dict:
     """The buildings, with the subsidy each carries."""
@@ -113,7 +151,8 @@ def facilities(period: str = None) -> dict:
     occupancy = query("SELECT * FROM v_facility_occupancy WHERE period = %s",
                       (period,))
     return {"period": period, "facilities": rows, "control": control,
-            "occupancy": occupancy}
+            "occupancy": occupancy,
+            "known_buildings": _known_buildings(period)}
 
 
 @router.put("")

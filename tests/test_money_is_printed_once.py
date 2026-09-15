@@ -91,3 +91,47 @@ def test_every_screen_that_shows_money_imports_it():
             missing.append(str(f.relative_to(ROOT)))
     assert not missing, (
         "these screens call money() and do not import it: " + "; ".join(missing))
+
+
+def test_a_proposed_figure_is_printed_by_the_formatter_too():
+    """A proposal is `jsonb`, so its figures arrive as strings.
+
+    `PositionReview` renders the four subjects generically, and `String(v)`
+    printed `5594162.00` on the card a controller presses Accept on, beside
+    `$1,835,047.17` everywhere else. Which keys carry a figure is a fact
+    about the registers, so this derives that side from the schema rather
+    than keeping a second list of it: every `numeric` column the three
+    non-classification subjects write, that the screen has a label for, has
+    to be in one of the two sets.
+    """
+    import os
+
+    import pytest
+
+    src = (SRC / "components" / "PositionReview.jsx").read_text()
+    named = set(re.findall(r'^\s*const (MONEY|AREA) = new Set\(\[(.*?)\]\);',
+                           src, re.S | re.M))
+    known: set[str] = set()
+    for _, body in named:
+        known |= set(re.findall(r'"([^"]+)"', body))
+    assert known, "PositionReview no longer says which proposal keys are figures."
+
+    field = src[src.index("const FIELD = {"):]
+    field = field[:field.index("};")]
+    labelled = set(re.findall(r'([a-z_0-9]+): "', field))
+
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("needs a database to read the registers' numeric columns")
+
+    from app.db import query
+
+    rows = query("""SELECT table_name, column_name FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name IN ('facility', 'space_unit', 'asset_funding')
+                       AND data_type = 'numeric'""")
+    missed = sorted({r["column_name"] for r in rows}
+                    & labelled - known)
+    assert not missed, (
+        f"{missed} reach the proposal card as a figure and are printed with "
+        "String(). Add each to MONEY or to AREA — a raw 5594162.00 beside "
+        "$1,835,047.17 is one number read two ways on one screen.")

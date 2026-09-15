@@ -15,6 +15,9 @@
 #   load_2025         the ledger, the P&L and the balance sheet, each proving
 #                     off its own printed subtotals before anything is promoted
 #   load_labor        the effort distribution, which the fringe base comes from
+#   load_assets       the 263-asset fixed-asset register, without the funding
+#                     column the schedule does not carry, which is the one
+#                     thing 200.436(b) waits on
 #   load_calendar     YBI's own working calendar and the hours log under it —
 #                     261 work days and 2,088 hours in 2025, which is what
 #                     every `Allow Hours` in their record is measured against
@@ -82,6 +85,13 @@ run "effort distribution" $PY scripts/load_labor.py
 # hours log maps its objective headings through labor_objective_map, and the
 # cost objectives have to exist first.
 run "calendar and hours log" $PY scripts/load_calendar.py
+# The fixed-asset register, from the schedule YBI already holds. It is
+# transcription and not judgment — their own depreciation schedule, read as
+# printed, which is why it belongs beside the ledger's loader and not in the
+# application. The funding column is deliberately not loaded: the schedule
+# does not have one, which is 200.313(d)(1) unanswered and is exactly what
+# Heidi answers on Classify > Equipment.
+run "fixed-asset register" $PY scripts/load_assets.py
 
 step "The awards, and what they say"
 run "invoices and awards" $PY scripts/load_invoices.py

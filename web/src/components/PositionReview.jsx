@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 
-import { api, count, explain } from "../api.js";
+import { api, count, explain, money } from "../api.js";
 import { Card, Drawer, Empty, Field, PageHead, Pill, Segmented, Table,
          useToast } from "./ui.jsx";
 
@@ -53,6 +53,17 @@ const FIELD = {
   kind: "source", amount: "amount", award_reference: "award", funder: "funder",
 };
 
+/* A figure on this screen is printed by the one formatter, like every other
+ * figure in the application. A proposal is `jsonb`, so its values arrive as
+ * strings and `String(v)` put `5594162.00` on a card beside `$1,835,047.17`
+ * elsewhere — the eight-spellings defect in the one place a controller is
+ * about to press Accept. Which keys are money and which are area is a fact
+ * about the registers, so it is written down beside `FIELD` rather than
+ * guessed from the value.
+ */
+const MONEY = new Set(["amount"]);
+const AREA = new Set(["usable_sqft", "rentable_sqft", "gross_sqft"]);
+
 /* What a recommendation actually proposes.
  *
  * A judgment is four dimensions and a building is five, so printing one
@@ -69,13 +80,14 @@ function changes(r) {
   /* `true` is what JSON calls it and not what a person does. A blank stays a
      blank, because there is no amount and nobody has read one off are
      different facts everywhere else in this system. */
-  const shown = (v) => v === null || v === undefined || v === ""
-    ? "\u2014" : v === true ? "yes" : v === false ? "no" : String(v);
+  const shown = (v, k) => v === null || v === undefined || v === ""
+    ? "\u2014" : v === true ? "yes" : v === false ? "no"
+    : MONEY.has(k) ? money(v) : AREA.has(k) ? count(v) : String(v);
   return Object.keys(proposed)
-    .filter((k) => r.is_new || shown(current[k]) !== shown(proposed[k]))
+    .filter((k) => r.is_new || shown(current[k], k) !== shown(proposed[k], k))
     .map((k) => ({ what: FIELD[k] || k,
-                   from: r.is_new ? null : shown(current[k]),
-                   to: shown(proposed[k]) }));
+                   from: r.is_new ? null : shown(current[k], k),
+                   to: shown(proposed[k], k) }));
 }
 
 

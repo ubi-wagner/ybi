@@ -6,6 +6,16 @@ guarantee survives a bug here.
 """
 
 import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:                      # pragma: no cover
+    # `_build_model` annotates a parameter "AllocationBase | None" as a
+    # string, so nothing evaluates it at runtime and the name was never
+    # imported — harmless until anything asks for the function's type hints,
+    # and an unresolvable annotation either way. pyflakes had been reporting
+    # it as the one undefined name in the application and nobody had run
+    # pyflakes.
+    from app.domain.core import AllocationBase
 
 from fastapi import Depends, APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field

@@ -56,6 +56,9 @@ export default function Facilities({ actor, tab: initialTab }) {
   const [inKind, setInKind] = useState(null);
   const [funding, setFunding] = useState(null);
   const [notesOn, setNotesOn] = useState(null);
+  const [answering, setAnswering] = useState(null);
+  const [assetsShown, setAssetsShown] = useState(25);
+  const [kitShown, setKitShown] = useState(25);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -127,7 +130,20 @@ export default function Facilities({ actor, tab: initialTab }) {
                   occupancy cost stays in the federal pool. It is the single
                   largest adjustment in the rate model."
             fields={[
-              { name: "name", label: "Name", type: "text", required: true },
+              /* The six buildings YBI's own lease book names, offered rather
+                 than typed. The book cannot create a facility — it carries no
+                 square footage and `usable_sqft` is NOT NULL above zero, so a
+                 row from it would mean inventing the driver of the largest
+                 adjustment in the rate model. It can stop somebody typing a
+                 building's name from memory, which is the difference between
+                 "tell us about your space" and "here are your buildings; how
+                 many square feet is each one?" */
+              { name: "name", label: "Name", required: true,
+                type: (data.known_buildings || []).length ? "suggest" : "text",
+                options: (data.known_buildings || []).map((b) => b.name),
+                hint: (data.known_buildings || []).length
+                  ? `Your lease book names ${(data.known_buildings || []).length} buildings. Pick one or type another.`
+                  : undefined },
               { name: "usable_sqft", label: "Usable square feet",
                 type: "number", required: true,
                 hint: "What the carve-out is sized by." },
@@ -278,6 +294,9 @@ export default function Facilities({ actor, tab: initialTab }) {
               different facts, so the second is never written as 0.00.
             </p>
             <Propose
+              key={answering || "new"}
+              presetId={answering || ""}
+              startOpen={!!answering}
               subject="ASSET_FUNDING"
               title="a funding source"
               subjectLabel="Asset id"
@@ -296,7 +315,7 @@ export default function Facilities({ actor, tab: initialTab }) {
                   hint: "Required for a federal source — 200.313(d)(1)." },
                 { name: "funder", label: "Funder", type: "text" },
               ]}
-              onDone={load} />
+              onDone={() => { setAnswering(null); load(); }} />
             {!funding || (funding.assets || []).length === 0 ? (
               <Empty mark="—" title="The asset register is empty">
                 It arrives whole, from the fixed-asset schedule YBI already
@@ -310,7 +329,7 @@ export default function Facilities({ actor, tab: initialTab }) {
                 { label: "Gross cost" }, { label: "Depreciation" },
                 { label: "Funding on file", align: "left" },
               ]}>
-                {funding.assets.map((a) => (
+                {funding.assets.slice(0, assetsShown).map((a) => (
                   <tr key={a.asset_id}>
                     <td className="l">
                       <span className="strong">{a.description}</span>
@@ -326,7 +345,14 @@ export default function Facilities({ actor, tab: initialTab }) {
                                         title: a.description });
                          }}>Notes</a>{" · "}
                       {Number(a.sources) === 0
-                        ? <Pill tone="warn">nobody has looked</Pill>
+                        ? <>
+                            <Pill tone="warn">nobody has looked</Pill>{" · "}
+                            <a href="#" onClick={(e) => {
+                                 e.preventDefault();
+                                 setAnswering(a.asset_id);
+                                 window.scrollTo({ top: 0, behavior: "smooth" });
+                               }}>Answer</a>
+                          </>
                         : (a.funding || []).map((x, n) => (
                             <div key={n} className="rowsub">
                               {x.kind} {money(x.amount)}
@@ -336,6 +362,17 @@ export default function Facilities({ actor, tab: initialTab }) {
                   </tr>
                 ))}
               </Table>
+            )}
+            {funding && (funding.assets || []).length > assetsShown && (
+              <div className="row-actions">
+                <button onClick={() => setAssetsShown(assetsShown + 25)}>
+                  Show 25 more
+                </button>
+                <span className="rowsub">
+                  {count(assetsShown)} of {count(funding.assets.length)} shown
+                  — unanswered first, then by what the asset cost.
+                </span>
+              </div>
             )}
           </Card>
 
@@ -352,7 +389,7 @@ export default function Facilities({ actor, tab: initialTab }) {
                 { label: "Footprint" }, { label: "Hours" }, { label: "Charged" },
                 { label: "At market" }, { label: "Given" },
               ]}>
-                {kit.equipment.map((a) => (
+                {kit.equipment.slice(0, kitShown).map((a) => (
                   <tr key={a.asset_id}>
                     <td className="l">
                       <span className="strong">{a.description}</span>
@@ -373,6 +410,17 @@ export default function Facilities({ actor, tab: initialTab }) {
                   </tr>
                 ))}
               </Table>
+            )}
+            {(kit?.equipment || []).length > kitShown && (
+              <div className="row-actions">
+                <button onClick={() => setKitShown(kitShown + 25)}>
+                  Show 25 more
+                </button>
+                <span className="rowsub">
+                  {count(kitShown)} of {count(kit.equipment.length)} shown
+                  — programme equipment first, then by name.
+                </span>
+              </div>
             )}
           </Card>
 

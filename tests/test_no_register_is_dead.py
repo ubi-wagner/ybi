@@ -133,12 +133,33 @@ EXPECTED_UNWRITTEN: dict[str, str] = {
 }
 
 
+#: A backfill is not a writer.
+#:
+#: `083` gave `decision.origin` its meaning and filled the 757 rows already
+#: on the record with one `UPDATE`; nothing wrote it going forward, so a
+#: replay from an empty database recorded every judgment as the controller's
+#: own and `/classify/review` had nothing to show him. This sweep read the
+#: migration and called the column written — *a migration that corrected a
+#: history once looks exactly like something that writes the column*, which
+#: is the one shape it exists to catch, wearing the schema's own clothes.
+#:
+#: Only `UPDATE` is dropped, and only inside a migration. An `INSERT` there
+#: is how `fiscal_period` and `labor_objective_map` come to exist at all and
+#: the boot replays it on every recovery, so it is a writer; a trigger that
+#: sets a column is read from the live database by `trigger_bodies()` and is
+#: unaffected either way.
+UPDATE_IN_A_MIGRATION = re.compile(r"\bUPDATE\b.*?;", re.S | re.I)
+
+
 def source() -> str:
     parts = []
     for d in ("app", "scripts"):
         for p in (ROOT / d).rglob("*"):
             if p.suffix in (".py", ".sql") and "__pycache__" not in str(p):
-                parts.append(p.read_text(errors="ignore"))
+                text = p.read_text(errors="ignore")
+                if "sql" in p.parts:
+                    text = UPDATE_IN_A_MIGRATION.sub(" ", text)
+                parts.append(text)
     return "\n".join(parts)
 
 
@@ -214,7 +235,15 @@ def written_columns() -> set[tuple[str, str]]:
     for d in ("app", "scripts"):
         for f in (ROOT / d).rglob("*"):
             if f.suffix in (".py", ".sql") and "__pycache__" not in str(f):
-                files.append(f.read_text(errors="ignore"))
+                text = f.read_text(errors="ignore")
+                # A backfill is not a writer — see UPDATE_IN_A_MIGRATION.
+                # This half of the sweep kept its own copy of the file walk,
+                # so fixing `source()` alone left the column check reading
+                # the migration and calling `decision.origin` written. Two
+                # copies of one rule, which is the defect this file is about.
+                if "sql" in f.parts:
+                    text = UPDATE_IN_A_MIGRATION.sub(" ", text)
+                files.append(text)
     files.append(trigger_bodies())
 
     written: set[tuple[str, str]] = set()
@@ -323,3 +352,70 @@ def test_every_allowed_entry_says_why():
     assert not thin, (
         "an allowlist entry with no reason is the defect wearing a "
         "permission slip:\n  " + "\n  ".join(thin))
+
+
+#: A column with a default is never empty, so it is never blank enough to be
+#: noticed — it just answers with the default for ever, and the answer reads
+#: as a fact. Each entry says why nothing writes it and where the door goes.
+EXPECTED_ALWAYS_DEFAULT = {
+    "asset.access": (
+        "How each asset is made available — FREE, SUBSIDIZED, CHARGED or "
+        "INTERNAL. All 263 read INTERNAL because that is the default and "
+        "nothing has ever set it, so v_equipment_subsidy can only report "
+        "zero given equipment. The door belongs on /classify/assets beside "
+        "the funding source, because Heidi is who knows which machines are "
+        "lent out and on what terms."),
+}
+
+
+def test_no_enum_column_answers_with_its_default_for_ever():
+    """The dead-register shape, one step along — and invisible to the sweep.
+
+    `decision.origin` survived `test_no_column_is_read_and_written_by_nothing`
+    for a reason that is literally true: it has a default, so the database
+    writes it and it is never empty. What nothing did was write anything
+    *else*, so every judgment the classification log recorded from an empty
+    database came back `CONTROLLER` — the column always answered, and always
+    with the same word, which a reader takes for a finding rather than for
+    an absence.
+
+    Scoped to enum columns, because an enum default is a *claim about the
+    domain* — `INTERNAL`, `PROPOSED`, `CONTROLLER` — where a timestamp or a
+    counter default is bookkeeping. On the live schema that is a handful of
+    columns, and the first run of this found one.
+    """
+    if not os.getenv("DATABASE_URL"):
+        pytest.skip("needs a database")
+    from app.db import query
+
+    src = source()
+    written = written_columns()
+    found = []
+    for r in query("""
+        SELECT c.table_name t, c.column_name col
+          FROM information_schema.columns c
+          JOIN information_schema.tables x
+            ON x.table_name = c.table_name AND x.table_schema = c.table_schema
+         WHERE c.table_schema = 'public' AND x.table_type = 'BASE TABLE'
+           AND c.column_default IS NOT NULL AND c.is_generated <> 'ALWAYS'
+           AND c.data_type = 'USER-DEFINED'
+         ORDER BY c.table_name, c.ordinal_position"""):
+        t, col = r["t"].lower(), r["col"].lower()
+        if (t, col) in written or ("*", col) in written:
+            continue
+        if not re.search(rf"\b{col}\b", src):
+            continue
+        found.append(f"{r['t']}.{r['col']}")
+
+    unexpected = sorted(set(found) - set(EXPECTED_ALWAYS_DEFAULT))
+    assert not unexpected, (
+        "read by something, and nothing ever writes anything but the "
+        "default — so every row carries one word and it reads as a fact. "
+        "Give it a writer, or record it in EXPECTED_ALWAYS_DEFAULT with the "
+        "screen its door belongs on:\n  " + "\n  ".join(unexpected))
+
+    stale = sorted(set(EXPECTED_ALWAYS_DEFAULT) - set(found))
+    assert not stale, (
+        "these have a writer now, so the reason recorded for them is no "
+        "longer true — remove them from EXPECTED_ALWAYS_DEFAULT:\n  "
+        + "\n  ".join(stale))

@@ -39,8 +39,8 @@ from pydantic import BaseModel, Field
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.domain.core import money
-from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
-                       Pool)
+from app.vocab import (DecisionOrigin, EvidenceGrade, FederalTreatment,
+                       Function990, Pool)
 from app.auth import Actor
 from app.db import execute, one, query, transaction
 from app.statelock import turn
@@ -113,6 +113,20 @@ class DecideIn(BaseModel):
     #: reclassification has no screen to be stale, and refusing it would make
     #: the crosswalk unloadable.
     based_on: dict[str, str] = {}
+    #: What kind of act this is — CONTROLLER, or MACHINE_PROPOSAL where a
+    #: script is recording a working position for somebody to adopt.
+    #:
+    #: `083` gave the column its meaning and filled the 757 rows already on
+    #: the record; nothing has ever written it going forward, so a recovery
+    #: replayed `scripts/classification_log.py --apply` and every one of the
+    #: 757 came back as the controller's own judgment — six seconds of
+    #: seven hundred judgments a minute with nothing saying a machine
+    #: proposed them. The migration corrected a history and the writer was
+    #: never built: the dead-register shape, one column along.
+    #:
+    #: Defaults to CONTROLLER, so a screen that does not send it is
+    #: unchanged, and the column is write-once in the schema.
+    origin: DecisionOrigin = DecisionOrigin.CONTROLLER
 
 
 class CoverageOut(BaseModel):
@@ -729,8 +743,8 @@ def decide(body: DecideIn, period: str = "2025",
             cur.execute("""
                 INSERT INTO decision (set_id, scope, pool, function_990, federal,
                                       objective_id, grade, rationale, citation,
-                                      decided_by, supersedes)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                      decided_by, supersedes, origin)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING decision_id
             """, (set_id, f"account={account}|payee={payee}", body.pool,
                   body.function_990, body.federal, body.objective_id, body.grade,
@@ -740,7 +754,8 @@ def decide(body: DecideIn, period: str = "2025",
                   # the audit reason rather than half-recorded in a column
                   # that holds one.
                   body.supersedes or (str(superseded[0])
-                                      if len(superseded) == 1 else None)))
+                                      if len(superseded) == 1 else None),
+                  body.origin))
             did = cur.fetchone()["decision_id"]
             for l in with_lines:
                 cur.execute("""INSERT INTO decision_line (decision_id, line_id)

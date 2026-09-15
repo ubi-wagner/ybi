@@ -87,8 +87,23 @@ class ScheduleAsset:
         register reloaded next year lands on the same rows rather than
         doubling. Prefixed because a bare number in an id column is a
         provocation.
+
+        **And the account, because the number alone is not unique.** The
+        depreciation software numbers assets *within* a GL account, so
+        system 165 is `Juggerbot Buildout` at $35,414.95 under 1501 and
+        `Old Turning Office Furniture` at $5,000.00 under 1527. Keyed on the
+        number alone they are one asset, and the register loads 262 rows from
+        263 — the second silently overwriting the first, $35,414.95 of cost
+        and $1,770.75 of depreciation gone, with every printed subtotal still
+        tying because the parser saw both rows and only the database collapsed
+        them.
+
+        That is `071`'s lesson in a new register: *71 lines worth $24,082.67
+        were being dropped on promote by natural keys that collided on
+        genuinely-duplicate lines.* A natural key has to be the whole natural
+        key.
         """
-        return f"FA-{self.system_no}"
+        return f"FA-{self.gl_account}-{self.system_no}"
 
 
 @dataclass(frozen=True)

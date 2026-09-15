@@ -28,10 +28,14 @@ import { Card, Field, Pill, useToast } from "./ui.jsx";
  *    same defect as one that is looser.
  */
 export default function Propose({ subject, title, hint, fields, subjectLabel,
-                                  onDone }) {
+                                  presetId = "", startOpen = false, onDone }) {
   const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const [id, setId] = useState("");
+  const [open, setOpen] = useState(startOpen);
+  /* A row that says "answer this one" should not then ask which one. The
+     parent remounts on the id it is answering for, so the form opens knowing
+     what it is about — and the field stays editable, because the id somebody
+     arrived with is a starting point and not a fact about the answer. */
+  const [id, setId] = useState(presetId);
   const [values, setValues] = useState({});
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -122,6 +126,19 @@ export default function Propose({ subject, title, hint, fields, subjectLabel,
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
               </select>
+            ) : f.type === "suggest" ? (
+              /* Offered, never imposed: a `datalist` puts the known names one
+                 keystroke away and still takes anything typed, which is the
+                 right shape where the list is what somebody else's document
+                 happens to say rather than the set of legal answers. */
+              <>
+                <input list={`sug-${subject}-${f.name}`}
+                       value={values[f.name] ?? ""}
+                       onChange={(e) => set(f.name, e.target.value)} />
+                <datalist id={`sug-${subject}-${f.name}`}>
+                  {(f.options || []).map((o) => <option key={o} value={o} />)}
+                </datalist>
+              </>
             ) : (
               <input type={f.type === "number" ? "number" : "text"}
                      value={values[f.name] ?? ""}

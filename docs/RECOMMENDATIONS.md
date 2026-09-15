@@ -15,7 +15,7 @@ what somebody has to do about it.
 | | rate | pool | base |
 | --- | ---: | ---: | ---: |
 | FRINGE | **21.90%** | $401,783.60 | $1,835,047.17 salaries and wages |
-| OVERHEAD | 29.61% | $1,497,879.12 | $5,058,960.45 MTDC |
+| OVERHEAD | 29.61% | $1,497,879.12 | $5,058,960.43 MTDC |
 | G&A | 5.21% | $263,517.59 | the same base |
 | **INDIRECT_COMBINED** | **34.82%** | $1,761,396.71 | the same base |
 
@@ -226,7 +226,7 @@ the indirect; allocating a pool to itself is a category error.
 
 | | base | G&A pool | combined |
 | --- | ---: | ---: | ---: |
-| as computed (objective) | $5,058,960.45 | $263,517.59 | **34.82%** |
+| as computed (objective) | $5,058,960.43 | $263,517.59 | **34.82%** |
 | administration in the pool | $4,736,602.12 | $585,875.92 | **43.99%** |
 
 **One thing to confirm before deciding:** that `YBI-GA` in the effort

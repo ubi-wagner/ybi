@@ -14,6 +14,11 @@ xlrd==2.0.2
 reportlab==4.2.5
 boto3==1.35.90
 pytest==8.3.4
+# Undefined names only, held by `test_no_python_module_uses_a_name_it_does
+# _not_have`. A NameError inside a `catch` is invisible to the build and to
+# every test that does not take the failure path, and three of them shipped
+# in one sitting before anybody ran this.
+pyflakes==3.4.0
 # Reading a rendered invoice back, so the tests and the drives assert
 # what a reader would see rather than what the bytes happen to contain:
 # PDF text is compressed, and searching the raw bytes for a phrase that

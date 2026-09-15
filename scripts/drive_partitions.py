@@ -96,6 +96,22 @@ def rates(period: str) -> dict[str, Decimal]:
                            (period,))}
 
 
+def admin_basis(period: str) -> str:
+    """The basis the rate on file was computed under.
+
+    Hard-coding POOL here restored a record that was on OBJECTIVE as
+    43.99% — nine points of combined rate, chosen by a drive rather than
+    by anybody, and invisible on a reference record that happened to be on
+    POOL already. `read the record, never recall it`, pointed at a policy
+    this drive has no business choosing. Where there is no rate yet the
+    default is the schema's.
+    """
+    r = one("""SELECT admin_labour_basis FROM rate
+                WHERE period = %s AND status <> 'SUPERSEDED'
+                ORDER BY computed_at DESC LIMIT 1""", (period,))
+    return r["admin_labour_basis"] if r else "OBJECTIVE"
+
+
 def walk_state(period: str, key: str) -> str:
     r = one("SELECT state FROM v_audit_walk WHERE period = %s AND key = %s",
             (period, key))
@@ -137,6 +153,7 @@ def main() -> int:
     execute("DELETE FROM recommendation WHERE subject_id LIKE 'DRIVE-TB%'")
 
     before_rates = rates(period)
+    before_basis = admin_basis(period)
     before_space = walk_state(period, "SPACE")
     buildings_before = one("SELECT count(*) AS n FROM facility "
                            "WHERE period = %s", (period,))["n"]
@@ -248,6 +265,82 @@ def main() -> int:
         note(f"the walk's SPACE step reads {walk_state(period, 'SPACE')} "
              f"(it was {before_space})")
 
+    # ── the other partition ──────────────────────────────────────────────
+    head("And who paid for each asset")
+    reg = one("""SELECT count(*) AS assets,
+                        count(*) FILTER (WHERE NOT EXISTS (
+                            SELECT 1 FROM asset_funding f
+                             WHERE f.asset_id = a.asset_id)) AS unanswered
+                   FROM asset a WHERE a.period = %s""", (period,))
+    if reg["assets"] == 0:
+        note("the asset register is empty, so there is nothing to answer for. "
+             "`scripts/load_assets.py` loads it from the schedule YBI already "
+             "holds; the funding column is what this half is about.")
+    else:
+        ok(f"{reg['assets']} assets on the register, {reg['unanswered']} with "
+           f"no funding source — 200.313(d)(1) unanswered")
+        part = one("""SELECT covered, whole, parts_done, parts, needs
+                        FROM v_partition_coverage
+                       WHERE period = %s AND partition = 'ASSETS'""", (period,))
+        # The partition read `gross_cost - funding_unknown` — dollars minus a
+        # count — so a loaded register reported 100% answered over a register
+        # where nothing was. It cannot exceed the cost of what is answered.
+        answered_cost = one("""SELECT COALESCE(sum(a.gross_cost), 0) AS c
+                                 FROM asset a
+                                WHERE a.period = %s
+                                  AND EXISTS (SELECT 1 FROM asset_funding f
+                                               WHERE f.asset_id = a.asset_id)""",
+                            (period,))["c"]
+        if Decimal(str(part["covered"])) == Decimal(str(answered_cost)):
+            ok("the partition counts the cost of the assets somebody has "
+               "answered for, in dollars")
+        else:
+            bad(f"the partition reports {part['covered']} covered where the "
+                f"answered assets cost {answered_cost}")
+        if part["parts_done"] < part["parts"] and (part["needs"] or "").strip():
+            ok("and OPEN says what it needs")
+        elif part["parts_done"] < part["parts"]:
+            bad("the asset partition is OPEN and does not say what it needs")
+
+        target = one("""SELECT a.asset_id, a.description, a.gross_cost
+                          FROM asset a WHERE a.period = %s
+                           AND NOT EXISTS (SELECT 1 FROM asset_funding f
+                                            WHERE f.asset_id = a.asset_id)
+                         ORDER BY a.gross_cost DESC LIMIT 1""", (period,))
+        rr = heidi.post("/api/positions/recommend", params=P, json={
+            "subject": "ASSET_FUNDING", "subject_id": target["asset_id"],
+            "proposal": {"kind": "FEDERAL",
+                         "amount": float(target["gross_cost"]),
+                         "award_reference": "DRIVE-AWARD-1",
+                         "funder": "A federal agency"},
+            "note": WHY})
+        if rr.status_code == 200:
+            ok(f"Heidi answers the funding on {target['description'][:32]}")
+            rec_id = rr.json()["rec_id"]
+            ac = tom.post(f"/api/positions/recommendations/{rec_id}/accept",
+                          params=P, json={"rationale": WHY})
+            if ac.status_code == 200:
+                ok("Tom accepts it, through the route that owns the register")
+            else:
+                bad(f"accepting the funding answered {ac.status_code}: "
+                    f"{ac.text[:120]}")
+            allow = one("""SELECT allowable_depreciation, depreciation
+                             FROM v_asset_allowability WHERE asset_id = %s""",
+                        (target["asset_id"],))
+            if allow and Decimal(str(allow["allowable_depreciation"])) == 0 \
+                    and Decimal(str(allow["depreciation"])) > 0:
+                ok(f"and 200.436(b) fires: {allow['depreciation']} of "
+                   f"depreciation, {allow['allowable_depreciation']} allowable")
+            else:
+                bad(f"a wholly federally funded asset still allows "
+                    f"{allow['allowable_depreciation'] if allow else '—'}")
+            execute("DELETE FROM asset_funding WHERE asset_id = %s",
+                    (target["asset_id"],))
+            execute("DELETE FROM recommendation WHERE rec_id = %s", (rec_id,))
+        else:
+            bad(f"proposing a funding source answered {rr.status_code}: "
+                f"{rr.text[:140]}")
+
     # ── and the carve-out, which has never fired ─────────────────────────
     head("The carve-out")
     occ = one("SELECT tenant_sqft, vacant_sqft FROM v_facility_occupancy "
@@ -258,7 +351,7 @@ def main() -> int:
     else:
         bad("no occupancy row, so the carve-out still cannot fire")
 
-    r = tom.post("/api/rates/compute", params=P, json={"admin_labour": "POOL"})
+    r = tom.post("/api/rates/compute", params=P, json={"admin_labour": before_basis})
     if r.status_code != 200:
         note(f"the rate could not be recomputed ({r.status_code}); the "
              f"carve-out is proved by the occupancy row above")
@@ -308,7 +401,7 @@ def main() -> int:
     # combined rate did not move on a carve-out* — a drive measuring its own
     # leftover and finding a fault in working code. `review_system` was fixed
     # for exactly this and I wrote it again one file away.
-    r = tom.post("/api/rates/compute", params=P, json={"admin_labour": "POOL"})
+    r = tom.post("/api/rates/compute", params=P, json={"admin_labour": before_basis})
     if r.status_code == 200 and rates(period) == before_rates:
         ok("and the rate is back where it was found, over the same sealed set")
     elif r.status_code != 200:
