@@ -61,7 +61,7 @@ sits underneath everything below:
 > twelve months** and $11,400.00 in February. So 18.76% is what a flat monthly
 > figure happened to come to on *this* invoice's base; February's identical
 > method came to 20.54%. There is no rate — there is a monthly amount that
-> moves with nothing. `WP_AM_2025_RESTATED_INVOICES.md` §3.3.
+> moves with nothing. `WP_AM_2025_RESTATED_INVOICES.md` §4.
 
 - 10018 and 10023 **forgo recovery outright**. On a cost-reimbursement award
   there is no mechanism that gives it back later.

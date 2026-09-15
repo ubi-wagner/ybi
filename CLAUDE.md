@@ -4110,6 +4110,128 @@ the $181,276.15 of T1 access, telephone, insurance and equipment sitting in
 the same pool. Fix it before the square footage arrives, so the first real
 measurement produces the right answer.
 
+## The settlement, and the fourth award that was never in it
+
+`docs/SETTLEMENT_2025.md`, `docs/WP_AM_2025_RESTATED_INVOICES.md`,
+`docs/restated-2025/`, `tests/test_the_settlement_states_the_record.py`. The
+four corrections put to NCDMM as one paper: the regulations relied on, the
+rate structure they produce, the offset on each award in the direction it
+runs, and an agreement accepting all four in full for 2025.
+
+**`scripts/restate_2025_invoices.py` carried a hand-written list of three
+contracts and the restatement register has four.** Digital Engineering is
+**$320,427.12** — the largest single correction in the file — and had never
+been rebuilt month by month, because the script's `CONTRACTS` constant was a
+copy of what the register held on the day it was written. The hand-kept map,
+in the one instrument whose output goes to a sponsor. It restates exactly as
+the other three do: a complete monthly hours log for two people,
+$169,975.01 of direct non-labour, seven invoices.
+
+And **the months are read from the record now**, not assumed to be twelve.
+Digital Engineering ran to 9 July 2025 and has seven. A constant twelve would
+have rendered five empty invoices for a closed award, which says the months
+were worked and nothing was billed — a different statement from the award
+having ended.
+
+**The script checks itself against the engine and prints both.** Three of the
+four agree to the cent; Hybrid differs by **$4,222.00**, because
+`POST /api/restate` measures the *invoice register* and this script measures
+the *Income section of the ledger*, and the ledger carries three further
+Hybrid postings the register does not. Both are right over different
+populations — which is `v_invoice_income_tie`'s open anchor, arriving from the
+other end. A script that quietly disagreed with the engine is the worse of the
+two ways to find that out, so it says so on every run and the settlement uses
+the register figure, because a settlement is against invoices the sponsor
+holds.
+
+**The memorandum states an aggregate and never nets in place of both
+directions.** `061` removed `net_movement` from `v_restatement` because
+$120,000 to ask for and $120,000 to give back is not a quiet year; the user
+asked for a single credit, which is a *settlement mechanism* rather than a
+reading of the record. So both directions are on the page in full first, the
+rule is written on the paper, and
+`test_both_directions_appear_before_any_aggregate` fails a draft that opens on
+the net.
+
+**Digital Engineering's prime is not America Makes**, and that changes the
+aggregate by $320,427.12. It flows from N00174-20-1-0031 through Energetics
+Technology Center and NSWC Indian Head; the other three flow from AFRL
+FA8650-20-2-5700. NCDMM administers both, and YBI's own invoices for it carry
+an "NCDMM — America Makes" bill-to on their face, which the restated face
+reproduces because that is the document NCDMM's payables holds. Federal award
+funds are not fungible between programmes, so the memorandum prices it both
+ways — **$157,460.70** by prime, **$477,887.82** across all four — and
+recommends the first. Under every reading the credit runs to NCDMM.
+
+Two figures in the first draft were recalled rather than read, and the test
+found both rather than a reader:
+
+- **The controller's retainer priced at 0.69 points**, which is arithmetic on
+  the 34.82% rate from before the carve-outs existed. On the recorded pools it
+  is 0.67.
+- **Drive AM's non-labour gap at $90,613.08**, which compared the restated
+  non-labour against the ODC *category* alone rather than against all the
+  non-labour billed. It is **$92,876.19** — which is the figure this file
+  already carried two sections up, arrived at independently and disagreed with
+  by the person who had written it down.
+
+**And a test that asserts a figure *appears* is satisfied by any one mention.**
+The first draft let a wrong combined rate through, because `24.71%` survived
+elsewhere in a nine-page memorandum while the structure table said `24.70%` —
+two readings of one rate, which is `PROJECT_CONTEXT.md`'s 22.45%-beside-21.90%
+in a paper going to a sponsor. The rate assertion is scoped to §3's table now
+and asks the stronger question: every percentage printed there is one of the
+four the record holds. Found by breaking the document and watching; five
+breaks, and two of the first four passed.
+
+One stale citation fell out of the rewrite. `tests/test_restatement_rebuilds.py`
+anchors the rebuild engine at 43.99% and its docstring said $(58,786.31) *"is
+in WP_AM_2025_RESTATED_INVOICES"* — true when written and false the moment the
+carve-outs moved the published position to $(128,474.23). The assertion is
+right and stays: it reproduces a figure derived by hand before the code
+existed, and a fixture that followed the live rate would be the engine agreeing
+with itself. What was wrong was the sentence pointing at a document that had
+moved. `AMERICA_MAKES_RESTATEMENT.md` cited a §3.3 the rewrite renumbered away,
+which is `award_term.evidence_id` in prose.
+
+### Heidi's floor plan, filed and not accepted
+
+`EV-224fc92fe21b`, request 1, `SPACE_INVENTORY v1`. The measured estate came
+back on 15 September 2026 and went in through `POST /requests/{id}/reply` —
+filed as evidence under `evidence/2025/information-request/`, sniffed as xlsx,
+against her name. **It has not been accepted into `space_unit` and no rate
+moves until it is**, because accepting supersedes a certified rate and that is
+Tom's act, not a loader's.
+
+The intake did what it is for: 38 rows, **36 usable, 3 problems**, and the row
+it held back is the one that matters — `Taft/semple · suites 2A,2B & building`
+gives its area as the text **"3630 and 25,809"**. *Nothing is coerced into
+validity*, so the row is held rather than half written.
+
+**The rent settles which building it is, and the ledger did it.** That row
+charges $203,115.96 and the vacant Taft suite charges $33,965.52;
+together they are **$237,081.48, which is `4021 TTC Rent` to the cent.** So
+the row is Taft, and Taft measures ~33,939 sq ft against the 34,181 the
+document-derived estate assumed — 0.7%. Two of the twenty-one open items
+(*"are Taft, Semple and Taft/semple two buildings or three"* and *"which
+building does this tenancy belong to"*) are answerable from that arithmetic,
+by Heidi rather than by me.
+
+**Where it can be compared it points one way on every building**: Taft and the
+America Makes building confirm the derivation, and Semple, Tech Block 5 and YBI
+Main all read a **higher** let-and-vacant share than the derivation assumed —
+TBB5 33.2% against ~92% of assignable. A higher share means a larger 200.465
+carve-out and a rate **below** 24.71%, which makes every credit to NCDMM
+**larger** and LTM's claim smaller. The settlement memorandum says so in §7
+rather than leaving it to be found: **the correction moves in the sponsor's
+favour, not YBI's.**
+
+Two more rows are hers to answer before any of it is a figure: Semple reports
+16,999 sq ft against $109,932.32 of Semple rent of which her rows account for
+$49,527.00, and YBI Incubator carries **5,459.8 sq ft of vacant space twice**,
+once as "floors 2-5" and once as "unoccupied offices F3-5". Until those are
+answered the measured estate is a **direction**, not a number.
+
 ### Thirty-six invoices, so the year's figure can be traced to a month
 
 `scripts/restate_2025_invoices.py`, `docs/restated-2025/`,

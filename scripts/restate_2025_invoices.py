@@ -83,12 +83,22 @@ from app.domain.invoice_document import (DocumentLine, InvoiceDocument, Party,
                                          render)
 
 PERIOD = "2025"
-MONTHS = [f"{PERIOD}-{i:02d}" for i in range(1, 13)]
+#: Every month of the year. A contract's own span is read from the record in
+#: `months_of()` — this is only the outer bound.
+ALL_MONTHS = [f"{PERIOD}-{i:02d}" for i in range(1, 13)]
 
-#: The three America Makes contracts, in the order the workpapers read them.
+#: The four awards NCDMM administers, in the order the workpapers read them.
 #: `face` is the category structure the contract's own invoices carry, read
-#: off `invoice_line` for the three on file — a restated invoice that dropped
+#: off `invoice_line` for the ones on file — a restated invoice that dropped
 #: a category the sponsor's payables expects would not match their file.
+#:
+#: **Digital Engineering is here and is not an America Makes award.** NCDMM
+#: administers it, but the prime flowing down is N00174-20-1-0031 through
+#: Energetics Technology Center and NSWC Indian Head, not the AFRL America
+#: Makes cooperative agreement FA8650-20-2-5700 the other three sit under.
+#: It is restated on the same rate because the rate is YBI's, not the
+#: award's; whose money the offset settles against is a separate question
+#: and the workpaper keeps it separate.
 CONTRACTS = [
     ("DRIVE-AM",  "AM-DRIVE-AM",  "Drive AM",
      "DRIVE AM Project", "Engel, Gaffney, Kale, Negro, Jaric", "20240119"),
@@ -96,7 +106,18 @@ CONTRACTS = [
      "Impact 2.0 The Last Tactical Mile Project", "Engel, Gaffney", "20250018"),
     ("HYBRID-II", "AM-HYBRID-P2", "Hybrid Phase 2",
      "Hybrid Phase II", "Gaffney, Negro, Longo, Jaric, Metzinger", ""),
+    ("DIG-ENG",   "AM-ICAM-DIGENG", "Digital Engineering",
+     "Digital Engineering (SRA-0350)", "Gaffney, Longo", "20240105"),
 ]
+
+#: Where each objective's billing sits in the Income section. The ledger is
+#: the billing register and its account names are its own.
+INCOME_ACCOUNT = {
+    "DRIVE-AM":  "3900 Grant Income:Drive AM",
+    "LTM":       "3900 Grant Income:Last Tactical Mile",
+    "HYBRID-II": "3900 Grant Income:Hybrid Energy",
+    "DIG-ENG":   "3900 Grant Income:Digital Engineering",
+}
 
 #: Where a 2025 income posting's description says which invoice category it
 #: was billed under. The ledger is the billing register — thirty-six monthly
@@ -256,6 +277,55 @@ def monthly_billed(account_like) -> tuple[dict, list]:
 
 # ── building the thirty-six ───────────────────────────────────────────
 
+def months_of(objectives) -> dict[str, list[str]]:
+    """The months each objective was actually worked or billed in.
+
+    Read from the record rather than assumed to be twelve. Digital
+    Engineering ran to 9 July 2025 and has seven; the other three have
+    twelve. A constant twelve would have rendered five empty invoices for a
+    closed award, which says the months were worked and nothing was billed —
+    a different statement from the award having ended.
+    """
+    out = defaultdict(set)
+    for r in query("SELECT objective_id, to_char(month_start,'YYYY-MM') AS mm "
+                   "FROM labor_month WHERE period = %s AND objective_id = ANY(%s)",
+                   (PERIOD, objectives)):
+        out[r["objective_id"]].add(r["mm"])
+    for r in query(
+            "SELECT d.objective_id, to_char(l.txn_date,'YYYY-MM') AS mm "
+            "FROM decision d JOIN decision_line dl USING (decision_id) "
+            "     JOIN ledger_line l ON l.line_id = dl.line_id "
+            "WHERE d.reversed_at IS NULL AND dl.live AND d.pool = 'DIRECT' "
+            "  AND d.objective_id = ANY(%s) AND l.period = %s",
+            (objectives, PERIOD)):
+        out[r["objective_id"]].add(r["mm"])
+    for obj, account in INCOME_ACCOUNT.items():
+        if obj not in objectives:
+            continue
+        for r in query("SELECT to_char(txn_date,'YYYY-MM') AS mm FROM ledger_line "
+                       "WHERE section = 'Income' AND period = %s AND account = %s",
+                       (PERIOD, account)):
+            out[obj].add(r["mm"])
+    return {o: sorted(out[o]) for o in objectives}
+
+
+def recorded_position(objectives) -> dict[str, dict]:
+    """What the engine recorded, to check this script against.
+
+    `POST /api/restate` measures the **invoice register**; this script
+    measures the **Income section of the ledger**, which is the other
+    register of the same billing. Both are right and they are not the same
+    population, so the two figures can legitimately differ — and a script
+    that quietly disagreed with the engine would be the worse of the two
+    ways to find that out.
+    """
+    return {r["objective_id"]: r for r in query(
+        "SELECT objective_id, invoices, billed_total, under_recovered, "
+        "       over_collected, register_invoices, register_billed "
+        "FROM v_restatement WHERE period = %s AND status <> 'SUPERSEDED' "
+        "  AND objective_id = ANY(%s)", (PERIOD, objectives))}
+
+
 def month_span(mm: str) -> tuple[dt.date, dt.date]:
     y, m = (int(x) for x in mm.split("-"))
     return dt.date(y, m, 1), dt.date(y, m, calendar.monthrange(y, m)[1])
@@ -273,9 +343,11 @@ def build():
     alloc = allocation(objectives)
     labour, unlogged = monthly_labour(objectives)
     nonlab = monthly_nonlabour(objectives)
+    spans = months_of(objectives)
 
     built = []
     for obj, award, title, project, personnel, po in CONTRACTS:
+        MONTHS = spans[obj]
         lab = {mm: labour[obj].get(mm, D("0.00")) for mm in MONTHS}
         nl = {mm: nonlab[obj].get(mm, D("0.00")) for mm in MONTHS}
 
@@ -291,9 +363,7 @@ def build():
                 f"tie to the rate they carry. Nothing written.")
         ind = spread(allocated, mtdc)
 
-        like = {"DRIVE-AM": "%Drive AM%", "LTM": "%Last Tactical Mile%",
-                "HYBRID-II": "%Hybrid%"}[obj]
-        billed, unmatched = monthly_billed(f"3900 Grant Income:{like[1:]}")
+        billed, unmatched = monthly_billed(INCOME_ACCOUNT[obj])
 
         for mm in MONTHS:
             built.append(dict(
@@ -347,8 +417,9 @@ def document(row, rates) -> InvoiceDocument:
         "ledger carries an account and a payee, not an invoice category — so it "
         "is one line rather than a guess.",
         "Requires a §4.4 modification changing the basis from the 10% de minimis "
-        "to the negotiated rate. Classification is complete and sealed; no 200.465 "
-        "facilities carve-out has been evaluated, so the rate reads high.",
+        "to the negotiated rate. Classification is complete and sealed, the rate "
+        "is certified, and the 200.465 facilities carve-out has been evaluated "
+        "against the estate on the record.",
     ]
     return InvoiceDocument(
         number=f"R-{row['objective']}-{row['month'].replace('-', '')}",
@@ -411,13 +482,16 @@ def workbook_of(built, rates, out: Path) -> None:
          "category. The QB columns are the ones the export fills in; the totals "
          "do not move when it does.", False),
         ("", False),
-        ("No 200.465 facilities carve-out has been evaluated — no building on "
-         "the record carries square footage — so every dollar of tenant and "
-         "vacant occupancy cost is in the federal pool and the indirect rate "
-         "reads high. At a provisional 20% tenant share the combined rate is "
-         "37.67% rather than 43.99%.", False),
+        ("The 200.465 facilities carve-out IS in this rate — carve-outs are "
+         "recorded against the estate on the record. That estate is derived "
+         "from documents rather than measured from floor plans, and the "
+         "derivation takes the low side at every choice, so the carve-out is "
+         "if anything too small and the rate too high. A measured floor plan "
+         "arrived on 15 September 2026 and has not been accepted into the "
+         "record; accepting it will move this rate, and the direction the "
+         "measurement points is DOWN.", True),
         ("", False),
-        ("0 of 43 people have certified their 2025 effort under 2 CFR "
+        ("No one of the 43 people has certified their 2025 effort under 2 CFR "
          "200.430(i). Every restated labour line is the management "
          "reconstruction at 100%.", False),
         ("", False),
@@ -531,8 +605,39 @@ def main() -> int:
         print(f"{title + ' TOTAL':20}{'':9}{t[0]:>11}{t[1]:>10}{t[2]:>12}"
               f"{t[3]:>11}{t[4]:>12}{t[5]:>12}{t[4] - t[5]:>12}\n")
         grand = [grand[0] + t[4], grand[1] + t[5], grand[2] + t[4] - t[5]]
-    print(f"{'ALL THREE':20}{'':9}{'':11}{'':10}{'':12}{'':11}"
+    print(f"{'ALL FOUR':20}{'':9}{'':11}{'':10}{'':12}{'':11}"
           f"{grand[0]:>12}{grand[1]:>12}{grand[2]:>12}")
+
+    # Against the engine's own recorded position. The two read different
+    # registers, so this is a comparison and not an assertion.
+    recorded = recorded_position([o for o, *_ in CONTRACTS])
+    print(f"\n{'':20}{'this script':>16}{'the restatement':>18}{'difference':>14}")
+    for obj, award, title, *_ in CONTRACTS:
+        mine = sum((r["total"] - r["billed_total"]
+                    for r in built if r["objective"] == obj), D("0.00"))
+        rec = recorded.get(obj)
+        if rec is None:
+            print(f"{title:20}{mine:>16}{'not restated':>18}{'':>14}")
+            continue
+        theirs = money(rec["under_recovered"]) - money(rec["over_collected"])
+        d = mine - theirs
+        print(f"{title:20}{mine:>16}{theirs:>18}{d:>14}"
+              f"{'' if d == 0 else '   <- the two registers differ'}")
+    off = [(t, o) for o, a, t, *_ in CONTRACTS
+           if o in recorded
+           and sum((r["total"] - r["billed_total"]
+                    for r in built if r["objective"] == o), D("0.00"))
+           != money(recorded[o]["under_recovered"]) - money(recorded[o]["over_collected"])]
+    if off:
+        print("\nWhere they differ, the ledger's Income section carries billing "
+              "the invoice register does not.\nThat difference is "
+              "`v_invoice_income_tie`, which reports it by name rather than "
+              "netting it.")
+        for title, obj in off:
+            r = recorded[obj]
+            print(f"  {title}: the ledger has {sum((x['billed_total'] for x in built if x['objective']==obj), D('0.00')):,.2f} "
+                  f"and the invoice register {money(r['billed_total']):,.2f} "
+                  f"over {r['register_invoices']} invoices")
 
     unmatched = [u for r in built for u in r["unmatched"]]
     if unmatched:

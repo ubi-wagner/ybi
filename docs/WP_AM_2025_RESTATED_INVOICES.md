@@ -1,269 +1,249 @@
-# WP — The thirty-six 2025 America Makes invoices, rebuilt
+# WP — The forty-three 2025 NCDMM invoices, rebuilt on the certified rate
 
-**Bookmarked 13 September 2026, against the sealed 2025 classification.**
-Regenerate with `scripts/restate_2025_invoices.py`; the rendering is
-deterministic, so `docs/restated-2025/MANIFEST.md` reproduces digest for
-digest from the same record. A digest that moves means a figure moved.
+**Bookmarked 15 September 2026, against the sealed and certified 2025
+classification.** Regenerate with `scripts/restate_2025_invoices.py`; the
+rendering is deterministic, so `docs/restated-2025/MANIFEST.md` reproduces
+digest for digest from the same record. A digest that moves means a figure
+moved.
 
 > **Nothing here has been issued.** These are proposed restatements. Every one
 > needs a §4.4 modification changing the basis from the 10% de minimis to the
 > negotiated rate before it could go anywhere.
 
-Rendered: `docs/restated-2025/R-<objective>-<YYYYMM>.pdf`, thirty-six of them,
+Rendered: `docs/restated-2025/R-<objective>-<YYYYMM>.pdf`, forty-three of them,
 on the face NCDMM's payables already recognises.
 Workbook: `docs/restated-2025/YBI-2025-AM-restated-invoices.xlsx`, with the
 QuickBooks columns left **empty** — a blank is unanswered, and unanswered is a
 value.
 
----
-
-## 1. What to lay beside what, on Monday
-
-The workbook's `By month` sheet has eleven columns on the right that this side
-of the record cannot fill: the QB invoice number, its date, and its category
-split. Those are the comparison. What each one tests:
-
-| | |
-| --- | --- |
-| **QB invoice no / date** | whether thirty-six invoices is the right count. This workpaper assumes one per contract per month because the ledger carries exactly thirty-six monthly income postings. If QB holds thirty-eight, two of them are not in the ledger. |
-| **QB total vs `as billed total`** | whether the ledger's income postings *are* the invoicing. They should agree month for month. This is the control that was missing when four published figures were computed against a three-invoice sample. |
-| **QB category columns vs `restated non-labour`** | the one thing the cost record cannot supply. The ledger carries an account and a payee, not an invoice category, so the restated non-labour is a single line. The split plugs in; **the totals do not move when it does.** |
+The settlement this supports is `docs/SETTLEMENT_2025.md`.
 
 ---
 
-## 2. The year, and then the months
+## 1. What changed since the thirty-six
 
-| | ceiling | as billed 2025 | restated | movement |
+Three things, and the second is the one that moves the money.
+
+**A fourth award.** Digital Engineering was never in this workpaper and is the
+largest single offset in the file — $320,427.12. It has seven invoices, a
+complete monthly hours log for two people, and $169,975.01 of direct
+non-labour, so it restates exactly as the other three do. It was absent
+because the script carried a hand-written list of three contracts while the
+restatement register carried four.
+
+**The rate is certified, and it is 24.71%, not 43.99%.** The thirty-six were
+built before the estate and the asset register existed, so no 200.465
+facilities carve-out and no 200.436(b) depreciation carve-out were in the
+pool. Both are now, at **$913,104.60** against an overhead pool of
+$1,497,879.12 — 61% of it. The combined rate fell from 43.99% to 24.71% and
+the whole of that fall is the two carve-outs.
+
+**Each contract's months are read from the record, not assumed to be twelve.**
+Digital Engineering ran to 9 July 2025 and has seven. A constant twelve would
+have rendered five empty invoices for a closed award, which says the months
+were worked and nothing was billed — a different statement from the award
+having ended.
+
+---
+
+## 2. The year
+
+| | ceiling | billed 2025 | restated | movement |
 | --- | ---: | ---: | ---: | ---: |
-| Drive AM | 1,103,594 | 579,240.87 | 520,454.56 | **(58,786.31)** |
-| Last Tactical Mile | 899,500 | 368,222.24 | 475,905.76 | **107,683.52** |
-| Hybrid Phase 2 | 512,409 | 191,638.05 | 132,165.73 | **(59,472.32)** |
-| **all three** | **2,515,503** | **1,139,101.16** | **1,128,526.05** | **(10,575.11)** |
+| Drive AM | 1,103,594 | 579,240.87 | 450,766.64 | **(128,474.23)** |
+| Last Tactical Mile | 899,500 | 368,222.24 | 412,182.84 | **43,960.60** |
+| Hybrid Phase 2 | 512,409 | 191,638.05 | 114,468.98 | **(77,169.07)** |
+| Digital Engineering | 1,000,690 | 579,074.25 | 258,647.13 | **(320,427.12)** |
+| **all four** | **3,516,193** | **1,718,175.41** | **1,236,065.59** | **(482,109.82)** |
 
-Unchanged from `WP_AM_RESTATEMENT_IF_ACCEPTED.md`, and that is the point: the
-thirty-six months add back to the recorded allocation to the cent, on all
-three contracts. The script refuses to write anything if they do not.
+**These are two directions and they are never added together.** $43,960.60 is
+money to ask for; $521,848.42 is money to give back. A single net figure hides
+both, which is why `v_restatement` has no net column and why the settlement
+memo shows each award in full before it states an aggregate.
 
-**But the monthly view says something the annual view hides.** The largest
-single-month movements are an order of magnitude larger than the year's:
+### The one place this workpaper and the engine disagree, by $4,222.00
+
+The script checks itself against `v_restatement` on every run and prints both:
+
+| | this workpaper | the restatement | difference |
+| --- | ---: | ---: | ---: |
+| Drive AM | (128,474.23) | (128,474.23) | 0.00 |
+| Last Tactical Mile | 43,960.60 | 43,960.60 | 0.00 |
+| Hybrid Phase 2 | (77,169.07) | (72,947.07) | **(4,222.00)** |
+| Digital Engineering | (320,427.12) | (320,427.12) | 0.00 |
+
+Both are right and they measure different registers. `POST /api/restate`
+measures the **invoice register**, which holds nine Hybrid invoices totalling
+$187,416.05. This workpaper measures the **Income section of the ledger**,
+which holds $191,638.05 — three further postings in October, November and
+December described only as "Hybrid 2". So Hybrid was billed after the invoice
+register stops, and the register does not have those three.
+
+That is `v_invoice_income_tie`, which reports the difference by name rather
+than netting it. **The settlement uses the invoice register figure**, because a
+settlement has to be against invoices the sponsor holds.
+
+---
+
+## 3. What the monthly view says that the annual view hides
+
+The largest single-month movements are an order of magnitude larger than the
+year's, in both directions:
 
 | | | movement |
 | --- | --- | ---: |
-| Drive AM | October | **+118,382.12** |
-| Drive AM | May | **(110,758.82)** |
-| Drive AM | September | (75,026.45) |
-| Last Tactical Mile | March | +44,610.20 |
-| Last Tactical Mile | December | +35,392.60 |
+| Drive AM | May | **(116,109.49)** |
+| Drive AM | October | **+94,146.85** |
+| Drive AM | September | (82,735.44) |
+| Digital Engineering | July | (79,728.13) |
+| Digital Engineering | March | +47,462.71 |
+| Last Tactical Mile | March | +36,093.78 |
 
-Drive AM billed $150,719.52 in May against $39,960.70 of cost, and $62,615.64
-in October against $180,997.76. **Billing and cost do not fall in the same
-month**, by five and six figures — which is a fact about when invoices were
-raised, not about the rate.
+Drive AM billed $150,719.52 in May against $34,610.03 of restated cost, and
+$62,615.64 in October against $156,762.49. **Billing and cost do not fall in
+the same month**, by six figures.
 
-**So restate the year, not the months.** Month-by-month credits and claims
-swinging six figures in both directions, netting to $10,575.11, is the same
-economics presented in the way most likely to trigger a desk audit. The
-thirty-six documents exist so the year's figure can be *traced*, not so
-thirty-six transactions can be issued.
+So: **restate the year, not the months.** Forty-three transactions swinging six
+figures in both directions to settle $482,109.82 is the same economics
+presented in the way most likely to trigger a desk audit. These documents exist
+so the year's figure can be *traced* to a month, not so the months can be
+issued.
 
 ---
 
-## 3. What the monthly split shows that the annual one could not
+## 4. Four contracts, four different billing methods, one election
 
-### 3.1 Two of the three billed labour at a flat monthly figure, all year
+Every one of these awards elects `DE_MINIMIS_10`. None of them was billed that
+way, and no two were billed alike.
 
-| | monthly labour billed | months |
-| --- | ---: | --- |
-| Drive AM | **25,373.65** | all twelve, identical |
-| Last Tactical Mile | **7,493.52** | all twelve, identical |
-| Hybrid Phase 2 | **19,168.47** | eight identical, then 19,068.19 in September |
+| | how labour was billed | billed labour ÷ wages + fringe |
+| --- | --- | ---: |
+| Drive AM | loaded labour rate, no indirect line | **1.70×** |
+| Hybrid Phase 2 | loaded labour rate, no indirect line | **2.25×** |
+| Last Tactical Mile | labour plus a flat $3,000/month indirect | **1.40×** |
+| Digital Engineering | **a flat $82,724.89 a month, no categories at all** | — |
 
-Actual monthly wages on Drive AM run from $10,733.22 to $14,345.27 — a 34%
-spread. A flat monthly labour figure is a **rate times assumed hours**, not
-cost reimbursement, and all four awards are cost reimbursement invoiced
-monthly (ICAM §6 CONTRACT TYPE). This is the loaded-rate finding, visible on
-the face of the billing rather than inferred from an annual ratio.
+Full burden on the certified rate is 1.2190 × 1.2471 = **1.52×**. So Drive AM
+and Hybrid billed labour *above* full burden — which is why restating them
+gives money back — and Last Tactical Mile billed *below* it, which is why
+restating it claims money.
 
-### 3.2 The loading is not the same on the three contracts
+**Digital Engineering is the one that is not an invoice at all in substance.**
+Seven identical monthly postings of $82,724.89, the last marked "(Final)", with
+no labour, materials, travel or indirect line anywhere in the description.
+Against $258,647.13 of restated cost for the same seven months. That is a fixed
+monthly draw on a cost-reimbursement instrument, and it is the reason its
+offset is the largest.
 
-| | billed labour | restated wages + fringe | loading |
+Three further things the categories show:
+
+- **Last Tactical Mile is the only award that ever billed an indirect line** —
+  $44,400.00, eleven months at $3,000 and one at $11,400. It is also the only
+  one whose Schedule B budgets indirect. The other three billed **$0.00** of
+  indirect across thirty-one invoices.
+- **Last Tactical Mile is 63.5% consultant cost** — $233,900.00 of $368,222.24.
+  That is what makes its MTDC large relative to its labour and why it
+  under-recovers on a rate applied to MTDC.
+- **Drive AM's non-labour billing is $274,757.07** — $272,493.96 of ODCs,
+  $1,880.90 of materials, $382.21 of travel, 48% of its billing — against
+  $181,880.88 the ledger classifies as Drive AM direct non-labour. The gap is
+  **$92,876.19** and it is unresolved: either the classification under-attributes
+  Drive AM cost, or the billing over-claimed. **Restating to cost only works if
+  the cost record is complete**, and this is the one contract where that is in
+  question.
+
+---
+
+## 5. The rate these are built on
+
+| | pool | base | rate |
 | --- | ---: | ---: | ---: |
-| Drive AM | 304,483.80 | 179,571.00 | **1.70×** |
-| Last Tactical Mile | 89,922.24 | 64,128.99 | **1.40×** |
-| Hybrid Phase 2 | 172,415.95 | 76,788.03 | **2.25×** |
-| **all three** | **566,821.99** | **320,488.02** | **1.77×** |
+| FRINGE | 401,783.60 | 1,835,047.17 salaries and wages | **21.90%** |
+| OVERHEAD | 584,774.52 | 4,736,602.11 MTDC | 12.35% |
+| G&A | 585,875.91 | 4,736,602.11 MTDC | 12.37% |
+| **INDIRECT_COMBINED** | **1,170,650.43** | **4,736,602.11 MTDC** | **24.71%** |
 
-The fully burdened multiplier the sealed classification computes is **1.44×**
-(fringe 21.90%, then indirect 43.99% on the MTDC). So LTM's labour was billed
-*below* full burden, Drive AM's above it, and **Hybrid's at more than half as
-much again as full burden**. Three different embedded rates under one de
-minimis election, and none of them is 10%.
+Administrative labour on the `POOL` basis. Sealed at 757 judgments, 100% of
+the 2025 cost classified, $0.00 unclassified. Certified by Tom Metzinger on
+15 September 2026. Every pool ties at `pool_variance` 0.00 and all four
+`v_rate_anchor` rows tie.
 
-### 3.3 LTM's indirect line is a flat $3,000 a month, not a rate
+The overhead pool is stated **after** $913,104.60 of carve-outs:
 
-Eleven months at exactly $3,000.00 and February at $11,400.00. It is not 10%
-of anything, it does not move with the base, and it is the only indirect line
-on any of the three contracts all year — $44,400.00 against $145,392.70 of
-restated indirect.
-
-`AMERICA_MAKES_RESTATEMENT.md` read invoice 10039's $3,000 as **18.76%** of
-that invoice's base. That reading is correct for that invoice and **wrong as a
-description of the method**: 18.76% is what a flat $3,000 happens to come to
-on a month whose base was $15,993.52. February's identical method came to
-20.54%. There is no rate; there is a monthly figure.
-
-### 3.4 Hybrid was worked for a quarter after the billing stopped
-
-The last real Hybrid invoice is September. October, November and December
-carry $1,474.00, $1,374.00 and $1,374.00 of `Hybrid 2` with **no labour line
-and no category breakdown** — the only three postings in the year whose
-description names no invoice category, and the script reports them rather than
-bucketing them.
-
-The hours log puts $2,353.43, $3,109.75 and $4,870.13 of wages on the project
-in those months. **$18,137.41 of restated cost against $4,222.00 billed** in
-the final quarter. The award's original period of performance ended 10 October
-2025 and Modification 001 extended it to 30 June 2026, so the work is within
-term; it simply was not invoiced.
+| | citation | amount |
+| --- | --- | ---: |
+| Taft Technology Center — let and vacant | 200.465 | 281,002.12 |
+| Depreciation on federally funded assets | 200.436(b) | 156,235.27 |
+| Tech Block Building 5 — let and vacant | 200.465 | 149,498.82 |
+| Semple Building — let and vacant | 200.465 | 130,300.50 |
+| America Makes Building — let and vacant | 200.465 | 128,010.25 |
+| YBI Main (Vindicator) — let and vacant | 200.465 | 68,057.64 |
+| | | **913,104.60** |
 
 ---
 
-## 4. The thirty-six, month by month
+## 6. The measurement that arrived the same day, and which way it points
 
-Labour is the month's wages from the hours log — **all fourteen
-person-objective pairs on these three contracts have a full twelve-month log**,
-so this is read rather than smeared. Fringe at 21.90% and the indirect
-allocation are spread across the months by largest remainder against the
-recorded annual figure, not rounded month by month: per-month rounding drifted
-one and two cents against the engine on all three contracts the first time this
-ran, which is migration `069`'s defect in a new place.
+The five 200.465 rows above are computed against an estate **derived from
+documents, not measured from floor plans** — building areas from the JobsOhio
+grant's $116.27/sq ft against the 2024 audited statements, let area from the
+rent roll at $7.00/sq ft. Every choice in that derivation took the low side, so
+the carve-out is if anything too small and the rate too high.
 
-### Drive AM
+**A measured floor plan came back from Heidi Ruby on 15 September 2026** and is
+on file as evidence `EV-224fc92fe21b`. It has **not** been accepted into the
+record and no figure in this workpaper moves until it is. Where it can be
+compared, it points one way:
 
-| month | labour | fringe | non-labour | MTDC | indirect @ 43.99% | **restated** | as billed | movement |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01 | 14,345.27 | 3,141.61 | 0.00 | 17,486.88 | 7,692.48 | **25,179.36** | 25,373.65 | (194.29) |
-| 02 | 12,752.95 | 2,792.90 | 13,113.85 | 28,659.70 | 12,607.40 | **41,267.10** | 27,798.15 | 13,468.95 |
-| 03 | 11,877.11 | 2,601.09 | 2,142.86 | 16,621.06 | 7,311.61 | **23,932.67** | 26,032.42 | (2,099.75) |
-| 04 | 11,793.19 | 2,582.71 | 4,960.86 | 19,336.76 | 8,506.24 | **27,843.00** | 33,785.53 | (5,942.53) |
-| 05 | 12,640.24 | 2,768.21 | 12,343.96 | 27,752.41 | 12,208.29 | **39,960.70** | 150,719.52 | (110,758.82) |
-| 06 | 10,987.94 | 2,406.36 | 3,662.31 | 17,056.61 | 7,503.20 | **24,559.81** | 29,086.96 | (4,527.15) |
-| 07 | 10,733.22 | 2,350.57 | 3,700.00 | 16,783.79 | 7,383.19 | **24,166.98** | 29,073.65 | (4,906.67) |
-| 08 | 10,896.72 | 2,386.38 | 381.83 | 13,664.93 | 6,011.20 | **19,676.13** | 25,940.16 | (6,264.03) |
-| 09 | 11,457.83 | 2,509.26 | 26,017.29 | 39,984.38 | 17,589.13 | **57,573.51** | 132,599.96 | (75,026.45) |
-| 10 | 13,629.86 | 2,984.94 | 109,086.82 | 125,701.62 | 55,296.14 | **180,997.76** | 62,615.64 | 118,382.12 |
-| 11 | 12,253.27 | 2,683.47 | 102.50 | 15,039.24 | 6,615.76 | **21,655.00** | 10,841.58 | 10,813.42 |
-| 12 | 13,942.49 | 3,053.41 | 6,368.60 | 23,364.50 | 10,278.04 | **33,642.54** | 25,373.65 | 8,268.89 |
-| **year** | **147,310.09** | **32,260.91** | **181,880.88** | **361,451.88** | **159,002.68** | **520,454.56** | **579,240.87** | **(58,786.31)** |
+| building | derived let/vacant share | measured | |
+| --- | ---: | ---: | --- |
+| Taft Technology Center | 99.1% | ~100% | confirms |
+| America Makes Building | 99.9% | 100% | confirms |
+| Semple Building | 55.9% | ~100% | **higher** |
+| Tech Block Building 5 | 33.2% | ~92% of assignable | **much higher** |
+| YBI Main (Vindicator) | 16.9% | ~83% of assignable | **much higher** |
 
-### Last Tactical Mile
+A higher let-and-vacant share means a **larger** carve-out, a **smaller**
+federal overhead pool and a **lower** combined rate than 24.71%. A lower rate
+supports less indirect, so **every offset in section 2 grows in the direction
+it already runs**: the three give-backs get larger and Last Tactical Mile's
+claim gets smaller.
 
-| month | labour | fringe | non-labour | MTDC | indirect @ 43.99% | **restated** | as billed | movement |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01 | 3,586.34 | 785.41 | 8,500.00 | 12,871.75 | 5,662.28 | **18,534.03** | 18,993.52 | (459.49) |
-| 02 | 4,407.25 | 965.19 | 29,603.25 | 34,975.69 | 15,385.81 | **50,361.50** | 66,893.52 | (16,532.02) |
-| 03 | 4,764.06 | 1,043.33 | 38,364.93 | 44,172.32 | 19,431.40 | **63,603.72** | 18,993.52 | 44,610.20 |
-| 04 | 4,369.54 | 956.93 | 15,190.41 | 20,516.88 | 9,025.38 | **29,542.26** | 18,993.52 | 10,548.74 |
-| 05 | 3,617.26 | 792.18 | 8,387.50 | 12,796.94 | 5,629.37 | **18,426.31** | 18,993.52 | (567.21) |
-| 06 | 4,470.20 | 978.97 | 13,575.61 | 19,024.78 | 8,369.00 | **27,393.78** | 18,993.52 | 8,400.26 |
-| 07 | 4,978.90 | 1,090.38 | 33,898.04 | 39,967.32 | 17,581.63 | **57,548.95** | 63,493.52 | (5,944.57) |
-| 08 | 4,861.80 | 1,064.73 | 14,000.00 | 19,926.53 | 8,765.68 | **28,692.21** | 18,993.52 | 9,698.69 |
-| 09 | 5,183.26 | 1,135.13 | 13,500.00 | 19,818.39 | 8,718.11 | **28,536.50** | 18,993.52 | 9,542.98 |
-| 10 | 4,792.19 | 1,049.49 | 48,284.33 | 54,126.01 | 23,810.03 | **77,936.04** | 66,893.52 | 11,042.52 |
-| 11 | 3,663.40 | 802.29 | 10,080.00 | 14,545.69 | 6,398.65 | **20,944.34** | 18,993.52 | 1,950.82 |
-| 12 | 3,913.67 | 857.09 | 33,000.00 | 37,770.76 | 16,615.36 | **54,386.12** | 18,993.52 | 35,392.60 |
-| **year** | **52,607.87** | **11,521.12** | **266,384.07** | **330,513.06** | **145,392.70** | **475,905.76** | **368,222.24** | **107,683.52** |
+Three rows of the reply cannot be read yet and are with Heidi:
 
-### Hybrid Phase 2
+1. `Taft/semple · suites 2A,2B & building` gives its area as the text
+   **"3630 and 25,809"**, which is not a number, so the row is held back. The
+   rent settles which building it is — $203,115.96 on that row plus $33,965.52
+   on the vacant Taft suite is **$237,081.48, exactly `4021 TTC Rent`** — but
+   whether the two figures are one building or two is hers to say.
+2. **Semple** reports 16,999 sq ft against $109,932.32 of Semple rent, of which
+   her rows account for $49,527.00. Rows appear to be missing.
+3. YBI Incubator carries **5,459.8 sq ft of vacant space twice**, once as
+   "floors 2-5" and once as "unoccupied offices F3-5". If that is one area
+   entered twice, the building's vacant space halves.
 
-| month | labour | fringe | non-labour | MTDC | indirect @ 43.99% | **restated** | as billed | movement |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01 | 7,328.34 | 1,604.91 | 1,666.66 | 10,599.91 | 4,662.90 | **15,262.81** | 20,835.13 | (5,572.32) |
-| 02 | 5,792.83 | 1,268.63 | 1,666.66 | 8,728.12 | 3,839.50 | **12,567.62** | 20,835.13 | (8,267.51) |
-| 03 | 5,091.88 | 1,115.12 | 1,666.66 | 7,873.66 | 3,463.62 | **11,337.28** | 20,835.13 | (9,497.85) |
-| 04 | 4,095.94 | 897.01 | 1,666.66 | 6,659.61 | 2,929.56 | **9,589.17** | 20,835.13 | (11,245.96) |
-| 05 | 5,178.53 | 1,134.10 | 1,666.66 | 7,979.29 | 3,510.09 | **11,489.38** | 20,835.13 | (9,345.75) |
-| 06 | 5,084.55 | 1,113.52 | 1,666.66 | 7,864.73 | 3,459.70 | **11,324.43** | 20,835.13 | (9,510.70) |
-| 07 | 6,235.96 | 1,365.67 | 1,666.66 | 9,268.29 | 4,077.12 | **13,345.41** | 20,835.13 | (7,489.72) |
-| 08 | 6,455.42 | 1,413.74 | 1,666.66 | 9,535.82 | 4,194.81 | **13,730.63** | 20,835.13 | (7,104.50) |
-| 09 | 7,395.88 | 1,619.70 | 1,666.82 | 10,682.40 | 4,699.19 | **15,381.59** | 20,735.01 | (5,353.42) |
-| 10 | 2,353.43 | 515.40 | 0.00 | 2,868.83 | 1,262.00 | **4,130.83** | 1,474.00 | 2,656.83 |
-| 11 | 3,109.75 | 681.03 | 0.00 | 3,790.78 | 1,667.56 | **5,458.34** | 1,374.00 | 4,084.34 |
-| 12 | 4,870.13 | 1,066.56 | 0.00 | 5,936.69 | 2,611.55 | **8,548.24** | 1,374.00 | 7,174.24 |
-| **year** | **62,992.64** | **13,795.39** | **15,000.10** | **91,788.13** | **40,377.60** | **132,165.73** | **191,638.05** | **(59,472.32)** |
+Until those are answered, the measured estate is not a figure — it is a
+direction. The direction is down.
 
 ---
 
-## 5. What each restated invoice carries, and why
+## 7. What is still not on the record
 
-Four lines, and every one of them is read from a row rather than computed
-here — the review-screen rule, for the same reason: a figure derived twice is
-one that can disagree with itself.
-
-| line | source |
-| --- | --- |
-| **Labor** | the month's wages for the objective, `labor_month` over `v_labor_effective`, at cost |
-| **Fringe** | 21.90%, the rate on the record, spread by largest remainder |
-| **ODC's** | the direct non-labour classified to the objective, by transaction date, **one line** |
-| **Indirects** | the engine's own `allocation.allocated`, distributed across the months by MTDC |
-
-**The indirect is the allocation the rate computation persisted, distributed —
-not a rate re-applied to a base rebuilt in this script.** A second derivation
-would be free to disagree with the first, and the twelve months would no
-longer add back to the workpaper.
-
-**Labour is at cost, and that is the whole restatement.** The original billed
-labour at a loaded rate, so the indirect recovery is already inside it. Adding
-an indirect line to the labour *as billed* would claim indirect twice — the
-mistake the first three documents in this sequence were heading towards.
-
-**The non-labour is one line because the split is not on the cost record.**
-The ledger carries `Grant Expenses:LTM Grant` and `Humtown Products`, not
-MATERIALS or CONSULTANT. Guessing the category from a payee name would be
-inventing a judgment. It is on the invoice face, in the caveats, and in the
-workbook, because "we could not tell" is more use to a reviewer than a
-plausible guess — and it is precisely the column Monday's export supplies.
-
-**The rate is in the description, not in the RATE column.** That column formats
-to the cent, so 21.90% printed as `0.22` and 43.99% as `0.44` — a figure that
-reads as twenty-two cents on a document a payables clerk checks. Found by
-reading a rendered PDF back with `pypdf`, not by reasoning about it.
-
----
-
-## 6. What these figures rest on, stated above them
-
-- **No 200.465 facilities carve-out has been evaluated.** No building on the
-  record carries square footage, so every dollar of tenant and vacant
-  occupancy cost is in the federal pool and 43.99% reads high. At a
-  provisional 20% tenant share the combined rate is 37.67%, and every restated
-  total here falls. **Do not issue anything before the square footage
-  arrives** — restating at 43.99% and then discovering 37.67% means
-  over-claiming on a rate YBI proposed itself.
-- **0 of 43 people have certified their 2025 effort** under 2 CFR 200.430(i).
-  Every restated labour line is the management reconstruction at 100%, and
-  restating *raises* the reliance on it, because labour becomes the audited
-  cost rather than a rate.
-- **$92,876.19 of Drive AM non-labour is unreconciled.** Drive AM billed that
-  much more in ODCs than the ledger classifies as Drive AM cost. Either the
-  classification under-attributes or the billing over-claimed, and it sits
-  underneath the largest credit in the set.
-- **Administrative labour is in the G&A pool** (`admin_labour = POOL`) and
-  **5227 portfolio consulting is in the base as contractor cost** under
-  200.331. Both were settled by instruction; see
-  `WP_AM_RESTATEMENT_IF_ACCEPTED.md` and the rejected two-tier alternative in
-  its appendix.
-- **Hybrid's `bill_to_name` in the register is `236 W Boardman Street`** — an
-  address in the name field, a transcription artefact from the original load.
-  The rendered restatements bill NCDMM, like the other two. The register
-  should be corrected at source.
-
----
-
-## 7. One sentence
-
-*The year's restatement is a net give-back of $10,575.11 and stands; the
-thirty-six monthly documents exist so that figure can be traced back to the
-month and the person it came from, not so thirty-six transactions can be
-issued — and what Monday's export has to settle is the category split of the
-non-labour and whether thirty-six is the right count.*
+- **No payment is recorded against any invoice.** The `receipt` register is
+  empty. Whether a restatement is an additional claim or a correction to a
+  settled one turns on that, and nothing here can say.
+- **No one of the forty-three people has certified their 2025 effort** under
+  2 CFR 200.430(i). Every restated labour line is the management
+  reconstruction. It does not move a figure; it moves whether the figure is
+  usable.
+- **The category split of the restated non-labour is not on the cost record.**
+  The ledger carries an account and a payee, not an invoice category. It is one
+  line on every restated invoice and the QuickBooks columns in the workbook are
+  where it plugs in. **The totals do not move when it does.**
+- **Digital Engineering's invoices are billed to "NCDMM - America Makes" on
+  their face**, and its prime is N00174-20-1-0031 through Energetics Technology
+  Center and NSWC Indian Head — not the AFRL America Makes cooperative
+  agreement FA8650-20-2-5700 the other three sit under. The restated face
+  reproduces what YBI issued, because that is the document NCDMM's payables
+  holds. Whose federal money the offset settles against is a different question
+  and `docs/SETTLEMENT_2025.md` keeps it separate.
