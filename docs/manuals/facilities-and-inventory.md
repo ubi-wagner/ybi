@@ -92,6 +92,14 @@ tape measure replaces all of it. Two things to know before you start:
 * **The shares are what matter, not the areas.** If every building is 10%
   bigger than the estimate, the rate does not move at all. Get the *split*
   right first.
+* **The market rate on the record measures no subsidy, by construction.**
+  $7.00 was *derived from* the rent roll, so the screen reports YBI letting
+  at market and a subsidy of **$12.79** across the whole estate. That is
+  arithmetic, not a finding. The subsidy is one of the numbers the board and
+  the 990 narrative want, and it only becomes real when you put a genuine
+  comparable in `market_rate_psf` — a broker's opinion, a listing for
+  similar space, or an appraisal. Until then it reads as zero and should be
+  read as *unmeasured*.
 
 ---
 

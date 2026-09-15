@@ -1,6 +1,6 @@
 {
   "period": "2025",
-  "produced": "2026-09-15T14:38:56+00:00",
+  "produced": "2026-09-15T14:43:20+00:00",
   "certified": true,
   "certified_by": "Tom Metzinger",
   "why_not": null,
@@ -41,8 +41,8 @@
     {
       "file": "rate-buildup.xlsx",
       "what": "the rate, the pool under it and the seal it hangs off",
-      "bytes": 6776,
-      "sha256": "1e1ecc77b0766a1032425c41c148523d46c996362847da8ca06d1c047d14fefa",
+      "bytes": 6775,
+      "sha256": "5daf016d207182fbea0020794da50b1a028867427967f59332675731d4257242",
       "stable": false,
       "says_unfinished": [
         "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
@@ -51,8 +51,8 @@
     {
       "file": "form-990-part-ix.xlsx",
       "what": "Form 990 Part IX, functional allocation as classified",
-      "bytes": 7749,
-      "sha256": "6844ec171d73266c57f686ee85d726a966af579d7607376ca9c49939aa490f90",
+      "bytes": 7748,
+      "sha256": "e7811f61e0e1ccec5b6113d3795437f104682b1c7447a01eb9a2ff4e537238e0",
       "stable": false,
       "says_unfinished": [
         "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
@@ -61,8 +61,8 @@
     {
       "file": "auditors-report.xlsx",
       "what": "what the engagement asserts and what proves each assertion",
-      "bytes": 11601,
-      "sha256": "2ae2786b4fe95ae25db3843bcc08bf74a88f692b04b802300d20b52089926284",
+      "bytes": 11600,
+      "sha256": "3a350a5fe0f233f2c1c2e2d08e6e9c7606d7ec93e773a72f70251500c5b82292",
       "stable": false,
       "says_unfinished": [
         "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
@@ -71,8 +71,8 @@
     {
       "file": "audit-package.xlsx",
       "what": "the whole cost record, every sheet",
-      "bytes": 164236,
-      "sha256": "0210b90fd38b519c2a1fa1a84898731ff4e1d4b3962dcd9c64746939a8a1e3a0",
+      "bytes": 164237,
+      "sha256": "125e508ecc35c4fff9374fc8be4f2ce9403686321b071c1893e13d7118d6de53",
       "stable": false,
       "says_unfinished": [
         "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
@@ -81,8 +81,8 @@
     {
       "file": "timesheet-report.xlsx",
       "what": "the distribution behind the fringe base, and who has certified",
-      "bytes": 18045,
-      "sha256": "9f4481761b1a29579e47c64527ad7f18862de11c3b5e572e96698c8f740b2a7b",
+      "bytes": 18044,
+      "sha256": "e422a5903c7a6d2c2ecd0918effa6b1a39fd2989244fa3a9b37aee37bf954816",
       "stable": false,
       "says_unfinished": [
         "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."

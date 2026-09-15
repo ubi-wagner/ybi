@@ -543,6 +543,33 @@ def _merged(rec: dict) -> dict:
     return dict(rec.get("merged") or {})
 
 
+def _as(model, merged: dict, **overrides):
+    """Build the register's own input model out of the merged proposal.
+
+    **Every field, by asking the model what its fields are.** This named them
+    by hand and dropped four of `UnitIn`'s: `months_occupied`,
+    `actual_annual_charge`, `market_rate_psf` and `market_basis`. A
+    recommendation carrying a tenancy that ran five months was accepted as
+    twelve — which weights the 200.465 carve-out — and every rent and market
+    rate a proposal carried was silently discarded, so the subsidy the whole
+    facilities screen exists to measure read 0.00 on a building with
+    $237,081.48 of rent against it. `FacilityIn` lost four more.
+
+    Nothing refused it and nothing could: the schema validated the *proposal*,
+    which was complete, and what reached the register was a subset. The
+    hand-kept map, one layer down from the places this file already names it.
+
+    An empty string for an optional numeric is treated as absent, because
+    `jsonb` round-trips a blank form field that way and `None` is what the
+    register means by *nobody has said*.
+    """
+    fields = set(model.model_fields)
+    out = {k: v for k, v in merged.items()
+           if k in fields and v not in (None, "")}
+    out.update(overrides)
+    return model(**out)
+
+
 @router.post("/recommendations/{rec_id}/accept")
 def accept(rec_id: str, body: DisposeIn, period: str = "2025",
            actor: Actor = Depends(require_controller)) -> dict:
@@ -617,49 +644,23 @@ def accept(rec_id: str, body: DisposeIn, period: str = "2025",
         result_id = live_id
 
     elif subject == "FACILITY":
-        out = put_facility(FacilityIn(
-            facility_id=subject_id,
-            name=merged.get("name") or subject_id,
-            code=merged.get("code") or "",
-            address=merged.get("address") or "",
-            owned=bool(merged.get("owned", True)),
-            landlord=merged.get("landlord") or "",
-            usable_sqft=float(merged["usable_sqft"]),
-            rentable_sqft=(float(merged["rentable_sqft"])
-                           if merged.get("rentable_sqft") not in (None, "")
-                           else None),
-            source_document=body.citation or "",
-            note=why,
-        ), period=period, actor=actor)
+        out = put_facility(_as(FacilityIn, merged, facility_id=subject_id,
+                               name=merged.get("name") or subject_id,
+                               source_document=body.citation or "", note=why),
+                           period=period, actor=actor)
         result_id = subject_id
 
     elif subject == "SPACE_UNIT":
-        out = put_unit(UnitIn(
-            unit_id=subject_id,
-            facility_id=merged["facility_id"],
-            label=merged.get("label") or subject_id,
-            floor=merged.get("floor") or "",
-            usable_sqft=float(merged["usable_sqft"]),
-            use=SpaceUse(merged["use"]),
-            status=OccupancyStatus(merged["status"]),
-            objective_id=merged.get("objective_id") or None,
-            occupant=merged.get("occupant") or "",
-            market_source=body.citation or "",
-            note=why,
-        ), period=period, actor=actor)
+        out = put_unit(_as(UnitIn, merged, unit_id=subject_id,
+                           label=merged.get("label") or subject_id,
+                           market_source=body.citation or "", note=why),
+                       period=period, actor=actor)
         result_id = subject_id
 
     else:  # ASSET_FUNDING
-        out = put_asset_funding(AssetFundingIn(
-            asset_id=subject_id,
-            kind=FundingKind(merged["kind"]),
-            amount=float(merged["amount"]),
-            award_reference=merged.get("award_reference") or "",
-            funder=merged.get("funder") or "",
-            counted_as_cost_share=bool(merged.get("counted_as_cost_share",
-                                                  False)),
-            note=why,
-        ), period=period, actor=actor)
+        out = put_asset_funding(_as(AssetFundingIn, merged,
+                                    asset_id=subject_id, note=why),
+                                period=period, actor=actor)
         result_id = subject_id
 
     with transaction() as cur:

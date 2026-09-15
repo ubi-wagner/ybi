@@ -1,6 +1,6 @@
 # YBI 2025 publication set
 
-Produced 2026-09-15T14:38:56+00:00 by `scripts/publish.py`. Every figure is
+Produced 2026-09-15T14:43:20+00:00 by `scripts/publish.py`. Every figure is
 read from the row it was recorded in; nothing in this set was
 written to the cost record.
 
@@ -24,11 +24,11 @@ on its own face.
 
 | file | what it is | bytes | sha256 |
 | --- | --- | ---: | --- |
-| `rate-buildup.xlsx` | the rate, the pool under it and the seal it hangs off | 6,776 | `1e1ecc77b076` |
-| `form-990-part-ix.xlsx` | Form 990 Part IX, functional allocation as classified | 7,749 | `6844ec171d73` |
-| `auditors-report.xlsx` | what the engagement asserts and what proves each assertion | 11,601 | `2ae2786b4fe9` |
-| `audit-package.xlsx` | the whole cost record, every sheet | 164,236 | `0210b90fd38b` |
-| `timesheet-report.xlsx` | the distribution behind the fringe base, and who has certified | 18,045 | `9f4481761b1a` |
+| `rate-buildup.xlsx` | the rate, the pool under it and the seal it hangs off | 6,775 | `5daf016d2071` |
+| `form-990-part-ix.xlsx` | Form 990 Part IX, functional allocation as classified | 7,748 | `e7811f61e0e1` |
+| `auditors-report.xlsx` | what the engagement asserts and what proves each assertion | 11,600 | `3a350a5fe0f2` |
+| `audit-package.xlsx` | the whole cost record, every sheet | 164,237 | `125e508ecc35` |
+| `timesheet-report.xlsx` | the distribution behind the fringe base, and who has certified | 18,044 | `e422a5903c7a` |
 | `invoice-9062.pdf` | invoice 9062 on DIG-ENG, rendered from the register | 2,951 | `8cec649bca5b` |
 | `invoice-9078.pdf` | invoice 9078 on HYBRID-II, rendered from the register | 3,561 | `99c7df5885a8` |
 | `invoice-9091.pdf` | invoice 9091 on LTM, rendered from the register | 3,497 | `4148dc5d4da6` |

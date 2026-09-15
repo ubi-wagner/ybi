@@ -70,6 +70,13 @@ rather than chosen.
   predominately *available* as operating leases, which includes space
   standing empty. Any vacancy Heidi measures makes the carve-out larger and
   the federal rate lower.
+* **The subsidy on the facilities screen is not a subsidy yet.** The market
+  rate carried on each tenancy is the same $7.00 the tenant areas were
+  derived from, so the screen reports $638,575.00 at market against
+  $638,562.21 billed and a subsidy of **$12.79** across five buildings. That
+  is a consequence of the derivation, not a measurement of how far below
+  market YBI lets. It belongs in the 990 narrative and the board pack, and it
+  is waiting on a genuine comparable.
 * **A known error, in YBI's favour and left uncorrected.** Named tenants
   already reimburse **$100,931.51** into the overhead accounts — Steelite for
   property tax, NCDMM for Boardman electric and gas, and six others. The
