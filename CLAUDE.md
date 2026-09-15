@@ -2818,6 +2818,118 @@ always accumulated it and the workbook never showed it, so a row whose total
 exceeded its three functions left the reader nothing to reconcile to. A
 column that is usually zero is cheaper than a total that does not foot.
 
+### The return was never on the return's own lines
+
+Migrations `094`–`097`, `scripts/form_990_comparison.py`,
+`docs/FORM_990_2025_vs_2024.md`. `092` made the compensation rows cross-foot
+and left Part IX organised by **natural category** — the bookkeeper's ten
+top-level account groups. That is the right shape for reading a ledger and it
+is **not the Statement of Functional Expenses**: the form has twenty-five
+numbered lines and a preparer has to put every account on one of them. A sheet
+printing `Management & Administrative Expenses 935,379.44` tells them nothing,
+and the 2024 return split that same money across occupancy, office, insurance,
+dues, meals, real estate taxes and four others.
+
+So the comparison a reviewer actually asks for — **this year's return against
+last year's, line for line** — could not be made at all. It can now, and
+making it is what accounts for everything:
+
+| | 2024 | 2025 |
+| --- | ---: | ---: |
+| Part VIII total revenue | 7,546,159.00 | 6,624,877.83 |
+| Part IX total functional expenses | 4,919,001.00 | 6,620,548.55 |
+| **revenue less expenses** | **2,627,158.00** | **4,329.28** |
+
+**Three tables and three controls, and the split between them is the point.**
+Which IRS line an account belongs on is a *preparer's judgment*, so
+`form_990_account_line` is data rather than a CASE — the same reason
+`v_payroll_reconciliation` names its six fringe accounts by hand. What is not
+a judgment is **completeness**, and `v_form_990_line_check` and
+`v_form_990_revenue_check` hold it: an account on no line is money that falls
+off the return with nothing saying so. Both read TIES at 0 unmapped over 86
+expense accounts and 41 income accounts.
+
+**And the prior year is a source document, not a constant in a script.**
+`form_990_prior_year` is the 2024 return transcribed as printed from the PDF
+that has been on file since the foundation was loaded, and
+`v_form_990_prior_check` asks whether the transcription foots the way the
+return does — 4,919,001.00 = 4,119,113 + 561,339 + 238,549, and total revenue
+7,546,159.00 with fundraising events taken net. *Figures in a document for
+somebody else get read from the record, not recalled*, applied to somebody
+else's document.
+
+Four things the comparison turned up that no view had ever been able to say:
+
+- **$154,663.63 does not belong in Part IX at all.** The direct expenses of a
+  fundraising event are netted against that event's receipts in Part VIII line
+  8b, by the form's own instruction at the head of the part — *do not include
+  amounts reported on lines 6b, 7b, 8b, 9b and 10b*. The 2024 return netted
+  $139,739 that way. Ours had never had the concept, so Part IX over-reported
+  expenses by the cost of the Shark Tank. Line `8b` is a real line of the map
+  now and the two presentations differ by exactly it, which a test holds.
+- **Line 5 is empty and should not be.** The 2024 return reported $167,967 of
+  officer, director, trustee and key-employee compensation. `5140 Employee
+  Wages` is undifferentiated and no column on this record says who is an
+  officer. The line prints **empty on purpose** and the comparison names it:
+  an empty line that should carry something is a question, and a line silently
+  folded into its neighbour is not.
+- **The two years allocate the functional columns by different methods.** Ten
+  indirect lines of the 2024 return carry the *same three percentages* —
+  occupancy, depreciation, insurance, interest, accounting, legal, office,
+  dues, real estate taxes and meals are each 80.5% / 15.7% / 3.9%. That is one
+  overhead ratio applied across the return. Ours takes the 990 function
+  recorded on each judgment, so a line is wholly one column or wholly another.
+  Applying 2024's ratio instead would move **$304,776.03 out of Program and
+  $236,201.21 into it** — $540,977.24 reassigned, netting $68,574.82. **The
+  netting is the finding**: a single figure for the difference reports a sixth
+  of what actually changed column, which is `v_restatement`'s refusal to net
+  in a new place.
+- **The revenue side had no reader at all.** `064` took the Income section out
+  of the classification scope, correctly, and this file already records what
+  that cost once — *taking it out of scope became taking it out of mind*, and
+  thirty-six months of America Makes billing sat one join away from every
+  figure computed without them. Comparing Part IX alone accounts for $6.6m of
+  a $13.4m document. `095` is Part VIII, and three of its lines are questions
+  for the preparer rather than answers: 2024 reported **no** programme service
+  revenue against 2025's $119,912; 2024's line 8a was $367,629 against 2025's
+  $23,162.02, which is the two years answering differently whether an event
+  sponsorship is a contribution or event income; and 2024 netted no rental
+  expense, which is why occupancy stays in Part IX line 16.
+
+### The expense view answered with the revenue lines, at zero
+
+Migration `097`. `094` built `v_form_990_part_ix` as
+`fiscal_period CROSS JOIN form_990_line`, so that **every line prints whether
+or not it carries anything** — an empty line is a fact about the year and a
+`SELECT DISTINCT` over the ledger cannot say it. Right, and the reason the
+cross join is there.
+
+`095` then put Part VIII's eight revenue lines into the same table, because
+they are lines of the same return. The cross join took them, and the expense
+view began answering with `V1` at **0.00** beside $5,866,141.77 of
+contributions and grants.
+
+Nothing refused it. The first reader was the comparison report, which printed
+**total revenue of −154,663.63** — the netted fundraising expense with no
+revenue behind it. A figure that wrong can only be a join, and that is the
+good case: the bad one is where zero is plausible. The report's own
+`COALESCE(ix.total, viii.amount, 0)` read as though it picked whichever side
+had an answer, and did not, because the wrong side answered zero rather than
+NULL. **A COALESCE over two sources that both always answer is not a choice,
+it is the first one.**
+
+`test_the_expense_view_emits_no_revenue_line` holds it as a property — the
+Part IX view's line ids and Part VIII's must not intersect, and `8b` must be
+in the first because it is the line the form takes *out* of Part IX. Watched
+failing, with three others, against the view flattened.
+
+And `test_the_record_is_one_year` caught `form_990_prior_year` on its first
+run, which is the sweep working: a table holding 2024 is either example data
+or a document, and this one is the third case the rule already states in
+prose — *a governing document carries its own date; only a transaction belongs
+to a period.* It is exempted with its reason, beside `evidence` and
+`fiscal_period`, on a list that can only shrink.
+
 ### A finished partition still asked for the thing it had
 
 Migration `093`. With the estate measured and every asset answered,

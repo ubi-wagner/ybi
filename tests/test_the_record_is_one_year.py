@@ -46,6 +46,12 @@ DATED_BY_THE_DOCUMENT = {
                 "January 2026 and the asset schedule is the 2026 print of "
                 "the register the 263 assets came from.",
     "fiscal_period": "The table of periods. It is the list, not a row in it.",
+    "form_990_prior_year": "A filed return, transcribed as printed. It is a "
+                           "document that happens to be shaped like a "
+                           "register — the 2024 Form 990, which "
+                           "docs/FORM_990_2025_vs_2024.md compares this year "
+                           "against line for line. Its period is the year it "
+                           "reports, which is the whole point of it.",
 }
 
 
