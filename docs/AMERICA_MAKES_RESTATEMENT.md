@@ -82,16 +82,24 @@ of an indirect line is therefore a statement, not an omission.
 
 ## 2. The three invoices restated at 43.99%
 
-> **These three are April 2026, and they are not the 2025 restatement.**
-> Migration `088`. The arithmetic below is right about the three invoices in
-> `YBI_Invoices_1.pdf` and was the whole register when it was written. The
-> 2025 register now holds **61 invoices**, and those three objectives carry
-> 12, 12 and 9 of them; the invoices themselves are period 2026, where they
-> belong. The rows that recorded this as `PROPOSED` were computed while the
-> three were filed under 2025, and the correction that re-periodised them
-> left the claims standing — so they are superseded rather than edited, and
-> §8 below carries the year. `v_restatement.still_agrees` is what says so now
-> instead of nobody saying anything.
+> **These three were examples, and they are off the record.** Migrations
+> `088` and `089`. The arithmetic below is right about the three invoices in
+> `YBI_Invoices_1.pdf`, and that file was the whole register when this was
+> written — but those three are dated 1 May 2026 for April 2026 service and
+> were a sample of the *shape* of an America Makes invoice, not YBI's
+> billing. `089` removed them and the six restatements measured against
+> them.
+>
+> **The 2025 register is 61 invoices**, from the six PDFs of invoices as
+> issued, and those three objectives carry 12, 12 and 9 of them. §8 below
+> carries the year, which is the restatement: Drive AM $(58,786.31), LTM
+> $107,683.52, Hybrid $(55,250.32). Two of the three run the *other way* from
+> the table below, because the indirect was recovered inside a loaded labour
+> rate and no 2025 invoice carries an indirect line at all.
+>
+> The section is kept rather than deleted because three findings elsewhere
+> rest on it — the `TERM` failure on Drive AM among them — and a reader who
+> meets one of those has to be able to arrive here and see why it went.
 
 Engine-computed, per invoice, recorded as `PROPOSED`:
 

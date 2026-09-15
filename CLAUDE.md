@@ -3897,6 +3897,114 @@ papers say the claims are not ready to send. `docs/MONDAY_RUNBOOK.md` §6 is
 regenerated against a record where they have been recomputed and now prints
 the year.
 
+## The record is 2025, and three of the invoices were examples
+
+Migration `089`, `scripts/load_awards.py`,
+`tests/test_the_record_is_one_year.py`. The rule, in the words it was given:
+
+> *Get rid of the 2026 examples unless they were for the period 2025 — they
+> were examples and will be re-entered when they do 2026.*
+>
+> *The system should have the GL, PL, BS, all invoices for 2025 that are
+> federal, the labor breakdowns, etc. ALL supporting documents ONLY FOR 2025.*
+
+`YBI_Invoices_1.pdf` carried three invoices — **10018** Drive AM, **10023**
+Hybrid Phase II, **10039** Last Tactical Mile, all dated 1 May 2026 for April
+2026 service — and `load_invoices.py` filed them into the register of record.
+They were a sample of the *shape* of an America Makes invoice, loaded before
+the year's own register existed. **Nothing downstream ever asked whether a
+register of three was the year**, and the cost of that is on this file
+already in four places: four published figures computed off it, six
+restatements measured against it, the run sheet printing those three as the
+position, and `088` written a day earlier to explain why a 2025 restatement
+was measuring 2026 invoices. The answer to all four was that they should not
+have been there.
+
+Gone with them: their 15 `invoice_line` rows, and **every restatement whose
+whole population was example data** — all six, three standing as claims. The
+2025 register is what remains: **61 invoices, $2,964,077.32**, across six
+objectives, from the six PDFs of invoices as issued and tied to `3900 Grant
+Income`.
+
+**Removing them is not editing history, and the trigger's own words are why.**
+`invoice_no_delete` says *"Issued invoices are what the pass-through entity
+holds. Correct by issuing a restatement or a credit, never by editing
+history."* That premise is about an invoice a sponsor is holding. These three
+are example data in a register of record, which is the opposite case —
+marking them `WITHDRAWN` would assert YBI withdrew three invoices NCDMM
+holds, a thing that did not happen. So `089` stands the trigger down for one
+statement, puts it straight back, and writes nine audit rows saying what it
+removed and why. `restatement_no_delete` is stood down on the same reasoning:
+*correct by superseding* is about a position somebody took, and a measurement
+of example data is not a position.
+
+**It is self-limiting and it refuses rather than guessing.** It matches on
+number, period *and* total; finding none it does nothing and says so, which
+is the state a clean seed is now in; finding one or two it raises, because a
+database where the fingerprint is partial is one it does not understand. And
+the restatements go by *every* line naming an example — so the three
+recomputed against the 2025 register, on the record where that had been done,
+survived untouched. Watched: 6 removed and 3 kept on one database, 6 and 0 on
+the other, and a second run is a no-op.
+
+### What stays, which is the half worth reading
+
+Twelve documents carry a period that is not 2025 and **every one of them
+supports 2025**: the five executed agreements the year was worked under
+(2021–2024), two prior-year Forms 990 and two audited statements an auditor
+reads as comparatives, Hybrid's **Modification 001 of 22 January 2026** —
+which is what `v_award_ceiling_check` ties the fourth award on — and
+`2026_YBI_Fixed-Asset-Schedule.xls`, which is where the 263 assets came from.
+
+**A governing document carries its own date; only a transaction belongs to a
+period.** The ledger (15,500 lines), the assets (263), the labour
+distribution (97) and every decision are 2025 and nothing else.
+
+`tests/test_the_record_is_one_year.py` sweeps every table carrying a `period`
+from `information_schema` — no list in it — and fails one holding anything
+but 2025. `evidence` and `fiscal_period` are the two exemptions and each
+carries its reason; an exemption that stops being needed **fails the test**,
+so the list can only shrink, which is `test_no_register_is_dead.py`'s rule.
+A third assertion is the defect itself as a property rather than as three
+invoice numbers: **no invoice may be filed under a year its own date does not
+name.** Both halves were watched failing — a 2026-dated invoice filed at
+2025, and a correctly-filed 2026 invoice.
+
+### The loader was two jobs and only one of them was wanted
+
+`load_invoices.py` loaded the three examples **and the four awards**, which
+are real and read out of the executed agreements. It is `scripts/load_awards.py`
+now and loads the awards only — a script called `load_invoices.py` that loads
+no invoices is the hand-kept map wearing a filename. `seed.sh` calls it by
+the new name and `load_invoices_2025.py` is the register, so a rebuild from
+nothing comes back with 61 invoices and no examples.
+
+### Three findings rested on them, and each says so rather than vanishing
+
+This is the part that would have gone wrong quietly. Removing the rows
+removes the findings computed from them, and a reader who was handed one of
+those findings has to be able to arrive at why it went:
+
+- **`INVOICE_GAP_TABLE.md` row 1** — *"Drive AM invoice 10018 is entirely
+  outside the period of performance… TERM fails"* — was a finding **about
+  example data**. `TERM` passes on Drive AM now, over the twelve invoices YBI
+  actually issued in 2025. The row is struck through and kept.
+- **`AMERICA_MAKES_RESTATEMENT.md` §2**, *"The three invoices restated at
+  43.99%"*, carries a notice: the arithmetic is right about those three, they
+  were examples, and §8 carries the year — where **two of the three run the
+  other way**, because the indirect was recovered inside a loaded labour rate
+  and no 2025 invoice carries an indirect line at all.
+- **`FOR_TOM_TO_VERIFY.md` §5.1** asked Tom for the real dates. It is closed:
+  the answer was that there were none to supply. It stays on the list at its
+  number, because the count of that list is checked against the worksheet and
+  because the closing is part of the trail.
+
+`scripts/reperiod_invoices.py` has nothing left to correct and is kept for the
+reason `retype_documents.py` and `read_documents.py` are: the next loader that
+writes a year as a constant will need it. `drive_invoice_ties.py` still
+filters on the invoice *date* rather than the period column, because the
+discipline is what stops that loader, and the test above now fails one.
+
 ## Staged for a human, and nothing else
 
 `scripts/readiness.py`, `scripts/monday.sh`, `docs/MONDAY_RUNBOOK.md`. The

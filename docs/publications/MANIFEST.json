@@ -1,6 +1,6 @@
 {
   "period": "2025",
-  "produced": "2026-09-15T13:02:26+00:00",
+  "produced": "2026-09-15T13:25:43+00:00",
   "certified": false,
   "certified_by": null,
   "why_not": "A rate stands and nobody has put their name to it.",
@@ -45,8 +45,8 @@
     {
       "file": "rate-buildup.xlsx",
       "what": "the rate, the pool under it and the seal it hangs off",
-      "bytes": 5943,
-      "sha256": "9b14ac88e19eaf6c77a205a6d6071cd680ac7ee9bd1f0c249d61d13f8f7fa70b",
+      "bytes": 5942,
+      "sha256": "107ace55fefee63a10392b859ea94dedd7205eabe9c65be6813ea97fe164b4b8",
       "stable": false,
       "says_unfinished": [
         "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
@@ -59,8 +59,8 @@
     {
       "file": "form-990-part-ix.xlsx",
       "what": "Form 990 Part IX, functional allocation as classified",
-      "bytes": 7676,
-      "sha256": "bfa6e187cab1d2283a6559c88e2a940aa67b18e63f1cac0d86dfc882c3db1106",
+      "bytes": 7674,
+      "sha256": "c2749075bfef6c1fb8f94fa362318c3910f1320113c4dea9dadc3858f4843386",
       "stable": false,
       "says_unfinished": [
         "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
@@ -74,7 +74,7 @@
       "file": "auditors-report.xlsx",
       "what": "what the engagement asserts and what proves each assertion",
       "bytes": 11669,
-      "sha256": "9ef82f06937343e7838533282f6c58ad599685324df20f3f3c4a3441ebe019ec",
+      "sha256": "3e7332c23e7adf0807380cd145659783bfaa3ecf520ce00b41b4d1bdc34484b7",
       "stable": false,
       "says_unfinished": [
         "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
@@ -87,8 +87,8 @@
     {
       "file": "audit-package.xlsx",
       "what": "the whole cost record, every sheet",
-      "bytes": 182877,
-      "sha256": "52e8d052113776efdc814439bb76380e1dc60a63c7709388d0cd32e54842da51",
+      "bytes": 184114,
+      "sha256": "2908fbec17464ad87ea9bc2e87a3415cdd0344265ef20dcffb67548b17578235",
       "stable": false,
       "says_unfinished": [
         "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
@@ -101,8 +101,8 @@
     {
       "file": "timesheet-report.xlsx",
       "what": "the distribution behind the fringe base, and who has certified",
-      "bytes": 18049,
-      "sha256": "c7b39f8f6c3a7c079a151d0b1cc9b14d1f3839acede1f2a5183697d97565b852",
+      "bytes": 18050,
+      "sha256": "4606d13a16854a2229059080977d4880e61308308a2cdf291e40f0c2656049bb",
       "stable": false,
       "says_unfinished": [
         "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",

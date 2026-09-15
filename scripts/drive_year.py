@@ -1040,7 +1040,8 @@ def main() -> int:
     try:
         loaded = one("SELECT count(*) AS n FROM invoice WHERE period='2025'")["n"]
         if not loaded:
-            raise CannotRun("no invoices on file; run scripts/load_invoices.py")
+            raise CannotRun("no invoices on file; run "
+                            "scripts/load_invoices_2025.py --apply.")
 
         cand = call(tom, "GET", "/api/restate/candidates", 200,
                     "what can be restated")

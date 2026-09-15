@@ -21,8 +21,8 @@
 #   load_calendar     YBI's own working calendar and the hours log under it —
 #                     261 work days and 2,088 hours in 2025, which is what
 #                     every `Allow Hours` in their record is measured against
-#   load_invoices     the three America Makes invoices, and the four awards the
-#                     register did not have; links each invoice to its award
+#   load_awards       the four awards the register lacked, read out of the
+#                     executed agreements — the ceiling, the term and the clause
 #   load_contract_terms   what the signed agreements actually say, with the
 #                     clause each provision came from
 #   load_award_budgets    what each award budgets by category, which is what
@@ -94,19 +94,19 @@ run "calendar and hours log" $PY scripts/load_calendar.py
 run "fixed-asset register" $PY scripts/load_assets.py
 
 step "The awards, and what they say"
-run "invoices and awards" $PY scripts/load_invoices.py
-# And the rest of the year. `load_invoices.py` opens *"Load the three America
-# Makes invoices"* and does exactly that — three, from one month of 2026 —
-# and the register the run sheet quotes is **61 invoices and $2,964,077.32**,
-# loaded by a script this file did not call. So a rebuild from nothing came
-# back with a register that is a sample, and five steps of `prove.sh` could
-# not run for want of invoices to measure.
+run "the four awards" $PY scripts/load_awards.py
+# The register is the year, and only the year. This was
+# `load_invoices.py` — *"Load the three America Makes invoices"* — which
+# loaded exactly that: three, dated 1 May 2026, a sample of the invoice
+# format taken before the year's own register existed. Nothing downstream
+# asked whether a register of three was the year: four published figures
+# were computed off it and three restatements were measured against it.
 #
-# Third instance of the shape this repository is named for: *the twenty-six
-# contract provisions read out of the executed agreements lived in one
-# developer's database and in no script*, and *anything that only exists
-# because somebody remembered to run it does not survive a recovery*.
-run "the rest of the 2025 register" $PY scripts/load_invoices_2025.py --apply
+# `load_invoices_2025.py` is the register — 61 invoices, $2,964,077.32, from
+# the six PDFs of invoices as issued. Migration `089` removed the three
+# examples and `load_awards.py` no longer files them; 2026 billing is entered
+# when 2026 is worked.
+run "the 2025 invoice register" $PY scripts/load_invoices_2025.py --apply
 run "contract provisions" $PY scripts/load_contract_terms.py \
     --base "$BASE" --password "$PASSWORD"
 run "budget schedules" $PY scripts/load_award_budgets.py

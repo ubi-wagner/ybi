@@ -424,7 +424,7 @@ def main() -> int:
                   ORDER BY invoice_date LIMIT 1""")
     if not inv:
         print("\nCOULD NOT RUN — no invoice on file; "
-              "run scripts/load_invoices.py first.", file=sys.stderr)
+              "run scripts/load_invoices_2025.py --apply first.", file=sys.stderr)
         return 2
     inv_id = str(inv["invoice_id"])
 
