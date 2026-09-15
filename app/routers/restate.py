@@ -417,7 +417,12 @@ def list_restatements(period: str = None) -> list[dict]:
                            method, direct_supported, indirect_rebuilt,
                            supported_total, as_billed_base, as_billed_indirect,
                            as_billed_position, elected_rate, elected_indirect,
-                           elected_position, implied_rate
+                           elected_position, implied_rate,
+                           -- What the register holds now, beside what this
+                           -- measured. `088`: three claims stood for a week
+                           -- over three invoices that had been moved to
+                           -- another period, and nothing anywhere said so.
+                           register_invoices, register_billed, still_agrees
                       FROM v_restatement WHERE period = %s
                      ORDER BY computed_at DESC""", (period,))
 
@@ -524,7 +529,9 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
     rows = query("""SELECT r.award_id, r.objective_id, r.invoices,
                            r.billed_total, r.under_recovered, r.over_collected,
                            r.rate_kind, r.rate_applied, r.rate_base,
-                           r.seal_hash, r.sponsor, r.billed_under
+                           r.seal_hash, r.sponsor, r.billed_under,
+                           r.register_invoices, r.register_billed,
+                           r.still_agrees
                       FROM v_restatement r
                      WHERE r.period = %s AND r.status = 'PROPOSED'
                        AND r.award_id = %s
@@ -617,10 +624,24 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
         # their own columns: that is not netting, it is the refusal to net.
         position_under=money(sum((r["under_recovered"] or 0) for r in rows)),
         position_over=money(sum((r["over_collected"] or 0) for r in rows)),
-        caveats=tuple(f"{r['step']} — {r['detail']}" for r in query(
-            """SELECT step, detail FROM v_audit_walk
-                WHERE period = %s AND state <> 'DONE' ORDER BY seq""",
-            (period,))),
+        # The walk's unfinished steps, and — first — anything on this
+        # award's own position that the register has since overtaken. It is
+        # not blocked, per `082`: the paper says so. But it says so **above**
+        # the general caveats, because a reader who has to reach the fourth
+        # bullet to learn the figures measure a population that has moved has
+        # already formed a view.
+        caveats=(
+            tuple(
+                f"Overtaken — {r['objective_id']} measured "
+                f"{r['invoices']} invoice(s) totalling {r['billed_total']:,.2f}, "
+                f"and the register now holds {r['register_invoices']} "
+                f"totalling {r['register_billed']:,.2f}. Recompute before "
+                f"this goes to a sponsor."
+                for r in rows if r.get("still_agrees") is False)
+            + tuple(f"{r['step']} — {r['detail']}" for r in query(
+                """SELECT step, detail FROM v_audit_walk
+                    WHERE period = %s AND state <> 'DONE' ORDER BY seq""",
+                (period,)))),
         certified=bool(cert.get("certified")),
         certification_line=(f"Certified by {cert.get('certified_by')}."
                             if cert.get("certified")

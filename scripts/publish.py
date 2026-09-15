@@ -30,7 +30,9 @@ Three rules it keeps:
   * **The manifest is the point.** Every file, its SHA-256 and what it says
     is unfinished — so a digest that moves means a figure moved, and a reader
     can tell a set produced before the square footage arrived from one
-    produced after.
+    produced after. The workbooks are the stated exception: the xlsx writer
+    stamps the wall clock into the file, so `stable` is false on those five
+    and the README says not to read anything into their digests.
 """
 
 from __future__ import annotations
@@ -65,8 +67,27 @@ def head(text: str) -> None:
 def wrote(path: Path, what: str, caveats: list[str]) -> None:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     FILES.append({"file": path.name, "what": what, "bytes": path.stat().st_size,
-                  "sha256": digest, "says_unfinished": caveats})
+                  "sha256": digest, "stable": _digest_is_stable(path),
+                  "says_unfinished": caveats})
     print(f"  {OK}ok{END}   {path.name:52} {path.stat().st_size:>9,} bytes")
+
+
+def _digest_is_stable(path: Path) -> bool:
+    """Whether this file's digest means anything between two runs.
+
+    The PDFs are rendered with reportlab's `invariant=1`, so the same figures
+    give the same bytes and a digest that moves means a figure moved — which
+    is the whole point of the manifest. **The workbooks are not**: openpyxl
+    stamps the wall clock into `docProps/core.xml` and into every zip entry
+    header, so all five move on every run whatever the figures say.
+
+    Measured rather than assumed — two builds in the same second are
+    byte-identical and two a second apart are not. Saying "rendering is
+    deterministic" over five files that move regardless is the sweep that
+    cries wolf: the reader checks a digest, sees it move on a run that
+    changed nothing, and stops checking.
+    """
+    return path.suffix.lower() in {".pdf", ".json", ".md"}
 
 
 def note(text: str) -> None:
@@ -214,10 +235,17 @@ def _readme(m: dict) -> str:
     for f in m["files"]:
         out.append(f"| `{f['file']}` | {f['what']} | {f['bytes']:,} | "
                    f"`{f['sha256'][:12]}` |")
+    unstable = [f["file"] for f in m["files"] if not f.get("stable", True)]
     out += ["",
-            "Rendering is deterministic, so a digest that moves means a figure",
-            "moved — which is how a set produced before the square footage",
-            "arrived is told apart from one produced after.", ""]
+            "The PDFs are rendered deterministically, so a digest that moves",
+            "means a figure moved — which is how a set produced before the",
+            "square footage arrived is told apart from one produced after.", ""]
+    if unstable:
+        out += [f"The {len(unstable)} workbook(s) are the exception and their",
+                "digests are not comparable between runs: the xlsx writer",
+                "stamps the wall clock into the file and into every zip entry,",
+                "so they move whatever the figures say. Compare their first",
+                "sheet, which carries the same caveats as everything else.", ""]
     if m["notes"]:
         out += ["## Notes from the run", ""] + [f"- {n}" for n in m["notes"]] + [""]
     return "\n".join(out)

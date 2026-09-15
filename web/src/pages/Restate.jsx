@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, explain, money } from "../api.js";
+import { api, count, explain, money } from "../api.js";
 import CertificationBand from "../components/CertificationBand.jsx";
 import {
   Card, Drawer, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast,
@@ -180,6 +180,7 @@ export default function Restate({ actor }) {
                 {r.invoices} invoice(s) · rate {(Number(r.rate_applied) * 100).toFixed(2)}%
               </span>
             </div>
+            <Overtaken r={r} />
             <Movement r={r} />
           </div>
         ))}
@@ -223,6 +224,34 @@ export default function Restate({ actor }) {
 }
 
 
+/* ── A claim measured against a register that has since moved ─────────
+   `project_claim.saw_*` in a second place: *an approval has to be of
+   something specific, or the record moves underneath it and the approval
+   silently comes to cover something else.* Three restatements stood as
+   claims for a week against one April-2026 invoice each, after the invoices
+   were re-periodised out of 2025 and nothing recomputed them.
+
+   Never shown on a SUPERSEDED row. A superseded restatement is history and
+   is *supposed* to disagree; flagging it would be the sweep that cries wolf,
+   and the next real one the reader dismisses. */
+function Overtaken({ r }) {
+  if (r.status === "SUPERSEDED" || r.still_agrees !== false) return null;
+  return (
+    <div className="gate bad" style={{ margin: "8px 0" }}>
+      <strong>Overtaken — not a position to send.</strong>{" "}
+      <span className="rowsub wrap">
+        This measured {count(r.invoices)} invoice(s) totalling{" "}
+        {money(r.billed_total)}. The register now holds{" "}
+        {count(r.register_invoices)} for {r.objective_id} in this period,
+        totalling {money(r.register_billed)}. Measure it again before anything
+        goes to a sponsor — recomputing supersedes this rather than editing
+        it, so the position taken today stays on the record.
+      </span>
+    </div>
+  );
+}
+
+
 /* ── The two figures, side by side and never subtracted ────────────────
    `v_restatement` offered `under_recovered - over_collected` as one column
    until migration 061 removed it. Money to ask a sponsor for and money to
@@ -261,6 +290,7 @@ function Detail({ d, canWrite, toast, onChange }) {
   const [deciding, setDeciding] = useState(null);
   return (
     <>
+      <Overtaken r={r} />
       <Movement r={r} />
 
       <div className="grid three" style={{ margin: "14px 0" }}>

@@ -3774,6 +3774,16 @@ unfinished, so **a digest that moves means a figure moved** and a set produced
 before the square footage arrived is distinguishable from one produced after.
 Nothing in the run writes to the cost record.
 
+**Except on the five workbooks, and the manifest says so rather than
+claiming otherwise.** The PDFs carry `invariant=1` and reproduce to the byte;
+openpyxl stamps the wall clock into `docProps/core.xml` and into every zip
+entry header, so all five move on every run whatever the figures say —
+measured, two builds in the same second being identical and two a second
+apart not. A manifest asserting determinism over five files that move
+regardless is the sweep that cries wolf: the reader checks a digest, sees it
+move on a run that changed nothing, and stops checking. `stable` is on every
+row and the README names the exception.
+
 ### A set that says CERTIFIED must not be signed by the machine
 
 The first honest-looking run was produced on a clone where **I had certified
@@ -3797,6 +3807,95 @@ measured the **whole year**: 12 invoices on Drive AM, 12 on LTM, 9 on Hybrid.
 That is *a register loaded from one document is a sample until something says
 otherwise* reaching the restatement, which is the last place it had not yet
 been noticed.
+
+## A restatement measures its own period, and says so when it stops
+
+Migration `088`. **Every restatement on the record measured one invoice dated
+1 May 2026, and all six are 2025 restatements.** Three stood as claims:
+
+| | measured | the 2025 register holds |
+| --- | ---: | ---: |
+| DRIVE-AM | 1 invoice, 37,593.90 · **16,537.56 to ask for** | 12 invoices, 579,240.87 |
+| LTM | 1 invoice, 18,993.52 · **4,035.55** | 12 invoices, 368,222.24 |
+| HYBRID-II | 1 invoice, 1,374.00 · **604.42** | 9 invoices, 187,416.05 |
+
+Those three figures are what `MONDAY_RUNBOOK.md` §6 printed, what the walk
+read `DONE` on, and what the amendment memoranda would have been rendered
+from. The position against the year is not near them and **two of the three
+run the other way**: −58,786.31, +107,683.52, −55,250.32.
+
+**Nothing was wrong when they were computed.** `POST /api/restate` selects
+invoices with `i.period = %s`, and when these ran the three were filed under
+2025 — which `load_invoices.py` records in its own words:
+
+> *The period is the invoice's own year, not a constant. These three are
+> dated April 2026 and were filed under 2025, so every 2025 figure taken off
+> the register was comparing thirteen months to twelve.*
+
+The correction re-periodised them to 2026, where they belong. **Nothing
+recomputed the restatements and nothing anywhere said they had been
+overtaken**, so three claims went on standing over a population that had
+moved out from under them. It is the register-loaded-from-one-document shape
+reaching the last place it had not been noticed — and this time the sample
+was not merely incomplete, it was *a different year*.
+
+**The invoices stay.** They are three real invoices YBI issued, on file as
+`YBI_Invoices_1.pdf`, and they are the face `invoice_document.py` renders and
+the subject of `v_award_claim_check`'s `TERM` failure — *the whole of invoice
+10018's $37,593.90 bills April 2026 service against an award that ended 4
+January 2026*. Withdrawing them would assert YBI withdrew invoices the
+sponsor holds, which is false, and `invoice_no_delete` says so anyway. What
+had to go is the three claims measured on them, and they go the way this
+system expresses change: **superseded by recomputing, never edited.**
+
+Two halves, and the second is the general one.
+
+- **The fence.** `restatement_line_is_in_period` refuses a line naming an
+  invoice outside the restatement's own period, naming both periods in the
+  refusal. That is what "restate 2025" *means*, so it belongs in the schema
+  rather than in the one handler that happens to select correctly today —
+  and the handler that produced these three was not wrong when it ran.
+- **The claim says what it saw.** `project_claim` already solved this: *an
+  approval has to be of something specific, or the record moves underneath it
+  and the approval silently comes to cover something else.* A restatement
+  records `invoices` and `billed_total`; `v_restatement` now puts the
+  register's own answer beside them as `register_invoices`, `register_billed`
+  and `still_agrees`. False there is not a defect — it is the thing a
+  controller needs to know before sending anything to a sponsor.
+
+**And the walk stops calling an overtaken claim done.** Step 10 read `DONE`
+on `standing > 0`, so the landing page the year is closed from said the
+restatement was finished over three claims measured on the wrong year. `086`
+in the one step whose output goes to a sponsor: *the step whose whole job is
+to say what is unfinished must not assert that it is finished.* It reads
+`OPEN` now and says what to do — **recompute them** — and a `SUPERSEDED` row
+never holds it open, because a superseded restatement is history and is
+*supposed* to disagree. A sweep that cries wolf teaches the reader to dismiss
+the next real one.
+
+The notice reaches all three places a figure can leave from: the row and the
+panel on `/restate`, and the top of `WHAT IS NOT FINISHED` on both papers —
+above the walk's own steps, because a reader who has to reach the seventh
+bullet to learn the figures measure a population that has moved has already
+formed a view. Nothing is blocked, per `082`.
+
+`tests/test_a_restatement_measures_its_own_period.py` drives all three
+against a database inside a rolled-back transaction, and every one was
+watched failing: the fence dropped, and `still_agrees` pinned to `true`,
+which took the walk back to `DONE` in the same run.
+
+One thing the scaffold taught, which is this file's own rule in a test:
+`SELECT rate_id FROM rate LIMIT 1` picks whichever row is first and
+`restatement_requires_sealed_rate` refuses a superseded one — so the fixture
+failed against working code until it read *a live 2025 rate* rather than
+any rate. **Read the record, never recall it**, applied to the fixture.
+
+**The reference record still carries the three**, and that is correct: only
+Tom can take a position, and recomputing is his act on `/restate`. The walk
+tells him so in those words, and until he does, the two screens and both
+papers say the claims are not ready to send. `docs/MONDAY_RUNBOOK.md` §6 is
+regenerated against a record where they have been recomputed and now prints
+the year.
 
 ## Staged for a human, and nothing else
 

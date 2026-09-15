@@ -98,13 +98,24 @@ The position is the **rebuild** against the cost record: labour taken down to wa
 
 | award | billed | position | as-billed would say | recovered |
 | --- | ---: | ---: | ---: | ---: |
-| DRIVE-AM | 37,593.90 | **+16,537.56** | 0.00 | — |
-| LTM | 18,993.52 | **+4,035.55** | -3,000.00 | — |
-| HYBRID-II | 1,374.00 | **+604.42** | 0.00 | — |
+| DRIVE-AM | 579,240.87 | **-58,786.31** | 254,808.06 | 60.25% |
+| LTM | 368,222.24 | **+107,683.52** | 98,049.40 | 11.41% |
+| HYBRID-II | 187,416.05 | **-55,250.32** | 82,444.32 | 104.18% |
 
 The last column is the indirect rate the billing **actually** recovered, against a **10.00%** de minimis election. That election is written down in two places and they are different kinds of evidence: Last Tactical Mile's **executed** Schedule B budgets 10.0000% of total direct, and Hybrid Phase 2's **cost proposal** computes *ICR 10% maximum 45,457.00* into its labour line.
 
 **Nothing goes to a sponsor off this table today.** Everything is PROPOSED until a sponsor says otherwise in writing, and an acceptance must name the §4.4 modification that authorised the change of basis.
+
+---
+
+## 7 · The paper, at any time — Tom or the auditor
+
+Nothing downstream is blocked by a missing signature or a missing document. A workbook, a reissued invoice, the amendment memorandum and the acceptance form can all be produced today; what changes is what the paper *says* about itself.
+
+- **On a screen.** `/reports` and `/review` for the workbooks; `/restate`, open a proposal, **The papers that go with it** for the memorandum and the acceptance form. Every one of those screens carries the certification band at the top, in whichever direction is true.
+- **The whole set at once.** `YBI_SEED_PASSWORD=... python3 scripts/publish.py` writes every workbook, every reissued invoice and both papers per award into `docs/publications/`, with a manifest and a README rendered from it. It fetches each document from the route the screen calls, so a figure in the set and the same figure on the screen cannot disagree, and it **writes nothing to the cost record**.
+
+The acceptance form prints two readings and they are not meant to add up: *as billed, line by line* is each invoice's indirect against what the rate supports on its own base, and **THE POSITION** is the objective rebuilt against the cost record. The position is the only figure the form asks a sponsor to accept.
 
 ---
 

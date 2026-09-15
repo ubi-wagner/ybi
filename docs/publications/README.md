@@ -1,6 +1,6 @@
 # YBI 2025 publication set
 
-Produced 2026-09-15T05:28:55+00:00 by `scripts/publish.py`. Every figure is
+Produced 2026-09-15T13:02:26+00:00 by `scripts/publish.py`. Every figure is
 read from the row it was recorded in; nothing in this set was
 written to the cost record.
 
@@ -34,11 +34,11 @@ generous one.
 
 | file | what it is | bytes | sha256 |
 | --- | --- | ---: | --- |
-| `rate-buildup.xlsx` | the rate, the pool under it and the seal it hangs off | 5,943 | `2c75aaa8b726` |
-| `form-990-part-ix.xlsx` | Form 990 Part IX, functional allocation as classified | 7,676 | `f98391bec3c1` |
-| `auditors-report.xlsx` | what the engagement asserts and what proves each assertion | 11,669 | `63490dc15742` |
-| `audit-package.xlsx` | the whole cost record, every sheet | 179,548 | `63f65358c2a8` |
-| `timesheet-report.xlsx` | the distribution behind the fringe base, and who has certified | 18,050 | `725a7f1ee487` |
+| `rate-buildup.xlsx` | the rate, the pool under it and the seal it hangs off | 5,943 | `9b14ac88e19e` |
+| `form-990-part-ix.xlsx` | Form 990 Part IX, functional allocation as classified | 7,676 | `bfa6e187cab1` |
+| `auditors-report.xlsx` | what the engagement asserts and what proves each assertion | 11,669 | `9ef82f069373` |
+| `audit-package.xlsx` | the whole cost record, every sheet | 182,877 | `52e8d0521137` |
+| `timesheet-report.xlsx` | the distribution behind the fringe base, and who has certified | 18,049 | `c7b39f8f6c3a` |
 | `invoice-9078.pdf` | invoice 9078 on HYBRID-II, rendered from the register | 3,561 | `99c7df5885a8` |
 | `invoice-9091.pdf` | invoice 9091 on LTM, rendered from the register | 3,497 | `4148dc5d4da6` |
 | `invoice-9092.pdf` | invoice 9092 on DRIVE-AM, rendered from the register | 3,621 | `8f602ceafa6f` |
@@ -79,9 +79,15 @@ generous one.
 | `amendment-memo-AM-LTM-PROJ88.pdf` | why AM-LTM-PROJ88's invoices are being reissued, and the clause it is made under | 4,255 | `f360d46ad075` |
 | `acceptance-AM-LTM-PROJ88.pdf` | what NCDMM signs for AM-LTM-PROJ88 — both directions, never netted | 5,057 | `5f2cf3d4b816` |
 
-Rendering is deterministic, so a digest that moves means a figure
-moved — which is how a set produced before the square footage
-arrived is told apart from one produced after.
+The PDFs are rendered deterministically, so a digest that moves
+means a figure moved — which is how a set produced before the
+square footage arrived is told apart from one produced after.
+
+The 5 workbook(s) are the exception and their
+digests are not comparable between runs: the xlsx writer
+stamps the wall clock into the file and into every zip entry,
+so they move whatever the figures say. Compare their first
+sheet, which carries the same caveats as everything else.
 
 ## Notes from the run
 

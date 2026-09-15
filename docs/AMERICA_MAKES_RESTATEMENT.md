@@ -82,6 +82,17 @@ of an indirect line is therefore a statement, not an omission.
 
 ## 2. The three invoices restated at 43.99%
 
+> **These three are April 2026, and they are not the 2025 restatement.**
+> Migration `088`. The arithmetic below is right about the three invoices in
+> `YBI_Invoices_1.pdf` and was the whole register when it was written. The
+> 2025 register now holds **61 invoices**, and those three objectives carry
+> 12, 12 and 9 of them; the invoices themselves are period 2026, where they
+> belong. The rows that recorded this as `PROPOSED` were computed while the
+> three were filed under 2025, and the correction that re-periodised them
+> left the claims standing — so they are superseded rather than edited, and
+> §8 below carries the year. `v_restatement.still_agrees` is what says so now
+> instead of nobody saying anything.
+
 Engine-computed, per invoice, recorded as `PROPOSED`:
 
 | invoice | base as billed | indirect billed | indirect supported | **variance** |
