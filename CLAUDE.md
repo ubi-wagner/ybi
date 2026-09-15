@@ -2120,6 +2120,152 @@ Still to wire: the workbook first sheets (`package.py`, `timesheet_report.py`)
 carry their own caveats and not yet this one, and the Restate and Reports
 screens show the state but do not yet repeat the band.
 
+## A working position is not a judgment
+
+Migration `083`, `app/routers/positions.py`, `/classify/review`. **All 757 live
+2025 judgments read `decided_by = 'Tom Metzinger'` and were recorded across six
+seconds**, because `scripts/classification_log.py --apply` writes them through
+the real API signed in as the controller. That is the right way for a script to
+write — every judgment carries a person's name and an audit row, and there is
+no path in it that writes behind the API's back. What it cannot do is tell the
+truth about *what kind of act* it was. An auditor reading the timestamps finds
+seven hundred judgments a minute and stops reading anything else in the file.
+
+**The fix is not to rewrite `decided_by`.** That column says who the API call
+was made as, the audit rows say the same, and editing it would be inventing a
+history — the thing `079` refused to do to 891 rows pointing at a retired
+account. What was missing is a *value for the kind of act*, which is exactly
+what `038` found in `ingest_channel` (*no value meaning: this system made it*)
+and `070` in `basis` (*no value meaning: the organisation reconstructed it and
+the person affirmed it*). Third instance, same shape. `decision.origin` is
+`CONTROLLER` or `MACHINE_PROPOSAL`, defaults to CONTROLLER so **nothing changes
+by default**, and is **write-once** — a judgment cannot be disowned after the
+fact without superseding it.
+
+The backfill reads the record rather than asserting: the log stamps
+`scripts/classification_log.py` into every rationale it writes, so which rows
+it made is on the rows. On a database it has never run against, it marks
+nothing.
+
+### Adopting moves no figure, and that is the whole guarantee
+
+A working position is adopted by the person whose judgment it has to be, which
+is `POST /api/timesheet/adopt` one level up — the reconstruction shown to the
+person whose work it was, read, corrected and signed. And it has that route's
+load-bearing property: **the rate is the same before and after**, so it never
+depends on who got round to reviewing.
+
+Two facts underneath that, worth keeping apart because the first draft of the
+migration header ran them together: **confirming never reaches the seal trigger
+at all** — it writes `position_confirmation`, a different table, and touches no
+judgment — while **`origin` does reach it**, being a column of `decision`, and
+the backfill is an UPDATE against rows in a sealed set, permitted only because
+`decision_set_is_frozen` compares the six columns the hash is taken over. Put
+`origin` in that list and the migration is refused by the seal, which is how
+that sentence was checked rather than reasoned about.
+
+So Tom reviews 757 positions inside the sealed set, at his own pace, and the
+34.82% / 43.99% on file never moves. Reclassifying still costs an unseal, which
+is right: **the auditor's ask does not get to move a sealed judgment quietly.**
+
+### Two kinds of note, and why it is not a toggle
+
+The visibility setting asked for is the one place this design could have gone
+wrong. A per-note show/hide switch is a switch somebody can flip *the day after*
+an auditor asks for the file — and the flip, not the note, is the finding. So
+the kind is the visibility, and it is decided when the note is written:
+
+- a **RECORD** note is part of the cost record, read by everybody entitled to
+  read the record, and it travels in the audit package;
+- a **WORKING** note is deliberative and does not.
+
+**A working note is undisclosed and never concealed.** The auditor is not shown
+the body and *is* shown that it exists — `v_classification_standing` carries the
+count of each kind to every reader, and `GET /positions/notes` returns the
+withheld note with everything intact except its text. Dropping the row would
+make three notes look like one, which is the other thing entirely. Re-designating
+one is still possible — the setting the request asked for — but it is an act:
+the reason is required, the row keeps who changed it and when, and `audit_log`
+holds every change rather than only the last.
+
+A note hangs off the **group key**, not the decision id, so it survives the
+supersession it is usually about. It is never edited and never deleted; a
+second note is a second note, and the record shows the order they were written
+in.
+
+### A recommendation carries the proposal, and is never a decision
+
+`062` built *a helper recommends* as a `todo`, and refused to express a
+suggestion as a `PROPOSED` decision row because **`PROPOSED` already means YBI
+has put this to a sponsor and they have not answered**. That was right and it
+left a gap: a `todo` carries the reason and cannot carry the *proposed
+classification*, which is the thing the controller actually has to look at. So
+`reclass_recommendation` holds all four dimensions — pool, 990 function,
+federal treatment, objective — the person, the note, and the disposition.
+
+- **Accepting goes through `classify.decide`.** That route holds the seal
+  check, the stale-screen check, the supersession, the line-level fan-out and
+  the proof that the lines landed, and a second path to the cost record is a
+  second place all of that can be missing. **There is one door** — the rule
+  `test_no_screen_reaches_past_the_request_layer` holds for the SPA and
+  `test_storage_paths` for the volume, pointed at an auditor's ask.
+- **It carries what it was written against.** `saw_decision` is
+  `project_claim.saw_*`: a recommendation overtaken by a later judgment says so
+  on the controller's list rather than being applied to something it was never
+  about.
+- **It refuses what the queue would refuse.** A proposed DIRECT with no
+  objective is a 422 here, because the crosswalk already shipped the opposite —
+  a screen offering what the server will not take, on 24 accounts.
+- **Nobody disposes of their own**, and declining says why. Accepting does not
+  need to: it produces a judgment that carries its own rationale, and the
+  recommendation then names the judgment it produced.
+
+**Recommending and noting take `require_reader`**, which departs from `062` on
+purpose. That migration offered its Recommend button only to portfolio holders
+because a worklist item is work to *do* and the auditor does none of it. This is
+the opposite case: **the auditor requiring a new classification out of a sealed
+account is the whole exercise**, and a system where the auditor cannot record
+the ask has put it back in an email. A controller may recommend too — the first
+draft refused it, and Heidi and Stephanie both hold CONTROLLER, so that rule
+would have turned *flag this for Tom* into *overrule Tom*.
+
+### What it changed elsewhere
+
+- **The walk's step 3 asks both halves of its own question.** It read coverage,
+  which answers whether every dollar carries a position; on a restaged year
+  every dollar does and none of it is anybody's judgment, so it would have read
+  DONE over 757 rows nobody has looked at. It is OPEN with the count and the
+  sentence, and `082`'s certificate picks the caveat up with no change at all,
+  because `outstanding` is the walk's unfinished steps.
+- **Two worklist kinds**, `POSITION_UNCONFIRMED` and `RECLASS_RECOMMENDED`,
+  routed in all three arms of `v_worklist_owned` and written down once in
+  `web/src/worklistKinds.js`.
+- **`resulting_decision` had no writer** and `tests/test_no_register_is_dead.py`
+  caught it in the same run it was written — the thirteenth instance of the
+  shape, found by the sweep rather than by somebody reading, which is what that
+  test is for.
+
+`scripts/drive_restage.py` walks it as Tom, Heidi and the auditor: **28 checks,
+0 findings**, re-runnable, and it clears its own residue out loud rather than
+tolerating it. Four assertions were watched failing against deliberate breaks —
+the working-note gate opened, the walk's second half deleted, the one-open-
+recommendation index dropped, and `origin` put inside the seal.
+
+Two things from building the screen:
+
+- **A sentence in a column pushes the figures off the edge.** `tbody td` is
+  `nowrap`, which is right for a figure and wrong for a rationale, so the
+  Accept and Decline buttons were clipped outside the card. The reason is a
+  **row of its own** now — `v_gl_accounted`'s lesson: a row cannot overlap a
+  row.
+- **A recommendation moves four dimensions and the screen printed one.** A real
+  proposal that moved only the 990 function rendered as `OVERHEAD → OVERHEAD`,
+  which is the screen showing a column where the reader needs a change.
+  Everything that differs is named, and nothing that does not is shown.
+- **The panel reads the position rather than being handed it.** Both lists that
+  open it carry different fields, and passing a partial object through printed
+  a heading with nothing under it.
+
 ## The audit is a walk, not a to-do list
 
 Migration `081`, `v_audit_walk`, `GET /api/dashboard/walk`, `Walk.jsx`. The

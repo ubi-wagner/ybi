@@ -14,6 +14,7 @@ import Choose from "./pages/Choose.jsx";
 import Guidebook from "./pages/Guidebook.jsx";
 import Help from "./pages/Help.jsx";
 import ClassifyQueue from "./pages/ClassifyQueue.jsx";
+import PositionReview from "./components/PositionReview.jsx";
 import Books from "./pages/Books.jsx";
 import Imports from "./pages/Imports.jsx";
 import Reconcile from "./pages/Reconcile.jsx";
@@ -371,6 +372,7 @@ export default function App() {
               bookmark and the worklist's own `goes_to` all still land — and
               these are the addresses the Classify screen sends people to. */}
           <Route path="/classify" element={<ClassifyQueue actor={actor} />} />
+          <Route path="/classify/review" element={<PositionReview actor={actor} />} />
           <Route path="/classify/space" element={<Facilities actor={actor} />} />
           <Route path="/classify/assets" element={<Facilities actor={actor} tab="equipment" />} />
           <Route path="/books" element={<Books actor={actor} />} />

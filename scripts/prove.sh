@@ -131,6 +131,15 @@ step "The auditor rejects a classification inside a sealed, certified set"
 # actually triggers, and until this existed nobody had walked it end to end.
 run "drive_recertify" $PY scripts/drive_recertify.py --base "$BASE"
 
+step "A restaged year: a note, a recommendation, an adoption"
+# After drive_recertify, because it needs a sealed set to be refused by — its
+# sharpest check is that accepting an auditor's recommendation under a seal is
+# refused by the seal, in the seal's own words, since there is no second path
+# to the cost record for the ask to travel down. It runs against whatever
+# working positions the record carries and reports COULD NOT RUN where there
+# are none, rather than manufacturing some to measure.
+run "drive_restage" $PY scripts/drive_restage.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 

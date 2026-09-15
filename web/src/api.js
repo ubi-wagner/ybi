@@ -523,6 +523,41 @@ export const api = {
     req("/reconcile/items", { method: "POST", body: JSON.stringify(body) }),
   retractReconcilingItem: (id, reason) =>
     req(`/reconcile/items/${id}/retract`, { method: "POST", body: JSON.stringify({ reason }) }),
+
+  /* Working positions: the 757 the classification log proposed, what people
+     have written against them, and what they have asked for instead. */
+  positions: ({ period = "2025", state = "all", limit = 80, offset = 0,
+                decision_id = "" } = {}) =>
+    req(`/positions?period=${period}&state=${state}&limit=${limit}` +
+        `&offset=${offset}` +
+        (decision_id ? `&decision_id=${encodeURIComponent(decision_id)}` : "")),
+  positionReview: (period = "2025") => req(`/positions/review?period=${period}`),
+  confirmPositions: (decision_ids, note = "", period = "2025") =>
+    req(`/positions/confirm?period=${period}`,
+        { method: "POST", body: JSON.stringify({ decision_ids, note }) }),
+  withdrawConfirmation: (decision_id, reason, period = "2025") =>
+    req(`/positions/confirm/withdraw?period=${period}`,
+        { method: "POST", body: JSON.stringify({ decision_id, reason }) }),
+  positionNotes: (decision_id, period = "2025") =>
+    req(`/positions/notes?period=${period}&decision_id=${encodeURIComponent(decision_id)}`),
+  writeNote: (body, period = "2025") =>
+    req(`/positions/notes?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  redesignateNote: (note_id, kind, reason, period = "2025") =>
+    req(`/positions/notes/${note_id}?period=${period}`,
+        { method: "PATCH", body: JSON.stringify({ kind, reason }) }),
+  recommendReclass: (body, period = "2025") =>
+    req(`/positions/recommend?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  acceptRecommendation: (id, body = {}, period = "2025") =>
+    req(`/positions/recommendations/${id}/accept?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  declineRecommendation: (id, reason, period = "2025") =>
+    req(`/positions/recommendations/${id}/decline?period=${period}`,
+        { method: "POST", body: JSON.stringify({ reason }) }),
+  withdrawRecommendation: (id, reason = "", period = "2025") =>
+    req(`/positions/recommendations/${id}/withdraw?period=${period}`,
+        { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
 /* Money, to the cent, in one place.
