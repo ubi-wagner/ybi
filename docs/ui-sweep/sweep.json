@@ -396,8 +396,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -408,8 +408,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/awards",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -420,8 +420,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/books",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -432,8 +432,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/certify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -444,8 +444,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/chart",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -456,8 +456,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/classify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -468,8 +468,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/classify/assets",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -480,8 +480,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/classify/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -492,8 +492,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/classify/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -504,8 +504,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/contracts",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -516,8 +516,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/documents",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -528,8 +528,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/evidence",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -540,8 +540,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/guidebook",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -552,8 +552,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/help",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -564,8 +564,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/imports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -576,8 +576,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/inventory",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -588,8 +588,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/lanes",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -600,8 +600,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/library",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -612,8 +612,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/people",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -624,8 +624,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/projects",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -636,8 +636,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/rates",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -648,8 +648,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/reconcile",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -660,8 +660,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/reports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -672,8 +672,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/requests",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -684,8 +684,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/restate",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -696,8 +696,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -708,8 +708,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -720,8 +720,8 @@
     "as": "eric.c.wagner@gmail.com",
     "path": "/timesheet",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 582,
+    "calls": 2,
+    "characters": 1098,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -732,8 +732,8 @@
     "as": "bewing@ybi.org",
     "path": "/",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -744,8 +744,8 @@
     "as": "bewing@ybi.org",
     "path": "/awards",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -756,8 +756,8 @@
     "as": "bewing@ybi.org",
     "path": "/books",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -768,8 +768,8 @@
     "as": "bewing@ybi.org",
     "path": "/certify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -780,8 +780,8 @@
     "as": "bewing@ybi.org",
     "path": "/chart",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -792,8 +792,8 @@
     "as": "bewing@ybi.org",
     "path": "/classify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -804,8 +804,8 @@
     "as": "bewing@ybi.org",
     "path": "/classify/assets",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -816,8 +816,8 @@
     "as": "bewing@ybi.org",
     "path": "/classify/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -828,8 +828,8 @@
     "as": "bewing@ybi.org",
     "path": "/classify/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -840,8 +840,8 @@
     "as": "bewing@ybi.org",
     "path": "/contracts",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -852,8 +852,8 @@
     "as": "bewing@ybi.org",
     "path": "/documents",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -864,8 +864,8 @@
     "as": "bewing@ybi.org",
     "path": "/evidence",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -876,8 +876,8 @@
     "as": "bewing@ybi.org",
     "path": "/guidebook",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -888,8 +888,8 @@
     "as": "bewing@ybi.org",
     "path": "/help",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -900,8 +900,8 @@
     "as": "bewing@ybi.org",
     "path": "/imports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -912,8 +912,8 @@
     "as": "bewing@ybi.org",
     "path": "/inventory",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -924,8 +924,8 @@
     "as": "bewing@ybi.org",
     "path": "/lanes",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -936,8 +936,8 @@
     "as": "bewing@ybi.org",
     "path": "/library",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -948,8 +948,8 @@
     "as": "bewing@ybi.org",
     "path": "/people",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -960,8 +960,8 @@
     "as": "bewing@ybi.org",
     "path": "/projects",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -972,8 +972,8 @@
     "as": "bewing@ybi.org",
     "path": "/rates",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -984,8 +984,8 @@
     "as": "bewing@ybi.org",
     "path": "/reconcile",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -996,8 +996,8 @@
     "as": "bewing@ybi.org",
     "path": "/reports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1008,8 +1008,8 @@
     "as": "bewing@ybi.org",
     "path": "/requests",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1020,8 +1020,8 @@
     "as": "bewing@ybi.org",
     "path": "/restate",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1032,8 +1032,8 @@
     "as": "bewing@ybi.org",
     "path": "/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1044,8 +1044,8 @@
     "as": "bewing@ybi.org",
     "path": "/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1056,8 +1056,8 @@
     "as": "bewing@ybi.org",
     "path": "/timesheet",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 581,
+    "calls": 2,
+    "characters": 1097,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1068,400 +1068,344 @@
     "as": "hruby@ybi.org",
     "path": "/",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/awards",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/books",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/certify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/chart",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/classify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/classify/assets",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/classify/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/classify/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/contracts",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/documents",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/evidence",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/guidebook",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/help",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/imports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/inventory",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/lanes",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/library",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/people",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/projects",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/rates",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/reconcile",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/reports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/requests",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/restate",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "hruby@ybi.org",
     "path": "/timesheet",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1088,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller+facilities+inventory+office+project \u00b7 on the payroll",
     "as": "sgaffney@ybi.org",
     "path": "/",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1472,8 +1416,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/awards",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1484,8 +1428,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/books",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1496,8 +1440,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/certify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1508,8 +1452,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/chart",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1520,8 +1464,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/classify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1532,8 +1476,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/classify/assets",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1544,8 +1488,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/classify/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1556,8 +1500,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/classify/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1568,8 +1512,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/contracts",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1580,8 +1524,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/documents",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1592,8 +1536,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/evidence",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1604,8 +1548,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/guidebook",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1616,8 +1560,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/help",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1628,8 +1572,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/imports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1640,8 +1584,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/inventory",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1652,8 +1596,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/lanes",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1664,8 +1608,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/library",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1676,8 +1620,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/people",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1688,8 +1632,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/projects",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1700,8 +1644,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/rates",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1712,8 +1656,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/reconcile",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1724,8 +1668,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/reports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1736,8 +1680,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/requests",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1748,8 +1692,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/restate",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1760,8 +1704,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1772,8 +1716,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1784,8 +1728,8 @@
     "as": "sgaffney@ybi.org",
     "path": "/timesheet",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 588,
+    "calls": 2,
+    "characters": 1099,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
@@ -1796,783 +1740,671 @@
     "as": "tmetzinger@ybi.org",
     "path": "/",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/awards",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/books",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/certify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/chart",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/classify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/classify/assets",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/classify/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/classify/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/contracts",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/documents",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/evidence",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/guidebook",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/help",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/imports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/inventory",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/lanes",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/library",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/people",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/projects",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/rates",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/reconcile",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/reports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/requests",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/restate",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "controller \u00b7 controller",
     "as": "tmetzinger@ybi.org",
     "path": "/timesheet",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1100,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/awards",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/books",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/certify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/chart",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/classify",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/classify/assets",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/classify/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/classify/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/contracts",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/documents",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/evidence",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/guidebook",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/help",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/imports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/inventory",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/lanes",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/library",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/people",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/projects",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/rates",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/reconcile",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/reports",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/requests",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/restate",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/review",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/space",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   },
   {
     "who": "auditor",
     "as": "auditor@ybi.org",
     "path": "/timesheet",
     "offered_in_nav": false,
-    "calls": 1,
-    "characters": 202,
+    "calls": 2,
+    "characters": 1101,
     "not_found_or_fault": [],
     "refused": 0,
     "refused_paths": [],
-    "console_errors": [
-      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
-    ]
+    "console_errors": []
   }
 ]

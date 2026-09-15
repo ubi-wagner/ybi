@@ -220,3 +220,42 @@ def test_equipment_stays_out_of_the_base():
         line(C.LABOR, "1000.00"), line(C.EQUIPMENT, "50000.00")))
     assert inv.mtdc_as_billed == D("1000.00")
     assert assess(inv, indirect_rate=DE_MINIMIS).indirect_supported == D("100.00")
+
+
+# ------------------------------------------------------ how a finding reads
+
+
+def test_a_finding_prints_its_figures_the_way_the_paper_does():
+    """A finding sentence lands on the acceptance form NCDMM signs, beside a
+    column of figures the renderer formats. So `4035.55` in the sentence and
+    `4,035.55` in the column beside it is the eight-spellings-of-one-formatter
+    defect on paper, in the one place a payables clerk is checking a figure
+    against a figure. Every branch of `findings` is swept, because a rule
+    fixed in one branch is one somebody gets wrong in the next.
+
+    It asserts the property — a four-figure amount carries its separator —
+    rather than the literal sentence, which would pin the prose and fail on
+    an edit that is not this defect."""
+    import re
+
+    def inv(name, *pairs):
+        return Invoice(invoice_id=name, objective_id="X",
+                       lines=tuple(InvoiceLine.of(c, a) for c, a in pairs))
+
+    cases = [
+        # no MTDC base at all -> NOT ASSESSABLE, quoting the billed total
+        inv("T1", (C.OTHER, "12345.67")),
+        # a base and no indirect line -> the forgone-recovery sentence
+        inv("T2", (C.LABOR, "50000.00")),
+        # a base and an indirect line under what is supported
+        inv("T3", (C.LABOR, "50000.00"), (C.INDIRECT, "1000.00")),
+        # ... and over it
+        inv("T4", (C.LABOR, "50000.00"), (C.INDIRECT, "9000.00")),
+    ]
+    seen = set()
+    for one in cases:
+        for finding in assess(one, indirect_rate=Decimal("0.10")).findings:
+            seen.add(" ".join(finding.split()[:3]))
+            bare = re.findall(r"(?<![\d,.])\d{4,}\.\d{2}", finding)
+            assert not bare, f"{finding!r} prints {bare} without a separator"
+    assert len(seen) == 4, f"only {len(seen)} branch(es) reached: {seen}"

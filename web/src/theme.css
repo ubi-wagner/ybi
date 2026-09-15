@@ -1117,3 +1117,16 @@ button.primary:hover:not(:disabled) { background: var(--accent-deep);
    press yet. A disabled control still has to say what it is. */
 button.primary:disabled { background: var(--surface-sunk);
                           border-color: var(--rule); color: var(--muted); }
+
+/* The certification band — one line, on every screen that produces output.
+   Warm rather than traffic-light, like every other annotation here. */
+.cert-band {
+  display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: 6px; margin: 0 0 14px;
+  font-size: 12.5px; line-height: 1.45;
+}
+.cert-band strong { font-size: 11px; letter-spacing: .06em; white-space: nowrap; }
+.cert-band span { color: inherit; opacity: .85; }
+.cert-band-ok      { background: var(--accent-wash); color: var(--accent-deep); }
+.cert-band-no      { background: var(--fail-wash);   color: var(--fail); }
+.cert-band-unknown { background: var(--warn-wash);   color: var(--warn); }

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api, explain, money } from "../api.js";
+import CertificationBand from "../components/CertificationBand.jsx";
 import {
   Card, Drawer, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
@@ -81,6 +82,7 @@ export default function Restate({ actor }) {
         signed their name to.
       </PageHead>
 
+      <CertificationBand />
       {/* "Not yet, because" rather than an empty list. The reasons are the
           work — the same answer the candidates route gives. */}
       {blocked.length > 0 ? (
@@ -304,6 +306,33 @@ function Detail({ d, canWrite, toast, onChange }) {
             {l.finding && <div className="rowsub wrap">{l.finding}</div>}
           </div>
         ))}
+      </Card>
+
+      {/* The two papers the restatement cannot travel without. Offered to
+          anybody who may read the record, not only the controller: rendering
+          them asserts nothing — the position was taken when the restatement
+          was recorded, and both say PROPOSED on their first line. The
+          auditor reads everything and holds no portfolio, and this is the
+          paper they will ask for first. */}
+      <Card variant="quiet" title="The papers that go with it"
+            aside="On the face NCDMM's payables recognises"
+            style={{ marginTop: 14 }}>
+        <div className="rowsub wrap" style={{ marginBottom: 10 }}>
+          A payables clerk holding a reissued invoice and nothing else has two
+          questions it cannot answer: why this differs from the one they paid,
+          and how to say yes. The memorandum quotes the clause from the
+          record; the form keeps both directions apart and is what they sign.
+        </div>
+        <div className="btn-row">
+          <a className="btn" target="_blank" rel="noreferrer"
+             href={api.amendmentMemoUrl(r.award_id, r.period)}>
+            Amendment memorandum (.pdf)
+          </a>
+          <a className="btn" target="_blank" rel="noreferrer"
+             href={api.acceptanceFormUrl(r.award_id, r.period)}>
+            Acceptance form (.pdf)
+          </a>
+        </div>
       </Card>
 
       <Card variant="quiet" title="Where it stands" style={{ marginTop: 14 }}>

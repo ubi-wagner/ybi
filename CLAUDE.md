@@ -3627,6 +3627,177 @@ register where none of them do. That is `086` one document along, written by
 the person who had just written `086` down: a count is not a state, and a
 sentence that pairs the two has to be read once out loud.
 
+## Everything runs uncertified, and every page says so
+
+`app/domain/audit_package.py::certification_lines`, `CertificationBand.jsx`,
+`scripts/publish.py`, `docs/publications/`. **The whole publication set —
+four workbooks, thirty-six reissued invoices, three amendment memoranda and
+three acceptance forms — produced against a record with no signature on the
+rate, four walk steps open and no square footage anywhere.**
+
+`082` settled the principle: *nothing downstream is blocked, and that is the
+design rather than a shortcut* — an invoice can be regenerated and a workbook
+produced at any time, because testing against real figures is ordinary work
+and a machine that refused it is one people route around. What it left half
+done was its own last line: *the workbook first sheets carry their own
+caveats and not yet this one, and the Restate and Reports screens show the
+state but do not yet repeat the band.*
+
+**One sentence-maker, and it is pure.** `certification_lines(cert)` takes the
+row `v_rate_certified` answers with and returns the band's lines. Five
+workbook builders open with it, both papers print it, and the SPA renders the
+same three states. **The third state is the one worth having:** `None` —
+*nothing was read about the signature when this was produced* — is not the
+same fact as *nobody has signed*, and a document that printed them alike
+would let a failed read pass as a finding.
+
+`tests/test_the_band_travels.py` derives the population from the AST rather
+than keeping a list: a `build_*` that calls `_caveat` and does not call
+`certification_lines` fails there. And it asserts **both directions on
+behaviour**, not on source — the uncertified workbooks were read back, the
+rate was certified on a clone, and the same two files flipped to
+*CERTIFIED — Tom Metzinger, 15 Sep 2026* carrying the four open steps. A band
+silent in either direction leaves the reader to assume, and the assumption
+made about a figure on a letterhead is the generous one.
+
+One collision worth knowing: `build_timesheet_report` already had a
+`certification` parameter and it means the **200.430(i) signatures** — whose
+effort was attested. The rate's is `rate_certification`. Two different facts
+under one name in a function about labour evidence is the defect this file
+keeps finding, one identifier wide.
+
+### The two papers a restated invoice cannot travel without
+
+`app/domain/amendment_document.py`, `GET /api/restate/award/{id}/memo` and
+`/acceptance`, and a card on `/restate`. A payables clerk holding a reissued
+invoice and nothing else has two questions the face cannot answer: **why is
+this different from the one I paid**, and **how do I say yes**. The
+memorandum quotes the §4.4 clause *from `award_term`* — `056` found three
+provisions on two awards cited to clauses those agreements do not contain, so
+the citation travels with the words — and the form is what NCDMM signs, with
+a place to name the modification the change is made under, which
+`acceptance_names_its_modification` will refuse an acceptance without.
+
+Where the record carries no change-of-basis clause — Drive AM — the memo says
+so and asks NCDMM to name the instrument. That is a fact about the agreement,
+not an omission to paper over.
+
+### The form put a claim in front of the sponsor running the wrong way
+
+The worst defect available to these papers, and it shipped in the first
+draft. **The acceptance form summed the per-invoice lines and printed the sum
+as the ask.**
+
+A `restatement_line` is the **as-billed reading** of one invoice: the
+indirect on its face against what the rate supports on that invoice's own
+base. The **position** is `restatement.under_recovered` / `over_collected`,
+which the engine rebuilds for the whole objective against the cost record —
+and the router's own comment says exactly this, that *the per-invoice figures
+are detail and the rebuild is the position, and the two are deliberately both
+on the row.* I read that comment and summed the detail anyway.
+
+On these awards they run **opposite ways**, because the indirect was
+recovered inside a loaded labour rate and not one 2025 invoice carries an
+indirect line at all:
+
+| | lines add to | the position is |
+| --- | ---: | ---: |
+| Drive AM | 254,808.06 **to claim** | 58,786.31 **to give back** |
+| Hybrid II | 82,444.29 to claim | 55,250.32 to give back |
+| LTM | 98,049.41 to claim | 107,683.52 to claim |
+
+$313,000 apart on Drive AM and pointing the other way. It is
+`WP_AM_2025_PL_RESTATED.md`'s finding — *the recovery is inside the labour
+rate* — reappearing as an arithmetic mistake in the one document that leaves
+the building.
+
+**The fix is the invoice renderer's own rule, and it was one file away:** the
+header total is *passed in* rather than derived from the lines, *so an invoice
+that does not foot can print both figures and say so instead of agreeing with
+itself by construction.* `AmendmentPapers.position_under` / `position_over`
+are the recorded position; `line_claim` / `line_return` are the sum; the form
+prints **both rows** and, where they differ, the sentence saying why they are
+not meant to add up. `test_the_ask_is_the_recorded_position_and_never_the_sum
+_of_the_lines` was watched failing against the summed version restored.
+
+And `AmendmentPapers` deliberately does **not** refuse a position that runs
+both ways, where `Movement` does. One invoice runs one way, so two directions
+there is a netting error; these papers cover an *award*, which can carry more
+than one objective, and one objective under-recovering while another
+over-collects is exactly the case the two columns exist for. Refusing it
+would force the caller to net them to get a document out.
+
+### Three smaller ones, each the same shape as something already here
+
+- **A count printed where a number belongs.** `v_restatement.invoices` is an
+  integer count, and the first form printed it under a heading reading
+  INVOICE — telling a payables clerk to match on invoice "1". The second
+  draft then listed all twelve invoices on the objective against a
+  restatement covering one. The unit is `restatement_line`, where one row is
+  one invoice, and the number, the date and the engine's own finding sentence
+  are all on it.
+- **A derived sentence contradicting the figures beside it.**
+  `as_billed_position` is a Decimal; a first fix derived a sentence from it
+  and printed *"No indirect line was billed"* next to a claim of 4,035.55
+  against 7,035.55 supported — LTM's flat $3,000 a month. The engine already
+  writes the sentence, in `restatement_line.finding`. **Do not compose a
+  second one.**
+- **Those sentences printed bare Decimals** — `4035.55` in the prose beside
+  `4,035.55` in the column, on the document a payables clerk is checking a
+  figure against a figure. It is `api.js::money()`'s lesson in the domain:
+  the house spelling is `{x:,.2f}` and `Recovery.findings` was the one place
+  not using it. All four branches are swept by a test that asserts the
+  property rather than the prose.
+
+### And the band was added to two screens nobody can reach
+
+`Form990` and `Auditor` both carry a `{!embedded && …}` block, and both are
+rendered **only** from `Review.jsx`, always embedded. So the PageHead in each
+is unreachable, and a band added inside it would have been a second copy of
+the defect it exists to fix: code that looks like a door and is not one. The
+band sits on the `/review` shell, on `/reports` and on `/restate`, and the two
+panes were put back exactly as they were.
+
+### The script goes through the door too
+
+`scripts/publish.py` opens on the rule that *every workbook is fetched from
+the route the screen calls, so a figure in this set and the same figure on the
+screen cannot disagree* — and then assembled the memo and the form itself,
+because they had no route. The assembly is in `app/routers/restate.py` now and
+the script fetches both like everything else. A publication set and a
+controller's download that are two implementations of one paper is the defect
+this whole file is about, written by the person who had just written the rule
+down at the top of the same file.
+
+`MANIFEST.json` carries every file, its SHA-256 and what it says is
+unfinished, so **a digest that moves means a figure moved** and a set produced
+before the square footage arrived is distinguishable from one produced after.
+Nothing in the run writes to the cost record.
+
+### A set that says CERTIFIED must not be signed by the machine
+
+The first honest-looking run was produced on a clone where **I had certified
+the rate myself** to photograph the band. The reference record reads *"A rate
+stands and nobody has put their name to it"*, and committing a set saying
+*CERTIFIED — Tom Metzinger* would have put a signature nobody gave into
+circulation — the thing the whole certification mechanism exists to prevent.
+The clone was rebuilt from the reference record and the set regenerated, so
+`docs/publications/` carries the true state. Withdrawing my own signature
+would not have been enough: `why_not` would then read *"the signature has
+been withdrawn"*, which is also not what the record says.
+
+### What the recomputation turned up
+
+Re-running `POST /api/restate` on the three America Makes objectives — needed
+so the stored `finding` sentences carried the corrected formatting — changed
+what the restatement measures. The standing restatements had been computed
+against the **three 2026 invoices** loaded by `load_invoices.py`; the register
+now holds the 61 invoices `load_invoices_2025.py` loads, and recomputing
+measured the **whole year**: 12 invoices on Drive AM, 12 on LTM, 9 on Hybrid.
+That is *a register loaded from one document is a sample until something says
+otherwise* reaching the restatement, which is the last place it had not yet
+been noticed.
+
 ## Staged for a human, and nothing else
 
 `scripts/readiness.py`, `scripts/monday.sh`, `docs/MONDAY_RUNBOOK.md`. The

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, explain, money } from "../api.js";
+import CertificationBand from "../components/CertificationBand.jsx";
 import {
   Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
@@ -73,6 +74,7 @@ export default function Reports({ actor }) {
           onto the face it was issued on.
       </PageHead>
 
+      <CertificationBand />
       <Card variant="raised" title="Timesheet and effort report"
             aside={<Pill>Schedule G</Pill>}>
         <p className="lede" style={{ marginTop: 0 }}>

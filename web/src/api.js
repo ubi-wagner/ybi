@@ -324,6 +324,14 @@ export const api = {
     req(`/restate?period=${period}`, { method: "POST", body: JSON.stringify(body) }),
   restateStatus: (id, body) =>
     req(`/restate/${id}/status`, { method: "POST", body: JSON.stringify(body) }),
+  // The two papers a restated invoice cannot travel without. Links rather
+  // than `req` calls, because a PDF opens in the page the way a document in
+  // the library does — and a download link is a door too, which is what
+  // `test_every_capability_has_a_door` had to learn.
+  amendmentMemoUrl: (awardId, period = "2025") =>
+    `/api/restate/award/${encodeURIComponent(awardId)}/memo?period=${period}`,
+  acceptanceFormUrl: (awardId, period = "2025") =>
+    `/api/restate/award/${encodeURIComponent(awardId)}/acceptance?period=${period}`,
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   // The rate itself. `POST /api/rates/compute` was complete on the server and

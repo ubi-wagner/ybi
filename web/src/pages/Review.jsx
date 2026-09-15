@@ -5,6 +5,7 @@ import RateReview from "./RateReview.jsx";
 import Form990 from "./Form990.jsx";
 import Auditor from "./Auditor.jsx";
 
+import CertificationBand from "../components/CertificationBand.jsx";
 /* Final review — the three things that leave the building.
  *
  * One tab rather than three. They are read together: a reviewer checks the
@@ -36,6 +37,7 @@ export default function Review({ actor }) {
         file cannot disagree.
       </PageHead>
 
+      <CertificationBand />
       {current === "report" && <Auditor embedded />}
       {current === "rate" && <RateReview embedded actor={actor} />}
       {current === "form-990" && <Form990 embedded />}

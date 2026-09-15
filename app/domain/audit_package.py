@@ -67,6 +67,49 @@ def _table(ws, row: int, headers: list[str], rows: list[dict],
     return r
 
 
+def certification_lines(cert: dict | None) -> list[str]:
+    """Whether the rate underneath these figures carries a signature.
+
+    Every workbook here already states what is *unfinished*. This is the
+    other question, and `invoice_document.py` has answered it on the face of
+    a rendered invoice since `082` while the workbooks did not — so a
+    controller could hand somebody a rate build-up carrying no band beside an
+    invoice carrying one, over the same rate, at the same moment. That is
+    13.0% and 2.2% in the place a figure is quoted from.
+
+    **It prints in both directions**, for the reason the invoice does: a
+    document silent either way leaves the reader to assume, and the
+    assumption made about a figure on a letterhead is the generous one.
+
+    Pure, and takes the row rather than reading it — `domain/` does not
+    import `app.db`. Every caller passes what `v_rate_certified` said, so
+    the workbook and the screen cannot hold two opinions.
+    """
+    if cert is None:
+        return ["NOT CERTIFIED — nothing was read about the rate's signature "
+                "when this was produced, which is not the same as a rate "
+                "nobody has signed. Treat it as unsigned."]
+    if cert.get("certified"):
+        who = cert.get("certified_by") or "the controller"
+        when = cert.get("certified_at")
+        when = f"{when:%d %b %Y}" if hasattr(when, "strftime") else str(when or "")
+        line = f"CERTIFIED — {who}" + (f", {when}." if when else ".")
+        outstanding = cert.get("outstanding") or []
+        if outstanding:
+            what = ", ".join(str(o.get("step", o)) if isinstance(o, dict) else str(o)
+                             for o in outstanding)
+            return [line,
+                    f"The signature records what was unfinished when it was "
+                    f"given, and those steps are part of it: {what}."]
+        return [line]
+    return ["NOT CERTIFIED — nobody has put their name to the rate these "
+            "figures rest on.",
+            (cert.get("why_not")
+             or "The rate carries no signature.")
+            + " Nothing here is blocked by that: this is a working document, "
+              "and it says so rather than waiting."]
+
+
 def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
                         decisions: list[dict], segments: list[dict],
                         evidence: list[dict], certifications: list[dict],
@@ -78,7 +121,8 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
                         allocations: list[dict] | None = None,
                         gl_pl: list[dict] | None = None,
                         gl_bs: list[dict] | None = None,
-                        reconciling_items: list[dict] | None = None) -> Path:
+                        reconciling_items: list[dict] | None = None,
+                        certification: dict | None = None) -> Path:
     wb = Workbook()
 
     # ── Index ────────────────────────────────────────────────────────
@@ -89,6 +133,16 @@ def build_audit_package(*, period: str, out_path: Path, controls: list[dict],
     ws["A2"] = (f"Generated {datetime.now(timezone.utc):%d %b %Y %H:%M} UTC "
                 f"by {generated_by}")
     ws["A2"].font = Font(italic=True, size=9)
+    # The signature, on the index, before the reader reaches a sheet. This is
+    # the whole record in one file — the one artefact most likely to be
+    # forwarded and quoted from, and the last one to grow the band.
+    _r = 3
+    for line in certification_lines(certification):
+        cell = ws.cell(row=_r, column=1, value=line)
+        cell.alignment = WRAP
+        cell.font = BOLD if line.startswith(("NOT ", "CERTIFIED")) else Font(size=10)
+        ws.row_dimensions[_r].height = 28
+        _r += 1
     ws.column_dimensions["A"].width = 22
     ws.column_dimensions["B"].width = 78
 

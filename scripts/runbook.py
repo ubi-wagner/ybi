@@ -304,6 +304,36 @@ def render(x: dict, f: dict) -> str:
           "change of basis.")
         w("")
 
+    # ── 7 · what can be produced, and what it says while it waits ──────
+    w("---")
+    w("")
+    w("## 7 · The paper, at any time — Tom or the auditor")
+    w("")
+    w("Nothing downstream is blocked by a missing signature or a missing "
+      "document. A workbook, a reissued invoice, the amendment memorandum "
+      "and the acceptance form can all be produced today; what changes is "
+      "what the paper *says* about itself.")
+    w("")
+    w("- **On a screen.** `/reports` and `/review` for the workbooks; "
+      "`/restate`, open a proposal, **The papers that go with it** for the "
+      "memorandum and the acceptance form. Every one of those screens "
+      "carries the certification band at the top, in whichever direction "
+      "is true.")
+    w("- **The whole set at once.** "
+      "`YBI_SEED_PASSWORD=... python3 scripts/publish.py` writes every "
+      "workbook, every reissued invoice and both papers per award into "
+      "`docs/publications/`, with a manifest and a README rendered from it. "
+      "It fetches each document from the route the screen calls, so a "
+      "figure in the set and the same figure on the screen cannot disagree, "
+      "and it **writes nothing to the cost record**.")
+    w("")
+    w("The acceptance form prints two readings and they are not meant to "
+      "add up: *as billed, line by line* is each invoice's indirect against "
+      "what the rate supports on its own base, and **THE POSITION** is the "
+      "objective rebuilt against the cost record. The position is the only "
+      "figure the form asks a sponsor to accept.")
+    w("")
+
     # ── C and P ─────────────────────────────────────────────────────────
     w("---")
     w("")

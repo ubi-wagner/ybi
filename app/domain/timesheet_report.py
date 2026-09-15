@@ -86,7 +86,15 @@ def _caveats(ws, row: int, notes: list[str]) -> int:
 def build_timesheet_report(period: str, *, coverage: list[dict],
                            distribution: list[dict], entries: list[dict],
                            certification: list[dict], reconciliation: dict,
-                           caveats: list[str], out_path: Path) -> Path:
+                           caveats: list[str], out_path: Path,
+                           #: `certification` above is the 200.430(i)
+                           #: signatures — whose effort was attested. This is
+                           #: the rate's, from `v_rate_certified`, and the two
+                           #: are different facts that a shared name would let
+                           #: a reader collapse. One of them says a person
+                           #: signed for their own hours; the other says
+                           #: nobody has signed for the arithmetic.
+                           rate_certification: dict | None = None) -> Path:
     wb = Workbook()
 
     # ── G — the cover, and what it does not yet prove ────────────────
@@ -98,7 +106,11 @@ def build_timesheet_report(period: str, *, coverage: list[dict],
     for col in "BCDEFG":
         ws.column_dimensions[col].width = 17
 
-    row = _caveats(ws, 4, caveats)
+    # `082`'s band, on the labour evidence too. The fringe base is a figure
+    # in the rate, so a workbook that supports it and says nothing about the
+    # rate's signature is the gap this closes.
+    from app.domain.audit_package import certification_lines
+    row = _caveats(ws, 4, [*certification_lines(rate_certification), *caveats])
 
     _cell(ws, row, 1, "The eleventh control", font=BOLD)
     row += 1

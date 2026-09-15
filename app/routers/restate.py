@@ -27,16 +27,22 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from app.audit import record
 from app.auth import Actor, require_controller, require_reader
 from app.db import one, query, transaction
 from app.statelock import turn
+from app.domain.amendment_document import (AmendmentPapers, Movement,
+                                           render_acceptance, render_memo)
 from app.domain.core import money
 from app.domain.invoice import (Category, DirectCost, Invoice, InvoiceLine,
                                 assess, rebuild)
+from app.domain.invoice_document import Party
+from app.routers.rates import rate_certification
 from app.settings import settings
 
 router = APIRouter(prefix="/restate", tags=["restate"],
@@ -488,3 +494,172 @@ def decide(restatement_id: str, body: DecideIn,
                reason=body.note.strip()[:400] or f"moved to {body.status}",
                cursor=cur)
     return {"restatement_id": restatement_id, "status": body.status}
+
+
+# ── the two papers a restated invoice cannot travel without ──────────
+#
+# The memorandum and the acceptance form, assembled **here** rather than in
+# the publication script, because `scripts/publish.py` opens on the rule that
+# every document is fetched from the route the screen calls: a second
+# assembly would be a second implementation of the same paper, free to drift
+# from this one. The screen and the script now render the same bytes.
+
+#: Where the papers are issued from and to. Both are on the face of the
+#: three invoices already in the register, which is why they are not
+#: configuration: a letterhead somebody can change from a settings screen is
+#: one that can differ from the document the sponsor already holds.
+_YBI = Party("Youngstown Business Incubator",
+             "241 W Federal St\nYoungstown, OH 44503", "ybi.org")
+_SPONSOR_ADDRESS = "6800 Innovation Blvd\nJohnstown, PA 15904"
+
+
+def _papers(award_id: str, period: str) -> AmendmentPapers:
+    """Everything both papers print, read from the rows that hold it.
+
+    Per award rather than per invoice: the change of basis is one
+    conversation with one sponsor about one agreement, and a clerk holding
+    twelve memos for twelve invoices on one award has to work out that they
+    are the same ask.
+    """
+    rows = query("""SELECT r.award_id, r.objective_id, r.invoices,
+                           r.billed_total, r.under_recovered, r.over_collected,
+                           r.rate_kind, r.rate_applied, r.rate_base,
+                           r.seal_hash, r.sponsor, r.billed_under
+                      FROM v_restatement r
+                     WHERE r.period = %s AND r.status = 'PROPOSED'
+                       AND r.award_id = %s
+                     ORDER BY r.objective_id""", (period, award_id))
+    if not rows:
+        raise HTTPException(404, (
+            f"No restatement is standing as a claim on {award_id} for "
+            f"{period}, so there is nothing to put an amendment memorandum "
+            f"against. POST /api/restate is what makes one, and it is a "
+            f"judgment."))
+
+    # `agreement_name`, not `title` — the schema's own word for what the
+    # executed instrument is called.
+    award = one("""SELECT award_id, agreement_name, sponsor, instrument
+                     FROM award WHERE award_id = %s""", (award_id,)) or {}
+    # Quoted from the record, never recalled: `056` found three provisions on
+    # two awards cited to clauses those agreements do not contain, so the
+    # citation travels with the words rather than being written here.
+    clause = one("""SELECT term_value, citation FROM award_term
+                     WHERE award_id = %s AND term_key = 'Change of basis'""",
+                 (award_id,)) or {}
+    billed = one("""SELECT term_value FROM award_term
+                     WHERE award_id = %s
+                       AND term_key IN ('Indirect basis as billed',
+                                        'Indirect provision',
+                                        'Indirect recovery')
+                     ORDER BY term_key LIMIT 1""", (award_id,)) or {}
+
+    # One row per **invoice**, from `restatement_line`. `v_restatement`
+    # aggregates to the objective and its `invoices` column is a *count*: a
+    # first draft printed that count under a heading reading INVOICE, so the
+    # form told a payables clerk to match on invoice "1".
+    lines = query("""SELECT rl.invoice_number, rl.invoice_date,
+                            rl.base_as_billed, rl.variance, rl.direction,
+                            rl.finding, r.objective_id
+                       FROM restatement_line rl
+                       JOIN restatement r USING (restatement_id)
+                      WHERE r.period = %s AND r.status = 'PROPOSED'
+                        AND r.award_id = %s
+                      ORDER BY rl.invoice_number""", (period, award_id))
+    movements = tuple(
+        Movement(covers=l["invoice_number"], objective=l["objective_id"],
+                 award=award_id, invoice_count=1,
+                 invoice_numbers=(l["invoice_date"].strftime("%d %b %Y")
+                                  if l["invoice_date"] else ""),
+                 as_billed=money(l["base_as_billed"] or 0),
+                 under_recovered=(money(l["variance"] or 0)
+                                  if l["direction"] == "UNDER" else Decimal(0)),
+                 over_collected=(money(l["variance"] or 0)
+                                 if l["direction"] == "OVER" else Decimal(0)),
+                 finding=l["finding"] or "")
+        for l in lines)
+    if not movements:
+        raise HTTPException(409, (
+            f"The standing restatement on {award_id} records no invoice "
+            f"lines, so the acceptance form would have nothing to accept."))
+
+    cert = rate_certification(period) or {}
+    first = rows[0]
+    return AmendmentPapers(
+        period=period, issued_on=date.today(), remit_to=_YBI,
+        bill_to=Party(award.get("sponsor") or first.get("sponsor") or "NCDMM",
+                      _SPONSOR_ADDRESS),
+        award=award_id,
+        award_title=(award.get("agreement_name")
+                     or award.get("instrument") or ""),
+        modification_clause=clause.get("term_value") or "",
+        modification_citation=clause.get("citation") or "",
+        as_billed_basis=billed.get("term_value") or "",
+        proposed_basis=(f"{first.get('rate_kind') or 'Indirect'} at the "
+                        f"negotiated rate on "
+                        f"{first.get('rate_base') or 'modified total direct cost'}."),
+        rate_kind=first.get("rate_kind") or "",
+        rate=(Decimal(str(first["rate_applied"]))
+              if first.get("rate_applied") is not None else None),
+        base_type=first.get("rate_base") or "",
+        seal_hash=first.get("seal_hash") or "",
+        movements=movements,
+        # The position, from the restatement row — **never** the sum of the
+        # lines. A `restatement_line` is the as-billed reading of one
+        # invoice; the position is the objective rebuilt against the cost
+        # record, and on these awards they run opposite ways: Drive AM's
+        # lines add to 254,808.06 of forgone recovery while the rebuild shows
+        # 58,786.31 over-collected, because the indirect was recovered inside
+        # a loaded labour rate and no invoice carries an indirect line at
+        # all. Summing the lines would put a claim in front of NCDMM running
+        # the opposite way from what the record supports.
+        #
+        # Summed across the award's objectives, with the two directions in
+        # their own columns: that is not netting, it is the refusal to net.
+        position_under=money(sum((r["under_recovered"] or 0) for r in rows)),
+        position_over=money(sum((r["over_collected"] or 0) for r in rows)),
+        caveats=tuple(f"{r['step']} — {r['detail']}" for r in query(
+            """SELECT step, detail FROM v_audit_walk
+                WHERE period = %s AND state <> 'DONE' ORDER BY seq""",
+            (period,))),
+        certified=bool(cert.get("certified")),
+        certification_line=(f"Certified by {cert.get('certified_by')}."
+                            if cert.get("certified")
+                            else (cert.get("why_not") or "")),
+        reference=f"{award_id} · {period}")
+
+
+def _paper(award_id: str, period: str, actor: Actor, which: str) -> Response:
+    p = _papers(award_id, period)
+    body = (render_memo(p) if which == "memo" else render_acceptance(p))
+    record(actor, "EXPORT", "award", award_id,
+           after={"paper": which, "period": period,
+                  "to_claim": str(p.to_claim), "to_return": str(p.to_return),
+                  "certified": p.certified},
+           reason=f"amendment {which} rendered")
+    name = (f"YBI-amendment-memo-{award_id}.pdf" if which == "memo"
+            else f"YBI-acceptance-{award_id}.pdf")
+    return Response(body, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{name}"',
+                             "X-Content-Type-Options": "nosniff"})
+
+
+@router.get("/award/{award_id}/memo")
+def amendment_memo(award_id: str, period: str = "2025",
+                   actor: Actor = Depends(require_reader)) -> Response:
+    """Why this award's invoices are being reissued, and under what clause.
+
+    A read, like every other document route here — `require_reader`, not
+    `require_controller`. Rendering the memorandum asserts nothing: the
+    position it describes was taken when the restatement was recorded, and
+    the paper says PROPOSED on its first line. Refusing it to the auditor,
+    who may read everything and holds no portfolio, would be the library
+    defect in a new place.
+    """
+    return _paper(award_id, period, actor, "memo")
+
+
+@router.get("/award/{award_id}/acceptance")
+def acceptance_form(award_id: str, period: str = "2025",
+                    actor: Actor = Depends(require_reader)) -> Response:
+    """What NCDMM signs. Both directions, and never their difference."""
+    return _paper(award_id, period, actor, "acceptance")

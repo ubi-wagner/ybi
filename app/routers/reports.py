@@ -34,6 +34,7 @@ from app.db import execute, one, query
 from app.domain.invoice_document import (DocumentLine, InvoiceDocument, Party,
                                          render)
 from app.domain.timesheet_report import build_timesheet_report
+from app.routers.rates import rate_certification
 from app.settings import settings
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -93,7 +94,8 @@ def timesheet_report(period: str | None = None,
     build_timesheet_report(
         period=period, coverage=coverage, distribution=distribution,
         entries=entries, certification=certification,
-        reconciliation=reconciliation, caveats=caveats, out_path=out)
+        reconciliation=reconciliation, caveats=caveats, out_path=out,
+        rate_certification=rate_certification(period))
 
     record(actor, "EXPORT", "timesheet_report", name,
            after={"period": period, "employee_key": employee_key,

@@ -753,6 +753,23 @@ def withdraw(body: WithdrawIn, period: str = "2025",
             "withdrawn": True}
 
 
+def rate_certification(period: str) -> dict | None:
+    """What `v_rate_certified` says, for anything that prints a band.
+
+    The endpoint below answers the same question to a screen. Both read this
+    so a workbook and the screen that produced it cannot hold two opinions
+    about whether anybody has signed — which is the whole point of the band,
+    and is why this is a function rather than three queries.
+
+    Returns None where the period has no row at all. `certification_lines`
+    treats that as unsigned and says so, rather than printing nothing: a
+    document silent about its own signature is read generously.
+    """
+    return one("""SELECT period, certified, cert_id, signature, certified_at,
+                         certified_by, seal_hash, outstanding, note, why_not
+                    FROM v_rate_certified WHERE period = %s""", (period,))
+
+
 @router.get("/certification")
 def certification(period: str = "2025") -> dict:
     """Whether the rate is certified right now, and the sentence if not.
@@ -760,9 +777,7 @@ def certification(period: str = "2025") -> dict:
     One fact, read from one view, by every screen and every renderer — so a
     footer cannot say one thing while a screen says another.
     """
-    row = one("""SELECT period, certified, cert_id, signature, certified_at,
-                        certified_by, seal_hash, outstanding, note, why_not
-                   FROM v_rate_certified WHERE period = %s""", (period,))
+    row = rate_certification(period)
     if not row:
         raise HTTPException(404, "No such period.")
     return row
