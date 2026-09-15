@@ -306,27 +306,91 @@ def _build_model(period: str,
 
     # Carve-outs from the facilities work: tenant, vacant and committed space
     # is the rental operation's cost and never reaches a federal pool.
+    #
+    # **The denominator is the estate, not the building.** There is one
+    # OVERHEAD pool and it carries the occupancy cost of every building
+    # together — the ledger identifies only a handful of accounts to a
+    # building and none of them completely. So the honest driver is square
+    # footage across the whole estate: a building's excluded space carves
+    # its share of the pool, and the shares add to one.
+    #
+    # It was `overhead_gross * excluded_f / usable_f` per facility, summed.
+    # That is exactly right with one building and wrong with any more: five
+    # buildings each half let would have carved 250% of the pool and left
+    # the overhead rate negative. Nothing could have caught it — the pool
+    # ties to itself whatever the carve-outs say, so `v_rate_buildup` reads
+    # TIES either way, and the reference record has had exactly one
+    # building for the life of the rate engine.
+    #
+    # One row per building still, because the disclosure is per building:
+    # a reviewer asks which building carried what, and the sum of the rows
+    # is the adjustment.
     occupancy = query("""SELECT name, tenant_sqft, vacant_sqft, committed_sqft,
-                                usable_sqft
+                                usable_sqft, rental_share
                            FROM v_facility_occupancy WHERE period = %s""",
                       (period,))
     overhead_gross = model.pools[PoolType.OVERHEAD].gross
+    estate = sum((Decimal(str(f["usable_sqft"] or 0)) for f in occupancy),
+                 Decimal(0))
     for f in occupancy:
         usable = Decimal(str(f["usable_sqft"] or 0))
-        if usable <= 0 or overhead_gross <= 0:
+        rental = Decimal(str(f["rental_share"] or 0))
+        if usable <= 0 or estate <= 0 or overhead_gross <= 0 or rental <= 0:
             continue
         excluded = (Decimal(str(f["tenant_sqft"] or 0))
                     + Decimal(str(f["vacant_sqft"] or 0))
                     + Decimal(str(f["committed_sqft"] or 0)))
-        if excluded <= 0:
-            continue
-        share = (excluded / usable).quantize(Decimal("0.000001"))
+        share = ((usable / estate) * rental).quantize(Decimal("0.000001"))
         model.add_carve_out(PoolType.OVERHEAD, CarveOut(
             name=f"Rental and vacant space — {f['name']}",
             citation="2 CFR 200.465",
             amount=(overhead_gross * share).quantize(Decimal("0.01")),
-            driver=f"{excluded:,.0f} of {usable:,.0f} usable square feet",
+            driver=(f"{rental:.1%} of this building is let, committed or "
+                    f"vacant ({excluded:,.0f} sq ft); the building is "
+                    f"{usable:,.0f} of the estate's {estate:,.0f}"),
             evidence=EvidenceGrade.MANAGEMENT_RECONSTRUCTION))
+
+    # And the second carve-out the registers can now support: 2 CFR 200.436(b)
+    # makes depreciation on an asset bought with federal money unallowable, so
+    # it must not sit in a pool that is charged to federal awards.
+    #
+    # It waited on `asset_funding` having an answer in it. Until `085` loaded
+    # the register there was nothing to ask, and until Heidi answers the
+    # funding source the federal share of every asset is zero — which is not
+    # the same fact as *no federal money bought any of this*, and is why the
+    # walk's ASSETS step reads OPEN rather than DONE while the column is blank.
+    #
+    # The ceiling is the depreciation the pool actually holds. A register that
+    # disagrees with the ledger is a control of its own (`v_asset_control`),
+    # not a licence to carve cost the pool does not carry.
+    unallowable = one("""SELECT COALESCE(sum(depreciation
+                                            - allowable_depreciation), 0)
+                                AS amount,
+                                count(*) FILTER (WHERE federal_share > 0)
+                                AS assets
+                           FROM v_asset_allowability
+                          WHERE period = %s AND in_use""", (period,))
+    in_the_pool = one("""SELECT COALESCE(sum(l.amount), 0) AS amount
+                           FROM decision d
+                           JOIN decision_line dl USING (decision_id)
+                           JOIN ledger_line l USING (line_id)
+                          WHERE d.reversed_at IS NULL AND dl.live
+                            AND d.pool = 'OVERHEAD' AND l.period = %s
+                            AND l.account LIKE %s""", (period, "%5010%"))
+    federally_funded = Decimal(str(unallowable["amount"] or 0))
+    ceiling = Decimal(str(in_the_pool["amount"] or 0))
+    if federally_funded > 0 and ceiling > 0:
+        amount = min(federally_funded, ceiling)
+        model.add_carve_out(PoolType.OVERHEAD, CarveOut(
+            name="Depreciation on federally funded assets",
+            citation="2 CFR 200.436(b)",
+            amount=amount.quantize(Decimal("0.01")),
+            driver=(f"{unallowable['assets']} asset(s) on the fixed-asset "
+                    f"register carry a federal funding source; the "
+                    f"depreciation on the federally funded share of them is "
+                    f"{federally_funded:,.2f}, against {ceiling:,.2f} of "
+                    f"depreciation classified to this pool"),
+            evidence=EvidenceGrade.CORROBORATED))
     return model
 
 

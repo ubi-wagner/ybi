@@ -82,6 +82,22 @@ class DecideIn(BaseModel):
     note: str = ""
 
 
+#: A restatement that stands as a claim, for the two papers that describe it.
+#:
+#: `PROPOSED` is a position YBI has taken, `SUBMITTED` is one in the post and
+#: `ACCEPTED` is one the sponsor has agreed to — which is the *strongest* form
+#: of standing and was the one both papers refused. The memorandum and the
+#: acceptance form filtered on `PROPOSED` alone, so the moment NCDMM accepted,
+#: the paper explaining the change and the paper they had just signed both
+#: answered 404. That is backwards in the place it costs most: after
+#: acceptance is exactly when a payables clerk holding a reissued invoice goes
+#: looking for the two documents that explain it.
+#:
+#: `SUPERSEDED` and `REJECTED` are history and stay out. A superseded
+#: restatement is *supposed* to disagree with the register.
+STANDING = ("PROPOSED", "SUBMITTED", "ACCEPTED")
+
+
 def _invoices(period: str, objective_id: str) -> list[tuple[dict, Invoice]]:
     """The invoices as billed, rebuilt into the domain object that knows how
     to read them."""
@@ -531,11 +547,13 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
                            r.rate_kind, r.rate_applied, r.rate_base,
                            r.seal_hash, r.sponsor, r.billed_under,
                            r.register_invoices, r.register_billed,
-                           r.still_agrees
+                           r.still_agrees,
+                           r.status, r.modification_ref
                       FROM v_restatement r
-                     WHERE r.period = %s AND r.status = 'PROPOSED'
+                     WHERE r.period = %s AND r.status = ANY(%s)
                        AND r.award_id = %s
-                     ORDER BY r.objective_id""", (period, award_id))
+                     ORDER BY r.objective_id""",
+                 (period, list(STANDING), award_id))
     if not rows:
         raise HTTPException(404, (
             f"No restatement is standing as a claim on {award_id} for "
@@ -569,9 +587,10 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
                             rl.finding, r.objective_id
                        FROM restatement_line rl
                        JOIN restatement r USING (restatement_id)
-                      WHERE r.period = %s AND r.status = 'PROPOSED'
+                      WHERE r.period = %s AND r.status = ANY(%s)
                         AND r.award_id = %s
-                      ORDER BY rl.invoice_number""", (period, award_id))
+                      ORDER BY rl.invoice_number""",
+                 (period, list(STANDING), award_id))
     movements = tuple(
         Movement(covers=l["invoice_number"], objective=l["objective_id"],
                  award=award_id, invoice_count=1,
@@ -609,6 +628,17 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
               if first.get("rate_applied") is not None else None),
         base_type=first.get("rate_base") or "",
         seal_hash=first.get("seal_hash") or "",
+        # Where this stands with the sponsor, and the instrument it is
+        # recorded against. The *least* advanced of the award's objectives,
+        # because an award whose objectives stand differently has not been
+        # accepted as a whole and a band claiming otherwise would overstate
+        # it — the same direction of error the certification band refuses.
+        status=min((r["status"] for r in rows),
+                   key=lambda st: STANDING.index(st)
+                   if st in STANDING else -1),
+        modification_ref=next((r["modification_ref"] for r in rows
+                               if (r.get("modification_ref") or "").strip()),
+                              ""),
         movements=movements,
         # The position, from the restatement row — **never** the sum of the
         # lines. A `restatement_line` is the as-billed reading of one

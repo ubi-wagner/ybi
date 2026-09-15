@@ -243,12 +243,18 @@ def build_form_990(*, period: str, out_path: Path, functions: list[str],
             "The column totals are therefore short by that amount, on purpose.",
         ])
 
+    # "Not applicable" is printed, not dropped. The handler has always
+    # accumulated it and the sheet has never shown it, so a row whose total
+    # exceeded its three functions gave the reader nothing to reconcile to —
+    # and until `092` that was the entire payroll, $2,191,777.54 of it, on a
+    # tax return. A column that is usually zero is cheaper than a total that
+    # does not foot.
     headers = ["Natural category", "Lines", "Program", "Management and general",
-               "Fundraising", "Not yet classified", "Total"]
+               "Fundraising", "Not yet classified", "Not applicable", "Total"]
     keys = ["natural_category", "lines", "PROGRAM", "MANAGEMENT_AND_GENERAL",
-            "FUNDRAISING", "NOT_YET_CLASSIFIED", "total"]
+            "FUNDRAISING", "NOT_YET_CLASSIFIED", "NOT_APPLICABLE", "total"]
     r = _table(ws, r, headers, categories, keys,
-               [42, 10, 18, 24, 18, 22, 18], {3, 4, 5, 6, 7})
+               [42, 10, 18, 24, 18, 22, 18, 18], {3, 4, 5, 6, 7, 8})
 
     r += 1
     ws.cell(row=r, column=1, value="Total").font = BOLD

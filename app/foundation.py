@@ -309,6 +309,14 @@ GUIDES = (
     Guide("manuals/administrator.md", "The administrator",
           "Accounts, access and the roster: who may do what, and how to give "
           "somebody their way in.", "admin"),
+    Guide("manuals/facilities-and-inventory.md", "Facilities and inventory",
+          "The two measurements the rate cannot be computed without: the "
+          "square footage of each building, and which assets federal money "
+          "paid for.", "FACILITIES"),
+    Guide("manuals/classification-team.md", "Working the classification",
+          "Reviewing the 757 working positions, citing the paper behind "
+          "them, and the timesheet every person on the payroll signs for "
+          "themselves.", "CONTROLLER"),
     Guide("manuals/auditor.md", "The auditor",
           "What to read and in what order, and where every figure on a "
           "workpaper comes from.", "AUDITOR"),

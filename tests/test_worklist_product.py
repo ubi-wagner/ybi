@@ -119,14 +119,27 @@ def test_no_partition_reports_ties_over_nothing():
         assert r["state"] in {"TIES", "OPEN", "NO DATA"}
 
 
-def test_every_partition_says_what_it_needs():
+def test_every_unfinished_partition_says_what_it_needs():
     """A control that cannot be evaluated has to say what would make it
-    evaluable, or it is a dead end on a screen."""
+    evaluable, or it is a dead end on a screen.
+
+    **And a finished one must not.** This asked for a sentence
+    unconditionally, so it failed the first time a partition was actually
+    completed — with SPACE reading `TIES 100.0%` beside "the square footage
+    per building", which is the finished partition asking for the thing it
+    already has. A test that cannot pass for the state it is about is the
+    mirror of one that cannot fail for the thing it names.
+    """
     for r in query("SELECT * FROM v_partition_coverage WHERE period = %s",
                    ("2025",)):
-        assert len(r["needs"].strip()) >= 20, (
-            f"{r['partition']} says {r['needs']!r} and that is not something "
-            f"anybody can go and do")
+        if r["state"] == "TIES":
+            assert r["needs"].strip() == "", (
+                f"{r['partition']} ties and still asks for "
+                f"{r['needs']!r}")
+        else:
+            assert len(r["needs"].strip()) >= 20, (
+                f"{r['partition']} is {r['state']} and says {r['needs']!r}, "
+                f"which is not something anybody can go and do")
         assert r["goes_to"].startswith("/")
 
 

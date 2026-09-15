@@ -2686,6 +2686,212 @@ unanswered first then by cost, and programme equipment first then by name. A
 caption asserting an order the query does not have is a screen the reader
 trusts once.
 
+## The year closed, end to end
+
+`scripts/drive_the_close.py`, migrations `090`–`093`,
+`docs/PROVISIONAL_RATE_2025.md`, `docs/FORM_990_2025.md`,
+`docs/publications/close-2025/`. Everything above this builds one mechanism at
+a time and proves it in isolation. This is the whole of it in one sitting, in
+the order a year is actually closed, by the people whose job each step is:
+Heidi proposes the estate and the asset funding, Tom accepts every one,
+adopts the 757 working positions, recomputes, signs, restates the four
+America Makes awards and records NCDMM's acceptance of each. **26 checks, 0
+findings, and it reproduces byte-for-byte from a rebuilt database** — 48 of
+the 53 published documents, the five xlsx being the stated exception.
+
+    INDIRECT_COMBINED   43.99%  ->  24.71%
+    OVERHEAD            31.62%  ->  12.35%    carve-outs 913,104.60
+    FRINGE              21.90%      21.90%    unmoved, and anchored
+    the walk            7 of 11 done  ->  10 of 11
+
+**Both of the two largest adjustments in the model fired for the first time**,
+and neither rests on a measurement — so every row they produced carries its
+own derivation and its own grade, because *an estimate that does not say it is
+one is a measurement*:
+
+| | |
+| --- | --- |
+| `$116.27/sqft` | JobsOhio Grant Agreement SFPN_2021_493762-VCG, Commitment 1 — $2,092,861 of building fixed asset investment for approximately 18,000 square feet, on this estate |
+| `180,538 sqft` | the 2024 audited statements' Note 1 land, building and improvements of $21,098,684 less $107,530 of land, at that rate |
+| `$7.00/sqft` | the rate at which the 2025 rent roll accounts for 50.5% of that estate — the floor of the same note's *"predominately available to businesses in Mahoning Valley as operating leases"* |
+| 2023 + 2024 | every capital addition of those two years is federal, because the SEFAs carry $465,426 and $2,621,962 of federal capital expenditure against $53,007 and $2,676,739 of additions |
+
+Two of the five buildings come out **99.1% and 99.9% let at an implied $6.94
+and $6.99 a square foot**, which is what makes the $7.00 credible rather than
+chosen — those two buildings' areas came from cost, and the rent lands on the
+rate anyway. And the rent roll ties to the ledger: `4021 TTC Rent` is
+Steelite's two Taft leases to the cent and `4026 NAMII Rent Boardman St.` is
+NCDMM's $108,000 exactly.
+
+**The low side is adopted and every upward movement is named.** The band is
+18.89% to 27.12% and `docs/PROVISIONAL_RATE_2025.md` prices each end of it:
+only the three assets a document names is 25.13%, EDA's own 80.09% share on
+TBB5 Phase-2 is 25.22%, let space at $8.00 is 26.71%; 5% vacancy is 23.13%
+and $6.00 is 22.05%. Arithmetic on two recorded figures with a different
+carve-out substituted — nothing in the model is re-derived.
+
+**No vacancy is claimed and that is the one place the estimate is not
+conservative**, because nothing on the record measures any. It is written
+down rather than hidden: any vacancy Heidi measures makes the carve-out
+larger and the federal rate lower.
+
+### The carve-out multiplied by the number of buildings
+
+Migration `090`. The 200.465 carve-out was
+`overhead_gross * (excluded_f / usable_f)` **per facility, summed** — exactly
+right with one building and wrong with any more. Five buildings each half let
+would have carved 250% of the pool and left the overhead rate negative.
+
+**Nothing could have caught it.** `v_pool_balance.allocable` is gross less
+carved and `v_rate_buildup` ties `rate.pool_amount` to that, so both sides of
+the control agree however large the carve-out is — and the reference record
+has carried exactly one building for the life of the rate engine, so the
+shape had no instance to be wrong in. `029` in the largest adjustment in the
+model: a control that is green because the population is degenerate.
+
+The handler weights each building by the estate's usable square footage and
+reads `v_facility_occupancy.rental_share` rather than computing its own —
+that view already rides common area along with the assignable space it
+serves, and the handler held a second opinion about it. Both changes reduce
+to the old arithmetic exactly when there is one building, so **nothing
+published moves**, and `tests/test_the_carve_out_is_weighted_by_the_estate.py`
+asserts that property first. `v_carve_out_check` is the control: three states,
+because a pool nobody has carved anything out of is `NO DATA` and not a pass.
+
+### Editing an applied migration mutated nothing, and it shipped
+
+Migration `091`, `tests/test_the_schema_matches_the_migrations.py`.
+`POST /api/positions/recommendations/{id}/accept` answered **500 on every
+FACILITY, SPACE_UNIT and ASSET_FUNDING recommendation, on every running
+database**, with `KeyError: 'usable_sqft'`. `084` declares
+`subject_merged()`, `enum_or_refuse()`, the current
+`recommendation_is_well_formed()` and a `merged` column on
+`v_recommendation`. **No database had any of them.**
+
+This file records the lesson in as many words — *editing an applied migration
+file mutates nothing* — and `084`'s own comment explains why the column is
+*appended* rather than inserted, so the author knew the constraint, wrote for
+it, and edited a file the runner was never going to read again.
+
+**And the whole class was invisible, for a reason worth keeping.** Every
+database test in the suite builds its schema from the same migrations it is
+testing: CI drops a database, applies `app/sql/*.sql`, and passes, because one
+made the other. The only place the two can disagree is a database that has
+been *running* — which is the one nobody tests against. So the new test
+applies every migration to a scratch database and compares three things that
+survive a dump and restore: every (table, column), every function's identity
+and body, and every trigger by name. **View bodies are deliberately not
+compared** — Postgres re-renders a `VALUES` list with `AS text` labels on
+restore, so comparing the text reports drift on two views that are identical,
+and a sweep that cries wolf teaches the reader to dismiss the next real one.
+
+The drift was exactly one column and three functions. It had disabled the
+entire non-classification half of the recommendation mechanism since the day
+it was written.
+
+### The return reported no salaries
+
+Migration `092`. Form 990 Part IX printed **$2,191,777.54 of payroll with
+nothing in any of the three columns the return prints** — $1,789,993.94 of
+wages and $401,783.60 of fringe, the whole of YBI's compensation, under
+`NOT_APPLICABLE`. Programme, management and general and fundraising added to
+$4,583,434.64 against a printed total of $6,775,212.18, so **the row did not
+cross-foot on a tax return** and a reader adding the columns could not find
+out why.
+
+One word answering two questions. `EXCLUDED` is a *rate* judgment and it is
+right — `add_labor()` already puts the distribution in MTDC, so a DIRECT
+judgment on a wage account would count the payroll twice. What it says
+nothing about is **which column of the return a salary belongs in**, and the
+classification log set both from one judgment.
+
+The driver is the one the eleventh control already insists on: *the fringe
+base comes from the effort distribution, not from the ledger's wage
+accounts.* The same distribution says which function the effort served —
+83.40% programme, 14.41% management and general, 2.18% fundraising, read
+through `cost_objective.objective_type`, which already carries what each
+objective is for. Largest remainder against the category total, so the three
+add back to the ledger to the cent.
+
+**And the sheet prints the `Not applicable` column now.** The handler has
+always accumulated it and the workbook never showed it, so a row whose total
+exceeded its three functions left the reader nothing to reconcile to. A
+column that is usually zero is cheaper than a total that does not foot.
+
+### A finished partition still asked for the thing it had
+
+Migration `093`. With the estate measured and every asset answered,
+`v_partition_coverage` read `SPACE TIES 100.0% — the square footage per
+building, and what each part is used for`. `needs` is a constant on the COST
+and SPACE arms, written when neither partition had ever been finished, so the
+state it is wrong in had never occurred.
+
+ASSETS was already right, because `085` had to give it a second branch when
+the register was loaded. **A rule fixed in one arm is one somebody gets wrong
+in the other two** — which is the sentence `086` closes on, about these same
+three partitions.
+
+`tests/test_worklist_product.py` asserted a sentence unconditionally and
+therefore **failed the first time a partition was actually completed**. A
+test that cannot pass for the state it is about is the mirror of one that
+cannot fail for the thing it names.
+
+### The papers vanished the moment the sponsor accepted
+
+Both the amendment memorandum and the acceptance form filtered on
+`status = 'PROPOSED'`, so accepting a restatement made the paper explaining
+the change and the paper NCDMM had just signed both answer **404**. That is
+backwards where it costs most: after acceptance is exactly when a payables
+clerk holding a reissued invoice goes looking for the two documents that
+explain it. `STANDING` is `PROPOSED`, `SUBMITTED`, `ACCEPTED`, defined once in
+`app/routers/restate.py` and **imported by `publish.py`** rather than copied —
+two spellings of one predicate is how a script and a screen come to disagree
+about what is on the record.
+
+**And the band said PROPOSED on a signed acceptance form.** `_proposed_band`
+printed *"PROPOSED — NOT A CLAIM · Nothing here is billed until NCDMM accepts
+it in writing"* unconditionally; the status could not reach the paper at all,
+because `AmendmentPapers` had no field for it. `standing_band()` is the one
+pure sentence-maker, the way `certification_lines()` is for the signature, and
+it names the modification the acceptance is recorded against — which
+`acceptance_names_its_modification` refuses to do without, so a paper printing
+a clean acceptance anyway would hide the finding rather than show it. The
+award's band takes the **least** advanced of its objectives, because an award
+whose objectives stand differently has not been accepted as a whole.
+
+### What the restatement found
+
+All four awards restated on the certified rate and accepted, and **three of
+the four run the other way from what the invoices look like**:
+
+| | invoices | billed | indirect billed | to claim | to return |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Drive AM | 12 | 579,240.87 | 0.00 | — | **128,474.23** |
+| Digital Engineering | 7 | 579,074.25 | 0.00 | — | **320,427.12** |
+| Last Tactical Mile | 12 | 368,222.24 | 44,400.00 | **43,960.60** | — |
+| Hybrid Phase II | 9 | 187,416.05 | 0.00 | — | **72,947.07** |
+
+Three billed **no indirect line at all**, which is not a saving — it is the
+finding. The recovery was inside a loaded labour rate, which 200.414(f) does
+not contemplate, so restating is a **rebuild**: the labour line comes down to
+wages plus fringe before the indirect goes on, and on three of these the
+rebuild finds more was collected than the year supports. Only LTM budgets
+indirect — 10.00% of its whole direct, to four decimal places, the sole place
+in any executed document where the election is visible — and it is the only
+one running the other way. $43,960.60 to ask for and $521,848.42 to give back
+are never added together.
+
+### And two guides that had no reader
+
+`docs/manuals/facilities-and-inventory.md` and
+`docs/manuals/classification-team.md`, on the shelf beside the other four. The
+first is the two measurements above — what to measure, which screen, what each
+field means and which way each answer moves the rate. The second is reviewing
+757 working positions, citing the paper behind them, and the timesheet path
+including certify-and-upload as the fallback, with the rule that **nothing
+downstream is blocked by an unsigned certification** and every paper says so
+instead.
+
 ## The audit is a walk, not a to-do list
 
 Migration `081`, `v_audit_walk`, `GET /api/dashboard/walk`, `Walk.jsx`. The

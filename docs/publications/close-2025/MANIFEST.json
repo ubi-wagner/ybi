@@ -1,0 +1,576 @@
+{
+  "period": "2025",
+  "produced": "2026-09-15T14:38:56+00:00",
+  "certified": true,
+  "certified_by": "Tom Metzinger",
+  "why_not": null,
+  "unfinished": [
+    "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+  ],
+  "rates": [
+    {
+      "kind": "FRINGE",
+      "rate": "0.219000",
+      "base": "SALARIES_WAGES",
+      "basis": "POOL",
+      "seal": "60fb3f4b52219514d8f0dc8d20c962ad2fd902dee0cf2407da91f2a93d215a37"
+    },
+    {
+      "kind": "G&A",
+      "rate": "0.123700",
+      "base": "MTDC",
+      "basis": "POOL",
+      "seal": "60fb3f4b52219514d8f0dc8d20c962ad2fd902dee0cf2407da91f2a93d215a37"
+    },
+    {
+      "kind": "INDIRECT_COMBINED",
+      "rate": "0.247100",
+      "base": "MTDC",
+      "basis": "POOL",
+      "seal": "60fb3f4b52219514d8f0dc8d20c962ad2fd902dee0cf2407da91f2a93d215a37"
+    },
+    {
+      "kind": "OVERHEAD",
+      "rate": "0.123500",
+      "base": "MTDC",
+      "basis": "POOL",
+      "seal": "60fb3f4b52219514d8f0dc8d20c962ad2fd902dee0cf2407da91f2a93d215a37"
+    }
+  ],
+  "files": [
+    {
+      "file": "rate-buildup.xlsx",
+      "what": "the rate, the pool under it and the seal it hangs off",
+      "bytes": 6776,
+      "sha256": "1e1ecc77b0766a1032425c41c148523d46c996362847da8ca06d1c047d14fefa",
+      "stable": false,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "form-990-part-ix.xlsx",
+      "what": "Form 990 Part IX, functional allocation as classified",
+      "bytes": 7749,
+      "sha256": "6844ec171d73266c57f686ee85d726a966af579d7607376ca9c49939aa490f90",
+      "stable": false,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "auditors-report.xlsx",
+      "what": "what the engagement asserts and what proves each assertion",
+      "bytes": 11601,
+      "sha256": "2ae2786b4fe95ae25db3843bcc08bf74a88f692b04b802300d20b52089926284",
+      "stable": false,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "audit-package.xlsx",
+      "what": "the whole cost record, every sheet",
+      "bytes": 164236,
+      "sha256": "0210b90fd38b519c2a1fa1a84898731ff4e1d4b3962dcd9c64746939a8a1e3a0",
+      "stable": false,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "timesheet-report.xlsx",
+      "what": "the distribution behind the fringe base, and who has certified",
+      "bytes": 18045,
+      "sha256": "9f4481761b1a29579e47c64527ad7f18862de11c3b5e572e96698c8f740b2a7b",
+      "stable": false,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9062.pdf",
+      "what": "invoice 9062 on DIG-ENG, rendered from the register",
+      "bytes": 2951,
+      "sha256": "8cec649bca5b010f2a7eac16c021907af42fbd1ee666d5daa1623b11a776a275",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9078.pdf",
+      "what": "invoice 9078 on HYBRID-II, rendered from the register",
+      "bytes": 3561,
+      "sha256": "99c7df5885a87aef0473b042da53adf4ed27993782819d909f82628219164e88",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9091.pdf",
+      "what": "invoice 9091 on LTM, rendered from the register",
+      "bytes": 3497,
+      "sha256": "4148dc5d4da652ca074f0d7b6db487530ba254886c633ec9171d54eda48f0cc3",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9092.pdf",
+      "what": "invoice 9092 on DRIVE-AM, rendered from the register",
+      "bytes": 3621,
+      "sha256": "8f602ceafa6fdfbda1011acb511e26907b3d2e067b6a5d8c814172e40bbdd491",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9126.pdf",
+      "what": "invoice 9126 on HYBRID-II, rendered from the register",
+      "bytes": 3561,
+      "sha256": "e6494c0b669a866d3d1e706950100fd62c5b3f604c34df66f4396523517eaf5e",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9127.pdf",
+      "what": "invoice 9127 on DIG-ENG, rendered from the register",
+      "bytes": 2951,
+      "sha256": "717f94b786607d2664d88290b88ef386773f84c6d02304d74360f2150a046181",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9133.pdf",
+      "what": "invoice 9133 on DRIVE-AM, rendered from the register",
+      "bytes": 3650,
+      "sha256": "9c89dc562947ccf0160625aa75c03dbbb2d09710aa4d96a8ae9c59074056c14e",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9134.pdf",
+      "what": "invoice 9134 on LTM, rendered from the register",
+      "bytes": 3505,
+      "sha256": "709050c19c85124a2241c62e324d69f0fd4d43be9f70854e03bbef82e269cea8",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9163.pdf",
+      "what": "invoice 9163 on HYBRID-II, rendered from the register",
+      "bytes": 3559,
+      "sha256": "4fac9926d31009a7da289b7b4be45fd8a8c16bf371464faba2115a4b87b1e830",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9167.pdf",
+      "what": "invoice 9167 on DIG-ENG, rendered from the register",
+      "bytes": 2949,
+      "sha256": "8fad299725d1696d560ce1efe989c746825b8dc69d58a0a86d10757a4cbb6468",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9205.pdf",
+      "what": "invoice 9205 on LTM, rendered from the register",
+      "bytes": 3493,
+      "sha256": "13059b0461e6ca310614e51cdf7fc5d627a7c6c82eeac658caea8baad5beff9c",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9206.pdf",
+      "what": "invoice 9206 on DRIVE-AM, rendered from the register",
+      "bytes": 3635,
+      "sha256": "2bb96ce9d06bb22bd1bc8b68d3d01238188018be0646026ceda3a7ddd2990a08",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9255.pdf",
+      "what": "invoice 9255 on HYBRID-II, rendered from the register",
+      "bytes": 3556,
+      "sha256": "abe7d9fb6595875f61edfde78e003879305735ec2b97e8b7358d4da29c40d49b",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9264.pdf",
+      "what": "invoice 9264 on DIG-ENG, rendered from the register",
+      "bytes": 2945,
+      "sha256": "eb3466dd830a6477fa5b8bb2681261af36342c39191ea1fd967ccee1dd46567f",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9268.pdf",
+      "what": "invoice 9268 on LTM, rendered from the register",
+      "bytes": 3497,
+      "sha256": "77c6347e7a8c15b048e41f1f78a506e7f0c54fb977c22543185553a73c2a6e31",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9276.pdf",
+      "what": "invoice 9276 on DRIVE-AM, rendered from the register",
+      "bytes": 3638,
+      "sha256": "bd0716075062d55e77d63aefab2079ac6fde0635f9839b0a60541568c6180154",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9296.pdf",
+      "what": "invoice 9296 on DIG-ENG, rendered from the register",
+      "bytes": 2946,
+      "sha256": "2de2ff6bf9a9d9ddc2aa0dee13523ee5e7f20ac794e807488b15cba6e9972895",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9297.pdf",
+      "what": "invoice 9297 on HYBRID-II, rendered from the register",
+      "bytes": 3557,
+      "sha256": "bf1e6143f7f15934fccd35ccc3985ec1935b465f3f1d47d6a7972792a740b7f6",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9348.pdf",
+      "what": "invoice 9348 on LTM, rendered from the register",
+      "bytes": 3496,
+      "sha256": "535abc7171fb0a3310b58640684b02bdf413a6aa62613d737121dbdfbd882be8",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9349.pdf",
+      "what": "invoice 9349 on DRIVE-AM, rendered from the register",
+      "bytes": 3636,
+      "sha256": "9f2384314489c081d2649493f17f9bd1dbbb6fc784c41e887726fbaca6648bab",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9418.pdf",
+      "what": "invoice 9418 on DIG-ENG, rendered from the register",
+      "bytes": 2944,
+      "sha256": "1f4bf8194d555b255681fe43aab0320fd85ddc2290f45c80793fc0cfb001e9ae",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9419.pdf",
+      "what": "invoice 9419 on HYBRID-II, rendered from the register",
+      "bytes": 3554,
+      "sha256": "637fbf02d640507b179dedc9332c34236631c24229d00fd0a310ee39576d8b6b",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9428.pdf",
+      "what": "invoice 9428 on DIG-ENG, rendered from the register",
+      "bytes": 2959,
+      "sha256": "2f95d5fa991ef22ffda56b25a2754204066e9fb489e33cc79c238604ff718a86",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9434.pdf",
+      "what": "invoice 9434 on LTM, rendered from the register",
+      "bytes": 3495,
+      "sha256": "a6d766d0526480cf8606cac8da25c74dbf59a36f9ee7f17ee2de1825c601b549",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9481.pdf",
+      "what": "invoice 9481 on HYBRID-II, rendered from the register",
+      "bytes": 3558,
+      "sha256": "39c7ee990c227d0e61c55e22720d4e02a81f47a1239bd87356180521f50f5392",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9495.pdf",
+      "what": "invoice 9495 on DRIVE-AM, rendered from the register",
+      "bytes": 3635,
+      "sha256": "27d8791173353ffac1c97cf084d54760cd8be0b20ee4619141c245f237b909a3",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9496.pdf",
+      "what": "invoice 9496 on DRIVE-AM, rendered from the register",
+      "bytes": 3632,
+      "sha256": "759d6745a9d7764bfb2d21508fbdb121cea19eb467f431d46c1dbfeca8e720b2",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9497.pdf",
+      "what": "invoice 9497 on LTM, rendered from the register",
+      "bytes": 3495,
+      "sha256": "450253d9f2805a57ed6daf1ae6fee067e286e2e2479d27e89504ed117dce2696",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9518.pdf",
+      "what": "invoice 9518 on HYBRID-II, rendered from the register",
+      "bytes": 3559,
+      "sha256": "cf31974b42c33db70fd8121a45add826cbcdb51006ca358bba459ecae00805be",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9560.pdf",
+      "what": "invoice 9560 on LTM, rendered from the register",
+      "bytes": 3495,
+      "sha256": "21a245991fbc58edfef6fa0de27b0a2122fd8c72f60293e6fad2e5174eee1ec4",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9561.pdf",
+      "what": "invoice 9561 on DRIVE-AM, rendered from the register",
+      "bytes": 3635,
+      "sha256": "142d64065c0a139e1e2fceb30a54fc558baed6f431ad8be5dd4d2ff3e8c52abc",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9639.pdf",
+      "what": "invoice 9639 on DRIVE-AM, rendered from the register",
+      "bytes": 3657,
+      "sha256": "6f8596b11621f213c7e8c6f5d2db03ee0401e918966f3c5789c163f1d6aad2ae",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9640.pdf",
+      "what": "invoice 9640 on LTM, rendered from the register",
+      "bytes": 3500,
+      "sha256": "ce2d64758e0916f869ed55fae4a278e3d9b15c2eb475f7127f4feead8d15c81c",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9646.pdf",
+      "what": "invoice 9646 on HYBRID-II, rendered from the register",
+      "bytes": 3557,
+      "sha256": "17cf2cff0706e238148b0327cc587bdca7cdda4e9298b478433a4dce78e34250",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9699.pdf",
+      "what": "invoice 9699 on LTM, rendered from the register",
+      "bytes": 3502,
+      "sha256": "ce3be97d77e5aa1000675454cbb0d7e05231ec323adbf2b18f878dae9422a116",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9703.pdf",
+      "what": "invoice 9703 on DRIVE-AM, rendered from the register",
+      "bytes": 3641,
+      "sha256": "90264a84601dc6bb59886ed3de2860977b13ae8a47f2cb04f1efa8e353414684",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9732.pdf",
+      "what": "invoice 9732 on LTM, rendered from the register",
+      "bytes": 3498,
+      "sha256": "a5990899589c0dd2fe62ae6928fb511e6ff46641925b4fc68ad5b667b7c070d9",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9734.pdf",
+      "what": "invoice 9734 on DRIVE-AM, rendered from the register",
+      "bytes": 3650,
+      "sha256": "e351a8879b7e0b910c79247e3bb7b7d9f235aed06b365ca43ba086ec13222f79",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9801.pdf",
+      "what": "invoice 9801 on LTM, rendered from the register",
+      "bytes": 3497,
+      "sha256": "5620badafef8be014533300c3b1859a389a720a0a25e8ddfefc9d57fa799702b",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9907.pdf",
+      "what": "invoice 9907 on DRIVE-AM, rendered from the register",
+      "bytes": 3622,
+      "sha256": "581f6d363db1b417f5fdf825fa7856f3d0be07345b45e4366d05f410c9a1ada3",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "amendment-memo-AM-DRIVE-AM.pdf",
+      "what": "why AM-DRIVE-AM's invoices are being reissued, and the clause it is made under",
+      "bytes": 3609,
+      "sha256": "f280016c93efa77ebdfde7dc1bc42472750b0bf57b56809f670dbfb97cf4307e",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "acceptance-AM-DRIVE-AM.pdf",
+      "what": "what NCDMM signs for AM-DRIVE-AM \u2014 both directions, never netted",
+      "bytes": 4739,
+      "sha256": "9c87dab540943c4e3545bdd058460b472227998a21b8679ed4859b57539b8954",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "amendment-memo-AM-HYBRID-P2.pdf",
+      "what": "why AM-HYBRID-P2's invoices are being reissued, and the clause it is made under",
+      "bytes": 3565,
+      "sha256": "83d59fbeac8ded1fa2d91331ad5f3cf363378a68adcd38858ef2f48f0603e3ef",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "acceptance-AM-HYBRID-P2.pdf",
+      "what": "what NCDMM signs for AM-HYBRID-P2 \u2014 both directions, never netted",
+      "bytes": 4299,
+      "sha256": "0cf90d550a68ed548e46e8fe56c0ddd6e25d135ddd5d7ffc679bdaa33016c1ff",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "amendment-memo-AM-ICAM-DIGENG.pdf",
+      "what": "why AM-ICAM-DIGENG's invoices are being reissued, and the clause it is made under",
+      "bytes": 3718,
+      "sha256": "a3dbed0227bcaf63695e548934c7f69af29ec9cc5d9c6e33a3134eda5c199bbc",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "acceptance-AM-ICAM-DIGENG.pdf",
+      "what": "what NCDMM signs for AM-ICAM-DIGENG \u2014 both directions, never netted",
+      "bytes": 4167,
+      "sha256": "24b76aa007b67c30b7ff2d00695169a8794cfb3f041d07c2c094d3a4de832c5e",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "amendment-memo-AM-LTM-PROJ88.pdf",
+      "what": "why AM-LTM-PROJ88's invoices are being reissued, and the clause it is made under",
+      "bytes": 3666,
+      "sha256": "38a347c5566d7c33f590584dd5fc1cf72dd787450602f2ab53bb02517ae2ed5a",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "acceptance-AM-LTM-PROJ88.pdf",
+      "what": "what NCDMM signs for AM-LTM-PROJ88 \u2014 both directions, never netted",
+      "bytes": 4441,
+      "sha256": "2e4c329018c3bb6d48111371faea422f084704ccbeda48d0ba80500cd28333a6",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    }
+  ],
+  "notes": [
+    "AM-DRIVE-AM: no change-of-basis clause on the record, so the memorandum asks NCDMM to name the instrument instead of citing one.",
+    "AM-ICAM-DIGENG: no change-of-basis clause on the record, so the memorandum asks NCDMM to name the instrument instead of citing one."
+  ]
+}

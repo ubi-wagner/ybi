@@ -326,3 +326,52 @@ def test_no_income_reaches_the_scope_on_a_loaded_ledger():
     bad = one("SELECT count(*) AS n FROM v_cost_line WHERE section = 'Income'")
     assert bad["n"] == 0, (
         f"{bad['n']} income lines are being offered as cost to classify")
+
+
+# ── Part IX cross-foots ───────────────────────────────────────────────
+
+def test_the_return_puts_every_dollar_of_compensation_in_a_function():
+    """Part IX printed $2,191,777.54 of payroll with nothing in any of the
+    three columns the return prints.
+
+    `EXCLUDED` is a rate judgment and it is right — `add_labor()` already puts
+    the distribution in MTDC, so a DIRECT judgment on a wage account would
+    count the payroll twice. What it says nothing about is which column of the
+    return a salary belongs in, and the classification log set both from one
+    judgment. The row did not cross-foot on a tax return.
+    """
+    import os
+    if not os.getenv("DATABASE_URL"):
+        import pytest
+        pytest.skip("needs a database")
+    from app.db import query
+
+    rows = query("""SELECT function_990, sum(amount) AS amount
+                      FROM v_form_990_functional
+                     WHERE period = '2025'
+                       AND natural_category = '5129 Payroll Expenses'
+                     GROUP BY 1""")
+    if not rows:
+        import pytest
+        pytest.skip("no payroll on this record")
+    by = {r["function_990"]: r["amount"] for r in rows}
+    printed = sum(v for k, v in by.items()
+                  if k in ("PROGRAM", "MANAGEMENT_AND_GENERAL", "FUNDRAISING"))
+    assert printed == sum(by.values()), (
+        "compensation is on the return in a function or it is nowhere: "
+        f"{ {k: str(v) for k, v in by.items()} }")
+    assert by.get("NOT_APPLICABLE", 0) == 0
+
+
+def test_the_990_workbook_prints_every_column_the_handler_accumulates():
+    """The handler has always carried a NOT_APPLICABLE bucket and the sheet
+    never showed it, so a row whose total exceeded its three functions left
+    the reader nothing to reconcile to."""
+    import inspect
+
+    from app.domain import review_workbooks
+
+    src = inspect.getsource(review_workbooks.build_form_990)
+    for key in ("PROGRAM", "MANAGEMENT_AND_GENERAL", "FUNDRAISING",
+                "NOT_YET_CLASSIFIED", "NOT_APPLICABLE", "total"):
+        assert f'"{key}"' in src, f"Part IX does not print {key}"

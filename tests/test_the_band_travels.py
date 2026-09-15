@@ -146,3 +146,49 @@ def test_the_fact_is_read_once():
         "these read v_rate_certified directly instead of calling "
         "rates.rate_certification(), so the band and the screen can drift:\n  "
         + "\n  ".join(own))
+
+
+# ── And the amendment papers say where they stand ─────────────────────
+#
+# `_proposed_band` printed "PROPOSED — NOT A CLAIM · Nothing here is billed
+# until NCDMM accepts it in writing" unconditionally — so an acceptance form
+# NCDMM had **already signed** came back saying it was not a claim, on the one
+# page whose whole job is to record that they said yes. The status could not
+# reach the paper at all: `AmendmentPapers` had no field for it.
+
+def test_the_amendment_band_says_where_the_restatement_stands():
+    from app.domain.amendment_document import standing_band
+
+    headline, sub = standing_band("PROPOSED")
+    assert headline == "PROPOSED — NOT A CLAIM"
+    assert "accepts it in writing" in sub
+
+    headline, sub = standing_band("SUBMITTED")
+    assert "SUBMITTED" in headline
+    assert "accepted in writing" in sub
+
+    headline, sub = standing_band("ACCEPTED", "Modification 001, 22 Jan 2026")
+    assert headline == "ACCEPTED BY NCDMM"
+    assert "Modification 001, 22 Jan 2026" in sub
+    assert "not a claim" not in sub.lower()
+    assert "NOT A CLAIM" not in headline
+
+
+def test_an_accepted_paper_never_calls_itself_a_proposal():
+    """The defect, as a property. Every state but PROPOSED must drop the
+    sentence that says nothing is billed yet."""
+    from app.domain.amendment_document import standing_band
+
+    for status in ("SUBMITTED", "ACCEPTED"):
+        headline, _ = standing_band(status, "Modification 001")
+        assert "PROPOSED" not in headline, status
+
+
+def test_an_acceptance_with_no_modification_says_so_rather_than_asserting_one():
+    """`acceptance_names_its_modification` refuses this in the schema, so it
+    should not be reachable — and a paper that printed a clean acceptance
+    anyway would hide the finding rather than show it."""
+    from app.domain.amendment_document import standing_band
+
+    _, sub = standing_band("ACCEPTED", "   ")
+    assert "without a modification named" in sub

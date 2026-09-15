@@ -52,6 +52,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.db import one, query                                  # noqa: E402
 from app.foundation import EMAIL                                # noqa: E402
+#: What counts as a restatement standing as a claim — read from the router
+#: that owns the papers rather than kept here. Two copies of one predicate is
+#: how a script and a screen come to disagree about what is on the record.
+from app.routers.restate import STANDING                        # noqa: E402
 
 BOLD, OK, WARN, FAIL, END = "\033[1m", "\033[32m", "\033[33m", "\033[31m", "\033[0m"
 
@@ -168,9 +172,9 @@ def amendment_papers(c, out_dir: Path, caveats: list[str]) -> None:
     about, and which this function was until the screen got its door.
     """
     awards = query("""SELECT DISTINCT award_id FROM v_restatement
-                       WHERE period = %s AND status = 'PROPOSED'
+                       WHERE period = %s AND status = ANY(%s)
                          AND award_id IS NOT NULL
-                       ORDER BY award_id""", (PERIOD,))
+                       ORDER BY award_id""", (PERIOD, list(STANDING)))
     if not awards:
         note("no restatement is standing as a claim, so there is nothing to "
              "put an amendment memorandum against. `POST /api/restate` is "
@@ -314,8 +318,9 @@ def main() -> int:
                           FROM invoice
                          WHERE period = %s AND objective_id IN (
                                SELECT objective_id FROM v_restatement
-                                WHERE period = %s AND status = 'PROPOSED')
-                         ORDER BY invoice_number""", (PERIOD, PERIOD))
+                                WHERE period = %s AND status = ANY(%s))
+                         ORDER BY invoice_number""",
+                    (PERIOD, PERIOD, list(STANDING)))
     got = 0
     for inv in invoices:
         r = c.get(f"/api/reports/invoice/{inv['invoice_id']}")

@@ -142,6 +142,21 @@ class AmendmentPapers:
     caveats: tuple[str, ...] = ()
     certified: bool = False
     certification_line: str = ""
+    #: Where the restatement stands with the sponsor, and what the band on
+    #: both papers says. It was hard-coded PROPOSED, so the acceptance form
+    #: NCDMM had *already signed* came back reading "PROPOSED — NOT A CLAIM ·
+    #: Nothing here is billed until NCDMM accepts it in writing" — a document
+    #: contradicting the record it was rendered from, on the one page whose
+    #: whole job is to record that the sponsor said yes. `082`'s rule in a new
+    #: place: a document silent about its own state leaves the reader to
+    #: assume, and the assumption made about a figure on a letterhead is the
+    #: generous one.
+    status: str = "PROPOSED"
+    #: The written instrument the acceptance is recorded against. Printed on
+    #: the band once accepted, because an acceptance that names no
+    #: modification is the finding `acceptance_names_its_modification` exists
+    #: to prevent and a paper that showed one anyway would hide it.
+    modification_ref: str = ""
     reference: str = ""
 
     #: Deliberately no check that only one of the two is set. A `Movement` is
@@ -202,22 +217,50 @@ def _head(c, p: AmendmentPapers, title: str, y: float) -> float:
     return min(y, PAGE_H - MARGIN - 44) - 14
 
 
-def _proposed_band(c, y: float) -> float:
-    """PROPOSED, before anything else.
+def standing_band(status: str, modification_ref: str = "") -> tuple[str, str]:
+    """What the band says, given where the restatement stands.
+
+    Pure, and the one definition — `audit_package.certification_lines()` is
+    the same move for the rate's signature. Both papers render it, so neither
+    can say something the other does not.
+
+    Three states, and the third is the one that was missing. `PROPOSED` is a
+    position YBI has taken and nothing is billed on it. `SUBMITTED` is that
+    position in the post. `ACCEPTED` is the sponsor having agreed in writing,
+    and a paper that still read "not a claim" there would contradict the
+    record it was rendered from.
+    """
+    if status == "ACCEPTED":
+        return ("ACCEPTED BY NCDMM",
+                (f"Recorded against {modification_ref}."
+                 if (modification_ref or "").strip()
+                 else "Recorded without a modification named — which the "
+                      "schema refuses, so this should not be readable."))
+    if status == "SUBMITTED":
+        return ("SUBMITTED — AWAITING NCDMM",
+                "Issued to NCDMM. Nothing is billed until it is accepted in "
+                "writing.")
+    return ("PROPOSED — NOT A CLAIM",
+            "Nothing here is billed until NCDMM accepts it in writing.")
+
+
+def _proposed_band(c, p: AmendmentPapers, y: float) -> float:
+    """Where this stands, before anything else.
 
     `061`'s rule on the screen, on the paper: *a proposal is not a position.*
     A sponsor who reads the total first has already formed a view about what
-    is being asserted.
+    is being asserted — and one who reads an acceptance form they have signed
+    and finds it calling itself a proposal has formed the wrong one.
     """
+    headline, sub = standing_band(p.status, p.modification_ref)
     c.setFillColor(BAND)
     c.rect(MARGIN, y - 6, TABLE_W, 22, stroke=0, fill=1)
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold", 8.5)
-    c.drawString(MARGIN + 6, y + 4, "PROPOSED — NOT A CLAIM")
+    c.drawString(MARGIN + 6, y + 4, headline)
     c.setFont("Helvetica", 7.5)
     c.setFillColor(MUTED)
-    c.drawString(MARGIN + 150, y + 4,
-                 "Nothing here is billed until NCDMM accepts it in writing.")
+    c.drawString(MARGIN + 150, y + 4, sub)
     return y - 22
 
 
@@ -276,7 +319,7 @@ def render_memo(p: AmendmentPapers) -> bytes:
     c.setTitle(f"Amendment memorandum — {p.award} — {p.period}")
 
     y = _head(c, p, "AMENDMENT", PAGE_H - MARGIN)
-    y = _proposed_band(c, y) - 6
+    y = _proposed_band(c, p, y) - 6
     y = _certification(c, p, y) - 4
 
     c.setFillColor(MUTED)
@@ -478,7 +521,7 @@ def render_acceptance(p: AmendmentPapers) -> bytes:
     c.setTitle(f"Acceptance — {p.award} — {p.period}")
 
     y = _head(c, p, "ACCEPTANCE", PAGE_H - MARGIN)
-    y = _proposed_band(c, y) - 6
+    y = _proposed_band(c, p, y) - 6
     y = _certification(c, p, y) - 4
 
     y = _para(c, (

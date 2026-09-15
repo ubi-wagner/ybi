@@ -105,14 +105,18 @@ def form_990(period: str | None = None) -> dict:
         cat = by_cat.setdefault(r["natural_category"], {
             "natural_category": r["natural_category"], "total": Decimal(0),
             "lines": 0, **{f: Decimal(0) for f in FUNCTIONS},
-            "NOT_YET_CLASSIFIED": Decimal(0)})
+            # Both of the return's non-function columns start at zero rather
+            # than being created on demand. A category with no not-applicable
+            # cost genuinely holds none of it, and the sheet's rule is that a
+            # blank means nobody has answered — which is a different fact.
+            "NOT_YET_CLASSIFIED": Decimal(0), "NOT_APPLICABLE": Decimal(0)})
         amount = Decimal(str(r["amount"] or 0))
         key = r["function_990"] if r["function_990"] in cat else "NOT_APPLICABLE"
-        if key == "NOT_APPLICABLE":
-            # The enum carries NOT_APPLICABLE for cost that is on the ledger
-            # but outside the return's scope. It is still shown, under its own
-            # name, rather than folded into a function it does not belong to.
-            cat.setdefault("NOT_APPLICABLE", Decimal(0))
+        # The enum carries NOT_APPLICABLE for cost that is on the ledger but
+        # outside the return's scope — contra-income sitting in the expense
+        # section, and nothing else since `092`. It is shown under its own
+        # name rather than folded into a function it does not belong to, and
+        # the column is printed so every row cross-foots.
         cat[key] = cat.get(key, Decimal(0)) + amount
         cat["total"] += amount
         cat["lines"] += r["lines"]
