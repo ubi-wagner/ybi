@@ -176,3 +176,104 @@ def test_the_map_routes_by_longest_prefix(q):
     assert D(netted[0]["total"]) == D(events["a"]), (
         "the special-event accounts did not reach line 8b, so their parent's "
         "mapping won and the return over-reports Part IX by their cost")
+
+
+# ── Line 5 is a person, not an account ────────────────────────────────
+
+def test_line_5_comes_out_of_line_7_and_the_two_still_tie(q):
+    """Line 5 is the only line of this return that is not a routing. The
+    officers' wages and everybody else's are the same account — payroll posts
+    as lump journal entries with no employee dimension — so line 5 is an
+    amount lifted out of line 7 *by person*, from the payroll register.
+
+    What must hold is that nothing is created or lost doing it."""
+    if not loaded(q):
+        pytest.skip("no ledger on this record")
+    rows = {r["line_id"]: r for r in
+            q("""SELECT line_id, total FROM v_form_990_part_ix
+                  WHERE period = %s AND line_id IN ('5', '7')""", (PERIOD,))}
+    wages = D(q("""SELECT sum(amount) AS a FROM ledger_line
+                    WHERE period = %s
+                      AND account LIKE '5129 Payroll Expenses:5139 Wages%%'""",
+                (PERIOD,))[0]["a"])
+    if wages == 0:
+        pytest.skip("no wage accounts on this record")
+    assert D(rows["5"]["total"]) + D(rows["7"]["total"]) == wages, (
+        "line 5 plus line 7 is not the wage accounts: "
+        f"{rows['5']['total']} + {rows['7']['total']} against {wages}")
+
+
+def test_line_5_is_officers_and_key_employees_and_nobody_else(q):
+    """The 2024 return's own answer: three people were paid over $100,000 and
+    only one of them reached line 5, because the other two are marked
+    *highest compensated employee* and hold no office. Getting this wrong
+    would have put $233,693 on line 5 instead of $167,967."""
+    reach = {r["position"] for r in
+             q("SELECT DISTINCT position FROM v_form_990_officer "
+               "WHERE on_line_5")}
+    assert reach <= {"OFFICER", "OFFICER_AND_DIRECTOR", "KEY_EMPLOYEE"}
+    assert "HIGHEST_COMPENSATED" not in reach, (
+        "a highest compensated employee who holds no office is on line 7")
+    assert "DIRECTOR" not in reach
+
+
+def test_the_2024_roster_reproduces_the_line_5_the_return_filed(q):
+    """Reportable plus other compensation, for the people who reach line 5,
+    is $167,967 — the figure on the face of the filed return. It is the
+    check that the roster was read correctly rather than plausibly."""
+    rows = q("""SELECT COALESCE(sum(reportable), 0) AS r,
+                       COALESCE(sum(other), 0) AS o
+                  FROM v_form_990_officer
+                 WHERE period = '2024' AND on_line_5""")
+    if not rows or D(rows[0]["r"]) == 0:
+        pytest.skip("2024 roster not on this record")
+    filed = D(q("""SELECT total FROM form_990_prior_year
+                    WHERE period = '2024' AND line_id = '5'""")[0]["total"])
+    assert D(rows[0]["r"]) + D(rows[0]["o"]) == filed, (
+        f"the roster gives {rows[0]['r']} + {rows[0]['o']} against the "
+        f"return's own {filed}")
+
+
+def test_line_5_is_split_by_its_own_effort_and_not_the_estate_s(q):
+    """`092` splits the compensation block by the estate-wide distribution,
+    which is right for forty-three people and wrong for one. Line 5 is one
+    person and her own distribution is on the record."""
+    if not loaded(q):
+        pytest.skip("no ledger on this record")
+    cohorts = {(r["cohort"], r["function_990"]): D(r["share"]) for r in
+               q("""SELECT cohort, function_990, share
+                      FROM v_labour_function_share_by_cohort
+                     WHERE period = %s""", (PERIOD,))}
+    if not cohorts:
+        pytest.skip("no effort distribution on this record")
+    line5 = q("""SELECT total, management FROM v_form_990_part_ix
+                  WHERE period = %s AND line_id = '5'""", (PERIOD,))[0]
+    if D(line5["total"]) == 0:
+        pytest.skip("no compensated officer on this record")
+    want = (D(line5["total"])
+            * cohorts[("OFFICER", "MANAGEMENT_AND_GENERAL")]).quantize(
+                Decimal("0.01"))
+    assert D(line5["management"]) == want, (
+        "line 5's management and general column is not the officer cohort's "
+        "own share of her effort")
+    assert (cohorts[("OFFICER", "MANAGEMENT_AND_GENERAL")]
+            != cohorts[("STAFF", "MANAGEMENT_AND_GENERAL")]), (
+        "the two cohorts have the same share, so this test cannot tell them "
+        "apart — it is passing over the thing it names")
+
+
+def test_a_roster_that_has_gone_stale_says_so(q):
+    """A roster carried forward from last year is exactly the shape that goes
+    stale. The control is not that it never does — Part VII also lists the
+    five highest compensated employees, and that list moves — but that the
+    two ways it matters are visible."""
+    rows = q("SELECT * FROM v_form_990_officer_check WHERE period = %s",
+             (PERIOD,))
+    if not rows or rows[0]["state"] == "NO DATA":
+        pytest.skip("no roster on this record")
+    r = rows[0]
+    assert r["on_the_roster_not_on_the_payroll"] == 0, r["needs"]
+    assert r["paid_with_no_payroll_key"] == 0, r["needs"]
+    # Not an assertion about the number: somebody crossing $100,000 is a fact
+    # about the year, and the column exists so a preparer sees it.
+    assert r["paid_over_100k_and_not_on_the_roster"] >= 0

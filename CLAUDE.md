@@ -2867,12 +2867,9 @@ Four things the comparison turned up that no view had ever been able to say:
   $139,739 that way. Ours had never had the concept, so Part IX over-reported
   expenses by the cost of the Shark Tank. Line `8b` is a real line of the map
   now and the two presentations differ by exactly it, which a test holds.
-- **Line 5 is empty and should not be.** The 2024 return reported $167,967 of
-  officer, director, trustee and key-employee compensation. `5140 Employee
-  Wages` is undifferentiated and no column on this record says who is an
-  officer. The line prints **empty on purpose** and the comparison names it:
-  an empty line that should carry something is a question, and a line silently
-  folded into its neighbour is not.
+- **Line 5 was empty and should not have been**, and printing it empty is
+  what got it answered. See **Line 5 is a person and the ledger has no column
+  for one** below.
 - **The two years allocate the functional columns by different methods.** Ten
   indirect lines of the 2024 return carry the *same three percentages* —
   occupancy, depreciation, insurance, interest, accounting, legal, office,
@@ -2895,6 +2892,71 @@ Four things the comparison turned up that no view had ever been able to say:
   $23,162.02, which is the two years answering differently whether an event
   sponsorship is a contribution or event income; and 2024 netted no rental
   expense, which is why occupancy stays in Part IX line 16.
+
+### Line 5 is a person, and the ledger has no column for one
+
+Migrations `098`–`100`. The comparison printed Part IX line 5 — *compensation
+of current officers, directors, trustees and key employees* — **empty**, and
+said why: the 2024 return reported $167,967 there, `5140 Employee Wages` is
+undifferentiated, and nothing on this record says who is an officer. Printing
+it empty rather than folding it into line 7 is what got it answered, which is
+the argument for the empty line: *a line that should carry something and does
+not is a question; a line silently folded into its neighbour is not.*
+
+**The answer was two documents away.** Part VII Section A of the 2024 return
+is the roster — twenty-four directors at nil, five of them also holding office
+as chairperson, vice chairperson, treasurer, secretary and executive committee
+member; the CEO at $158,507 reportable plus $9,460 of other compensation; and
+two vice presidents marked in column (v), *highest compensated employee*.
+A highest compensated employee who holds no office **does not reach line 5**,
+which is why the filed line 5 is one person and comes to $167,967 to the
+dollar. Read the column, not the salary: taking all three would have put
+$233,693 there.
+
+And the instruction that makes 2025 answerable is *same officers and directors
+as 2024*. So the roster carries forward, the titles carry forward, and **the
+compensation does not** — 2025's is read from the payroll register, where the
+CEO is $192,087.13.
+
+Three things it has to get right, and each is a rule already here:
+
+- **It is not a routing.** Every other line is an account prefix in
+  `form_990_account_line`; line 5 cannot be, because the officers' wages and
+  everybody else's are the same account. Payroll posts as two lump journal
+  entries a pay period with no employee, project or class dimension — which is
+  why `labor_allocation` exists at all. So line 5 is an amount lifted out of
+  line 7 **by person**, from the register, and the two still add to the wage
+  accounts.
+- **The register and the ledger differ by $45,053.23** and always have — the
+  donor credit that sat in an intern wage account for a year. Line 5 is a
+  register figure and line 7 is the ledger's wage accounts less it, so the
+  whole of that difference sits in line 7 rather than being spread across
+  both.
+- **Her functional split is her own.** `092` splits the compensation block by
+  the estate-wide effort distribution because it is forty-three people; line 5
+  is one, and `v_labor_effective` holds *her* distribution — 81.6% programme,
+  13.5% administration, 4.8% fundraising, against the staff's 83.6 / 14.5 /
+  1.9. `v_labour_function_share_by_cohort` is the two of them, and a test
+  fails if the cohorts ever come out identical, because then it is passing
+  over the thing it names.
+
+**What it still cannot carry is the other compensation** — the $9,460 the 2024
+return reports *inside* line 5, which is an estimate of the CEO's benefits.
+The fringe pool is six accounts and nothing allocates it by employee, so that
+element stays in line 9 with everybody else's. The note on the line says so
+rather than apportioning it, and `100` is that note: `094` wrote line 5's note
+when the line was empty and `098` made it false, which is `086` and `093`
+again — a sentence describing a state the record has moved out of.
+
+**And the roster control found something the instruction did not cover.**
+*Same officers and directors* is true and Part VII Section A is still not the
+same list, because the part also names the five highest compensated employees
+over $100,000. The 2024 return answered **3** to its own line 2; on the 2025
+register it is **4** — Heidi Ruby at $112,467.42, on nobody's roster. It does
+not move line 5, and it does change who Part VII has to list.
+`v_form_990_officer_check` asks the two questions a carried-forward roster
+goes stale by: an officer the register no longer pays, and somebody the
+register pays well who is on no roster.
 
 ### The expense view answered with the revenue lines, at zero
 

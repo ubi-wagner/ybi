@@ -204,6 +204,66 @@ def main() -> int:
       f"**{money(now_total)}** | |")
     w("")
 
+    # ── Part VII ─────────────────────────────────────────────────────
+    w("## Part VII — Officers, directors, trustees and key employees\n")
+    roster = query("""SELECT * FROM v_form_990_officer
+                       WHERE period = %s ORDER BY seq""", (period,))
+    orc = one("SELECT * FROM v_form_990_officer_check WHERE period = %s",
+              (period,))
+    if roster:
+        w(f"The board and the officers are unchanged from {prior}, so the "
+          f"roster carries forward. **The compensation does not** — "
+          f"{period}'s is read from the payroll register, and that is the "
+          f"whole reason the two are separate columns.\n")
+        w("| | | position | | " + prior + " | " + period + " |")
+        w("| --- | --- | --- | --- | ---: | ---: |")
+        paid = [r for r in roster if D(r["reportable"]) != 0
+                or r["position"] != "DIRECTOR"]
+        prior_pay = {r["seq"]: r for r in
+                     query("""SELECT seq, reportable, other
+                                FROM v_form_990_officer WHERE period = %s""",
+                           (prior,))}
+        for r in paid:
+            pp = prior_pay.get(r["seq"], {})
+            w(f"| {r['seq']} | {r['name']} | {r['title']} | "
+              f"{'**line 5**' if r['on_line_5'] else 'line 7'} | "
+              f"{money(pp.get('reportable'))} | {money(r['reportable'])} |")
+        directors = [r for r in roster
+                     if r["position"] == "DIRECTOR" and D(r["reportable"]) == 0]
+        w(f"| | *and {len(directors)} directors at nil* | MEMBER | | — | — |")
+        w("")
+        w(f"**Line 5 is one person.** Of the {orc['people_on_the_roster']} on "
+          f"Part VII, {orc['reach_line_5']} hold office and only the CEO is "
+          f"compensated; the two vice presidents are marked *highest "
+          f"compensated employee*, which is not an officer and belongs on "
+          f"line 7. That is what makes the {prior} line 5 of "
+          f"{money(prior_pay.get(25, {}).get('reportable', 0) + prior_pay.get(25, {}).get('other', 0))} "
+          f"exactly one person's reportable pay plus her other compensation.\n")
+        if D(orc["paid_over_100k_and_not_on_the_roster"]) > 0:
+            over = query("""
+                SELECT r.employee_key, r.wages FROM (
+                  SELECT period, employee_key, max(payroll_wages) AS wages
+                    FROM labor_allocation GROUP BY 1, 2) r
+                 WHERE r.period = %s AND r.wages >= 100000
+                   AND NOT EXISTS (SELECT 1 FROM form_990_officer f
+                                    WHERE f.period = r.period
+                                      AND f.employee_key = r.employee_key)
+                 ORDER BY r.wages DESC""", (period,))
+            w(f"**And Part VII Section A is not the same list, even though "
+              f"the officers and directors are.** The part also names the "
+              f"five highest compensated employees over $100,000, and "
+              f"{period} has one the {prior} return did not:\n")
+            for o in over:
+                w(f"* **{o['employee_key']}** — {money(o['wages'])} on the "
+                  f"{period} payroll register, on nobody's roster.")
+            w(f"\nThe {prior} return answered **3** to Part VII Section A "
+              f"line 2, *total number of individuals who received more than "
+              f"$100,000 of reportable compensation*. On the {period} "
+              f"register it is **{len(over) + len([r for r in roster if D(r['reportable']) >= 100000])}**. "
+              f"That does not move line 5 — a highest compensated employee "
+              f"is not an officer — and it does change who Part VII has to "
+              f"list.\n")
+
     # ── Part IX ──────────────────────────────────────────────────────
     w("## Part IX — Statement of Functional Expenses\n")
     w(f"| line | | {prior} total | {period} total | Δ | {period} program | "
@@ -366,13 +426,18 @@ def main() -> int:
 
     # ── What it cannot produce ───────────────────────────────────────
     w("## What this return cannot say, and what it is waiting for\n")
-    gaps = [r for r in all_rows if D(r["total"]) == 0 and r["note"]]
-    for r in gaps:
-        w(f"* **Line {r['line_id'].lstrip('V')} — {r['label']}.** {r['note']}")
+    # Every line that carries a note, whether or not it carries money. A note
+    # on a line with a figure on it is the more interesting case: it says what
+    # the figure does *not* include, which a reader cannot see from the
+    # figure. Filtering on `total == 0` dropped exactly those the moment 098
+    # gave line 5 an amount.
     for r in all_rows:
-        if r["note"] and D(r["total"]) != 0 and r["part"] == "VIII":
-            w(f"* **Line {r['line_id'].lstrip('V')} — {r['label']}** carries "
-              f"{money(r['total'])}. {r['note']}")
+        if not r["note"]:
+            continue
+        carries = (f"carries {money(r['total'])}. " if D(r["total"]) != 0
+                   else "is empty. ")
+        w(f"* **Line {r['line_id'].lstrip('V')} — {r['label']}** — "
+          f"{carries}{r['note']}")
     w("")
     if walk:
         w("And the steps of the year's own walk that are not finished, which "

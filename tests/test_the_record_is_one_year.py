@@ -52,6 +52,13 @@ DATED_BY_THE_DOCUMENT = {
                            "docs/FORM_990_2025_vs_2024.md compares this year "
                            "against line for line. Its period is the year it "
                            "reports, which is the whole point of it.",
+    "form_990_officer": "Form 990 Part VII Section A — who the officers, "
+                        "directors and key employees are. The 2024 roster is "
+                        "transcribed from that year's filed return and the "
+                        "2025 one is carried forward from it, so the table "
+                        "holds both years by construction: knowing last "
+                        "year's roster is how this year's line 5 can be told "
+                        "from line 7 at all.",
 }
 
 
