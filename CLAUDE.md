@@ -3306,6 +3306,106 @@ Still open, and named rather than chased: Part X line 10a is
 and not all, and which of the two records is right is the same question
 `v_asset_register_tie` already asks about depreciation.
 
+## What the system writes is what it reads back
+
+`scripts/drive_symbiosis.py`, `tests/test_writing_and_reading_agree.py`, in
+`prove.sh` after `drive_partitions`. The concern, in the words it was put in:
+*this inconsistency of writing and reading symbiosis has me a little
+concerned* — the read side had grown fast (the tie register, Part X, the 990
+replica, twenty-one anchors) and nothing had asked whether the **write** side
+still reached all of it correctly.
+
+`drive_propagation` asks what one reclassification moves. `drive_buildup` asks
+whether the rate builds up as the queue is worked. This is the question behind
+both, over the whole surface at once: **five people change five registers, and
+every figure downstream of each has to move by exactly the right amount and
+nothing else may move at all.**
+
+| | | |
+| --- | --- | ---: |
+| LABOUR | `5130 Benefits`, FRINGE → OVERHEAD | 194,353.59 |
+| G&A | the accounting retainer, G&A → OVERHEAD | 73,024.44 |
+| SUBCONTRACTOR | a portfolio consultant, DIRECT → EXCLUDED | 100,000.00 |
+| FACILITIES | 33,869 sq ft of Taft, let → programme | |
+| INVENTORY | an Xjet asset, federally funded → not | 120,310.00 |
+
+**Three hundred figures are watched through each change** — coverage, seven
+pools, four rates, the carve-outs, Form 990 Parts VIII, IX and X, all
+twenty-one anchors of the tie register *by name*, the eleven statement
+controls, the asset register, the estate's occupancy, the three partitions and
+the walk. **44 checks, 0 findings, and every one of the three hundred is
+identical at the end.**
+
+The combined rate went **24.71% → 34.68%** and came back.
+
+### The separation is the property worth having
+
+**All 175 figures of the return held still** while the rate moved ten points.
+Form 990 is a statement about the ledger — the account a cost sits in and the
+990 function somebody judged — and a rate is a statement about the pools.
+Neither may reach into the other, and a return that moved when a pool did
+would report a different tax position for every rate the controller tried.
+
+It is only true for as long as the views stay apart, so it is a test:
+`v_form_990_part_ix`, `_part_viii` and `_part_x` may not read `pool`,
+`carve_out` or `rate`, and `v_pool_balance`, `v_rate_buildup` and
+`v_rate_anchor` may not read `form_990`. **Both halves were watched failing**
+against a Part IX taught to filter on `d.pool <> 'EXCLUDED'` — the source
+sweep caught it and so did the driven test, which moves a judgment to EXCLUDED
+inside a rolled-back transaction and compares every line and all four columns.
+
+A total alone would not have caught it. The first version asserted
+`sum(total)` and the mutant passed, because the decision reaches Part IX
+through the **function columns** and not the total.
+
+### The anchors are asserted to fire, not allowed to move
+
+Taking `5130 Benefits` out of FRINGE breaks `067`'s two anchors by
+construction — the fringe rate is anchored by anchoring both of its parts, and
+one of the six accounts the P&L names had just left the numerator. The drive
+**asserts they go OPEN** rather than listing them as permitted movement, and
+the screen prints the difference as **194,353.59**, which is the amount moved
+to the cent. A control that did not fire there would be the more serious
+finding.
+
+Three other things the read side got right without being asked:
+
+- **The worklist counted the drive's own judgments.** *Judgments that block
+  the seal — 3 items, 367,378.03*, which is 194,353.59 + 73,024.44 + 100,000
+  exactly. The three were recorded `TEST_ASSUMPTION`, and a grade that cannot
+  support a seal is what that row is for.
+- **The carve-out table lost a building and an asset**, visibly: Taft dropped
+  out of the 200.465 list when its tenant space became programme space, and
+  the 200.436(b) line went *20 assets · 156,235.27* to *19 assets ·
+  139,048.13*.
+- **The walk went 10 of 11 steps to 9**, naming the rate as 34.68% on the
+  POOL basis and the certification as `TO DO` with *the signature has been
+  withdrawn*.
+
+### Two things the drive itself got wrong first
+
+- **The census watched the tally and not the anchors.** It read the tie
+  register's `ties / open / no_data` counts, so one control going OPEN while
+  another came back would have left the totals standing and nothing would have
+  said so — **netting, in a census**, which is the thing `v_restatement`
+  refuses to do to a claim. Every anchor is a figure of its own now, and
+  `test_no_control_can_change_without_the_census_noticing` derives both sides:
+  it takes a real census and reads the real register, so a control added
+  tomorrow fails there until the drive watches it.
+- **Two families of key under one prefix.** `v_rate_anchor` keys on
+  `anchor.<CONTROL>` and the register's rows arrived as
+  `anchor.<REPORT>.<ANCHOR>` — the collision this file keeps finding, one
+  identifier wide, and it made four correct movements read as four findings.
+
+And one rule kept: **the walk-back is one unseal, not five.** Each act's undo
+only writes; the seal and the recompute happen once around the loop, because
+putting back what this drive did is one decision and not five.
+
+`--hold` leaves the five changes standing instead of walking them back, so the
+screens and the papers can be read in the moved state. The drive's whole claim
+is that the record comes back; proving it also has to be possible to *see* it
+move.
+
 ## The audit is a walk, not a to-do list
 
 Migration `081`, `v_audit_walk`, `GET /api/dashboard/walk`, `Walk.jsx`. The

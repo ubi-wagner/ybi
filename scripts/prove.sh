@@ -216,6 +216,15 @@ step "Heidi measures, Tom verifies, and the carve-out fires"
 # rate they feed. It puts its building back and says what it could not.
 run "drive_partitions" $PY scripts/drive_partitions.py --base "$BASE"
 
+step "Five registers changed at once, and every figure that must not move"
+# After drive_partitions, because it needs a sealed set with a live rate and
+# an estate to change. Five people change five registers — labour, G&A, a
+# subcontractor, a suite's square footage, an asset's funding source — and
+# three hundred figures are watched through each one. It puts every change
+# back and the census at the end has to equal the census at the start, which
+# is the whole of *what the system writes is what it reads back*.
+run "drive_symbiosis" $PY scripts/drive_symbiosis.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 
