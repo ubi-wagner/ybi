@@ -123,3 +123,64 @@ def test_every_step_goes_somewhere():
         assert r["goes_to"] in routed or base in routed, (
             f"step {r['seq']} ({r['step']}) points at {r['goes_to']}, which "
             f"is not a route")
+
+
+def test_a_partial_partition_does_not_report_the_finished_sentence():
+    """OPEN is not DONE with a different word.
+
+    `081` wrote the two partition steps while a partition could only be
+    `NO DATA` or `TIES` — nothing had ever been measured, so nothing could be
+    half-measured — and each carries a two-branch CASE: the `NO DATA`
+    sentence, and everything else. `085` loaded 263 assets, the partition
+    became evaluable and went `OPEN`, and the walk printed *"Every asset
+    names where its money came from"* over a register where 263 of 263 name
+    nothing: the step that exists to say what is unfinished asserting it was
+    finished, on the landing page the year is closed from.
+
+    Driven against the database rather than read off the view body, and both
+    partitions are driven — SPACE has the identical defect and is masked
+    today only because no building is on the record.
+    """
+    import psycopg
+    import psycopg.rows
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as con, con.cursor(
+            row_factory=psycopg.rows.dict_row) as cur:
+        cur.execute("SELECT period FROM fiscal_period LIMIT 1")
+        if not cur.fetchone():
+            pytest.skip("no period on this database")
+
+        cur.execute("""
+            INSERT INTO facility (facility_id, period, name, address,
+                                  usable_sqft, owned)
+            VALUES ('WALK-PART', '2025', 'Part measured', 'nowhere',
+                    10000, true)""")
+        cur.execute("""
+            INSERT INTO space_unit (unit_id, facility_id, period, label,
+                                    usable_sqft, use, status, occupant)
+            VALUES ('WALK-PART-1', 'WALK-PART', '2025', 'Room 1', 2000,
+                    'VACANT', 'VACANT', 'none')""")
+        cur.execute("""SELECT state, detail FROM v_audit_walk
+                        WHERE period = '2025' AND key = 'SPACE'""")
+        r = cur.fetchone()
+        assert r["state"] == "OPEN", (
+            "a building measured at 2,000 of 10,000 square feet is not a "
+            "partition that ties.")
+        assert "accounts for itself" not in r["detail"], (
+            "the SPACE step reports the finished sentence over a building "
+            "that does not account for its own area: " + r["detail"])
+        assert "%" in r["detail"], (
+            "OPEN has to say how much is outstanding, or it is a state with "
+            "no work in it: " + r["detail"])
+        con.rollback()
+
+    # And the asset half, on whatever the record actually holds.
+    with psycopg.connect(os.environ["DATABASE_URL"]) as con, con.cursor(
+            row_factory=psycopg.rows.dict_row) as cur:
+        cur.execute("""SELECT state, detail FROM v_audit_walk
+                        WHERE period = '2025' AND key = 'ASSETS'""")
+        r = cur.fetchone()
+        if r and r["state"] == "OPEN":
+            assert "names where its money came from" not in r["detail"], (
+                "the ASSETS step reports the finished sentence while assets "
+                "carry no funding source: " + r["detail"])

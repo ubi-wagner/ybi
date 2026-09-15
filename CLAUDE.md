@@ -2604,6 +2604,40 @@ interesting:**
   belongs on rather than fixed blind — which machines are lent out and on
   what terms is Heidi's answer, not a default's.
 
+### OPEN is not DONE with a different word
+
+Migration `086`, and the from-nothing replay is what surfaced it. `081`
+wrote the walk's two partition steps while a partition could only be
+`NO DATA` or `TIES` — nothing had ever been measured, so nothing could be
+half-measured — and each carries a **two-branch** CASE: the `NO DATA`
+sentence, and everything else. `085` loaded 263 assets, the partition
+became evaluable and went `OPEN`, and step 5 printed **"Every asset names
+where its money came from"** over a register where 263 of 263 name nothing.
+
+The step whose whole job is to say what is unfinished asserted it was
+finished, on the landing page the year is closed from. It is `v_asset
+_control.needs` going blank the moment the register existed — the defect
+`085` fixed one view away and did not carry here.
+
+**SPACE has the identical defect and is masked**, because no building is on
+the record. The day Heidi enters one whose rooms do not add up it goes OPEN
+and says *the space accounts for itself*. Both are fixed: a rule with one
+instance fixed is one somebody gets wrong the next time.
+
+And OPEN carries **the percentage**, not a part count and not an amount.
+`parts_done` means a different thing on each partition — buildings that have
+been *measured* for SPACE, assets that carry a source for ASSETS — so a
+building measured and never attributed reads as done; and `outstanding` is
+square feet on one and dollars on the other, which is the unit confusion
+`085` exists for. The first draft of this migration used the part count and
+reported **"0 of 1 building(s)"** on a building measured at 2,000 of 10,000
+square feet. `pct` is the one figure that means the same thing on both, and
+the view already computes it.
+
+`test_a_partial_partition_does_not_report_the_finished_sentence` drives both
+against a database inside a rolled-back transaction, rather than reading the
+view body — and was watched failing against `081`'s CASE restored.
+
 ### Proved from an empty database
 
 Not from the record it was built against, because a drive reading its own
