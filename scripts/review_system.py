@@ -381,8 +381,11 @@ def auditability(c: httpx.Client) -> None:
     total = one("SELECT count(*) AS n FROM audit_log")["n"]
     facts["audit_rows"] = total
 
-    orphan = one("""SELECT count(*) AS n FROM audit_log
-                     WHERE actor_id IS NULL OR session_id IS NULL""")["n"]
+    # The third copy of one predicate — `drive_state_machine` and
+    # `drive_everyone` held the other two, and all three reported the
+    # deployment bootstrap's honest rows as faults on a record built from
+    # nothing. Defined once in `v_audit_orphan`; migration `087`.
+    orphan = one("""SELECT count(*) AS n FROM v_audit_orphan""")["n"]
     if orphan:
         finding("AUDITABILITY", FAULT,
                 f"{orphan} audit entries name no account or no session",

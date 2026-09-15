@@ -831,8 +831,10 @@ def drive_feed(args, c, started):
     for a in actors:
         ok(f"{a['actor']} ({a['role']}) — {a['n']} change(s) on the record")
 
-    orphan = one("""SELECT count(*) AS n FROM audit_log
-                     WHERE actor_id IS NULL OR session_id IS NULL""")
+    # One definition, in the schema — `drive_state_machine` asked the same
+    # question with its own copy of this predicate, and both reported the
+    # deployment bootstrap's 24 honest rows as violations. Migration `087`.
+    orphan = one("""SELECT count(*) AS n FROM v_audit_orphan""")
     if orphan["n"] == 0:
         ok("every entry names an account and the session it was made in")
     else:

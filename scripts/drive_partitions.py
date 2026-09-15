@@ -152,6 +152,23 @@ def main() -> int:
         execute("DELETE FROM facility WHERE facility_id = %s", (FACILITY,))
     execute("DELETE FROM recommendation WHERE subject_id LIKE 'DRIVE-TB%'")
 
+    # The carve-out is a consequence of a rate, and a rate is a consequence
+    # of a seal. Against a bare seed there is neither, so this drive measured
+    # the space half correctly and then reported *the rate could not be
+    # restored (409)* as a finding — the server refusing exactly as it should,
+    # rendered as a defect. A precondition that is absent is not a failure;
+    # it is the register's NO DATA, and saying so is the difference between a
+    # harness a reviewer trusts and one they learn to skip.
+    sealed = one("""SELECT count(*) AS n FROM decision_set
+                     WHERE period = %s AND sealed_at IS NOT NULL""",
+                 (period,))["n"]
+    if not sealed:
+        print("COULD NOT RUN — no sealed decision set for this period, so "
+              "there is no rate for a carve-out to move. Apply the "
+              "classification log and seal, then run this again.",
+              file=sys.stderr)
+        return 2
+
     before_rates = rates(period)
     before_basis = admin_basis(period)
     before_space = walk_state(period, "SPACE")

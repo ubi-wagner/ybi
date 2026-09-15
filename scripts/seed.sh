@@ -95,6 +95,18 @@ run "fixed-asset register" $PY scripts/load_assets.py
 
 step "The awards, and what they say"
 run "invoices and awards" $PY scripts/load_invoices.py
+# And the rest of the year. `load_invoices.py` opens *"Load the three America
+# Makes invoices"* and does exactly that — three, from one month of 2026 —
+# and the register the run sheet quotes is **61 invoices and $2,964,077.32**,
+# loaded by a script this file did not call. So a rebuild from nothing came
+# back with a register that is a sample, and five steps of `prove.sh` could
+# not run for want of invoices to measure.
+#
+# Third instance of the shape this repository is named for: *the twenty-six
+# contract provisions read out of the executed agreements lived in one
+# developer's database and in no script*, and *anything that only exists
+# because somebody remembered to run it does not survive a recovery*.
+run "the rest of the 2025 register" $PY scripts/load_invoices_2025.py --apply
 run "contract provisions" $PY scripts/load_contract_terms.py \
     --base "$BASE" --password "$PASSWORD"
 run "budget schedules" $PY scripts/load_award_budgets.py

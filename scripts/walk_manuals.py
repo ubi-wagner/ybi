@@ -241,6 +241,44 @@ def main() -> int:
         raise SystemExit("YBI_SEED_PASSWORD is required.")
     OUT.mkdir(parents=True, exist_ok=True)
 
+    # Refuse before a browser starts, rather than photograph the gate.
+    #
+    # `YBI_SEED_PASSWORD` is the *organisation's* password, and an account
+    # still on it meets `FirstPassword` in front of every screen — so the
+    # walk signs in perfectly, lands on the must-set-password card, and
+    # writes that card over all thirty-six screenshots. Every file comes out
+    # the same size, which is the only tell; `tests/test_manual.py` passes,
+    # because a picture of the wrong screen is still a picture; and
+    # `git add -A` commits the lot. That is this repository's own recorded
+    # near-miss — seven screens overwritten with a login box — reached by a
+    # *correct* password instead of a wrong one.
+    #
+    # `must_set_password` is on the login response for exactly this, so ask.
+    unset = []
+    for email in sorted({e for e, *_ in SHOTS if e}):
+        try:
+            r = httpx.post(f"{args.base}/api/auth/login", timeout=30,
+                           json={"email": email, "password": pw_pass})
+        except httpx.HTTPError as exc:
+            raise SystemExit(f"{args.base} did not answer: {exc}")
+        if r.status_code != 200:
+            raise SystemExit(
+                f"{email} cannot sign in on YBI_SEED_PASSWORD "
+                f"({r.status_code}). The walk photographs screens as real "
+                f"people and has no way past a sign-in card.")
+        if r.json().get("must_set_password"):
+            unset.append(email)
+    if unset:
+        raise SystemExit(
+            "these accounts are still on the password somebody else chose:\n"
+            "  " + "\n  ".join(unset) + "\n\n"
+            "Every screen behind that is the must-set-password card, so a "
+            "walk now would write that card over every screenshot in the "
+            "manual and no test would fail on it. Have each of them choose "
+            "their own password first — POST /api/auth/password, which is "
+            "what the drives do — and run this again."
+        )
+
     commit = head_commit()
     taken: dict[str, dict] = {}
     with sync_playwright() as pw:
@@ -265,6 +303,28 @@ def main() -> int:
                               passwords.get(email, pw_pass))
                     page.click("button[type=submit]")
                     page.wait_for_timeout(1500)
+                    # The landing page offers two doors and `App.jsx` renders
+                    # it in place of every screen until one is picked. Without
+                    # this the walk photographs the chooser over every
+                    # screenshot in the manual — sixteen files at exactly
+                    # 93,358 bytes, because they are the same picture — and
+                    # `tests/test_manual.py` passes on all of them, since a
+                    # photograph of the wrong screen is still a photograph.
+                    #
+                    # `sweep_screens.py` was fixed for precisely this and said
+                    # so in a comment; this walk has the same defect and kept
+                    # it. An instrument that cannot tell a screen from a door
+                    # is worse than no instrument.
+                    door = page.get_by_text("2025 Audit", exact=True)
+                    if door.count():
+                        door.first.click()
+                        page.wait_for_timeout(1200)
+                    if "Pick the one you are doing" in page.inner_text("body"):
+                        browser.close()
+                        raise SystemExit(
+                            f"still on the product chooser as {email} — every "
+                            f"screenshot below this would be a picture of it, "
+                            f"and no test would fail on that.")
                 signed_in = email
             page.goto(args.base + path, wait_until="networkidle")
             # Wait for the screen to have drawn something, not for a fixed

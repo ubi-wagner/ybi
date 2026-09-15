@@ -3462,6 +3462,171 @@ Two defects from building it, both found by looking:
   **there is one door**, which is what
   `test_no_screen_reaches_past_the_request_layer` holds for the SPA.
 
+## The register the run sheet quotes was in no script
+
+`seed.sh` is this repository's answer to *the twenty-six contract provisions
+read out of the executed agreements lived in one developer's database and in
+no script*. Running `prove.sh` against a database built from empty found the
+third instance of that shape, in the seed itself.
+
+`load_invoices.py` opens *"Load the three America Makes invoices"* and does
+exactly that — three, from one month of 2026. The register `MONDAY_RUNBOOK.md`
+quotes in its first table is **61 invoices and $2,964,077.32**, loaded by
+`load_invoices_2025.py`, which **`seed.sh` did not call**. So a rebuild from
+nothing came back with a register that is a sample, and it was not a quiet
+gap: `drive_restate` reported COULD NOT RUN for want of invoices to measure
+and `drive_access` failed on *no invoices on the register — regeneration
+cannot be proved against real rows*.
+
+The loader's own header says the shape out loud — *"a register loaded from
+one document is a sample until something says otherwise"* — and the thing
+that was supposed to say otherwise did not run. It runs now, and the seed
+comes back with 61 invoices and the six streams tying to `3900 Grant Income`
+to the cent on five of them, with the two that differ declared.
+
+## Three copies of one predicate, and a bootstrap that names itself
+
+`drive_state_machine`, `drive_everyone` and `review_system` each carried
+their own `WHERE actor_id IS NULL OR session_id IS NULL`, and on a record
+built from nothing all three reported **24 violations**: 18 `EVIDENCE_UPLOAD`
+and 6 `ACTOR_CREATE`, every one written by `app/foundation.py` at boot.
+
+**The rows are right and the assertion was wrong.** `077` opens the accounts
+and files the eighteen documents when a Postgres service has been rebuilt and
+nobody has signed in yet. There is no session because there was no session,
+and no actor_id because the account being created does not exist when the row
+is written; `actor` says `deployment bootstrap`, which is the honest record of
+a machine acting alone. Naming a person there — Barb, because she is the
+administrator — would be inventing a history, which is what `079` refused to
+do to 891 rows.
+
+Migration `087` defines it once, and the useful part is that **the exemption
+is a shape and not a list of names.** A first draft matched
+`'deployment bootstrap'` literally and left three `INVOICE_REPERIOD` rows
+still reported — written by `load_invoices_2025.py (correction)`, the same
+case under a different name, and a list of names is the defect one level up.
+Two questions instead: *is anything named at all*, and *does the row claim a
+person*. An `actor_id` is set only where an account acted, and an account acts
+through a session; a mechanism that names itself and carries no `actor_id`
+had no session to record.
+
+**And it leaves exactly one row reported, which it should.** `079`
+deactivated the retired `tom@ybi.org` and recorded it under **Tom's own
+name** with no session — the migration did that, not him. Naming a person for
+an act a migration performed is the shape `079` itself refused, and it is a
+finding to answer rather than a predicate to widen.
+
+## The harness went red for a reason that is not a defect
+
+Twelve drives failed in a row, each reporting
+**`psycopg_pool.PoolTimeout: couldn't get a connection after 30.00 sec`**,
+and not one of them named the cause. `prove.sh` exports `PYTHONPATH` and
+takes `--base`, and **nothing in it names `DATABASE_URL`** — every drive
+below it talks to the API over the wire *and* reads rows through `app.db`,
+which without that variable falls back to `.env`, which on a machine that is
+not the one `.env` was written for points at a socket that does not exist.
+
+**And `psycopg_pool` reports a caller that can never connect as a timeout.**
+The connection error — *connection to server on socket "/tmp/.s.PGSQL.5432"
+failed* — is retried in the background and never reaches the caller. So the
+one fact worth knowing was swallowed and replaced with a symptom.
+
+That is `YBI_JWT_SECRET` in a second place: *the worst shape a configuration
+fault can take is one that reports as something else.* And the cost is the
+one this file already names — **a proof harness going red for a reason that
+is not a defect is how a reader learns to ignore it**, which is the whole
+argument for `foundation.EMAIL` in **Fifty-two copies of one address**
+above.
+
+`prove.sh` opens one connection before anything now and says which URL it
+tried and what the server said, beside the interpreter preflight that was
+already there for the same reason. Deliberately **not** through `app.db`:
+the pool retries eight times and prints a line per attempt, so the first
+version buried the URL under eight copies of the symptom.
+
+**And the step above them printed a green that described nothing.**
+`pytest` needs the same variable and skips what it cannot reach, so the
+harness opened with **`1091 passed, 229 skipped`** and a `PASS` — every
+database-backed test in the suite stepping aside quietly while the line a
+reviewer reads said the engine was sound. With the variable set it is
+`1320 passed`, nothing skipped. That is `sweep_screens.py` reporting *46
+figures, 100% clickable* against the chooser: a pass over a population that
+is not the one anybody thinks is being measured. The preflight settles this
+half too — there is no run without a database now, so there is no run where
+those 229 are absent.
+
+**And I misdiagnosed it first.** The Postgres log carried a genuine
+270-second checkpoint in the same window — 3,125 buffers at eleven a second
+where the run before it wrote 202 in five milliseconds — so the first
+reading was an I/O stall on the host, which was true and was not the cause.
+Two facts in one window, and the plausible one was wrong: the tell was that
+a fresh `app.db` query worked perfectly a minute later with `DATABASE_URL`
+set. **A coincidence that explains the symptom is not the same as the
+cause**, and the way to tell them apart was to reproduce rather than to
+reason.
+
+## The manual was thirty-three photographs of the same card
+
+And the second instrument in one run. `walk_manuals.py` signs in, navigates
+to `/classify`, and photographs it — except `App.jsx` renders the **two-door
+landing in place of every screen until one is picked**, so what it filed as
+the classification queue was a card headed *Pick the one you are doing*. It
+did that for every path: **thirty-three of the thirty-five** were the
+chooser, in five sizes — sixteen at exactly 93,358 bytes, ten at 92,153, and
+the rest differing only by whose name the masthead carried. The two that
+were not are the sign-in card and the must-set-password screen, which are
+the only two the walk reaches before a door exists.
+
+**`sweep_screens.py` was fixed for precisely this and says so in a comment**
+— *"it walked 23 paths, photographed the chooser 23 times, and reported 46
+figures, 100% clickable — a green that describes nothing"*. The manual walk
+had the same defect and kept it, one file away from the note about it. The
+lesson `079` records for a hand-kept address is the lesson here for a
+hand-fixed defect: **fixing one instance is not fixing the rule.**
+
+**And all 111 manual tests passed on it**, this repository's own recorded
+near-miss in as many words: *a screenshot of the wrong screen is still a
+screenshot.* Every test asked whether a file exists, whether the manifest
+names it, whether a chapter is gated on something real — and not one asked
+what was in the picture.
+
+`test_no_two_screens_are_the_same_picture` is the missing question, and the
+useful part is the exception. Six chapters share a screen with their menu
+thumbnail and are **legitimately** byte-identical, so a first draft reported
+all six and was a test arguing against correct code. The pair is read out of
+`taken.json` — same path, same person, fine; different path, identical
+bytes, not — so there is no allowlist to decay. Watched failing against the
+chooser written over two real screens.
+
+The walk picks the door now and **exits rather than photographing the
+chooser**, which is what `sweep_screens.py` already did. It also refuses
+before starting a browser where an account is still on the organisation's
+password: `FirstPassword` sits in front of every screen for exactly as long
+as that is true, and the walk would fill the manual with pictures of the
+must-set-password card by the same mechanism, reached by a *correct*
+password rather than a wrong one.
+
+## The run sheet did not know about the asset register
+
+`docs/MONDAY_RUNBOOK.md` is generated from the record by `scripts/runbook.py`
+precisely so its figures cannot be recalled. Its §P — *running in parallel,
+and none of it blocks the above* — named the roster reply and the square
+footage, and was written when those were the only two things outstanding on
+somebody else's desk. `085` loaded the fixed-asset register, so **263
+outstanding items appeared on the same person's list** and the sheet she
+reads on Monday said nothing about them.
+
+The generated half was right and the prose half had gone stale, which is
+what a generator is for and what it cannot do on its own. It reads
+`asset` now, so the bullet carries its own count.
+
+**And the first version of that sentence said the opposite of what it
+counted.** It printed the *unanswered* figure in the slot that reads as
+answered — *"263 of 263 assets name where their money came from"* — over a
+register where none of them do. That is `086` one document along, written by
+the person who had just written `086` down: a count is not a state, and a
+sentence that pairs the two has to be read once out loud.
+
 ## Staged for a human, and nothing else
 
 `scripts/readiness.py`, `scripts/monday.sh`, `docs/MONDAY_RUNBOOK.md`. The

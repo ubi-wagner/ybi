@@ -2,7 +2,7 @@
 
 *Generated from the record by `scripts/runbook.py`, which will not write over a failing crosscheck. Every figure below was read by `scripts/drive_invoice_ties.py`; none was typed beside it.*
 
-*14 September 2026*
+*15 September 2026*
 
 **Read §0 first.** The record is at the end of the path this document used to describe, so every step is **verification, not construction**. Following an earlier version literally would have had the controller press *Seal* on a sealed set.
 
@@ -123,6 +123,7 @@ The last column is the indirect rate the billing **actually** recovered, against
 
 - **The 43 timesheets.** 0 of 43 certified, and **0 employment terms are on the record**, so no draft can be built for anybody. Two gates, and both come out of the roster reply — which also carries the addresses the accounts are opened against. Opening them is a second act and it is the administrator's.
 - **The square footage.** 0 facilities carry measured space. It is the largest open item and **it gates no classification** — occupancy is OVERHEAD in the 2025 chart and the tenant share comes out at rate time.
+- **The funding source on each asset.** 263 of 263 assets name **no** funding source, against 23,419,573.64 of gross cost. 2 CFR 200.313(d)(1) requires the column and the schedule does not carry it, so it is the one thing here that no amount of reading the books can settle. It gates no classification either — depreciation is OVERHEAD whatever the answer — but 200.436(b) cannot be answered until it lands, so the federal treatment on it stays PENDING.
 - **Barb's decisions.** `docs/BARB_ONE_PAGE_AM.pdf`.
 
 ## What must not be automated, and why

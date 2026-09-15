@@ -81,6 +81,20 @@ def live() -> dict:
     terms = one("SELECT count(*) AS n FROM employment") or {"n": 0}
     facilities = one("SELECT count(*) AS n FROM facility") or {"n": 0}
     carve = one("SELECT count(*) AS n FROM carve_out") or {"n": 0}
+    # The other half of the same job. `085` loaded the fixed-asset register,
+    # so the funding source 200.436(b) turns on landed on the same person's
+    # list as the square footage — and this sheet named only one of the two,
+    # which is a generated document whose prose half has gone stale under a
+    # record that moved. The count is read here rather than written into the
+    # sentence, for the reason the rest of this file exists.
+    assets = one("""SELECT count(*) AS n,
+                           count(*) FILTER (
+                             WHERE NOT EXISTS (SELECT 1 FROM asset_funding f
+                                                WHERE f.asset_id = a.asset_id)
+                           ) AS unanswered,
+                           COALESCE(sum(a.gross_cost), 0) AS cost
+                      FROM asset a WHERE a.period = '2025'""") or {
+        "n": 0, "unanswered": 0, "cost": 0}
     restate = query("""SELECT objective_id, billed_total, under_recovered,
                               over_collected, as_billed_position, implied_rate
                          FROM v_restatement
@@ -88,7 +102,7 @@ def live() -> dict:
                         ORDER BY billed_total DESC""")
     return dict(seal=seal, rates=rates, judgments=judgments["n"],
                 people=people, terms=terms["n"], facilities=facilities["n"],
-                carve=carve["n"], restate=restate)
+                carve=carve["n"], restate=restate, assets=assets)
 
 
 def render(x: dict, f: dict) -> str:
@@ -322,6 +336,19 @@ def render(x: dict, f: dict) -> str:
       f"space. It is the largest open item and **it gates no "
       f"classification** — occupancy is OVERHEAD in the 2025 chart and the "
       f"tenant share comes out at rate time.")
+    a = f["assets"]
+    if a["n"]:
+        w(f"- **The funding source on each asset.** {a['unanswered']:,} of "
+          f"{a['n']:,} assets name **no** funding source, against "
+          f"{a['cost']:,.2f} of gross cost. 2 CFR 200.313(d)(1) requires the "
+          f"column and the schedule does not carry it, so it is the one thing "
+          f"here that no amount of reading the books can settle. It gates no "
+          f"classification either — depreciation is OVERHEAD whatever the "
+          f"answer — but 200.436(b) cannot be answered until it lands, so the "
+          f"federal treatment on it stays PENDING.")
+    else:
+        w("- **The fixed-asset register.** Not loaded, so 200.313(d)(1) "
+          "cannot be asked at all: `python3 scripts/load_assets.py`.")
     w("- **Barb's decisions.** `docs/BARB_ONE_PAGE_AM.pdf`.")
     w("")
     w("## What must not be automated, and why")
