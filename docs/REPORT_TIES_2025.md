@@ -2,7 +2,7 @@
 
 *Generated from the record on 15 September 2026. Every row is read from the control that already owns its figure; nothing in this document is computed.*
 
-**18 of 20 anchors tie.** 2 outstanding.
+**19 of 21 anchors tie.** 2 outstanding.
 
 | | Report | Anchor | Against | Difference |
 | --- | --- | --- | --- | ---: |
@@ -18,6 +18,7 @@
 | ✓ | FORM 990 | Part IX adds back to the profit and loss | the profit and loss's Expense and COGS sections | 0.00 |
 | ✓ | FORM 990 | Part VIII adds back to the profit and loss | the profit and loss's Income and Other Income sections | 0.00 |
 | ✓ | FORM 990 | Part VII names everybody the register pays | the payroll register | — |
+| ✓ | FORM 990 | Part X foots, and every account is on it | the balance sheet as imported, account by account | 0.00 |
 | ✓ | TIMESHEET | The distribution is the payroll register | the payroll register, which is the fringe denominator | 0.00 |
 | ✓ | TIMESHEET | The hours account for the wages | the hours log, against the payroll distribution the rate rests on | — |
 | △ | INVENTORY | The asset register is the ledger's depreciation | the profit and loss's depreciation expense, and the balance sheet's accumulated depreciation | 22,429.02 |

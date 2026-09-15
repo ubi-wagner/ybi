@@ -3081,7 +3081,7 @@ owns its figure**. Nothing in the view, the route, the panel or the document
 computes a tie; a second derivation of a control is one figure computed
 twice, which is the thing that can disagree with itself.
 
-**Twenty anchors, eighteen tie, two do not, none is unevaluable.** The two
+**Twenty-one anchors, nineteen tie, two do not, none is unevaluable.** The two
 are named to the cent rather than netted away, because a difference is
 closed by naming it and which of the two records is right is a judgment with
 a person's name on it:
@@ -3173,6 +3173,138 @@ them, because a reviewer handed a total has formed a view before they reach a
 footnote. `scripts/report_ties.py` writes the same register as a document for
 the reader who is not at a screen, and reads every figure from the row the
 control recorded it in.
+
+## The 2024 return, answered for 2025
+
+Migrations `110`–`113`, `app/domain/form_990_return.py`,
+`app/domain/form_990_document.py`, `scripts/form_990_replica.py`,
+`docs/FORM_990_2025_REPLICA.pdf`. The instruction was to **map the filed 2024
+PDF to a 2025 replica with every field completed**, and the first thing
+mapping it showed is how little of a Form 990 is a financial statement.
+
+`094`–`097` put Parts VIII and IX on the return's own lines and this adds Part
+X. Those are the three statements and they are **a third of the document**:
+the filed 2024 return is thirty-six pages, and the rest is a mission
+statement, four checklists of Yes and No, a governance section, a signature
+block and seven schedules. A "2025 Form 990" that printed three statements
+would be three schedules with a cover.
+
+**213 fields, and the column that matters is where each answer comes from.**
+There are only four honest answers and they lead to different work:
+
+| | | |
+| --- | ---: | --- |
+| read from the record | 28 | a view answers it, and the field names which |
+| referenced | 34 | the form defines it as another line of itself |
+| **carried** | **135** | a fact about the organisation, from the 2024 filing |
+| **asked** | **16** | nobody has answered it and nothing here can |
+
+**A carried answer is last year's, and the paper says so on every one of the
+135.** That is the whole value of the document. A return that printed a
+carried answer and a measured one alike is how one gets signed over a figure
+nobody confirmed — the same rule `invoice_document.py` holds for a
+reproduction and `082` holds for an uncertified rate, pointed at a tax form.
+And an asked field prints **what it needs**, never blank and never the 2024
+answer: *a blank is unanswered, and unanswered is a value*, which the intake
+has held since it was built.
+
+**The return keeps its own cross-foots**, which is what makes it a replica
+rather than a collection:
+
+        Part I line 12    6,624,877.83   must equal Part VIII line 12
+        Part I line 18    6,620,548.55   must equal Part IX line 25
+        Part I line 19        4,329.28   and equals the balance sheet's own
+                                         Net Income, to the cent
+        Part XI line 10  14,350,693.71   must equal Part X line 32
+
+`tests/test_the_return_is_a_replica.py` asserts every one of those against the
+live views rather than a fixture, because asserting the form's own *must
+equal* statements against my own arithmetic would prove nothing.
+
+### Part X, and the mapping nobody had made
+
+`bs_account` has carried all 74 closing balances since the balance sheet was
+imported and **nothing had ever said which of the return's 33 lines each one
+belongs on**, so the system could print two of its three financial statements
+and not the third. `form_990_bs_line` is that mapping — **data rather than a
+`CASE`**, because which line an account belongs on is a preparer's judgment,
+the way `form_990_account_line` is for Part IX and the six fringe accounts are
+in `v_payroll_reconciliation`.
+
+What is *not* a judgment is completeness, and `v_form_990_part_x_check` holds
+both halves: every account reaches a line, and **line 16 equals line 33**,
+because a balance sheet that does not balance is not one. On the live record
+74 accounts, 0 unmapped, **16,713,219.80 = 2,362,526.09 + 14,350,693.71**.
+
+Two mappings are genuinely arguable and carry their reason on the row rather
+than in anybody's head: `1456 Accrued Receivables` is unbilled grant revenue
+on a grant-funded incubator and goes to line 3 with the pledges rather than
+line 4 with the trade debts, and the year's result rolls into line 27 because
+nothing on this record says a donor restricted it.
+
+### A small interpreter, so the map stays data
+
+Every source is an expression on the row — `viii:V1`, `ixsum:1,2,3:total`,
+`sub:field:P1_12,field:P1_18` — and `form_990_return.py` reads them. A `CASE`
+on 213 field ids in SQL, or a dict of lambdas in Python, would be the
+hand-kept map in its purest form; this way a field that moves is a row that
+moves.
+
+**It raises rather than answering.** `Unresolved` on a source nobody reads, on
+a field that refers to itself, and on a comma-bearing list nested inside
+another — because a source that quietly resolved to zero would put a figure on
+a tax return with nothing behind it, and a plausible wrong figure is the worst
+shape available. It earned that on the first run: `field:P6_1a` against a
+register that spells it `P6_1A`, which a silent resolver would have printed as
+a blank in the count of voting members.
+
+**`8b` is never in a Part IX total.** The form nets the fundraising event's
+direct expenses in Part VIII and excludes them from Part IX, in the
+instruction at the head of the part, so `ixtotal` filters the line out.
+Counting it would overstate expenses by the cost of the Shark Tank and leave
+Part I not cross-footing — and the two tests that hold it were watched failing
+against the filter removed.
+
+### What the mapping found
+
+- **Part XII line 3a.** The 2024 return answered **No** to *as a result of a
+  federal award, was the organization required to undergo an audit as set
+  forth in the Uniform Guidance, 2 C.F.R. Part 200, Subpart F?* It is the one
+  carried answer this record argues with — the organisation holds four America
+  Makes awards and an EDA award, and 200.501 turns on federal expenditure in
+  the year rather than on last year's answer. It is **asked**, because
+  carrying it would be the return contradicting the cost record underneath it.
+- **Part I line 7a.** The 2024 return reported nought of unrelated business
+  revenue and **227,890 of net unrelated business income on Schedule A Part II
+  line 9** — two different answers to neighbouring questions on one filing.
+  Asked rather than carried.
+- **Part VII Section B.** Seven payees cleared $100,000 in 2025, and the form
+  wants compensation **for services**: the seven include Medical Mutual of
+  Ohio and Ohio Edison. A payee cannot separate a consultant from an insurer,
+  so the return prints all seven and says so rather than filing a plausible
+  list — *naming the gap precisely is more use than a plausible split*.
+- **Part XI line 9 is 0.43**, and that is the right answer. Net assets at the
+  start of the year are the filed return's own end-of-year figure, which is
+  whole dollars; the balance sheet is to the cent. The return prints the
+  residual rather than forcing line 10 to agree, so a difference the record
+  cannot explain would show as one.
+- **Schedule A Part II line 14 cannot be computed.** Line 6 is line 4 less
+  line 5, and line 5 is the 2% excess-contributor adjustment no ledger holds.
+  Printing a public support percentage with line 5 assumed at nought would put
+  the organisation's public charity status on a figure nobody computed.
+
+### And the balance sheet reached the tie register
+
+`113`. `103` collected twenty-two controls and its FORM_990 arm carried two of
+the return's three statements, because the third had no control to collect.
+**Twenty-one anchors now, nineteen tie**, and the register answers *does
+everything we publish tie* over all three.
+
+Still open, and named rather than chased: Part X line 10a is
+**23,735,007.69** of cost against the fixed-asset register's
+**23,419,573.64**. Construction in progress and land account for part of it
+and not all, and which of the two records is right is the same question
+`v_asset_register_tie` already asks about depreciation.
 
 ## The audit is a walk, not a to-do list
 
