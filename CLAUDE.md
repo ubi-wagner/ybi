@@ -4110,6 +4110,95 @@ the $181,276.15 of T1 access, telephone, insurance and equipment sitting in
 the same pool. Fix it before the square footage arrives, so the first real
 measurement produces the right answer.
 
+## A rate built rather than carved back, and the run staged for two people
+
+`scripts/defensible_rate.py`, `docs/DEFENSIBLE_RATE_2025.md`, migration `115`,
+`scripts/stage_the_run.py`, `docs/RUN_SHEET_2025.md`.
+
+The certified 24.71% is arithmetically right and hard to defend: **a 31.62%
+overhead rate with 61% carved back out**, and on the measured estate the
+carve-out reaches 102.4% and the rate goes negative — `rate_rate_check`
+refuses it. **A carve-out that approaches its own pool is the model saying the
+pool was never the right size.** Appendix IV B.2.a asks for the costs of an
+organisation's activities to be segregated; YBI runs an incubator and a
+landlord business, and the occupancy cost of let space should never enter a
+federal pool to be carved out of it.
+
+So the pool is built: occupancy **gross** of the $133,998.11 the tenants have
+already repaid, times the share of the estate that is YBI's own, plus the
+$181,276.15 of overhead floor area does not drive, less the 200.436(b)
+depreciation **in that share**. Fringe 21.90%, overhead 7.58%, G&A 12.37%,
+combined **19.95%**.
+
+**Only overhead moves on a measurement**, and that is the check the
+construction is sound: fringe is anchored at both ends to documents and G&A
+carries no occupancy.
+
+### Three things worth not repeating
+
+- **The 436(b) carve was subtracted twice.** The first draft took the whole
+  $156,235.27 out of a pool the space split had already cut to 13.73%. The
+  depreciation sits *inside* occupancy, so the let share left with everything
+  else; only the part on YBI's own floor was still there. **2.85 points
+  against YBI**, found by asking which way each assumption runs rather than by
+  reading the code.
+- **The band printed one figure for both readings.** The sandbox had been
+  loaded with common space already reclassified, so the two branches could not
+  differ — a zero-width band that reads as agreement. It refuses now rather
+  than printing a point, which is the fourth time this shape has been caught
+  here and the first time it was caught by its own guard.
+- **The recommendation is not the midpoint.** Splitting the difference between
+  two readings is an average, not an argument. The middle scenario is the one
+  with a reason on it — a conference room an incubator books is the
+  incubator's, a corridor follows whoever it serves — and the floor plan names
+  the two separately, 9,326.5 sq ft against 39,579.
+
+### The cap that existed and never fired
+
+`burdened_buildup.py` shipped a `SUBAWARD_CAP` and **no line ever reached
+it**, because these invoices categorise every consultant as `CONSULTANT`.
+2 CFR 200.1 takes the first $25,000 of each *subaward* and a contract for
+services whole, so the same payment sits in the base or mostly outside it —
+and nothing here had ever recorded a 200.331 determination.
+
+`party_determination` (migration `115`) opens one per party over the cap.
+**Six, not the four found by hand** — the sweep covers every federal objective
+and AAMEN carries two more. **$313,605.35 of MTDC** turns on them, and three
+name **no payee at all** on the ledger line. `UNDETERMINED` is the default and
+the register reports it as `NO DATA`, never a pass; the schema refuses a
+half-made determination, because 200.331 turns on the substance of the
+relationship and not on what an invoice called it.
+
+`test_no_register_is_dead` caught `decided_at` in the same run it was written
+— read by the constraint, written by nothing, because the determination has no
+door yet. Recorded with the route and screen it stands in for.
+
+### Staged, and nothing performed
+
+**`readiness.py` was sound and blind to all of it.** It reported the machinery
+green and two things waiting on people, and knew nothing of a floor plan
+filed but not accepted, six determinations, or a rate decision — the
+staleness shape, in the report whose whole job is to say what is outstanding.
+Three sections now: what has been asked for from outside, the 200.331
+register, and what sits on the controller's desk before anything reaches a
+sponsor.
+
+**A reply that is filed and not accepted is the easiest thing here to lose**:
+it is on the record, it changes nothing, and no control reads it because it is
+not in a register yet. Heidi's measurement sat in exactly that state.
+
+`docs/RUN_SHEET_2025.md` is the third document and answers the third question.
+`MONDAY_RUNBOOK.md` is the order a year closes in; `readiness.py` is whether
+the machinery can do its job; this is **who is waiting on whom**, which on a
+two-person close is what decides whether Monday moves. Generated, so it cannot
+go stale, and it performs none of the four acts that are judgments with a
+person's name on them.
+
+One figure on it was wrong first: `v_labor_effective` is one row per person
+**per objective**, so a plain count read 97 where the answer is 43 — a number
+on a run sheet that nobody could tie to the 43 the rest of the page talks
+about.
+
 ## The settlement, and the fourth award that was never in it
 
 `docs/SETTLEMENT_2025.md`, `docs/WP_AM_2025_RESTATED_INVOICES.md`,
