@@ -4423,6 +4423,59 @@ assume: **the de minimis floor went 10% to 15% for awards issued on or after
 Tactical Mile by nine days — so the subaward instrument's own date decides it,
 not the prime's period.
 
+## Net zero was the hope, and the rate is not the lever
+
+`scripts/settlement_at_rate.py`, `docs/SETTLEMENT_AT_RATE_2025.md`. The
+question put to this was whether the four America Makes settlements come out
+close to net zero at the rate the engagement expects. They do not, and the
+**direction** is the first thing worth knowing: restating is a rebuild, so
+each award's position is
+
+        billed  −  ( direct supported  +  rate × MTDC )
+
+— a straight line in the rate whose slope is that award's own MTDC. **A lower
+rate makes every give-back larger and the one claim smaller**, so moving from
+the certified 24.71% towards 21% moves the net *further* from zero, from
+$(477,887.82) to $(507,523.27).
+
+Seven points walked, each one **computed** rather than asserted: the 200.465
+carve-out is linear in the share of the estate that is not YBI's own, so
+moving that share on a sandbox clone walks the engine from 40.69% down to
+15.40%, and every settlement figure is read back off `v_restatement` after
+`POST /api/restate`. The middle point reproduces the four recorded positions
+to the cent, which is what makes the rest of the line worth reading.
+
+**Where each contract crosses zero** says it plainly — Drive AM at 60.25%,
+Hybrid Phase II at 104.18%, Digital Engineering at **179.21%**, all four
+together at 72.93%. Last Tactical Mile crosses at 11.41%, *below* the band,
+so under that rate the one claim becomes a give-back too. There is no rate at
+which this settles near zero.
+
+**The lever is attribution.** An award's slope is the cost the record puts on
+it, and where that is small against what was billed no rate can reach:
+Digital Engineering's whole 2025 cost is $169,975.01 of ledger expense in one
+account plus $30,700.46 of distributed wages across two people, against
+$579,074.25 billed over seven invoices — and its invoice register carries
+every dollar of that billing in a single undifferentiated `OTHER` category,
+so nothing on the record says what it was billed *for*. Compared like with
+like, three of the four billed labour well above what a fully burdened hour
+costs here (1.5202): Drive AM 2.07× its distributed wages, Hybrid 2.74×, LTM
+1.71×.
+
+So the document ends on checkable asks rather than arithmetic — $103,018.39,
+$256,937.79 and $58,493.36 of direct cost would close the three give-backs —
+and on the refusal that has to go with them: **nothing here proposes moving
+cost onto an award to reduce a give-back.** That is the rate reverse-engineered
+by another route, which is the thing the seal exists to rule out. The question
+is whether the record is complete, and it is answered by going and looking.
+
+One defect in my own first draft, and it is the shape this file keeps finding:
+the table compared each award's **billed ÷ supported** against 1.5202, which
+is a multiple on a *wage* dollar. Both figures are right and they are about
+different things — a figure that checks out and is about something else is
+worse than a blank. The comparison is labour billed against wages distributed
+now, which is like for like.
+
 ## The settlement, and the fourth award that was never in it
 
 `docs/SETTLEMENT_2025.md`, `docs/WP_AM_2025_RESTATED_INVOICES.md`,
