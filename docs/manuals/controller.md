@@ -133,6 +133,26 @@ document library with a hash.
 - **Drive AM's cost share contradicts itself.** Schedule B proposes zero, §4.3
   names none, Schedule A expects roughly 1:1 with cancellation as a remedy.
   Recorded as a provision marked UNRESOLVED. It needs counsel, not arithmetic.
-- **Square footage and the asset register.** Neither exists yet. The
-  facilities carve-out cannot be sized without the first, and 200.436(b)
-  cannot be answered without the second.
+- **Square footage and the asset register.** Both exist now, and they are in
+  different states. All 263 assets name where their money came from, so
+  200.436(b) is answered. The estate on the record is a **derivation from the
+  documents**, not a measurement — Heidi's floor plan is filed as evidence and
+  **not accepted**, because accepting it supersedes a certified rate and that
+  is your act.
+- **Accepting a floor plan adds to the estate; it does not replace it.** The
+  derived rows are still there, so the rows a reply supersedes have to come
+  off first or the estate is counted twice and the 200.465 carve-out is taken
+  over the result. The preview says what it will land on, building by
+  building, before you press Accept — **read it**, and read it for the second
+  shape too: a building named under a spelling the register does not hold is
+  *created beside* the one meant, and its area becomes the sum of the rows
+  just written, so it ties by construction and can check nothing.
+- **`TENANT` or `PROGRAM` on a tenancy is the largest reading still open** —
+  2.72 points of combined rate. It is not about whether they pay rent; a
+  client company in residence pays rent too. It is whether YBI is letting the
+  space commercially or housing a client company as part of what a programme
+  does for them. Heidi answers it off the tenancy agreements and you accept
+  it; **America Makes is the middle case** and is the one to settle together
+  rather than either of you alone. A tenancy that is charged for and called
+  programme space has to name the agreement that says so — that is the
+  reading that moves the rate, so it does not rest on nobody's document.

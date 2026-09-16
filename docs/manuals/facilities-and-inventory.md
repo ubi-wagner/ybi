@@ -28,6 +28,14 @@ without him seeing it is a figure on his signature that he never read. The
 screen does that for you: fill the form, press Recommend, and it appears on
 his list.
 
+**There are two doors and the difference is how much you are answering at
+once.** One room, one correction, one tenancy whose use has changed: the
+screen, at `/classify/space`. A whole estate: the **workbook** on
+`/requests`, which comes to you with everything the record already holds
+filled in, so you are confirming and completing rather than typing. Both end
+in the same place — Tom's list, then the register — and both meet the same
+refusals.
+
 ### What a building needs
 
 | field | what it means | where to get it |
@@ -51,13 +59,54 @@ back in the federal pool.
 
 | use | what it is | does it come out of the federal pool? |
 | --- | --- | --- |
-| `TENANT` | let to somebody | **yes** |
+| `TENANT` | **let commercially** — somebody YBI runs no programme for | **yes** |
 | `VACANT` | lettable and not let | **yes** |
 | `COMMITTED` | let from a date that has not arrived | **yes** |
-| `PROGRAM` | YBI's own programme delivery — names the cost objective it serves | no |
+| `PROGRAM` | programme delivery — including **a client company housed as part of what a programme does for them**. Names the cost objective it serves | no |
 | `ADMINISTRATIVE` | YBI's own offices | no |
 | `SHARED_LAB` | the additive-manufacturing laboratory and shared equipment floor | no |
 | `COMMON` | corridors, lobbies, lavatories | rides along proportionally |
+
+### `TENANT` or `PROGRAM`, and it is not about the rent
+
+**This is the largest question still open on the 2025 rate — 2.72 points of
+combined rate — and it is the one the first version of this manual got
+wrong.** It said `TENANT` meant *let to somebody*, which is literally true of
+a portfolio company paying rent, so all twenty-six tenancies on the floor plan
+came back `TENANT` and every one of them took its occupancy cost out of the
+federal pool.
+
+**The question is not whether they pay rent. A client company in residence
+pays rent too.** It is whether YBI is *letting the space commercially* — a
+manufacturer, an unrelated business, somebody YBI runs no programme for — or
+**housing a client company as part of what a programme does for them**, which
+is incubation and not property.
+
+* Steelite in two buildings is a letting. Nobody argues about that.
+* America Makes is the arguable middle case, and it is Tom's to decide with
+  you rather than either of you alone.
+* The small suites in YBI Main and Tech Block 5 are the question. Some are
+  plainly client companies and some are plainly not — a maintenance
+  contractor, a charity, an appraiser are not being incubated.
+
+**A `PROGRAM` tenancy names the programme.** Housing somebody is part of a
+named programme or it is a letting; the schema refuses programme space that
+names no programme, and that refusal is the question asked again.
+
+### The agreement that says which
+
+A new column, and it is the reason the answer will survive a reviewer.
+
+**For anything somebody is charged for, name the document that settles the
+use** — a commercial lease, or an incubation or residency agreement. Blank is
+a fine answer and means *nobody has read one*; it is never taken as a claim
+that none exists.
+
+**A tenancy that is charged for and called `PROGRAM` with nothing named is
+refused**, on both doors. That is deliberately the only case fenced: it is the
+reading that takes cost *into* the federal pool, so it is the one that does
+not get to rest on nobody's document. Space YBI's own team occupies is
+`PROGRAM` and has no agreement to name, and nothing asks it for one.
 
 **Vacant space is the one people forget, and it is worth money.** Space that
 is available to let and not let is the rental operation's cost, not the
@@ -69,9 +118,11 @@ means the whole year. If a tenant left in May, that is 5.
 
 ### Where the estimate on the record came from
 
-There is no measurement on file, so the record currently carries an
-**estimate**, marked `TEST_ASSUMPTION`, with its derivation in the note of
-every row:
+You have sent a measurement — the floor plan of 15 September 2026, filed as
+evidence — and **it has not been accepted into the register**, because
+accepting supersedes a certified rate and that is Tom's act. So until it is,
+the record still carries the **estimate** below, marked `TEST_ASSUMPTION`,
+with its derivation in the note of every row:
 
 * the estate is the 2024 audited statements' $21,098,684 of land, building
   and improvements, less $107,530 of land, at **$116.27 a square foot** — the
@@ -178,6 +229,30 @@ Neither moves the rate. Both are on the 990 narrative and in the board pack.
 3. `/audit` — the walk — moves. SPACE and ASSETS go from `NO DATA` to `OPEN`
    to `DONE`.
 4. Tom recomputes and the rate moves.
+
+### And on a workbook, read *what it will land on* before accepting
+
+A reply carries a whole estate, and **accepting adds those rows to whatever
+the register already holds for each building — it does not put them in their
+place.** The register may be carrying an estate derived from the documents
+while it waited for yours, so the rows this replaces have to come off first
+or the estate is counted twice and the 200.465 carve-out is taken over the
+result.
+
+The preview says so, building by building, before anybody presses Accept.
+Two shapes, and only one of them is visible afterwards:
+
+* **a building the register already holds** gains your rows on top of its
+  own, and the square-foot control reports that it no longer adds up;
+* **a name the register does not hold creates a second building** beside the
+  one you meant, whose area becomes the sum of the rows just written — so it
+  ties perfectly and can check nothing.
+
+The second is why the workbook's first sheet lists the names the register
+holds. **Use them exactly.** If one of your buildings is one of those under a
+different name, use the name on the list and say so in the note; do not
+introduce the new spelling and leave somebody to work out that `Semple` and
+`Semple Building` are the same place.
 
 **You cannot accept your own recommendation**, even though you hold
 `CONTROLLER` as well. That rule is in the database, not the screen: the point

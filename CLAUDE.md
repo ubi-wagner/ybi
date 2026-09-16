@@ -4308,6 +4308,36 @@ driven on a clone that has been dropped. The run sheet carries the whole
 sequence, the derived estate that has to come off first, and what the answer
 is worth.
 
+### And the manual said the same wrong thing the form did
+
+`docs/manuals/facilities-and-inventory.md` is the shelf copy of this
+question, and its table read **`TENANT` · let to somebody · yes**. So the
+correction was in the form and in the workbook and not in the document the
+person actually reads before filling either of them in — *fixing one instance
+is not fixing the rule*, which this file records about a hand-fixed defect
+one section along.
+
+It carries the distinction now, the agreement column, and the rule that only
+a **charged** tenancy called programme space is fenced. Two other sentences
+in it had gone stale the ordinary way: *there is no measurement on file*
+(Heidi sent one on 15 September and it is filed, not accepted), and nothing
+told her that a whole estate goes back as a **workbook** while one room is
+the screen.
+
+`docs/manuals/controller.md` was worse, because its staleness read as
+reassurance: **"Square footage and the asset register. Neither exists yet."**
+All 263 assets name their funding source and the estate is on the record as a
+derivation. Tom's three new facts are there instead — accepting adds to the
+estate rather than replacing it, the preview says what it will land on, and
+the America Makes tenancy is the middle case he settles with Heidi rather
+than either of them alone.
+
+A manual is not generated, so nothing can keep it honest but reading it
+against the record when the record moves. **Both were checked against live
+rows before the sentences were written**, which is how the asset count came
+out as 263 answered rather than as the 263 unanswered this file carried a
+week ago.
+
 ## Which readings have legs, and the three that run the other way
 
 `scripts/rate_headroom.py`, `docs/RATE_HEADROOM_2025.md`. The fair question
