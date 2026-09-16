@@ -4199,6 +4199,91 @@ One figure on it was wrong first: `v_labor_effective` is one row per person
 on a run sheet that nobody could tie to the 43 the rest of the page talks
 about.
 
+## Which readings have legs, and the three that run the other way
+
+`scripts/rate_headroom.py`, `docs/RATE_HEADROOM_2025.md`. The fair question
+about 19.95% is why it is so far under what other non-profits carry and an
+order of magnitude under a research university. **Most of the answer is
+structural and neither half is a cost somebody forgot to collect.**
+
+A university's F&A rate is Facilities plus Administration, the second capped
+at 26 points (Appendix III). YBI's overhead is the facilities analogue and its
+G&A the administration analogue, and two facts account for the distance:
+
+- **86.27% of the measured estate is let, committed or vacant**, so that share
+  of $1,450,601.08 of occupancy never enters the federal pool at all. A
+  university does not rent that proportion of its laboratories to third
+  parties. **A small facilities component is the right answer here.**
+- **The base is every activity.** MTDC is $4,736,602.11 and the federal share
+  is **$1,154,545.23 — 24.4%**, spread over eleven non-federal objectives
+  besides. A university computes F&A over organized research MTDC alone.
+  Appendix IV B.2 permits separate rates by function, which is the one
+  structural change that would raise the federal rate without finding a
+  dollar; it needs evidence of differential benefit this record does not
+  carry, and is named as the largest unexplored option rather than as a
+  recommendation.
+
+Eight legs are priced, **each alone, in points of combined rate**, and three
+of them run against YBI at the same size as the rest. A list of only the
+readings that raise the number is a rate reverse-engineered, whatever the seal
+says.
+
+| leg | Δ pts |
+| --- | ---: |
+| all common is the incubator's own | +6.11 |
+| 200.331 on the federal six *and* the 18 portfolio consultants over the cap | +3.66 |
+| America Makes counted as programme space, rent credited | +3.45 |
+| client companies are programme space, rent credited | +2.72 |
+| 200.331 on the federal six alone | +1.41 |
+| all common follows the tenants | −2.12 |
+| **the letting bears its share of G&A** | **−2.36** |
+| the controller's retainer moves to the programmes | −0.65 |
+
+**The largest leg is a question about tenancy agreements, not accounting.**
+An incubator housing its client companies is delivering incubation, not
+renting property, and 24 occupants sit on the floor plan: Steelite in two
+buildings and America Makes are lettings, and the rest are small suites in
+YBI Main and Tech Block 5. `estate_share` grew a `programme_tenancy`
+predicate so this is asked through the *same* arithmetic rather than a second
+copy of it, and it defaults to None so nothing moves unless a caller asks.
+
+**And the space cannot move without the rent.** Floor area whose cost stays in
+the federal pool and which somebody pays YBI for carries an applicable credit
+under 200.406 — so the client-space leg is **+2.72 with the rent credited and
++6.75 without**, and the second figure is printed only to price the credit.
+Taking the first without the second is the same money into the pool twice.
+
+**The one nobody had looked at is a dead register.** `cost_objective` has
+carried a `RENTAL` row since the master was built and **nothing is classified
+to it, nothing is allocated to it and no labour sits on it.** The same
+Appendix IV B.2.a segregation that keeps let occupancy out of the overhead
+pool makes the letting an *activity*, and an activity bears general
+administration. It is worth −2.36 points, and `readiness.py` reports it on
+the controller's desk now rather than leaving it to be found — derived from
+the objective master, so a day somebody classifies to it the line reads the
+other way.
+
+**The two packages largely cancel, which is the useful finding.** Client space
+in, rent credited, the letting bearing G&A: **20.96%** against a reference of
+19.95%. The stretch reading — America Makes as programme, all common the
+incubator's, the federal six as subrecipients — is 27.69%, and every part of
+it is a judgment somebody has to sign.
+
+Two things it prints rather than summarises. **The tenancy roster**, all 24
+occupants with what the run assumed, because some are plainly not incubator
+clients — a maintenance contractor, a charity, an appraiser — and a wrong row
+moves the rate. And **which record it read**: Heidi's measured estate is filed
+as evidence and is not in `space_unit` on the reference record, so a run
+against that record is about a different building.
+
+What has no room is stated at the same length: fringe is anchored at both ends
+to documents, leave is already inside the denominator, and the certified
+24.71% is not a leg in either direction. One thing to check rather than
+assume: **the de minimis floor went 10% to 15% for awards issued on or after
+1 October 2024**, and all four America Makes awards start before it — Last
+Tactical Mile by nine days — so the subaward instrument's own date decides it,
+not the prime's period.
+
 ## The settlement, and the fourth award that was never in it
 
 `docs/SETTLEMENT_2025.md`, `docs/WP_AM_2025_RESTATED_INVOICES.md`,

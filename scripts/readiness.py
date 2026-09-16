@@ -379,6 +379,34 @@ def rate_decisions(r: Report) -> None:
     if not pend:
         r.line("ok", "federal treatment", "every indirect judgment is resolved")
 
+    # Appendix IV B.2.a asks for an organisation's activities to be
+    # segregated, and the same segregation that keeps let occupancy out of the
+    # federal overhead pool makes the letting an activity that bears general
+    # administration. `cost_objective` has carried a RENTAL row since the
+    # master was built; if nothing is on it, the letting is in no base
+    # anywhere and the G&A rate is taken over the programmes alone.
+    let = one("""SELECT o.objective_id,
+                        (SELECT count(*) FROM decision d
+                          JOIN decision_set ds ON ds.set_id = d.set_id
+                         WHERE d.reversed_at IS NULL AND ds.period = %s
+                           AND d.objective_id = o.objective_id) AS judged,
+                        (SELECT count(*) FROM allocation a
+                          JOIN rate r USING (rate_id)
+                         WHERE r.period = %s AND r.status <> 'SUPERSEDED'
+                           AND a.objective_id = o.objective_id) AS allocated
+                   FROM cost_objective o
+                  WHERE o.objective_type = 'RENTAL'""", (PERIOD, PERIOD))
+    if let and not let["judged"] and not let["allocated"]:
+        r.line("waiting", f"the letting carries nothing ({let['objective_id']})",
+               "no cost is classified to it and no indirect is allocated to "
+               "it, so the letting bears no share of G&A — which the same "
+               "Appendix IV B.2.a segregation that sizes the overhead pool "
+               "asks for. See docs/RATE_HEADROOM_2025.md; it is worth points "
+               "of rate and it runs against YBI.")
+    elif let:
+        r.line("ok", f"the letting is an activity ({let['objective_id']})",
+               f"{let['judged']} judgment(s), {let['allocated']} allocation(s)")
+
     cert = one("""SELECT certified, certified_by, why_not FROM v_rate_certified
                    WHERE period = %s""", (PERIOD,))
     if cert and cert["certified"]:

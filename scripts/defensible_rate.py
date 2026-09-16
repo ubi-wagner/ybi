@@ -114,17 +114,23 @@ def is_programme_common(label: str) -> bool:
     return any(w in (label or "").lower() for w in PROGRAMME_COMMON)
 
 
-def estate_share(common: str) -> tuple[D, D, D]:
+def estate_share(common: str, programme_tenancy=None) -> tuple[D, D, D]:
     """The share of the measured estate that is let, committed or vacant.
 
     Weighted by building, because there is one overhead pool carrying every
     building's occupancy and the honest driver is floor area across the whole
     estate. `months_occupied` weights a suite let for part of the year.
+
+    `programme_tenancy` is a predicate over a row saying that a tenancy is
+    *programme space rather than let space* — an incubator housing its client
+    companies is delivering incubation, not renting property. It defaults to
+    None, which is every tenancy let, so nothing here moves unless a caller
+    asks the question. `scripts/rate_headroom.py` is the caller that does.
     """
-    rows = query("""SELECT facility_id, use::text AS use, label,
+    rows = query("""SELECT facility_id, use::text AS use, label, occupant,
                            sum(usable_sqft * months_occupied / 12) AS sqft
                       FROM space_unit WHERE period = %s
-                     GROUP BY 1, 2, 3""", (PERIOD,))
+                     GROUP BY 1, 2, 3, 4""", (PERIOD,))
     if not rows:
         raise SystemExit("No space is on the record for this period.")
     if common == "pro-rata" and not any(r["use"] == "COMMON" for r in rows):
@@ -140,7 +146,9 @@ def estate_share(common: str) -> tuple[D, D, D]:
     for r in rows:
         f = per.setdefault(r["facility_id"], {"rental": D(0), "ours": D(0)})
         q = D(str(r["sqft"]))
-        if r["use"] in ("TENANT", "VACANT", "COMMITTED"):
+        if r["use"] == "TENANT" and programme_tenancy and programme_tenancy(r):
+            f["ours"] += q
+        elif r["use"] in ("TENANT", "VACANT", "COMMITTED"):
             f["rental"] += q
         elif r["use"] == "COMMON":
             if common == "ours":
