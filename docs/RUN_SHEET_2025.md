@@ -1,6 +1,6 @@
 # Run sheet — 2025 close
 
-*Generated from the record by `scripts/stage_the_run.py` on 15 September 2026. Nothing here has been done on anybody's behalf.*
+*Generated from the record by `scripts/stage_the_run.py` on 16 September 2026. Nothing here has been done on anybody's behalf.*
 
 Four acts are staged and deliberately not performed, because each is a judgment with a person's name on it: **accepting a measurement**, **determining a relationship**, **sealing or certifying**, and **anything sent to a sponsor**.
 
@@ -8,19 +8,33 @@ Four acts are staged and deliberately not performed, because each is a judgment 
 
 ## Heidi — facilities and inventory
 
-### 1. Three rows of your own floor plan cannot be read
+### 1. The floor-space workbook, version 2
 
-Everything else on your desk waits behind these. `/requests` → request 1 → **What it says**.
+`/requests` → request 2 → **Download**. It is your own floor plan, filled in — the ask is two columns.
 
-| row | what it says | what is needed |
-| --- | --- | --- |
-| `Taft/semple · suites 2A,2B & building` | area reads **"3630 and 25,809"**, which is not a number | is that one building or two? The rent says Taft — that row plus the vacant Taft suite are **237,081.48**, which is `4021 TTC Rent` to the cent — but it is yours to confirm |
-| Semple | your rows account for **49,527.00** of **109,932.32** of Semple rent | rows appear to be missing |
-| YBI Incubator | **5,459.8 sq ft** of vacant entered twice, once as "floors 2-5" and once as "unoccupied offices F3-5" | one area entered twice, or two different areas? |
+**What it is used for.** Version 1 explained TENANT as *leased to a third party*, which is true of a portfolio company paying rent, so all twenty-six tenancies came back TENANT and every one of them left the federal pool. The question is not whether they pay rent. It is whether YBI is letting the space commercially — a manufacturer, an unrelated business — or **housing a client company as part of what a programme does for them**, which is incubation and not property. Steelite in two buildings and America Makes are the ones nobody argues about; the small suites in YBI Main and Tech Block 5 are the question.
 
-### 2. Then accept it
+**The agreement that says which.** A commercial lease, or an incubation or residency agreement. Blank is a fine answer and means nobody has read one — it is never taken as a claim that none exists. A paid tenancy called programme space with nothing named is refused, because that is the reading that moves the rate.
 
-Same screen, **Accept**. Until you do, the measurement is filed as evidence and **no register has it** — it moves no figure at all. It is the single largest adjustment in the rate model.
+**It is worth 2.72 points of combined rate** with the client companies' rent credited under 200.406, and it is the largest single reading still open. `docs/RATE_HEADROOM_2025.md` §2a lists all twenty-four occupants with what the analysis assumed, and some of those assumptions are plainly wrong — a maintenance contractor, a charity, an appraiser. The agreements decide it, not the suite number.
+
+**And the rows held back last time come back in it**, each carrying what the intake could not read, so they are answered in the same sitting rather than tracked separately.
+
+### 2. Send it back, and then accept it
+
+Same screen: **Reply**, then **What it says**, then **Accept**. Until it is accepted the measurement is filed as evidence and **no register has it** — it moves no figure at all. It is the single largest adjustment in the rate model.
+
+**Read *What it says* before you accept, and read the *what it will land on* panel.** The register already carries an estate derived from the documents while we waited for yours, and accepting **adds** to it rather than replacing it — driven on a copy of this record, that turned five buildings into nine and left one carrying twice its own floor area, with the 200.465 carve-out taken over the result. What is there now:
+
+| building | rows | sq ft |
+| --- | ---: | ---: |
+| America Makes Building | 2 | 15,448.00 |
+| Semple Building | 2 | 28,112.00 |
+| Taft Technology Center | 2 | 34,181.00 |
+| Tech Block Building 5 | 2 | 54,308.00 |
+| YBI Main (Vindicator Building) | 2 | 48,489.00 |
+
+The rows these replace come off first. The panel names them building by building, and a building you name under a different spelling is created beside the one you meant rather than corrected.
 
 ### 3. Which machines are lent out, and on what terms
 
@@ -68,7 +82,7 @@ Certified by Tom Metzinger. **Recomputing supersedes the rate and the certificat
 
 The difference is not a correction to the arithmetic. It is whether the overhead **pool** was ever the right size: the certified rate is 31.62% with 61% carved back out, and on the measured estate the carve-out exceeds the pool. See `docs/DEFENSIBLE_RATE_2025.md`.
 
-### 5. 363 judgments cite no document
+### 4. 363 judgments cite no document
 
 Every one is classified and sealed; what is outstanding is the citation to the paper behind it. `/evidence`.
 
@@ -86,7 +100,7 @@ Neither of you is blocked on these, and neither of you can do them.
 
 ## The order it has to go in
 
-1. **Heidi answers the three rows** and accepts the floor plan. Everything about the rate waits behind this.
+1. **Heidi answers the floor-space workbook** — the tenancy question, the agreement behind each answer, and the rows held back last time — and it is accepted. Everything about the rate waits behind this.
 
 2. **Tom determines the six parties.** Independent of the space — it can happen in parallel.
 

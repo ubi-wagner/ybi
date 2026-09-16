@@ -574,7 +574,8 @@ function SpaceForm({ facilities, onSaved }) {
                                status: "OCCUPIED", occupant: "",
                                months_occupied: "12", actual_annual_charge: "",
                                market_rate_psf: "", market_basis: "",
-                               market_source: "", objective_id: "" });
+                               market_source: "", objective_id: "",
+                               occupancy_basis: "" });
   const set = (k, x) => setV((s) => ({ ...s, [k]: x }));
 
   async function save() {
@@ -637,6 +638,14 @@ function SpaceForm({ facilities, onSaved }) {
         </Field>
         <Field label="Objective" hint="Required when the use is a programme">
           <input value={v.objective_id} onChange={(e) => set("objective_id", e.target.value)} />
+        </Field>
+        <Field label="The agreement that says which"
+               hint={"A commercial lease, or an incubation or residency agreement. " +
+                     "Required where the space is charged for and called programme " +
+                     "space \u2014 that reading takes its occupancy cost out of the " +
+                     "rental side and into the federal pool, so it does not rest on " +
+                     "nobody\u2019s document. Blank is fine and means nobody has read one."}>
+          <input value={v.occupancy_basis} onChange={(e) => set("occupancy_basis", e.target.value)} />
         </Field>
       </div>
       <div className="splitter-foot">

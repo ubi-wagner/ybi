@@ -359,11 +359,16 @@ def read_request_workbook(data: bytes, form: Form) -> Filled:
         # row we did issue counts as touched only where something outside
         # the columns we pre-filled has been answered.
         prefilled = set(form.prefilled) | {c.key for c in form.columns if c.known}
+        # `form.asks` where the form names it, because "a column we did not
+        # pre-fill" is a proxy for "the ask" and stops being one the moment a
+        # form pre-fills everything — which a second pass does by design, and
+        # which made every row of one come back untouched and unusable.
+        asks = set(form.asks) or {col.key for col, _ in columns
+                                  if col.key not in prefilled}
         ours = (marker_at is not None
                 and _text(ws.cell(row=r, column=marker_at).value) == ISSUED)
         touched = (not ours) or any(
-            values.get(col.key) not in (None, "")
-            for col, _ in columns if col.key not in prefilled)
+            values.get(k) not in (None, "") for k in asks)
         rows.append(Row(number=r, values=values, missing_required=absent,
                         touched=touched))
 

@@ -52,6 +52,7 @@ from app.audit import record
 from app.auth import (Actor, current_actor, require_admin, require_controller, require_facilities,
                       require_inventory, require_own_writes, require_reader)
 from app.db import execute, one, query, transaction
+from app.domain.core import money
 from app.domain.request_forms import FORMS, Form as FormDef
 from app.domain.request_intake import (Filled, WorkbookNotRecognised,
                                        read_request_workbook)
@@ -118,23 +119,34 @@ def _known_rows(form: FormDef, period: str) -> list[dict]:
                 for r in rows]
 
     if form.name == "SPACE_INVENTORY":
-        # The lease book, same story: twenty-six tenants with the building
-        # and the rent already filled in. What it has never carried is square
-        # footage, which is the one thing the carve-out is sized by and the
-        # one thing only a floor plan knows.
-        rows = [{"facility_name": t.building,
-                 "label": "",
-                 "occupant": t.lessee,
-                 "use": "TENANT",
-                 "status": "OCCUPIED",
-                 "actual_annual_charge": t.annual_rent,
-                 "note": ("Rolling tenancy — the lease book says "
-                          f"{t.term_note!r} rather than a start date."
-                          if t.rolling else "")}
-                for t in _lease_book(period)]
+        # Three sources, and the order is the point.
+        #
+        # **A reply somebody has already sent and nobody has accepted beats
+        # the register**, because it is the most recent thing that person
+        # said and the register may still hold an estimate we derived while
+        # waiting for them. Showing them our estimate in place of their own
+        # floor plan is the worst possible second pass: they cannot tell what
+        # they answered from what we guessed, so they check all of it.
+        #
+        # Once the reply is accepted the register *is* the record and comes
+        # first. The lease book is the fallback it always was — twenty-six
+        # tenants with the building and the rent, and no square footage,
+        # which is the one thing only a floor plan knows.
+        rows = _space_from_reply(period, form) or _space_from_register(period)
+        if not rows:
+            rows = [{"facility_name": t.building,
+                     "label": "",
+                     "occupant": t.lessee,
+                     "use": "TENANT",
+                     "status": "OCCUPIED",
+                     "actual_annual_charge": t.annual_rent,
+                     "note": ("Rolling tenancy — the lease book says "
+                              f"{t.term_note!r} rather than a start date."
+                              if t.rolling else "")}
+                    for t in _lease_book(period)]
         for r in query("""SELECT name FROM facility WHERE period = %s
                            ORDER BY name""", (period,)):
-            if not any(x["facility_name"] == r["name"] for x in rows):
+            if not any(x.get("facility_name") == r["name"] for x in rows):
                 rows.append({"facility_name": r["name"]})
         return rows
 
@@ -184,6 +196,89 @@ def _known_rows(form: FormDef, period: str) -> list[dict]:
     return []
 
 
+#: Columns of the space form that a second pass carries across from whatever
+#: was said last. `use` is deliberately among them — the question v2 asks is
+#: whether the answer given is still the right one now the column explains
+#: itself, and blanking it would make somebody re-read thirty-eight rows from
+#: scratch. `occupancy_basis` is the one column v1 never had, so it comes back
+#: empty on every row, which is what makes the new ask visible.
+_SPACE_CARRY = ("facility_name", "label", "floor", "usable_sqft", "use",
+                "status", "occupant", "objective_id", "months_occupied",
+                "actual_annual_charge", "market_rate_psf", "market_basis",
+                "occupancy_basis", "note")
+
+
+def _space_from_reply(period: str, form: FormDef) -> list[dict]:
+    """The last reply on file that nobody has accepted, read back as rows.
+
+    A row the intake held back comes back with **what was wrong with it in
+    the note**, because those rows are still outstanding and a second
+    workbook that showed them as ordinary rows would ask somebody to notice
+    on their own that three of thirty-eight never landed.
+    """
+    row = one("""SELECT r.reply_evidence_id, e.uri
+                   FROM information_request r
+                   JOIN evidence e ON e.evidence_id = r.reply_evidence_id
+                  WHERE r.form = %s AND r.period = %s AND r.state = 'RECEIVED'
+                  ORDER BY r.received_at DESC LIMIT 1""",
+             (form.name, period))
+    if not row:
+        return []
+    try:
+        raw = Path(row["uri"]).read_bytes()
+    except OSError:
+        return []
+    try:
+        filled = read_request_workbook(raw, form)
+    except Exception:                                        # noqa: BLE001
+        # A reply that will not parse is a thing to fix, not a reason to stop
+        # asking — the same rule the asset schedule and the lease book follow.
+        return []
+
+    held = {}
+    for pr in filled.problems:
+        if pr.row:
+            held.setdefault(pr.row, []).append(f"{pr.heading}: {pr.says}")
+
+    out: list[dict] = []
+    for r in filled.rows:
+        # **Every row comes back, touched or not.** `touched` asks whether a
+        # person changed a row *relative to what we sent them*, which is the
+        # right question for "did anybody get to this" and the wrong one here:
+        # twenty-seven of Heidi's thirty-eight rows matched the lease book we
+        # pre-filled, so a `touched` filter dropped two thirds of her estate
+        # and re-asked her to type it. Found by counting the rows in the
+        # workbook against the rows in the reply.
+        d = {k: r.values.get(k) for k in _SPACE_CARRY
+             if r.values.get(k) not in (None, "")}
+        if not d.get("facility_name"):
+            continue
+        says = held.get(r.number, [])
+        for k in r.missing_required:
+            says.append(f"{k}: was required and was blank")
+        if says:
+            d["note"] = ("HELD BACK LAST TIME — " + "; ".join(says)
+                         + (f" (you wrote: {d['note']})" if d.get("note") else ""))
+        out.append(d)
+    return out
+
+
+def _space_from_register(period: str) -> list[dict]:
+    """What the register holds, for a second pass after a reply was accepted."""
+    rows = query("""SELECT f.name AS facility_name, u.label, u.floor,
+                           u.usable_sqft, u.use::text AS use,
+                           u.status::text AS status, u.occupant,
+                           u.objective_id, u.months_occupied,
+                           u.actual_annual_charge, u.market_rate_psf,
+                           u.market_basis, u.occupancy_basis, u.note
+                      FROM space_unit u
+                      JOIN facility f ON f.facility_id = u.facility_id
+                     WHERE u.period = %s
+                     ORDER BY f.name, u.usable_sqft DESC""", (period,))
+    return [{k: v for k, v in dict(r).items() if v not in (None, "")}
+            for r in rows]
+
+
 def _source_bytes(period: str, kind: str) -> bytes | None:
     """A document already on file, read back from the volume.
 
@@ -225,6 +320,30 @@ def _lease_book(period: str):
         return parse_lease_book(raw)
     except Exception:                                        # noqa: BLE001
         return []
+
+
+def _notes_from_the_record(form: FormDef, period: str) -> tuple[str, ...]:
+    """Instructions the register supplies, read at the moment of issue.
+
+    The space book's rows are filed against a **building name**, and a name
+    the register does not hold creates a building beside the one meant — five
+    became nine on a driven copy of the record, one of them carrying twice its
+    own floor area. The names cannot be written on the `Form`, because the
+    form is a definition and this is a reading of the database.
+    """
+    if form.name != "SPACE_INVENTORY":
+        return ()
+    names = [r["name"] for r in query(
+        "SELECT name FROM facility WHERE period = %s ORDER BY name",
+        (period,))]
+    if not names:
+        return ()
+    return ("The buildings on the record are: " + "; ".join(names) + ". "
+            "Use these names exactly in the Building column. A name that is "
+            "not one of these creates a second building beside the first and "
+            "the estate is counted twice — if one of your buildings is one of "
+            "these under a different name, use the name on this list and say "
+            "so in the note.",)
 
 
 def _controls(form: FormDef, period: str) -> dict[str, Decimal]:
@@ -312,7 +431,8 @@ def workbook(request_id: int) -> Response:
     data = build_request_workbook(
         form, r["period"],
         known_rows=_known_rows(form, r["period"]),
-        controls=_controls(form, r["period"]))
+        controls=_controls(form, r["period"]),
+        notes=_notes_from_the_record(form, r["period"]))
     name = f"YBI_{form.name}_{r['period']}_request-{request_id}.xlsx"
     return Response(content=data, media_type=XLSX, headers={
         "Content-Disposition": f'attachment; filename="{name}"',
@@ -497,6 +617,8 @@ def preview(request_id: int) -> dict:
                      for p in filled.problems[:400]],
         "problem_count": len(filled.problems),
         "controls": controls,
+        "lands_on": (_space_lands_on(r["period"], filled)
+                     if form.name == "SPACE_INVENTORY" else []),
         "sample": [{"row": row.number,
                     "values": {k: str(v) for k, v in row.values.items()
                                if v is not None}}
@@ -758,6 +880,86 @@ def _write_assets(cur, period: str, filled: Filled, actor: Actor):
     return written, notes
 
 
+def _space_lands_on(period: str, filled) -> list[dict]:
+    """What accepting a space reply would land on, building by building.
+
+    The router's own promise is that *the preview says exactly what it will
+    do*, and on this form it did not say the one thing that matters most.
+    Driven on a clone of the reference record: accepting Heidi's measured
+    plan produced **nine buildings where there are five** and left Tech Block
+    Building 5 carrying fourteen rows summing to 109,179 square feet against
+    a usable area of 54,308 — her rooms **plus** the derived lump row the
+    close had put there, double counted, with the 200.465 carve-out taken
+    over the result.
+
+    Two shapes, and only one of them is visible afterwards:
+
+      * a name the register already holds **adds** to it, because a unit id
+        is derived from the label and the lump row's id is not one of them —
+        `v_space_unit_control` reports `ties False` and somebody has to look;
+      * a name it does not hold **invents a building**, whose usable area is
+        the sum of the rows just written, so it ties perfectly by
+        construction and says nothing at all. Four of the nine were this.
+
+    So the preview says both, before anybody presses Accept.
+    """
+    named: dict[str, dict] = {}
+    for row in filled.usable:
+        name = str(row.values.get("facility_name") or "").strip()
+        if not name:
+            continue
+        d = named.setdefault(name, {"building": name, "rows": 0,
+                                    "sqft": Decimal("0")})
+        d["rows"] += 1
+        d["sqft"] += row.values.get("usable_sqft") or Decimal("0")
+
+    have = {r["name"]: r for r in query(
+        """SELECT f.name, f.facility_id, f.usable_sqft,
+                  COALESCE((SELECT count(*) FROM space_unit u
+                             WHERE u.facility_id = f.facility_id
+                               AND u.period = f.period), 0) AS units,
+                  COALESCE((SELECT sum(u.usable_sqft) FROM space_unit u
+                             WHERE u.facility_id = f.facility_id
+                               AND u.period = f.period), 0) AS unit_sqft
+             FROM facility f WHERE f.period = %s""", (period,))}
+
+    out = []
+    for name, d in sorted(named.items()):
+        cur = have.get(name)
+        if not cur:
+            out.append({**d, "sqft": str(money(d["sqft"])),
+                        "on_the_record": False,
+                        "says": "No building of this name is on the record, so "
+                                "accepting creates one whose usable area is "
+                                "the sum of these rows — which then ties by "
+                                "construction and can check nothing. If this "
+                                "is one of the buildings already on the "
+                                "record under another name, correct the name "
+                                "in the workbook first."})
+        else:
+            out.append({**d, "sqft": str(money(d["sqft"])),
+                        "on_the_record": True,
+                        "already": int(cur["units"]),
+                        "already_sqft": str(money(cur["unit_sqft"])),
+                        "usable_sqft": str(money(cur["usable_sqft"])),
+                        # Plain prose and the house spelling for a figure.
+                        # The screen renders this as text: markdown reaches
+                        # the reader as literal asterisks, and `money()`
+                        # returns a Decimal, so `15448.00` printed beside
+                        # `15,448.00` in the column next to it. Both are in
+                        # CLAUDE.md already, one of them twice.
+                        "says": (f"{cur['units']} row(s) of "
+                                 f"{money(cur['unit_sqft']):,.2f} sq ft are "
+                                 f"already on this building. These are added "
+                                 f"to them, not put in their place — remove "
+                                 f"the rows this replaces first, or the estate "
+                                 f"is counted twice and the 200.465 carve-out "
+                                 f"is taken over the result.")
+                        if cur["units"] else
+                        "Nothing is recorded against this building yet."})
+    return out
+
+
 def _write_space(cur, period: str, filled: Filled, actor: Actor):
     """Buildings first, then the units inside them.
 
@@ -807,8 +1009,9 @@ def _write_space(cur, period: str, filled: Filled, actor: Actor):
                                         floor, usable_sqft, use, status,
                                         objective_id, occupant, months_occupied,
                                         actual_annual_charge, market_rate_psf,
-                                        market_basis, market_source, note)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                        market_basis, market_source,
+                                        occupancy_basis, note)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 ON CONFLICT (unit_id) DO UPDATE SET
                   label = EXCLUDED.label, floor = EXCLUDED.floor,
                   usable_sqft = EXCLUDED.usable_sqft, use = EXCLUDED.use,
@@ -820,6 +1023,7 @@ def _write_space(cur, period: str, filled: Filled, actor: Actor):
                   market_rate_psf = EXCLUDED.market_rate_psf,
                   market_basis = EXCLUDED.market_basis,
                   market_source = EXCLUDED.market_source,
+                  occupancy_basis = EXCLUDED.occupancy_basis,
                   note = EXCLUDED.note""",
                 (unit_id, fid, period, v["label"], v.get("floor") or "",
                  v["usable_sqft"], v["use"], v["status"],
@@ -828,6 +1032,7 @@ def _write_space(cur, period: str, filled: Filled, actor: Actor):
                  v.get("actual_annual_charge"), v.get("market_rate_psf"),
                  v.get("market_basis") or "",
                  f"Request reply — {filled.form.title}",
+                 v.get("occupancy_basis") or "",
                  v.get("note") or ""))
             written += 1
 

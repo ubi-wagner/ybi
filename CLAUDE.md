@@ -4199,6 +4199,115 @@ One figure on it was wrong first: `v_labor_effective` is one row per person
 on a run sheet that nobody could tie to the 43 the rest of the page talks
 about.
 
+## The form asked the wrong question, so it got the wrong answer
+
+Migrations `116`–`118`, `SPACE_INVENTORY` v2, `scripts/stage_the_run.py`,
+`tests/test_a_tenancy_says_which_kind_it_is.py`. The largest reading still
+open on the 2025 rate is whether the incubator's client companies are tenants
+or programme space, and it is worth **2.72 points of combined rate**. Staging
+it for Heidi and Tom is what this is.
+
+**Version 1 of the form explained TENANT as *leased to a third party*.** That
+is literally true of a portfolio company paying rent, so all twenty-six
+tenancies came back TENANT and every one of them left the federal pool. The
+answer was not wrong; **the column's own explanation was**, and no amount of
+re-reading her reply would have shown it. v2 asks whether YBI is letting the
+space commercially or housing a client company as part of what a programme
+does for them, and asks for the document that settles it.
+
+**`space_unit.occupancy_basis` is that document, and the fence is narrow on
+purpose.** `unit_market_needs_basis` is the precedent one column along — *a
+rate with no basis behind it is a number somebody made up* — and this
+repository has paid for the citation-with-no-document shape three times.
+Space YBI's own team occupies is PROGRAM and has no agreement to name, so a
+blanket rule would refuse the rows already on every record. What must name
+one is the case that **moves the rate**: space somebody is charged rent for
+and which is nonetheless called programme space. `117` puts the same refusal
+on the recommendation door, of the *merged* row, because a recommendation the
+register would refuse is a screen offering what the API will not take — and
+here it would tell Heidi her proposal was fine and hand Tom a raw constraint
+violation with her name on it.
+
+### A second pass is not a re-ask, and three things had to change for that
+
+- **It is pre-filled from her own reply, not from the register.** A reply
+  nobody has accepted is the most recent thing that person said, and the
+  register may still hold the estate *we* derived while waiting. Showing
+  somebody our estimate in place of their own floor plan is the worst
+  possible second pass: they cannot tell what they answered from what we
+  guessed, so they check all of it. Once it is accepted the register is the
+  record and comes first.
+- **Every row of the reply comes back, touched or not.** `Row.touched` asks
+  whether a person changed a row *relative to what we sent*, and twenty-seven
+  of Heidi's thirty-eight matched the lease book we had pre-filled — so the
+  first draft dropped two thirds of her estate and re-asked her to type it.
+  Found by counting the rows in the workbook against the rows in the reply.
+- **The rows the intake held back come back carrying what was wrong with
+  them**, so they are answered in the same sitting rather than tracked on a
+  list somewhere else.
+
+**And `touched` itself could not survive a complete prefill.** Its rule is
+*did they answer a column we did not pre-fill*, which is a proxy for "the
+ask" and stops being one the moment a form pre-fills everything — which is
+what a second pass is for. Driven: forty-two rows came back, **nought usable
+and forty-two untouched**, and accepting would have written nothing while
+reporting success. `Form.asks` names the ask where the proxy cannot find it,
+defaults to today's behaviour for the other three forms, and
+`test_no_form_can_pre_fill_everything_it_asks_for` sweeps the forms
+themselves so the next one to do it fails there.
+
+### What accepting would actually have done
+
+The router promises that *the preview says exactly what it will do*, and on
+this form it did not say the one thing that mattered. Driven on a clone of
+the reference record: accepting the measured plan produced **nine buildings
+where there are five**, and left Tech Block Building 5 carrying fourteen rows
+summing to 109,179 square feet against a usable area of 54,308 — her rooms
+**plus** the derived lump row the close had put there, double counted, with
+the 200.465 carve-out taken over the result.
+
+Two shapes, and only one is visible afterwards. A name the register already
+holds **adds** to it and `v_space_unit_control` reports `ties False`. A name
+it does not hold **invents a building** whose usable area is the sum of the
+rows just written — so it ties by construction and says nothing at all. Four
+of the nine were that, because Heidi's plan says *YBI Incubator Building*,
+*AM*, *Semple* and *Taft* where the register says *YBI Main (Vindicator
+Building)*, *America Makes Building*, *Semple Building* and *Taft Technology
+Center*.
+
+So two fixes, both read from the record rather than written down: the
+preview and the screen carry a **what it will land on** panel, building by
+building; and the workbook's first sheet **names the buildings the register
+holds**, as a note the database supplies at the moment of issue rather than
+as text on the `Form` — `build_request_workbook(notes=…)`, because a form is
+a definition and this is a reading.
+
+### Four smaller ones, and three are already in this file
+
+- **Markdown in a spreadsheet cell.** Every string on a `Form` is written
+  into the workbook as plain text, so `**added**` reached the reader as
+  literal asterisks. `test_no_form_text_carries_markdown` sweeps every
+  heading, `why`, instruction, purpose and consequence.
+- **A figure printed without the house spelling**, in prose beside a column
+  that had it — `15448.00` next to `15,448.00`. `money()` returns a Decimal;
+  the spelling is `{x:,.2f}`. Recorded twice already, and written again.
+- **A `NameError` in a threaded parameter.** `notes` was a parameter of
+  `build_request_workbook` and got used inside `_write_start_here`, which
+  does not take it. Caught on the first request rather than in an untaken
+  branch, which is the lucky half of that class.
+- **A hand-written step number beside a conditional section.** The run
+  sheet's own headings were numbered by hand and already read *1, 2, 3, 5* on
+  a record with no overtaken restatement. They count what prints now. And
+  `readiness.py` names the form **version**, because two rows reading
+  `SPACE_INVENTORY` in different states is two true figures about one thing
+  on one page.
+
+**Nothing is performed.** Request 2 is issued and sits waiting; the certified
+24.71% has not moved, no space is accepted, and the round trip above was
+driven on a clone that has been dropped. The run sheet carries the whole
+sequence, the derived estate that has to come off first, and what the answer
+is worth.
+
 ## Which readings have legs, and the three that run the other way
 
 `scripts/rate_headroom.py`, `docs/RATE_HEADROOM_2025.md`. The fair question

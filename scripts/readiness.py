@@ -309,7 +309,8 @@ def requests(r: Report) -> None:
     """
     r.head("Asked for from outside")
     rows = query("""SELECT form, state::text AS state, received_from,
-                           received_at, rows_accepted, sent_to
+                           received_at, rows_accepted, sent_to,
+                           form_version
                       FROM information_request
                      WHERE period = %s ORDER BY issued_at""", (PERIOD,))
     if not rows:
@@ -317,18 +318,24 @@ def requests(r: Report) -> None:
                "the three things the record cannot infer are the asset "
                "funding source, the square footage and the roster")
         return
+    # **The version is part of the name here.** A second pass over the same
+    # form is the ordinary case — v2 of the space book asks the tenancy
+    # question v1 could not — and two rows reading `SPACE_INVENTORY` in
+    # different states, with nothing saying which is which, is two true
+    # figures about one thing on one page.
     for x in rows:
+        who = f"{x['form']} v{x['form_version']}"
         if x["state"] == "ACCEPTED":
-            r.line("ok", x["form"],
+            r.line("ok", who,
                    f"accepted — {x['rows_accepted'] or 0} row(s) written")
         elif x["state"] == "RECEIVED":
-            r.line("waiting", x["form"],
+            r.line("waiting", who,
                    f"came back from {x['received_from'] or 'somebody'} and is "
                    f"**not accepted** — it is filed as evidence and no "
                    f"register has it yet, so it moves no figure until "
                    f"somebody presses Accept on /requests")
         else:
-            r.line("waiting", x["form"],
+            r.line("waiting", who,
                    f"{x['state'].lower()} — sent to {x['sent_to'] or 'nobody named'}")
 
 

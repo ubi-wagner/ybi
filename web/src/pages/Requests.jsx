@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api, explain } from "../api.js";
+import { api, count, explain, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast }
   from "../components/ui.jsx";
 
@@ -426,6 +426,35 @@ function Preview({ preview, busy, mine, state, form, onAccept }) {
                 <td className="num">{c.expect ?? "—"}</td>
                 <td className="num">{c.got}</td>
                 <td className={`num ${c.ties ? "" : "fail"}`}>{c.variance ?? "—"}</td>
+              </tr>
+            ))}
+          </Table>
+        </>
+      )}
+
+      {(preview.lands_on ?? []).length > 0 && (
+        <>
+          <h4 className="section-h">What it will land on</h4>
+          <p className="quiet small">
+            Accepting <em>adds</em> these rows to whatever the register already
+            holds for each building — it does not put them in their place. A
+            building named under a spelling the record does not hold is created
+            beside the one meant, and its area becomes the sum of the rows just
+            written, so it ties by construction and can check nothing.
+          </p>
+          <Table columns={[
+            { label: "", align: "left" }, { label: "Building", align: "left" },
+            { label: "Rows" }, { label: "Sq ft" }, { label: "Already there", align: "left" },
+          ]}>
+            {preview.lands_on.map((b, i) => (
+              <tr key={i}>
+                <td className="l">
+                  <Tick state={!b.on_the_record || b.already ? "flagged" : "done"} />
+                </td>
+                <td className="l">{b.building}</td>
+                <td className="num">{count(b.rows)}</td>
+                <td className="num">{money(b.sqft)}</td>
+                <td className="l"><span className="quiet small">{b.says}</span></td>
               </tr>
             ))}
           </Table>

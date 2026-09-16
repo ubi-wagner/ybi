@@ -68,6 +68,11 @@ class UnitIn(BaseModel):
     market_rate_psf: float | None = None
     market_basis: str = ""
     market_source: str = ""
+    #: The agreement that settles what kind of occupancy this is. Blank is
+    #: honest and means nobody has read one; it is never a claim that none
+    #: exists. `unit_paid_program_names_its_agreement` refuses only the one
+    #: case that moves the rate — space charged for and called programme.
+    occupancy_basis: str = ""
     note: str = ""
 
 
@@ -221,8 +226,8 @@ def put_unit(body: UnitIn, period: str = None,
                  (unit_id, facility_id, period, label, floor, usable_sqft, use,
                   status, objective_id, occupant, months_occupied,
                   actual_annual_charge, market_rate_psf, market_basis,
-                  market_source, note)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                  market_source, occupancy_basis, note)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                ON CONFLICT (unit_id) DO UPDATE SET
                  label = EXCLUDED.label, floor = EXCLUDED.floor,
                  usable_sqft = EXCLUDED.usable_sqft, use = EXCLUDED.use,
@@ -232,17 +237,20 @@ def put_unit(body: UnitIn, period: str = None,
                  actual_annual_charge = EXCLUDED.actual_annual_charge,
                  market_rate_psf = EXCLUDED.market_rate_psf,
                  market_basis = EXCLUDED.market_basis,
-                 market_source = EXCLUDED.market_source, note = EXCLUDED.note""",
+                 market_source = EXCLUDED.market_source,
+                 occupancy_basis = EXCLUDED.occupancy_basis,
+                 note = EXCLUDED.note""",
             (body.unit_id, body.facility_id, period, body.label, body.floor,
              body.usable_sqft, body.use.value, body.status.value,
              body.objective_id, body.occupant, body.months_occupied,
              body.actual_annual_charge, body.market_rate_psf, body.market_basis,
-             body.market_source, body.note))
+             body.market_source, body.occupancy_basis, body.note))
     record(actor, "SPACE_UNIT", "space_unit", body.unit_id,
            after={"facility_id": body.facility_id, "label": body.label,
                   "sqft": body.usable_sqft, "use": body.use.value,
                   "charged": body.actual_annual_charge,
-                  "market_rate_psf": body.market_rate_psf},
+                  "market_rate_psf": body.market_rate_psf,
+                  "occupancy_basis": body.occupancy_basis},
            reason=body.market_source or "space recorded")
     return {"unit_id": body.unit_id}
 
