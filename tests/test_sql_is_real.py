@@ -193,6 +193,13 @@ def test_every_literal_statement_parses_against_the_real_schema(db):
         assert head in {"CREATE", "SET", "DROP", "ALTER", "TRUNCATE",
                         "COMMENT", "ANALYZE", "VACUUM", "GRANT", "REVOKE",
                         "LISTEN", "NOTIFY", "BEGIN", "COMMIT", "ROLLBACK",
+                        # SAVEPOINT and RELEASE are transaction control, the
+                        # same family as BEGIN and ROLLBACK above, and PREPARE
+                        # refuses them for the same reason. They were missing
+                        # only because nothing had used one until a test
+                        # needed to watch a CHECK refuse three writes in one
+                        # rolled-back transaction.
+                        "SAVEPOINT", "RELEASE",
                         "PREPARE", "DEALLOCATE", "REFRESH"}, (
             f"{path}:{line} was skipped for leading keyword {head!r}, which "
             f"is not a utility verb. It is a query that escaped the sweep.")

@@ -38,17 +38,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 #: decision somebody made, not an oversight — which is the whole difference
 #: between this list and the twelve defects that preceded it.
 EXPECTED_UNWRITTEN: dict[str, str] = {
-    # ── Waiting on a person, and on the door they will use ────────────
-    "party_determination.decided_at": (
-        "Migration 115 opens a 200.331 question per payee over the 200.1 cap "
-        "and deliberately answers none: whether a party is a contractor or a "
-        "subrecipient turns on the substance of the relationship, read off an "
-        "agreement, and is a judgment with a person's name on it. All six rows "
-        "are UNDETERMINED, which the register reports as NO DATA and never a "
-        "pass. This column fills the moment the first determination is made, "
-        "and it has no door yet — the route and the screen Tom answers on are "
-        "the work this entry is standing in for, not a shape the schema got "
-        "wrong."),
+    # `party_determination.decided_at` stood here, with its reason opening
+    # *"it has no door yet — the route and the screen Tom answers on are the
+    # work this entry is standing in for"*. Migration 121 built them, so the
+    # entry has to go: an allowlist that keeps a permission slip after the
+    # thing it excused has been done is the defect wearing one. This list can
+    # only shrink, which is why removing an entry is part of the change that
+    # earns it rather than a tidy-up somebody gets round to.
 
     # ── Money that has not moved ──────────────────────────────────────
     "invoice.paid_on": (

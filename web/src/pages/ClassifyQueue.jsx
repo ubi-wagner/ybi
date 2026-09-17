@@ -62,6 +62,47 @@ const POOL_KEYS = ["DIRECT", "FRINGE", "OVERHEAD", "G&A", "RENTAL_DIRECT",
  * 200.436(b) cannot be answered on $850,383 of depreciation. A screen that
  * printed those as 0% done would be saying somebody has started; nobody has.
  */
+/* And the judgment that decides what the base takes, which is not a
+   partition and must not be printed as one.
+ *
+ * `v_partition_coverage`'s three arms each account for a *whole* — every
+ * dollar of cost, every square foot, every asset's cost. 200.331 accounts
+ * for nothing: it is a determination on a handful of payments already judged
+ * DIRECT, and forcing it into the partition card would make "three sheets,
+ * one job" a sentence about four. It is its own row, and it is here because
+ * this is the screen where cost is judged.
+ *
+ * The figures are read from the answer, including the count. A screen that
+ * counted the open ones itself would be a second definition of "unanswered",
+ * and the register's own is `determination = 'UNDETERMINED'`. */
+function WhatMtdcTakes({ data }) {
+  const t = data?.totals;
+  if (!t || !Number(t.parties)) return null;
+  const open = Number(t.undetermined || 0);
+  return (
+    <Card title="What the base takes" variant={open ? "raised" : "quiet"}
+          aside={<Link to="/classify/parties">{open ? "Determine" : "Review"}</Link>}>
+      <div className="rowsub">
+        {open ? (
+          <>
+            <b>{count(open)}</b> of {count(t.parties)} part
+            {Number(t.parties) === 1 ? "y" : "ies"} paid on a federal objective
+            clears the 2 CFR 200.1 cap with no 200.331 determination, so{" "}
+            <b>{money(t.at_stake)}</b> of modified total direct cost is open —
+            in the base whole if each is a contractor, capped at the first
+            $25,000 if each is a subaward. UNDETERMINED is NO DATA and never a
+            pass: while it stands every computation takes the payment whole,
+            which is the contractor answer applied by omission.
+          </>
+        ) : (
+          <>All {count(t.parties)} parties over the 200.1 cap carry a 200.331
+          determination, with the substance of each relationship on the row.</>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function Partitions({ rows }) {
   if (!rows?.length) return null;
   return (
@@ -193,6 +234,7 @@ export default function ClassifyQueue({ actor }) {
   const [cov, setCov] = useState(null);
   const [parts, setParts] = useState([]);
   const [gl, setGl] = useState(null);
+  const [parties, setParties] = useState(null);
   const [exhausted, setExhausted] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [rows, setRows] = useState([]);
@@ -217,14 +259,16 @@ export default function ClassifyQueue({ actor }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, q, v, parts, gl] = await Promise.all([
+      const [c, q, v, parts, gl, pty] = await Promise.all([
         api.coverage(),
         api.queue({ status, search, limit: PAGE }),
         vocab ? Promise.resolve(vocab) : api.vocabulary(),
         api.partitions(),
         api.glAccounted(),
+        api.parties(),
       ]);
       setCov(c); setRows(q); setVocab(v); setParts(parts); setGl(gl);
+      setParties(pty);
       // A short page is the end of the list. A full one is not evidence
       // either way, so the button stays until a page comes back short.
       setExhausted(q.length < PAGE);
@@ -475,6 +519,7 @@ export default function ClassifyQueue({ actor }) {
           the two unmeasured sheets invisible until somebody went looking for
           a tab that no longer exists. */}
       <Partitions rows={parts} />
+      <WhatMtdcTakes data={parties} />
       <WholeLedger data={gl} />
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "18px 0 12px" }}>

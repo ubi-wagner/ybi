@@ -50,6 +50,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app.domain.audit_package import certification_lines  # noqa: E402
 from app.db import one, query                                  # noqa: E402
 from app.foundation import EMAIL                                # noqa: E402
 #: What counts as a restatement standing as a claim — read from the router
@@ -141,9 +142,12 @@ def _fmt_when(value) -> str:
 
 
 def certification() -> dict:
-    row = one("""SELECT period, certified, certified_by, certified_at,
-                        why_not, outstanding
-                   FROM v_rate_certified WHERE period = %s""", (PERIOD,))
+    # `SELECT *`, deliberately. A hand-written column list here is a place a
+    # new column cannot reach, and that is not hypothetical: `122` added the
+    # kind of act and this select dropped it, so every paper in the set
+    # printed REHEARSAL while the README above them printed CERTIFIED, from
+    # one run. The view exists to answer one question completely.
+    row = one("SELECT * FROM v_rate_certified WHERE period = %s", (PERIOD,))
     return row or {}
 
 
@@ -214,14 +218,14 @@ def _readme(m: dict) -> str:
            f"Produced {m['produced']} by `scripts/publish.py`. Every figure is",
            "read from the row it was recorded in; nothing in this set was",
            "written to the cost record.", ""]
-    if m["certified"]:
-        out += [f"**CERTIFIED** — {m['certified_by']}. Every document says so",
-                "on its own face.", ""]
-    else:
-        out += ["**NOT CERTIFIED** — nobody has put their name to the rate",
-                f"these figures rest on. {m['why_not']}",
-                "",
-                "Nothing here is blocked by that. These are working documents",
+    # The one sentence-maker. This composed its own two branches and so could
+    # not see `122`'s rehearsal state — it printed **CERTIFIED — Tom
+    # Metzinger** over a signature a drive had made. `certification_lines` is
+    # what every workbook and both papers use; a README that spells it itself
+    # is the second copy that goes stale first.
+    out += ["**" + " ".join(certification_lines(m)) + "**", ""]
+    if not m["certified"] or m.get("rehearsal"):
+        out += ["Nothing here is blocked by that. These are working documents",
                 "and each one says so above its figures, which is `082`'s rule:",
                 "a document silent either way leaves the reader to assume, and",
                 "the assumption made about a figure on a letterhead is the",
@@ -271,8 +275,11 @@ def main() -> int:
     caveats = walk_caveats()
 
     head(f"Publishing {PERIOD}")
-    if cert.get("certified"):
+    if cert.get("certified") and not cert.get("rehearsal"):
         print(f"  the rate is certified — {cert.get('certified_by')}")
+    elif cert.get("rehearsal"):
+        print(f"  {WARN}the signature under these figures is a drive's{END} — "
+              f"no person gave it, so every document says REHEARSAL")
     else:
         print(f"  {WARN}the rate carries no signature{END} — "
               f"{cert.get('why_not') or 'nobody has put their name to it'}")
@@ -345,6 +352,13 @@ def main() -> int:
         "produced": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "certified": bool(cert.get("certified")),
         "certified_by": cert.get("certified_by"),
+        # The kind of act, carried through. The README renders from this
+        # manifest and nothing else, so a field dropped here is a sentence the
+        # index cannot say however well the documents it lists say it — which
+        # is exactly what happened: every paper printed REHEARSAL and the
+        # README above them printed CERTIFIED, from the same run.
+        "rehearsal": bool(cert.get("rehearsal")),
+        "origin": cert.get("origin"),
         "why_not": cert.get("why_not"),
         "unfinished": caveats,
         "rates": [{"kind": r["kind"], "rate": str(r["rate"]),

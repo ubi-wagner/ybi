@@ -221,7 +221,8 @@ def _build_model(period: str,
                                  FederalTreatment, Function990, PoolType)
     from app.domain.core import AllocationBase
     from app.domain.ingest import Ledger, LedgerLine
-    from app.domain.pools import CarveOut, PoolModel
+    from app.domain.core import money
+    from app.domain.pools import CarveOut, PoolModel, SUBAWARD_CAP
 
     fringe_base = fringe_base or AllocationBase.SALARIES_WAGES
 
@@ -391,6 +392,35 @@ def _build_model(period: str,
                     f"{federally_funded:,.2f}, against {ceiling:,.2f} of "
                     f"depreciation classified to this pool"),
             evidence=EvidenceGrade.CORROBORATED))
+
+    # And the third adjustment to the base, which is not a carve-out at all:
+    # 2 CFR 200.1 takes the first $25,000 of each **subaward** into MTDC and a
+    # contract for services whole. That sits on the objective rather than on a
+    # pool — it changes the denominator a rate is allocated over, not the
+    # numerator — which is why `ObjectiveCost.subaward_excess` has been on the
+    # domain model since it was written.
+    #
+    # **And nothing had ever written it.** `115` opened the register, priced
+    # the exposure at $313,605.35 of MTDC across six parties, and the engine
+    # went on reading a field that was zero for everybody. The fourteenth
+    # instance of the dead-register shape and the softest: the table has a
+    # writer, and its *answer* reached no figure.
+    #
+    # **Nothing changes by default, and that is the property to keep.**
+    # UNDETERMINED contributes nothing, because it is not a number — it is
+    # `NO DATA`, and defaulting it either way would decide a 200.331 question
+    # by omission. So a record where nobody has determined anything computes
+    # exactly the rate it computed before this existed, and only a
+    # determination somebody signed their name to moves the base.
+    for party in query("""SELECT objective_id, payee, amount
+                            FROM party_determination
+                           WHERE period = %s AND determination = 'SUBRECIPIENT'""",
+                       (period,)):
+        obj = model.objectives.get(party["objective_id"])
+        if obj is None:
+            continue
+        excess = max(Decimal(str(party["amount"])) - SUBAWARD_CAP, Decimal(0))
+        obj.subaward_excess = money(obj.subaward_excess + excess)
     return model
 
 
@@ -663,6 +693,17 @@ class CertifyIn(BaseModel):
     """Typing your own name is the signature. Nothing else is."""
     signature: str = Field(..., min_length=2, max_length=120)
     note: str = ""
+    #: What kind of act this is. A person signing leaves it alone; a drive
+    #: proving the mechanism sends REHEARSAL, and every paper resting on the
+    #: signature then prints REHEARSAL instead of a name.
+    #:
+    #: **It can only ever be used to weaken a signature.** A caller may label
+    #: its own certification a rehearsal; nothing here lets one claim to be a
+    #: controller's that was not already, because CONTROLLER is the default
+    #: and the column is write-once. The direction is the whole safety of it:
+    #: the failure this exists for is a script that typed a person's name into
+    #: `signature` and put it on a memorandum to a sponsor.
+    origin: str = "CONTROLLER"
 
 
 @router.post("/certify")
@@ -732,6 +773,13 @@ def certify(body: CertifyIn, period: str = "2025",
         # dead certificate was not withdrawn — it was superseded, which is a
         # different fact. The schema holds the same rule through the same
         # view, so the handler and the trigger cannot disagree.
+        origin = (body.origin or "CONTROLLER").strip().upper()
+        if origin not in ("CONTROLLER", "REHEARSAL"):
+            raise HTTPException(
+                422, "A signature is a controller's or a rehearsal's. "
+                     "Leave it alone to sign, or send REHEARSAL if a script "
+                     "is proving the mechanism rather than a person signing.")
+
         live = one("""SELECT cert_id FROM v_rate_certified
                        WHERE period = %s AND certified""", (period,))
         if live:
@@ -743,12 +791,12 @@ def certify(body: CertifyIn, period: str = "2025",
             cur.execute(
                 """INSERT INTO rate_certification
                        (period, seal_hash, signature, certified_by,
-                        outstanding, note)
-                   VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                        outstanding, note, origin)
+                   VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s)
                 RETURNING cert_id, certified_at""",
                 (period, seal_hash, body.signature.strip(), actor.actor_id,
                  json.dumps([dict(o) for o in outstanding], default=str),
-                 body.note.strip()))
+                 body.note.strip(), origin))
             row = cur.fetchone()
             # The rate rows this signature is on. Recomputing supersedes them
             # and the certificate dies with them, which is what stops an
@@ -830,7 +878,8 @@ def rate_certification(period: str) -> dict | None:
     document silent about its own signature is read generously.
     """
     return one("""SELECT period, certified, cert_id, signature, certified_at,
-                         certified_by, seal_hash, outstanding, note, why_not
+                         certified_by, seal_hash, outstanding, note, why_not,
+                         origin, rehearsal
                     FROM v_rate_certified WHERE period = %s""", (period,))
 
 

@@ -1130,3 +1130,9 @@ button.primary:disabled { background: var(--surface-sunk);
 .cert-band-ok      { background: var(--accent-wash); color: var(--accent-deep); }
 .cert-band-no      { background: var(--fail-wash);   color: var(--fail); }
 .cert-band-unknown { background: var(--warn-wash);   color: var(--warn); }
+
+/* 2 CFR 200.331's five tests, printed beside the judgment rather than
+   summarised. A regulation read from the page is a different act from one
+   recalled, and this is the screen where the difference decides a base. */
+.tests { margin: 0; padding-left: 18px; }
+.tests li { margin: 3px 0; color: var(--muted); }

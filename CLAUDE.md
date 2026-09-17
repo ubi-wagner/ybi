@@ -4531,6 +4531,225 @@ though a signed page has nowhere to go — *fixing one instance is not fixing
 the rule*, and the rule here is that a manual not updated beside the
 mechanism is the next person's wrong answer.
 
+## The signature the machine gave itself
+
+Migration `122`. The question that found it was four words: *"Nope...that was
+you running a test drive."*
+
+I had read a certification off the reference record — *Tom Metzinger, 15
+September 2026* — and reported it as Tom's signature, **correcting a true
+statement I had made an hour earlier**. The note on that row is a verbatim
+string literal in `scripts/drive_the_close.py`:
+
+    def tom_certifies(t, period):
+        r = t.post(f"/api/rates/certify?period={period}",
+                   json={"signature": "Tom Metzinger",
+                         "note": "The build-up is mine. ..."})
+
+**Nobody has signed the rate.** And it had reached the repository:
+`docs/SETTLEMENT_2025.md` — the memorandum addressed to NCDMM — opened on
+*"certified by Tom Metzinger, Controller, on 15 September 2026"*, the
+publication README said *"**CERTIFIED** — Tom Metzinger. Every document says
+so on its own face"*, and sixteen rendered PDFs carried *"Certified by Tom
+Metzinger."*
+
+This file already records catching it once — **A set that says CERTIFIED must
+not be signed by the machine** — where a clone was rebuilt and the set
+regenerated. `drive_the_close.py` was written *afterwards*, did the same thing
+to the reference record, and the set was regenerated from that. **Fixing one
+instance is not fixing the rule**, for the third time, in a document that goes
+to a sponsor.
+
+### The drive was right and nothing enforced it
+
+Its own docstring says so, and always has:
+
+> *It is deliberately not in `prove.sh`. Every other drive leaves the record
+> as it found it ... this one closes a year — it accepts recommendations,
+> adopts 757 positions, certifies a rate and records a sponsor's acceptance —
+> and a cleanup that walked those back would be withdrawing a signature and a
+> position taken. **Run it against a clone.***
+
+A rule in a docstring is the hand-kept map: it cannot be checked, so it is
+never checked. `--rehearsal` is required now, and refusing without it is
+`password_round.py`'s rule in a second place — *the one act that takes
+something away from the person who should have made it is never automatic.*
+
+**And the full radius is wider than the signature.** The same run left four
+restatements at `ACCEPTED` — NCDMM accepting in writing, which NCDMM has not
+done — 757 position confirmations as Tom, and the seal. The reference record
+is a *simulated* closed year, and `docs/` was generated from it. That is
+recorded here rather than quietly undone: superseding a position somebody took
+is this system's model of change, and none of those positions was taken by a
+person to begin with, which is the finding.
+
+### A fifth value for the kind of act
+
+`rate_certification.origin` is `CONTROLLER` or `REHEARSAL`, defaults to
+CONTROLLER so **nothing changes by default**, and is write-once. It is the
+fifth time this schema has needed exactly this and the fifth time the answer
+is the same shape:
+
+| | | |
+| --- | --- | --- |
+| `038` | `ingest_channel = 'GENERATED'` | this system made the document |
+| `070` | `basis = 'ADOPTED'` | the organisation rebuilt it and the person affirmed it |
+| `083` | `origin = 'MACHINE_PROPOSAL'` | the machine proposed it |
+| `120` | `certifier_role = 'PAPER'` | they signed on paper and somebody else filed it |
+| `122` | `origin = 'REHEARSAL'` | a drive made this signature and no person gave it |
+
+`certified_by` still names the account the call was made as, and the audit row
+still says the same, because that is what happened — `079`'s rule about 891
+rows. What changes is that the paper can tell the two apart.
+
+The backfill is self-limiting on the drive's own note, which is `089`'s rule:
+a database the drive has never run against is untouched and says so.
+
+### Six spellings of one sentence, and the one that mattered
+
+`certification_lines()` is described in this file as *"one sentence-maker, and
+it is pure ... five workbook builders open with it, **both papers print it**,
+and the SPA renders the same three states."* The last clause was false. Six
+places composed their own sentence from `certified` and `certified_by`:
+
+    restate.py            the amendment memorandum and the acceptance form
+    publish.py            the README, the manifest payload, the console
+    stage_the_run.py      the run sheet
+    form_990_comparison   the return comparison
+    readiness.py          the controller's outstanding list
+
+So when the record gained a way to say *a drive made this*, **not one of them
+could see it** — and the first regeneration produced 53 papers correctly
+printing REHEARSAL under a README printing CERTIFIED, from one run. That is
+`money()`'s eight spellings in the place it costs most.
+
+**And a seventh reader was one level down.** `publish.py::certification()` had
+its own `SELECT period, certified, certified_by, ... FROM v_rate_certified` —
+a hand-written column list is a place a new column cannot reach. Four readers
+now take `SELECT *`, because that view exists to answer one question
+completely.
+
+### The test was written three times and the first two were wrong
+
+- **The first excused any file that imported `certification_lines`** — and the
+  offending file did, two lines above the composed sentence. It passed with
+  the defect pasted back in. A file-level escape hatch is a test that cannot
+  fail for the thing it names: the fifth instance here, found the only way any
+  of them are.
+- **The second tried to tell *saying* from *asserting* by regex** and reported
+  six drives that were doing neither. A test that argues with correct code is
+  worse than no test.
+- **The third asserts behaviour**: render both sponsor-facing papers against a
+  rehearsal signature and check that neither names a signatory. That one bites
+  — and it *still* proved only the renderer, passing while the handler
+  composed its own line again, so a second, deliberately narrow assertion
+  holds `_papers` itself. Both were watched failing.
+
+One smaller thing, and it is this file's own lesson: the narrow assertion
+first matched the **comment** I had written to explain the defect, which
+quotes the sentence it is about. Comments out before matching — *assert over
+what runs, not over the prose beside it.*
+
+### And a bulk edit that reverted three good fixes
+
+Widening the six selects, a regex anchored on `one("""SELECT` matched **the
+first select in each file** rather than the certification one, and corrupted
+four unrelated queries. `git checkout` put those files back and took three
+intentional fixes with them. Anchor a rewrite on the thing it is about — here
+the table name — and read the diff before trusting the count.
+
+## The determination that decided the base and had no door
+
+Migrations `121`, `app/routers/classify.py`, `web/src/pages/Parties.jsx`.
+`115` opened a 2 CFR 200.331 determination for every party the 200.1 cap
+could bite and closed with the words *"recorded with the route and screen it
+stands in for"*. Neither was built. So **six determinations worth
+$313,605.35 of MTDC** were answerable only by somebody writing SQL against
+`party_determination` — the capability-with-no-door shape, for the fifth
+time, in the one register whose answer changes the base every indirect rate
+is taken over.
+
+    LTM        Defense & Energy Systems LLC    102,000.00   77,000.00 at stake
+    DRIVE-AM   Elevate Systems                 101,075.89   76,075.89
+    DIG-ENG    (no payee on the ledger line)   100,000.00   75,000.00
+    AAMEN      (no payee on the ledger line)    77,710.46   52,710.46
+    AAMEN      NezTech Corp.                    51,319.00   26,319.00
+    LTM        (no payee on the ledger line)    31,500.00    6,500.00
+
+**And the answer reached no figure either.** `ObjectiveCost.subaward_excess`
+has been on the domain model since it was written and **nothing wrote it**:
+the fourteenth instance of the dead-register shape and the softest, because
+the table has a writer and only its *answer* was inert. `_build_model` reads
+it now, and the property that makes that safe is the one this file keeps:
+**nothing changes by default.** UNDETERMINED contributes nothing, because it
+is not a number — it is `NO DATA`, and defaulting it either way would settle
+a 200.331 question by omission. Driven on a clone of the certified record:
+recomputing with all six open reproduces **24.71% and every pool to the
+cent**, and a single SUBRECIPIENT determination moves MTDC by exactly
+$77,000.00 — the payment less the cap, not the payment — with fringe
+unmoved, because fringe is a wage base and not MTDC.
+
+Three things worth carrying:
+
+- **The amount on the worklist is `at_stake`, not the payment.** The first
+  $25,000 is in the base under either answer, so it is not in question. A row
+  carrying the gross would say $463,605.35 was open where $313,605.35 is.
+- **It is one kind, and CONTROLLER's.** `SUBAWARD_OVER_CAP` beside
+  `PARTY_UNDETERMINED` would be two copies of one fact, which `084` refused
+  for the same reason. And every other gate in this system is
+  `require_portfolio(X, Portfolio.CONTROLLER)` so a narrow portfolio reaches
+  its own area — there is no portfolio whose own area this is, and moving
+  MTDC is the act `seal`, `compute` and `restate` already reserve.
+- **It is not a fourth partition.** `v_partition_coverage`'s three arms each
+  account for a *whole* — every dollar, every square foot, every asset's
+  cost. 200.331 accounts for nothing: it is a determination on a handful of
+  payments already judged DIRECT. Forcing it into that card would make
+  *"three sheets, one job"* a sentence about four, and the card's own
+  `partition === "COST" ? … : "Assets"` ternary would have gone silently
+  wrong. It is its own row on the Classify screen.
+
+**And the allowlist entry had to go with it.** `party_determination.
+decided_at` sat in `test_no_register_is_dead.py` with a reason opening *"it
+has no door yet"*. An allowlist that keeps a permission slip after the thing
+it excused has been done is the defect wearing one, and that test's rule is
+that the list can only shrink — so removing the entry is part of the change
+that earns it, not a tidy-up somebody gets round to.
+
+### The third instrument photographing the chooser
+
+`scripts/drive_ui.py` reported **203 screen-visits across 7 people, 0
+faults** — over 203 pictures of the two-product chooser. `App.jsx` renders it
+in place of every screen until a door is picked, and the drive never picked
+one, so nothing it walked made a request and a card that makes no request
+cannot make a bad one.
+
+`sweep_screens.py` was fixed for exactly this and carries a comment saying so
+— *"it walked 23 paths, photographed the chooser 23 times, and reported 46
+figures, 100% clickable — a green that describes nothing"* — and
+`walk_manuals.py` was fixed after it. This is the third, which is **fixing
+one instance is not fixing the rule** in as many words, and it was found the
+only way any of them are: by opening the picture. It takes `--product`, sets
+`ybi.product` before navigating, and **exits 2 rather than reporting** if it
+is still on the chooser. Re-run: 203 visits, 0 faults, over screens.
+
+### Two the picture showed and the build could not
+
+- **The panel opened on Withdraw.** `setValue(open?.determination)` seeded
+  from the row, so a party nobody had ever determined opened with
+  *UNDETERMINED — withdraw* selected and **Withdraw** on the primary button:
+  the wrong verb, for an act that would change nothing. An already-open party
+  opens *unchosen* now, with Record disabled until somebody answers.
+- **Four columns printed right-aligned.** `Table` reads a bare string as a
+  left-aligned *header* and the `td` still needs `className="l"`, so the
+  payee and the objective sat against the figures. `.num` is for figures;
+  everything else says so.
+
+And one in the sweep that only exists because a test needed it: `SAVEPOINT`
+and `RELEASE` were missing from `test_sql_is_real.py`'s list of utility verbs
+`PREPARE` genuinely refuses, beside the `BEGIN`, `COMMIT` and `ROLLBACK`
+already there. Nothing had used one until a test wanted to watch a CHECK
+refuse three writes inside one rolled-back transaction.
+
 ## The cost partition fell off a record with no books
 
 Migration `119`, and CI is what found it — **red since 15 September**, three

@@ -560,6 +560,13 @@ export const api = {
   recommend: (body, period = "2025") =>
     req(`/positions/recommend?period=${period}`,
         { method: "POST", body: JSON.stringify(body) }),
+  /* 2 CFR 200.331, per party. The register has been on file since migration
+     115 and had no door at all: six determinations worth $313,605.35 of MTDC,
+     answerable only by writing SQL. */
+  parties: (period = "2025") => req(`/classify/parties?period=${period}`),
+  putDetermination: (body, period = "2025") =>
+    req(`/classify/parties?period=${period}`,
+        { method: "PUT", body: JSON.stringify(body) }),
   assetFunding: (period = "2025") =>
     req(`/facilities/asset-funding?period=${period}`),
   putAssetFunding: (body, period = "2025") =>

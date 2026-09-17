@@ -25,6 +25,7 @@ import Requests from "./pages/Requests.jsx";
 import FirstPassword from "./components/FirstPassword.jsx";
 import Evidence from "./pages/Evidence.jsx";
 import Facilities from "./pages/Facilities.jsx";
+import Parties from "./pages/Parties.jsx";
 import Chart from "./pages/Chart.jsx";
 import Projects from "./pages/Projects.jsx";
 import Lanes from "./pages/Lanes.jsx";
@@ -375,6 +376,10 @@ export default function App() {
           <Route path="/classify/review" element={<PositionReview actor={actor} />} />
           <Route path="/classify/space" element={<Facilities actor={actor} />} />
           <Route path="/classify/assets" element={<Facilities actor={actor} tab="equipment" />} />
+          {/* 200.331, the third partition of the same question: which of the
+              cost already judged DIRECT reaches MTDC whole. The register has
+              been on file since migration 115 and had no door at all. */}
+          <Route path="/classify/parties" element={<Parties actor={actor} />} />
           <Route path="/books" element={<Books actor={actor} />} />
           <Route path="/books/:pane" element={<Books actor={actor} />} />
           <Route path="/evidence" element={<Evidence actor={actor} />} />
