@@ -296,3 +296,57 @@ def test_a_half_loaded_register_is_reported_loudly(monkeypatch, caplog):
     assert "41" in said and "PART WAY" in said and "parse error" in said, (
         "the message has to carry how far it got and what the loader "
         "actually said, or nobody can act on it:\n" + said)
+
+
+# ── A loader may fill more than one register ─────────────────────────
+
+def test_every_table_a_loader_writes_is_accounted_for():
+    """The count has to reach everything the loader puts on the record.
+
+    `load_calendar.py` writes the working calendar, the hours log **and**
+    the contractor identities. The first draft of REGISTERS counted
+    `work_month` alone: the calendar landed on the boot, the walk called the
+    register in, and `contractor_identity` — which needs the ledger, and so
+    cannot be written on the pass that loads the calendar — was skipped by
+    name for ever after. One test failed on a from-empty seed and nothing
+    else said a word.
+
+    So the rule is swept rather than trusted: every table a register loader
+    writes has to be named by some register's count. A loader that grows a
+    second output fails here until the list catches up.
+    """
+    named = " ".join(r.loaded for r in REGISTERS)
+    for r in REGISTERS:
+        if r.always:
+            # A loader that runs every time is never skipped, so an output
+            # of its that has not landed gets another pass. `load_awards.py`
+            # is the one: besides the four awards it links each invoice to
+            # the award that authorised it, and the invoice register is
+            # loaded by the half a person runs — so that link lands on the
+            # pass after it, which is exactly what `always` buys.
+            continue
+        src = _without_comments((SCRIPTS / r.script).read_text())
+        writes = set(re.findall(r"INSERT\s+INTO\s+([a-z_]+)", src))
+        writes |= set(re.findall(r"UPDATE\s+([a-z_]+)\b", src))
+        writes -= {"audit_log"}          # every writer touches it
+        assert writes, f"{r.script} writes nothing this sweep can see"
+        for t in sorted(writes):
+            assert re.search(rf"\b{t}\b", named), (
+                f"scripts/{r.script} writes `{t}` and no register counts it, "
+                f"so a boot on which that write does not land will report "
+                f"the register in and never try again")
+
+
+def _without_comments(src: str) -> str:
+    """SQL and Python comments out before matching.
+
+    A sentence about a table is not a write to it, and this repository has
+    been caught four times asserting over the prose beside the code.
+    """
+    out = []
+    for line in src.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("#") or stripped.startswith("--"):
+            continue
+        out.append(line)
+    return "\n".join(out)

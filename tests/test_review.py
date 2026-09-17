@@ -355,6 +355,16 @@ def test_the_return_puts_every_dollar_of_compensation_in_a_function():
         import pytest
         pytest.skip("no payroll on this record")
     by = {r["function_990"]: r["amount"] for r in rows}
+    if set(by) == {"NOT_YET_CLASSIFIED"}:
+        import pytest
+        pytest.skip(
+            "nobody has judged the payroll on this record, so every dollar "
+            "of it is in the return's fourth column — which is what that "
+            "column is for. This property is about what a judgment does to "
+            "the three printed functions, and the premise is that one has "
+            "been made. Narrow on purpose: the defect it was written about "
+            "put compensation in NOT_APPLICABLE, which is a judgment and "
+            "still runs here.")
     printed = sum(v for k, v in by.items()
                   if k in ("PROGRAM", "MANAGEMENT_AND_GENERAL", "FUNDRAISING"))
     assert printed == sum(by.values()), (

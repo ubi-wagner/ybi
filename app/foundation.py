@@ -438,6 +438,15 @@ class Register:
 
 
 #: Everything a boot can transcribe, in the order it has to happen.
+#:
+#: **A loader may fill more than one register, and the count has to reach
+#: all of them.** `load_calendar.py` writes the working calendar, the hours
+#: log and the contractor identities; the first draft counted `work_month`
+#: alone, so the calendar landed, the walk called it done, and the
+#: contractor register — which needs the ledger and so cannot be written on
+#: the pass that loads the calendar — was skipped by name for ever after.
+#: `test_every_table_a_loader_writes_is_accounted_for` sweeps the loaders
+#: rather than trusting this list to stay complete.
 REGISTERS: tuple[Register, ...] = (
     Register(
         "the effort distribution", "load_labor.py", (),
@@ -448,7 +457,8 @@ REGISTERS: tuple[Register, ...] = (
         "accounts, which is the eleventh control point."),
     Register(
         "the calendar and the hours log", "load_calendar.py", (),
-        "SELECT count(*) FROM work_month",
+        "SELECT least((SELECT count(*) FROM work_month), "
+        "             (SELECT count(*) FROM labor_month))",
         "YBI counts 261 work days and 2,088 hours in 2025 and takes no "
         "holiday out — their calendar, not a derived one. The hours log "
         "beneath it is the independent source `v_labor_hours_check` "
@@ -472,7 +482,8 @@ REGISTERS: tuple[Register, ...] = (
         always=True),
     Register(
         "the budget schedules", "load_award_budgets.py", (),
-        "SELECT count(*) FROM award_budget",
+        "SELECT least((SELECT count(*) FROM award_budget), "
+        "             (SELECT count(*) FROM award_budget_schedule))",
         "What each award funds by category, which decides the line set on "
         "an invoice. A category named at zero and a category absent are "
         "different findings, and only a loaded schedule can tell them "
@@ -485,12 +496,32 @@ REGISTERS: tuple[Register, ...] = (
         "already done and skips; it fires on a record whose evidence rows "
         "predate that, which is what it was written for."),
     Register(
+        "who is paid as a company", "load_calendar.py", (),
+        "SELECT count(*) FROM contractor_identity",
+        "`load_calendar.py` fills two registers and this is the second: the "
+        "link from an employee key to the company the ledger actually pays, "
+        "which is how 781 hours with no payroll row turn out to be a 1099 "
+        "contractor rather than a gap. **It needs the ledger** — a link "
+        "naming a payee the ledger has never paid is not written at all — "
+        "so on a boot it writes nothing and says so, and lands on the pass "
+        "after `load_2025.py`. Its own entry rather than a wider count on "
+        "the calendar's, because a register whose loader has run and whose "
+        "rows are not there has to be visible as itself."),
+    Register(
         "the awards to their agreements", "link_agreements.py", (),
-        "SELECT count(*) FROM award WHERE agreement_evidence_id IS NOT NULL",
-        "Points each award at the paper it was read out of, so "
-        "`v_award_citation_check` can ask the document whether the cited "
-        "clause is in it. Needs the documents filed, which is why the walk "
-        "is safe to run twice and `seed.sh` does."),
+        "SELECT least((SELECT count(*) FROM award "
+        "               WHERE agreement_evidence_id IS NOT NULL), "
+        "             (SELECT count(*) FROM award_term "
+        "               WHERE evidence_id IS NOT NULL))",
+        "Points each award at the paper it was read out of **and carries "
+        "that paper down onto every provision cited from it**, so "
+        "`v_award_citation_check` can ask the document whether the clause "
+        "is really in it. Both halves are counted: the awards are here and "
+        "the provisions come from `load_contract_terms.py`, which is the "
+        "half a person runs, so the first pass links the awards and the "
+        "pass after the provisions links the 36. Counting the awards alone "
+        "left every citation with no document behind it — which `056` calls "
+        "somebody's recollection of a contract."),
 )
 
 

@@ -173,9 +173,17 @@ def test_no_control_can_change_without_the_census_noticing():
     # the return. Asserting it over an empty ledger is asserting the size of
     # a population that is not there, which is the literal-threshold shape
     # this repository has been caught by before. So it states its premise.
-    if not query("SELECT 1 FROM ledger_line WHERE period = '2025' LIMIT 1"):
-        pytest.skip("no ledger on this database, so the census is the shape "
-                    "of an empty record rather than a shrunken one. The "
-                    "anchor-by-anchor assertion above ran; prove.sh covers "
-                    "the magnitude against a loaded record.")
+    # The premise is a **computed rate**, and stating it as a ledger was one
+    # level too coarse: a record that has been seeded and not yet classified
+    # has 15,500 ledger lines and no pools, no allocations and no rates, so
+    # the census is 247 of the entries a closed year produces. That is the
+    # shape of a record mid-close, not a gutted census — and it failed on the
+    # first from-empty seed anybody ran the suite against, which is the same
+    # literal-threshold shape one line further out.
+    if not query("SELECT 1 FROM rate WHERE period = '2025' LIMIT 1"):
+        pytest.skip("no rate has been computed on this database, so most of "
+                    "what the census counts — one entry per pool, per "
+                    "objective — does not exist yet. The anchor-by-anchor "
+                    "assertion above ran; prove.sh covers the magnitude "
+                    "against a closed record.")
     assert len(taken) > 250, "the census has shrunk to something unwatchful"

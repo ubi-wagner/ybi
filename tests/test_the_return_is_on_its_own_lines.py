@@ -277,3 +277,81 @@ def test_a_roster_that_has_gone_stale_says_so(q):
     # Not an assertion about the number: somebody crossing $100,000 is a fact
     # about the year, and the column exists so a preparer sees it.
     assert r["paid_over_100k_and_not_on_the_roster"] >= 0
+
+
+# ── Line 5 appears with the block it is carved out of ─────────────────
+
+def test_line_5_does_not_appear_without_the_line_7_it_is_lifted_out_of(q):
+    """`098`'s rule is one act: line 5 is lifted out of line 7 and the two
+    still add to the wage accounts. `099` let the two halves happen
+    separately — the subtraction lived inside the compensation block (`WHERE
+    function_990 = 'NOT_APPLICABLE'`, which needs somebody to have judged the
+    payroll) and the addition needed nothing at all.
+
+    So on every record with a ledger and no classifications, Part IX added
+    the chief executive's $192,087.13 without taking it off line 7 and the
+    return did not cross-foot. Worse than the arithmetic: line 5 splits by
+    the OFFICER cohort's own effort shares, so it was the one line claiming
+    a function allocation while every other dollar sat in
+    `NOT_YET_CLASSIFIED`.
+
+    Driven inside a rolled-back transaction: take the judgments off the wage
+    accounts, and line 5 has to go with them while the return still foots.
+    """
+    from app.db import conn
+
+    if not loaded(q):
+        pytest.skip("needs a ledger to have a line 7 at all")
+
+    with conn() as c, c.cursor() as cur:
+        cur.execute("SAVEPOINT probe")
+        cur.execute("""SELECT total FROM v_form_990_part_ix
+                        WHERE period = %s AND line_id = '5'""", (PERIOD,))
+        row = cur.fetchone()
+        before = Decimal(str(row["total"])) if row else Decimal(0)
+        if before <= 0:
+            cur.execute("ROLLBACK TO SAVEPOINT probe")
+            pytest.skip("no officer pay on this record, so there is nothing "
+                        "for line 5 to carry either way")
+
+        # Un-judge the compensation block, which is what a record looks
+        # like between the ledger landing and the first judgment.
+        #
+        # The seal has to come off first, and that is the schema working:
+        # `decision_set_is_frozen` refuses a change to a judgment inside a
+        # sealed set, which is the guarantee the whole system rests on. It
+        # refused this probe on the first run. Both statements are inside the
+        # savepoint, so the seal is put back by the rollback and no record
+        # this test touches is left unsealed.
+        cur.execute("""UPDATE decision_set
+                          SET seal_hash = NULL, sealed_at = NULL,
+                              unsealed_reason = 'test probe, rolled back'
+                        WHERE period = %s AND sealed_at IS NOT NULL""",
+                    (PERIOD,))
+        #
+        # Every judgment, not just the wage accounts: line 7 carries intern
+        # wages as well as employee wages, so un-judging one of the two left
+        # the compensation block standing and the probe measured nothing. An
+        # unclassified record has no judgments at all, which is the state
+        # this is about.
+        cur.execute("""UPDATE decision SET reversed_at = now(),
+                              reversal_reason = 'test probe, rolled back'
+                        WHERE reversed_at IS NULL
+                          AND set_id IN (SELECT set_id FROM decision_set
+                                          WHERE period = %s)""", (PERIOD,))
+        cur.execute("""SELECT coalesce(sum(total), 0) AS n
+                         FROM v_form_990_part_ix
+                        WHERE period = %s AND line_id = '5'""", (PERIOD,))
+        after = Decimal(str(cur.fetchone()["n"]))
+        cur.execute("""SELECT variance FROM v_form_990_line_check
+                        WHERE period = %s""", (PERIOD,))
+        variance = Decimal(str(cur.fetchone()["variance"]))
+        cur.execute("ROLLBACK TO SAVEPOINT probe")
+
+    assert after == 0, (
+        f"the wage accounts are unjudged, so there is no compensation block "
+        f"for line 5 to be carved out of — and it still printed {after}. "
+        f"That is added to a line 7 nothing was taken off.")
+    assert variance == 0, (
+        f"Part IX does not cross-foot by {variance} once the payroll is "
+        f"unjudged, which is the defect 123 was written for")

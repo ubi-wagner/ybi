@@ -818,6 +818,108 @@ names where its money came from* — instead of saying nothing exists. That is
 the 200.436(b) question arriving on Heidi's list on the first boot after a
 rebuild rather than after somebody remembers to run a script.
 
+### A loader may fill more than one register
+
+And the from-empty proof is what found it. `load_calendar.py` writes the
+working calendar, the hours log **and** `contractor_identity` — the link
+that turns 781 hours with no payroll row into a 1099 contractor. The first
+draft of `REGISTERS` counted `work_month` alone, so the calendar landed on
+the boot, the walk called the register in, and the contractor link — which
+**needs the ledger**, and so cannot be written on the pass that loads the
+calendar — was skipped by name for ever after.
+
+`link_agreements.py` had the identical shape and cost more. Besides pointing
+each award at its agreement it carries that document down onto every
+provision cited from it, and `award_term` comes from the half a person runs.
+Counting the awards alone left **36 of 36 citations with no document behind
+them** on a from-empty seed, against 36 of 36 on the reference record —
+which is `056`'s *a citation with no document behind it is somebody's
+recollection of a contract*, reintroduced by the change that was supposed to
+make a recovery complete.
+
+So both are counted across everything their loader is responsible for, the
+contractor link is **its own register** — a register whose loader has run
+and whose rows are not there has to be visible as itself — and
+`test_every_table_a_loader_writes_is_accounted_for` sweeps the loaders
+rather than trusting the list to stay complete. It found a third on its
+first run: `load_awards.py` also links each invoice to the award that
+authorised it, and the invoice register is loaded by a person. That one is
+already safe, because `load_awards` is the `always` loader and is never
+skipped — which is what `always` buys, and the sweep says so rather than
+widening a count that did not need it.
+
+**Read end to end from nothing, the passes fall where the dependencies are:**
+
+    boot          5 transcribed; the contractor link and the citations
+                  report "had nothing to load yet"
+    the ledger
+    pass 1        1 transcribed: who is paid as a company
+    the invoices, the provisions, the documents
+    pass 2        1 transcribed: the awards to their agreements
+
+15,500 ledger lines · 263 assets · 61 invoices, 40 linked to their award ·
+36 provisions, all 36 citing a document · 488 person-months · 18 documents ·
+6 reconciling items. Eleven statement points TIE, the whole general ledger
+TIES, and Form 990 Part IX ties at variance 0.00.
+
+### The return was over by one salary, on every record mid-close
+
+Migration `123`. **Part IX over-reported by $192,087.13 on every record that
+has a ledger and no classifications** — the chief executive's compensation,
+to the cent. Line 7 read 1,789,993.94 against the reference record's
+1,597,906.81, the difference is line 5 exactly, and the return did not
+cross-foot: its lines added to 6,812,635.68 against a profit and loss of
+6,775,212.18.
+
+`098` is right about the rule — *line 5 is an amount lifted out of line 7 by
+person, and the two still add to the wage accounts*. What `099` did not hold
+is that **the two halves of that one act could happen separately.** The
+subtraction lives inside `comp`, which is `WHERE function_990 =
+'NOT_APPLICABLE'` — the compensation block, and that exists only once
+somebody has judged the wage accounts. The addition was `FROM officer o
+WHERE o.wages > 0`, which needs nothing at all. The lift was conditional and
+what it lifted was not.
+
+`099`'s own comment shows where the reasoning stopped: *"where no roster is
+on the record the officer amount is zero and line 7 is unchanged"*. It
+anticipated a missing **roster** — `096` seeds that, so it never is — and
+not a missing **block**, which is the state every record passes through
+between the ledger landing and the first judgment.
+
+**And the second half is worse than the arithmetic.** Line 5 splits by the
+OFFICER cohort's own effort shares, so on a record where nothing has been
+judged it was the one line claiming a function allocation — 81.6% programme,
+13.5% administration — while every other dollar sat in `NOT_YET_CLASSIFIED`.
+*That is a column of the 990, not a rounding*, and line 5 was jumping the
+queue out of it.
+
+Nothing on the reference record moves: 192,087.13 on line 5, 1,597,906.81 on
+line 7, Part IX at 6,620,548.55, the same function columns. On an
+unclassified record line 5 is empty, the whole payroll is on line 7, and the
+line check reads TIES at 0.00.
+
+**Four tests assert that the return foots and all four were passing**,
+because the only record anybody had ever run them against was one that had
+been classified since before `098` existed. Two more were premises stated
+one level too coarse and failed on the first from-empty seed: *every dollar
+of compensation is in a function* is about what a **judgment** does, not
+about a record with none — narrowly skipped, so the `NOT_APPLICABLE` defect
+it was written for still runs it; and the census magnitude needs a
+**computed rate**, not merely a ledger, because most of what it counts is
+one entry per pool and per objective.
+
+Two things worth not repeating, both mine, both already in this file:
+
+- **The semicolon was in the comment.** Lifting `099`'s body with a scanner
+  that looks for the statement's terminating `;` stopped at *"Line 7 gives up
+  the officers' wages; line 5 is what it gave up"* and produced half a view.
+  Lifted by line range instead.
+- **A diff of two error messages is not a diff.** The before/after check on
+  the reference record printed IDENTICAL because both sides had failed on a
+  column name written from memory — `management_and_general` for
+  `management`. A comparison whose two halves are both empty compares
+  nothing, which is `029` in an experiment rather than in a control.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.
