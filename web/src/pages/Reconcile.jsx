@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, explain, money } from "../api.js";
-import { Card, Empty, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Drawer, Empty, Field, PageHead, Pill, Segmented, Stat, Table, Tick,
+         useToast } from "../components/ui.jsx";
 
 /* Schedule A-1 — the three source documents against each other.
  *
@@ -30,6 +31,13 @@ export default function Reconcile({ actor }) {
   const [items, setItems] = useState([]);
   const [aliases, setAliases] = useState([]);
   const [props, setProps] = useState(null);
+  const [pay, setPay] = useState(null);
+  // What is being named: a candidate ledger line, or "rounding" for the
+  // residual nothing can be attributed to. null is the drawer shut.
+  const [naming, setNaming] = useState(null);
+  const [form, setForm] = useState({ to_account: "", kind: "SOURCE_DEFECT",
+                                     explanation: "" });
+  const [refusal, setRefusal] = useState("");
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const canWrite = actor?.role === "CONTROLLER" || actor?.role === "ADMIN";
@@ -40,6 +48,7 @@ export default function Reconcile({ actor }) {
     api.reconcileGlBs().then(setGbs).catch(() => setGbs([]));
     api.reconcileItems().then(setItems).catch(() => setItems([]));
     api.reconcileAliases().then(setAliases).catch(() => setAliases([]));
+    api.reconcilePayroll().then(setPay).catch(() => setPay(null));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -77,6 +86,47 @@ export default function Reconcile({ actor }) {
     }
   };
 
+  /* The eleventh control. Unlike the profit-and-loss differences this one
+     cannot be derived: no amount of arithmetic says a credit in an intern
+     wage account is a donor's pledge rather than a payroll correction. So
+     the screen finds the candidates — the route already does — and the
+     wording is the controller's. `/propose` is deliberately not extended to
+     it, because a proposal here would be the machine writing the judgment. */
+  const openNaming = (what) => {
+    setRefusal("");
+    setForm({ to_account: what === "rounding" ? "the payroll register" : "",
+              kind: what === "rounding" ? "ROUNDING" : "SOURCE_DEFECT",
+              explanation: "" });
+    setNaming(what);
+  };
+
+  const nameIt = async () => {
+    const rounding = naming === "rounding";
+    setBusy(true);
+    setRefusal("");
+    try {
+      await api.addReconcilingItem({
+        control: "PAYROLL_REGISTER",
+        from_account: rounding ? "the ledger's wage accounts" : naming.account,
+        to_account: form.to_account,
+        amount: String(rounding ? -Number(pay.reconciliation.unexplained)
+                                : naming.amount),
+        kind: form.kind,
+        explanation: form.explanation,
+        line_ids: rounding ? [] : [naming.line_id],
+      });
+      toast.show(`Named ${money(rounding ? -Number(pay.reconciliation.unexplained)
+                                         : naming.amount)}`);
+      setNaming(null);
+      load();
+    } catch (e) {
+      // A refusal fades out of a toast while somebody is still reading the
+      // form, so it prints where it happened as well.
+      setRefusal(explain(e));
+      toast.show(explain(e), { tone: "fail" });
+    } finally { setBusy(false); }
+  };
+
   if (!reg) return <div className="page"><Empty mark="—" title="Reading the register" /></div>;
 
   const open = reg.controls.filter((c) => !c.ties);
@@ -111,6 +161,7 @@ export default function Reconcile({ actor }) {
           ["gl-pl", `Ledger vs P&L (${gpl.length})`],
           ["gl-bs", `Ledger vs balance sheet (${gbs.length})`],
           ["items", `Reconciling items (${items.length})`],
+          ...(pay ? [["payroll", "Payroll register"]] : []),
           ...(props ? [["propose", "Proposals"]] : []),
         ]}
       />
@@ -345,6 +396,132 @@ export default function Reconcile({ actor }) {
           ))}
         </Card>
       )}
+
+      {view === "payroll" && pay && (() => {
+        const r = pay.reconciliation;
+        const left = Number(r.unexplained);
+        return (
+          <Card variant="raised" title="The payroll register against the ledger">
+            <div className="stat-row">
+              <Stat label="Payroll register" value={money(r.register_wages)}
+                    note={`${r.people} people — the fringe base`} />
+              <Stat label="The ledger's wage accounts" value={money(r.ledger_wages)}
+                    note={`${r.ledger_lines} lines`} />
+              <Stat label="Difference" value={money(r.gross_difference)}
+                    note="named by attributing it, never by netting it" />
+              <Stat label="Named" value={money(r.named)}
+                    note={`${r.named_items} item${Number(r.named_items) === 1 ? "" : "s"}`} />
+              <Stat label="Unexplained" value={money(left)} size="lg"
+                    tone={left ? "warn" : "pass"}
+                    note={left ? "a rate is refused while this stands" : "nothing left"} />
+            </div>
+            <p className="rowsub">
+              The fringe base comes from the effort distribution, not from the ledger's
+              wage accounts, so a difference between them is two denominators for one
+              rate. Nothing here is proposed: which of these lines is not payroll is a
+              judgment, and the wording recorded against it is yours.
+            </p>
+
+            {left === 0 ? (
+              <Empty mark="✓" title="Nothing left to name">
+                The register and the ledger's wage accounts are reconciled.
+              </Empty>
+            ) : (
+              <>
+                <Table columns={[
+                  { label: "Date", align: "left" },
+                  { label: "Account", align: "left" },
+                  { label: "Payee", align: "left" },
+                  { label: "Amount" }, { label: "", align: "left" },
+                ]}>
+                  {pay.unlike_payroll.map((l) => (
+                    <React.Fragment key={l.line_id}>
+                      <tr>
+                        <td className="l">{l.txn_date}</td>
+                        <td className="l">{(l.account || "").split(":").pop()}</td>
+                        <td className="l">{l.payee || "—"}</td>
+                        <td className="amt">{money(l.amount)}</td>
+                        <td className="l">
+                          {canWrite && (
+                            <button className="btn" onClick={() => openNaming(l)}>
+                              Name this
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {l.description && (
+                        <tr className="subrow">
+                          <td className="l rowsub" colSpan={5}>{l.description}</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </Table>
+                <p className="rowsub">{pay.note}</p>
+                {canWrite && Math.abs(left) <= 1000 && (
+                  <button className="btn" onClick={() => openNaming("rounding")}>
+                    Record the remaining {money(left)} as unattributable
+                  </button>
+                )}
+              </>
+            )}
+          </Card>
+        );
+      })()}
+
+      <Drawer
+        open={!!naming}
+        title={naming === "rounding" ? "A residual nobody can attribute"
+                                     : "Name this difference"}
+        subtitle={naming && naming !== "rounding"
+          ? `${money(naming.amount)} — ${naming.payee || "no payee"}`
+          : naming ? money(-Number(pay?.reconciliation?.unexplained || 0)) : ""}
+        onClose={() => setNaming(null)}
+        footer={
+          <>
+            <button className="btn" onClick={() => setNaming(null)}>Cancel</button>
+            <button className="btn primary" disabled={busy} onClick={nameIt}>
+              {busy ? "Recording…" : "Record it"}
+            </button>
+          </>
+        }>
+        {naming === "rounding" ? (
+          <p className="rowsub">
+            A rounding item is the one relaxation: it may carry no ledger lines, and
+            in exchange it has to say in sixty characters or more why attribution is
+            impossible, and may not exceed a thousand dollars. Both fences are in the
+            database. The alternative to writing an unattributable residual down is a
+            tolerance that quietly swallows it.
+          </p>
+        ) : (
+          <>
+            <Field label="Where the statement puts it" required
+                   hint="The account this belongs in — 4000 Contributions Income, say.">
+              <input value={form.to_account}
+                     onChange={(e) => setForm({ ...form, to_account: e.target.value })} />
+            </Field>
+            <Field label="What kind of difference" required>
+              <select value={form.kind}
+                      onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+                {Object.entries(KIND_LABEL)
+                  .filter(([k]) => k !== "ROUNDING")
+                  .map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </Field>
+          </>
+        )}
+        <Field label="Why" required
+               hint={naming === "rounding"
+                 ? "Sixty characters or more, saying why no line can be named."
+                 : "What this line actually is, and what it does to the figures."}>
+          <textarea rows={7} value={form.explanation}
+                    onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+        </Field>
+        <p className="rowsub">
+          {form.explanation.length} characters — {naming === "rounding" ? 60 : 30} needed.
+        </p>
+        {refusal && <p className="refusal">{refusal}</p>}
+      </Drawer>
     </div>
   );
 }
