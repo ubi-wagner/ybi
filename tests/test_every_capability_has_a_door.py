@@ -71,7 +71,6 @@ NO_DOOR_YET = {
     "GET classify/materiality": "the materiality threshold — /classify",
     "PUT classify/materiality": "setting it — /classify, controller only",
     "GET rates/allocation": "allocation by objective — /review/rate has room",
-    "GET reconcile/payroll": "the eleventh control's detail — /reconcile",
     "GET export/exceptions": "an export the other four already have links for",
     "GET export/reconciliation": "likewise; /reports or /reconcile",
     "POST classify/defer": "deferring a group rather than judging it",

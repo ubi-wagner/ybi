@@ -412,6 +412,7 @@ export const api = {
   reconcileGlPl: (period = "2025") => req(`/reconcile/gl-pl?period=${period}`),
   reconcileGlBs: (period = "2025") => req(`/reconcile/gl-bs?period=${period}`),
   reconcileItems: (period = "2025") => req(`/reconcile/items?period=${period}`),
+  reconcilePayroll: (period = "2025") => req(`/reconcile/payroll?period=${period}`),
   reconcileAliases: (period = "2025") => req(`/reconcile/aliases?period=${period}`),
   reconcilePropose: (period = "2025") => req(`/reconcile/propose?period=${period}`),
   // People and access
