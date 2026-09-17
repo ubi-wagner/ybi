@@ -36,27 +36,35 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("")
 def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
+              product: str | None = None,
               actor: Actor = Depends(require_reader)) -> dict:
     period = period or settings.period
 
     rollup = one("SELECT * FROM v_dashboard WHERE period = %s", (period,))
-    coverage = one("""
-        WITH d AS (
-          SELECT l.line_id, l.amount,
-                 (dl.decision_id IS NOT NULL) AS decided
-            FROM ledger_line l
-            LEFT JOIN decision_line dl ON dl.line_id = l.line_id AND dl.live
-           WHERE l.period = %s AND l.statement = 'P&L')
-        SELECT count(*)                                            AS lines,
-               count(*) FILTER (WHERE decided)                     AS decided_lines,
-               COALESCE(sum(abs(amount)), 0)                       AS dollars,
-               COALESCE(sum(abs(amount)) FILTER (WHERE decided), 0) AS decided_dollars
-          FROM d""", (period,))
-
+    # Read, not computed. This handler carried its own copy of the scope —
+    # `l.statement = 'P&L'` — which is the predicate `064` moved into
+    # `v_cost_line` precisely because grant income is on the P&L and is not
+    # cost to classify. So the denominator was 41% revenue and the controller's
+    # home screen said **59.7% classified** while
+    # `v_classification_coverage` said **100.0%**, at the same moment, over
+    # the same 757 judgments. That is 13.0% and 2.2% exactly, in the place a
+    # figure gets quoted from.
+    #
+    # `lines`, `dollars` and `decided_dollars` are kept as names because the
+    # screen and the workbooks read them; they come off the one definition now.
+    row = one("""SELECT total_lines, decided_lines, scope_dollars, classified,
+                        unclassified, pct_dollars_covered
+                   FROM v_classification_coverage WHERE period = %s""",
+              (period,))
+    coverage = None
     pct = 0.0
-    if coverage and coverage["dollars"]:
-        pct = round(float(coverage["decided_dollars"]) /
-                    float(coverage["dollars"]) * 100, 1)
+    if row:
+        coverage = {"lines": row["total_lines"],
+                    "decided_lines": row["decided_lines"],
+                    "dollars": row["scope_dollars"],
+                    "decided_dollars": row["classified"],
+                    "unclassified": row["unclassified"]}
+        pct = float(row["pct_dollars_covered"] or 0)
 
     # The cross-reference register is the one place the controls live. The
     # dashboard used to keep its own short list of three, which meant a
@@ -74,14 +82,34 @@ def dashboard(period: str = None, activity_limit: int = Query(25, le=200),
                variance, (variance = 0) AS ties
           FROM v_asset_control WHERE period = %s""", (period,))
 
-    worklist = query("""
-        SELECT kind, severity, count(*) AS items,
-               COALESCE(sum(amount), 0) AS amount
-          FROM v_worklist WHERE period = %s
+    # Scoped the same way `/worklist/mine` is, and off the same view, because
+    # this card and that one were showing the same list to the same person at
+    # the same moment with different contents — the audit home carried 43
+    # uncertified timesheets in the rollup after they had been taken out of
+    # the list above it. Two readings of one question is the shape this
+    # repository keeps finding.
+    #
+    # Unknown is unfiltered, as it is there: a caller that does not say which
+    # product it is gets everything.
+    scope, args = "", []
+    if product in ("audit", "fcs"):
+        scope, args = " AND owner_product = %s", [product]
+    #
+    # `sum(amount)` and not `COALESCE(sum(amount), 0)`: SPACE_UNMEASURED
+    # carries no amount at all — there is no dollar figure for "no building
+    # has square footage" — and coercing that to zero says the facilities
+    # carve-out is worth nothing, which is the opposite of true. It is the
+    # single largest adjustment in the rate model. A sum over rows that all
+    # hold NULL is NULL, and NULL reaches the screen as a blank; a kind that
+    # genuinely nets to zero still reaches it as 0.00, which is a different
+    # fact and now prints as one.
+    worklist = query(f"""
+        SELECT kind, severity, count(*) AS items, sum(amount) AS amount
+          FROM v_worklist_owned WHERE period = %s{scope}
          GROUP BY kind, severity
          ORDER BY CASE severity WHEN 'BLOCKING' THEN 0 WHEN 'HIGH' THEN 1
                                 ELSE 2 END, sum(amount) DESC NULLS LAST""",
-        (period,))
+        (period, *args))
 
     activity = query("""
         SELECT occurred_at, kind, actor, entity, entity_id, label, amount, detail
@@ -154,6 +182,29 @@ def activity(limit: int = Query(100, le=500), offset: int = 0,
 
 
 
+@router.get("/walk")
+def walk(period: str = None, actor: Actor = Depends(require_reader)) -> list[dict]:
+    """The 2025 audit as the one ordered journey it is.
+
+    The door opened on the generic dashboard, which answers *what is
+    outstanding* and never *where am I in this*. Those are different questions
+    and the second is the one a controller closing a year holds: the file is
+    closed in an order, each step depends on the one before it, and the order
+    is the whole guarantee — classification is sealed before any rate exists,
+    and a landing page listing the two as peers said nothing about that.
+
+    Nothing is computed here or in the view. Each step reads the view that
+    already owns its figure.
+    """
+    period = period or settings.period
+    rows = query("""SELECT seq, step, what, state, detail, goes_to
+                      FROM v_audit_walk WHERE period = %s ORDER BY seq""",
+                 (period,))
+    if not rows:
+        raise HTTPException(404, "No such period.")
+    return rows
+
+
 @router.get("/refusals")
 def refusals(limit: int = 50, mine: bool = True,
              actor: Actor = Depends(current_actor)) -> dict:
@@ -198,7 +249,7 @@ def refusals(limit: int = 50, mine: bool = True,
 
 
 @router.get("/worklist/mine")
-def my_worklist(period: str = None,
+def my_worklist(period: str = None, product: str | None = None,
                 actor: Actor = Depends(require_own_work)) -> dict:
     """What *this* person owes, rather than what is outstanding in general.
 
@@ -216,22 +267,34 @@ def my_worklist(period: str = None,
     """
     period = period or settings.period
     held = {p.value for p in actor.portfolios}
+    # Which product is asking. The tabs were split into a year being closed
+    # and a company being run, and the worklist was not — so the controller's
+    # audit home opened on 43 uncertified timesheets and 43 missing
+    # employment terms, two of its six rows being work behind the other door
+    # and neither of them work a controller may do: 200.430(i) wants the
+    # signature of the person whose effort it was.
+    #
+    # Unknown is *unfiltered* rather than empty. A caller that does not say
+    # which product it is gets everything, which is what `/worklist` has
+    # always answered and what a script reading the whole list expects.
+    scope, args = "", []
+    if product in ("audit", "fcs"):
+        scope, args = " AND owner_product = %s", [product]
+
+    columns = """kind, severity, label, entity, entity_id,
+                 amount, detail, owner_portfolio, owner_product, goes_to"""
+    order = """ORDER BY CASE severity WHEN 'BLOCKING' THEN 0
+                                      WHEN 'HIGH' THEN 1 ELSE 2 END,
+                        amount DESC NULLS LAST"""
     if Portfolio.CONTROLLER in actor.portfolios:
-        rows = query("""SELECT kind, severity, label, entity, entity_id,
-                               amount, detail, owner_portfolio, goes_to
-                          FROM v_worklist_owned WHERE period = %s
-                          ORDER BY CASE severity WHEN 'BLOCKING' THEN 0
-                                                 WHEN 'HIGH' THEN 1 ELSE 2 END,
-                                   amount DESC NULLS LAST""", (period,))
+        rows = query(f"""SELECT {columns} FROM v_worklist_owned
+                          WHERE period = %s{scope} {order}""",
+                     (period, *args))
     elif held:
-        rows = query("""SELECT kind, severity, label, entity, entity_id,
-                               amount, detail, owner_portfolio, goes_to
-                          FROM v_worklist_owned
-                         WHERE period = %s AND owner_portfolio = ANY(%s)
-                         ORDER BY CASE severity WHEN 'BLOCKING' THEN 0
-                                                WHEN 'HIGH' THEN 1 ELSE 2 END,
-                                  amount DESC NULLS LAST""",
-                     (period, list(held)))
+        rows = query(f"""SELECT {columns} FROM v_worklist_owned
+                          WHERE period = %s AND owner_portfolio = ANY(%s)
+                                {scope} {order}""",
+                     (period, list(held), *args))
     else:
         rows = []
 
@@ -242,9 +305,13 @@ def my_worklist(period: str = None,
         g = groups.setdefault(r["kind"], {
             "kind": r["kind"], "severity": r["severity"],
             "owner_portfolio": r["owner_portfolio"], "goes_to": r["goes_to"],
-            "items": 0, "amount": Decimal(0), "examples": []})
+            "items": 0, "amount": None, "examples": []})
         g["items"] += 1
-        g["amount"] += Decimal(str(r["amount"] or 0))
+        # Same rule as the rollup above, which this card has to agree with:
+        # a kind with no amount on any of its rows keeps no amount, rather
+        # than accumulating into a zero that reads as a figure.
+        if r["amount"] is not None:
+            g["amount"] = (g["amount"] or Decimal(0)) + Decimal(str(r["amount"]))
         if len(g["examples"]) < 3:
             g["examples"].append({"label": r["label"], "detail": r["detail"]})
 

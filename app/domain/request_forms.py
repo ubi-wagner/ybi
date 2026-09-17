@@ -131,6 +131,15 @@ class Form:
     #: this the two hundred and sixty-three assets we send out pre-filled all
     #: read as "somebody started this and gave up".
     prefilled: tuple[str, ...] = ()
+    #: The columns that *are* the ask, where naming them is the only way to
+    #: tell. A row we sent counts as answered when one of these carries
+    #: something; left empty, that is every column we did **not** pre-fill,
+    #: which is right for a first ask and breaks the moment a form pre-fills
+    #: everything. `SPACE_INVENTORY` v2 does exactly that — it sends Heidi's
+    #: own floor plan back so she is confirming rather than retyping — and
+    #: with no `asks` every one of the forty-two rows came back `untouched`
+    #: and **nothing at all was usable**. Measured, by driving it.
+    asks: tuple[str, ...] = ()
 
     def column(self, key: str) -> Column | None:
         return next((c for c in self.columns if c.key == key), None)
@@ -272,25 +281,42 @@ ASSET_REGISTER = Form(
 
 SPACE_INVENTORY = Form(
     name="SPACE_INVENTORY",
-    version=1,
-    title="Floor space, and who uses it",
-    for_whom="whoever holds the floor plans and the rent roll",
+    version=2,
+    title="Floor space, who uses it, and on what terms",
+    for_whom="whoever holds the floor plans, the rent roll and the tenancy "
+             "agreements",
     purpose=(
         "Occupancy is the second largest item in the indirect cost pool. "
-        "Space rented to a tenant, space standing empty, and space promised "
-        "to somebody else are all costs of the rental operation and never "
-        "reach a federal award — but only a floor plan can say which square "
-        "feet those are."),
+        "Space let commercially, space standing empty and space promised to "
+        "somebody else are costs of the rental operation and never reach a "
+        "federal award — but space an incubator's own client companies "
+        "occupy *is* the programme, and only the agreements can tell those "
+        "two apart."),
     consequence=(
-        "With no space on file the carve-out under 2 CFR 200.465 cannot be "
-        "computed at all, so overhead currently carries the tenant and vacant "
-        "space along with everything else. The rate reads high. Between this "
-        "and the asset register the modelled range is 36% to 46%, and the "
-        "spread is almost entirely these two."),
+        "Version 1 of this form explained TENANT as 'leased to a third "
+        "party', which is literally true of a portfolio company paying rent, "
+        "so all twenty-six tenancies came back TENANT and every one of them "
+        "left the federal pool. Reading the client companies as programme "
+        "space instead is worth 2.72 points of combined rate with their rent "
+        "credited under 200.406, and it is the largest single reading still "
+        "open on the 2025 rate."),
     sheet="Space",
-    prefilled=("facility_name", "label", "occupant", "use", "status",
-               "actual_annual_charge", "note"),
+    prefilled=("facility_name", "label", "floor", "usable_sqft", "occupant",
+               "use", "status", "objective_id", "months_occupied",
+               "actual_annual_charge", "market_rate_psf", "market_basis",
+               "occupancy_basis", "note"),
+    #: Everything is pre-filled on the second pass, so "did somebody answer
+    #: a column we did not send" can never be true. What makes a row an
+    #: answer here is that it comes back naming a use at all — this workbook
+    #: sends no placeholder rows, only her own estate, so a row returned is
+    #: a row she has looked at.
+    asks=("use", "occupancy_basis"),
     instructions=(
+        "This is a second pass over what you already sent, not a re-ask. "
+        "Every column is filled in from your own floor plan where we have "
+        "it. What is new is the last two columns and a sharper question in "
+        '"What it is used for" — read that column\'s note before anything '
+        "else.",
         "One row per suite, lab, or identifiable area. Corridors, restrooms "
         "and mechanical space go in as COMMON — they are real square feet and "
         "leaving them out makes everything else look larger than it is.",
@@ -299,10 +325,19 @@ SPACE_INVENTORY = Form(
         "if that figure is wrong, correct it there.",
         "Months occupied matters: a suite empty for half the year is half a "
         "suite of cost, and that is how it will be counted.",
+        "Where a row came back last time with something we could not read, "
+        "the note column says what it was. Those rows were held rather than "
+        "half written, so they are still outstanding.",
     ),
     columns=(
         Column("facility_name", "Building", Kind.TEXT, required=True,
-               why="Use the same name for every row in the same building.",
+               why="Use the same name for every row in the same building, and "
+                   "use the names the record already holds — they are "
+                   "listed on the first sheet. A name the record does not "
+                   "hold creates a second building beside the first, and the "
+                   "estate is then counted twice: driven on a copy of the "
+                   "record, five buildings became nine and one of them "
+                   "carried twice its own floor area.",
                width=28),
         Column("label", "Suite or area", Kind.TEXT, required=True,
                why='Whatever it is called on the plan — "Suite 210", "Lab 1".',
@@ -315,9 +350,18 @@ SPACE_INVENTORY = Form(
                width=18),
         Column("use", "What it is used for", Kind.CHOICE, required=True,
                choices=SPACE_USES,
-               why="TENANT is leased to a third party. PROGRAM is delivering "
-                   "one named programme. COMMITTED is promised to somebody "
-                   "under an agreement, like the YSU joint use space.",
+               why="The question is not whether they pay rent — a client "
+                   "company in residence pays rent too. It is whether YBI is "
+                   "letting the space commercially or delivering incubation "
+                   "in it. TENANT is a commercial letting to somebody YBI "
+                   "runs no programme for: a manufacturer, an unrelated "
+                   "business. PROGRAM is a portfolio or client company "
+                   "housed as part of what a programme does for them — name "
+                   "the programme in the next column and the agreement two "
+                   "columns along. ADMINISTRATIVE is YBI's own staff. "
+                   "COMMITTED is promised to somebody under an agreement, "
+                   "like the YSU joint use space. Only TENANT, VACANT and "
+                   "COMMITTED leave the federal pool.",
                citation="2 CFR 200.465", width=20),
         Column("status", "Occupied or empty", Kind.CHOICE, required=True,
                choices=OCCUPANCY, width=18),
@@ -325,8 +369,11 @@ SPACE_INVENTORY = Form(
                why="The tenant's name, or the team. Required where the status "
                    "is OCCUPIED.", width=28),
         Column("objective_id", "Which programme", Kind.TEXT,
-               why="Only where the use is PROGRAM. The programme name as you "
-                   "use it — we will match it.", width=24),
+               why="Required where the use is PROGRAM, including where the "
+                   "occupant is a client company — housing somebody is part "
+                   "of a named programme or it is a letting, and the schema "
+                   "refuses PROGRAM space that names no programme. The name "
+                   "as you use it; we will match it.", width=24),
         Column("months_occupied", "Months occupied in 2025", Kind.NUMBER,
                why="12 unless it changed hands or stood empty part of the "
                    "year.", width=20),
@@ -340,6 +387,15 @@ SPACE_INVENTORY = Form(
                why="A broker's opinion, a comparable lease, an appraisal. A "
                    "rate with no basis behind it is a number somebody made "
                    "up, and the system will not accept one.", width=44),
+        Column("occupancy_basis", "The agreement that says which", Kind.TEXT,
+               why="For anything somebody is charged for: name the document "
+                   "that settles the column three to the left. A commercial "
+                   "lease, or an incubation or residency agreement. Blank is "
+                   "a fine answer and means nobody has read one — it is "
+                   "never taken as a claim that none exists. A paid tenancy "
+                   "called PROGRAM with nothing named here is refused, "
+                   "because that is the reading that moves the rate.",
+               citation="2 CFR 200.465", width=46),
         Column("note", "Anything we should know", Kind.TEXT, width=40),
     ),
 )

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 
 /* Every account is provisioned with the same bootstrap password, which is what
    a bootstrap is. This is how it stops being the permanent one. */
@@ -22,8 +22,8 @@ export default function PasswordDialog({ onClose }) {
       await api.changePassword({ current_password: current, new_password: next });
       setDone(true);
     } catch (err) {
-      const body = String(err.message || err);
-      setError(body.replace(/^\d+:\s*/, "").replace(/^\{"detail":"|"\}$/g, ""));
+      const body = explain(err);
+      setError(body);
     }
     setBusy(false);
   }

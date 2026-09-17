@@ -39,8 +39,8 @@ from pydantic import BaseModel, Field
 from app.auth import require_controller, require_reader
 from app.audit import record
 from app.domain.core import money
-from app.vocab import (EvidenceGrade, FederalTreatment, Function990,
-                       Pool)
+from app.vocab import (DecisionOrigin, EvidenceGrade, FederalTreatment,
+                       Function990, Pool)
 from app.auth import Actor
 from app.db import execute, one, query, transaction
 from app.statelock import turn
@@ -113,6 +113,20 @@ class DecideIn(BaseModel):
     #: reclassification has no screen to be stale, and refusing it would make
     #: the crosswalk unloadable.
     based_on: dict[str, str] = {}
+    #: What kind of act this is — CONTROLLER, or MACHINE_PROPOSAL where a
+    #: script is recording a working position for somebody to adopt.
+    #:
+    #: `083` gave the column its meaning and filled the 757 rows already on
+    #: the record; nothing has ever written it going forward, so a recovery
+    #: replayed `scripts/classification_log.py --apply` and every one of the
+    #: 757 came back as the controller's own judgment — six seconds of
+    #: seven hundred judgments a minute with nothing saying a machine
+    #: proposed them. The migration corrected a history and the writer was
+    #: never built: the dead-register shape, one column along.
+    #:
+    #: Defaults to CONTROLLER, so a screen that does not send it is
+    #: unchanged, and the column is write-once in the schema.
+    origin: DecisionOrigin = DecisionOrigin.CONTROLLER
 
 
 class CoverageOut(BaseModel):
@@ -157,6 +171,70 @@ def coverage(period: str = "2025") -> CoverageOut:
         groups_remaining=r["groups_total"] - r["groups_decided"],
         dollars_remaining=total - decided,
     )
+
+
+@router.get("/ledger")
+def ledger(period: str = "2025") -> dict:
+    """The whole general ledger, accounted for — not just the part in scope.
+
+    `coverage` above answers *how much of the cost has been judged*, over the
+    scope `064` narrowed to cost. That is the right denominator for a rate and
+    the wrong one for the question the controller is actually asked, which is
+    **have you been through the whole book?** On the live record those are
+    4,038 lines and 15,500.
+
+    Taking income out of scope was correct and it also took income out of
+    *view*, which this repository has already recorded costing it the America
+    Makes billing — thirty-six monthly postings sitting in the Income section
+    for a year, one join away from every figure computed without them. So the
+    out-of-scope buckets are shown rather than dropped, and each says why it is
+    out: *cannot be classified* with no reason is the dead end this system
+    keeps finding.
+
+    Nothing is computed here. `v_gl_accounted` holds the buckets and
+    `v_gl_accounted_check` holds them against the ledger they came from, so the
+    screen cannot claim to have accounted for the book while being short of it.
+    """
+    buckets = query("""SELECT seq, bucket, in_scope, why, goes_to,
+                              lines, groups, dollars
+                         FROM v_gl_accounted WHERE period = %s
+                        ORDER BY seq""", (period,))
+    if not buckets:
+        raise HTTPException(404, "No ledger loaded for that period.")
+    check = one("""SELECT accounted_lines, ledger_lines, accounted_dollars,
+                          ledger_dollars, line_difference, dollar_difference,
+                          state
+                     FROM v_gl_accounted_check WHERE period = %s""", (period,))
+    return {"period": period, "buckets": buckets, "check": check}
+
+
+@router.get("/partitions")
+def partitions(period: str = "2025") -> list[dict]:
+    """The three sheets the year divides into, and how much of each is done.
+
+    Cost into pools, each building into tenant, programme and vacant space,
+    and the asset register into funding sources. They are one screen because
+    they are one job — *account for the year* — and they were three tabs, two
+    of which a controller had no reason to open until the third was finished.
+
+    `NO DATA` is not a pass and is the answer on two of the three: no building
+    carries square footage and no asset carries a funding source, so the
+    carve-out cannot fire and 200.436(b) cannot be answered. An empty set
+    matching an empty set perfectly is what `029` is about, and the facilities
+    carve-out is the single largest adjustment in the rate model.
+    """
+    return query("""SELECT partition, divides, unit, covered, whole,
+                           parts_done, parts, evaluable, needs, goes_to,
+                           pct, state, outstanding
+                      FROM v_partition_coverage WHERE period = %s
+                     -- Cost, space, assets: the order they bear on the
+                     -- rate. Alphabetical put ASSETS above SPACE, and space
+                     -- is the one holding the largest adjustment in the
+                     -- model hostage.
+                     ORDER BY CASE partition WHEN 'COST' THEN 1
+                                             WHEN 'SPACE' THEN 2
+                                             ELSE 3 END""",
+                 (period,))
 
 
 @router.get("/queue", response_model=list[GroupOut])
@@ -665,8 +743,8 @@ def decide(body: DecideIn, period: str = "2025",
             cur.execute("""
                 INSERT INTO decision (set_id, scope, pool, function_990, federal,
                                       objective_id, grade, rationale, citation,
-                                      decided_by, supersedes)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                      decided_by, supersedes, origin)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING decision_id
             """, (set_id, f"account={account}|payee={payee}", body.pool,
                   body.function_990, body.federal, body.objective_id, body.grade,
@@ -676,7 +754,8 @@ def decide(body: DecideIn, period: str = "2025",
                   # the audit reason rather than half-recorded in a column
                   # that holds one.
                   body.supersedes or (str(superseded[0])
-                                      if len(superseded) == 1 else None)))
+                                      if len(superseded) == 1 else None),
+                  body.origin))
             did = cur.fetchone()["decision_id"]
             for l in with_lines:
                 cur.execute("""INSERT INTO decision_line (decision_id, line_id)

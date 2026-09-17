@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
+import CertificationBand from "../components/CertificationBand.jsx";
 import {
   Card, Drawer, Empty, PageHead, Pill, Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
@@ -34,7 +35,7 @@ export default function Reports({ actor }) {
   const load = useCallback(() => {
     api.invoicesToRender()
       .then(setData)
-      .catch((e) => toast.show(String(e.message || e), { tone: "fail" }));
+      .catch((e) => toast.show(explain(e), { tone: "fail" }));
   }, [toast]);
   useEffect(() => { load(); }, [load]);
 
@@ -56,7 +57,7 @@ export default function Reports({ actor }) {
         : `Invoice ${r.invoice_number} filed as ${r.evidence_id}`);
       load();
     } catch (e) {
-      toast.show(String(e.message || e).replace(/^\d+:\s*/, ""), { tone: "fail" });
+      toast.show(explain(e), { tone: "fail" });
     } finally {
       setBusy("");
     }
@@ -73,6 +74,7 @@ export default function Reports({ actor }) {
           onto the face it was issued on.
       </PageHead>
 
+      <CertificationBand />
       <Card variant="raised" title="Timesheet and effort report"
             aside={<Pill>Schedule G</Pill>}>
         <p className="lede" style={{ marginTop: 0 }}>

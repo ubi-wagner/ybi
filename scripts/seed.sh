@@ -15,11 +15,14 @@
 #   load_2025         the ledger, the P&L and the balance sheet, each proving
 #                     off its own printed subtotals before anything is promoted
 #   load_labor        the effort distribution, which the fringe base comes from
+#   load_assets       the 263-asset fixed-asset register, without the funding
+#                     column the schedule does not carry, which is the one
+#                     thing 200.436(b) waits on
 #   load_calendar     YBI's own working calendar and the hours log under it —
 #                     261 work days and 2,088 hours in 2025, which is what
 #                     every `Allow Hours` in their record is measured against
-#   load_invoices     the three America Makes invoices, and the four awards the
-#                     register did not have; links each invoice to its award
+#   load_awards       the four awards the register lacked, read out of the
+#                     executed agreements — the ceiling, the term and the clause
 #   load_contract_terms   what the signed agreements actually say, with the
 #                     clause each provision came from
 #   load_award_budgets    what each award budgets by category, which is what
@@ -82,9 +85,28 @@ run "effort distribution" $PY scripts/load_labor.py
 # hours log maps its objective headings through labor_objective_map, and the
 # cost objectives have to exist first.
 run "calendar and hours log" $PY scripts/load_calendar.py
+# The fixed-asset register, from the schedule YBI already holds. It is
+# transcription and not judgment — their own depreciation schedule, read as
+# printed, which is why it belongs beside the ledger's loader and not in the
+# application. The funding column is deliberately not loaded: the schedule
+# does not have one, which is 200.313(d)(1) unanswered and is exactly what
+# Heidi answers on Classify > Equipment.
+run "fixed-asset register" $PY scripts/load_assets.py
 
 step "The awards, and what they say"
-run "invoices and awards" $PY scripts/load_invoices.py
+run "the four awards" $PY scripts/load_awards.py
+# The register is the year, and only the year. This was
+# `load_invoices.py` — *"Load the three America Makes invoices"* — which
+# loaded exactly that: three, dated 1 May 2026, a sample of the invoice
+# format taken before the year's own register existed. Nothing downstream
+# asked whether a register of three was the year: four published figures
+# were computed off it and three restatements were measured against it.
+#
+# `load_invoices_2025.py` is the register — 61 invoices, $2,964,077.32, from
+# the six PDFs of invoices as issued. Migration `089` removed the three
+# examples and `load_awards.py` no longer files them; 2026 billing is entered
+# when 2026 is worked.
+run "the 2025 invoice register" $PY scripts/load_invoices_2025.py --apply
 run "contract provisions" $PY scripts/load_contract_terms.py \
     --base "$BASE" --password "$PASSWORD"
 run "budget schedules" $PY scripts/load_award_budgets.py

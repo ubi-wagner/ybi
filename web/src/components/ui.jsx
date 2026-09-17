@@ -44,8 +44,12 @@ export function Card({ title, aside, children, variant = "", className = "", ...
 }
 
 export function Stat({ label, value, note, size = "md", tone }) {
+  /* `.stat` is what lets `.stat-row` put every label on one line and every
+     value on the next — the wrapper participates in the parent grid rather
+     than forming a box of its own. Without the class a row of five figures
+     printed on four baselines. */
   return (
-    <div>
+    <div className="stat">
       <div className="stat-label">{label}</div>
       <div className={`stat-value ${size}`} style={tone ? { color: `var(--${tone})` } : undefined}>
         {value}
@@ -87,14 +91,23 @@ export function Meter({ pct, target = 80, good = false }) {
 }
 
 export function Field({ label, hint, required, children }) {
+  /* A hint beside the label competes with it for one line, so "Required where
+     the status is OCCUPIED" squeezed "Cost objective" onto two lines and the
+     label — the part somebody scans — came off worse than the aside. A short
+     one still sits on the label line; anything longer goes under the control,
+     where it is read after the box rather than instead of it. And a hint is
+     no longer dropped when the field is required, which silently lost the
+     sentence saying what the field wants. */
+  const brief = hint && hint.length <= 28;
   return (
     <label className="field">
       <div className="field-label">
         <span>{label}</span>
         {required && <span className="req">required</span>}
-        {hint && !required && <span>{hint}</span>}
+        {brief && !required && <span>{hint}</span>}
       </div>
       {children}
+      {hint && !brief && <div className="field-hint">{hint}</div>}
     </label>
   );
 }

@@ -86,6 +86,23 @@ class OccupancyStatus(StrEnum):
     COMMON = "COMMON"
 
 
+class FundingKind(StrEnum):
+    """Where the money for an asset came from.
+
+    2 CFR 200.313(d)(1) requires the source on the property record, and
+    200.436(b) makes depreciation on a federally funded asset unallowable —
+    which is why the fixed-asset schedule having no such column is a finding
+    of its own rather than a missing convenience.
+    """
+
+    FEDERAL = "FEDERAL"
+    STATE = "STATE"
+    LOCAL = "LOCAL"
+    PRIVATE = "PRIVATE"
+    DEBT = "DEBT"
+    UNRESTRICTED = "UNRESTRICTED"
+
+
 class AccessPolicy(StrEnum):
     FREE = "FREE"
     SUBSIDIZED = "SUBSIDIZED"
@@ -150,3 +167,17 @@ MIRRORS = {
     "org_role": OrgRole,
     "portfolio": PortfolioVocab,
 }
+
+
+class DecisionOrigin(StrEnum):
+    """What kind of act a judgment was — `decision.origin`, from `083`.
+
+    `CONTROLLER` is somebody's own judgment. `MACHINE_PROPOSAL` is a working
+    position a script recorded for somebody to adopt, which is what all 757
+    of the restaged 2025 judgments are: the column exists so an auditor
+    reading six seconds of seven hundred judgments a minute is told what
+    they are looking at rather than inferring it from the timestamps.
+    """
+
+    CONTROLLER = "CONTROLLER"
+    MACHINE_PROPOSAL = "MACHINE_PROPOSAL"

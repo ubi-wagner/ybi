@@ -191,7 +191,8 @@ They are surfaced as a gap on the People screen rather than invented.
 | `provision.py` | Nobody can record anything until there are accounts, and the ladder has to run downward from a bootstrapped root. |
 | `load_2025.py` | The ledger, the P&L and the balance sheet — each proving off its own printed subtotals before anything is promoted. |
 | `load_labor.py` | The effort distribution, which the fringe base comes from. |
-| `load_invoices.py` | The three invoices and the two awards the register lacked; links each invoice to its award. |
+| `load_awards.py` | The four awards, read out of the executed agreements — the ceiling, the term, the rate method and the clause each came from. Was `load_invoices.py`, which also filed three April-2026 example invoices; `089` removed them. |
+| `load_invoices_2025.py` | The 2025 invoice register — 61 invoices, $2,964,077.32, from the six PDFs of invoices as issued, tied to `3900 Grant Income`. |
 | `load_contract_terms.py` | What the signed agreements say, with the clause each provision came from. |
 | `seed_documents.py` | The eighteen foundational documents. |
 | `reconcile.py --record` | The eleven cross-reference points, every difference named. |

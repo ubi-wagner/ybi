@@ -26,6 +26,8 @@ from decimal import Decimal
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 # Differences that come from the books moving between two exports. Naming the
 # kind is a judgment; naming it once here keeps the wording consistent across
 # however many accounts turn out to be affected.
@@ -119,7 +121,7 @@ def main() -> int:
     ap.add_argument("--period", default="2025")
     ap.add_argument("--record", action="store_true",
                     help="record the unambiguous proposals as reconciling items")
-    ap.add_argument("--as-user", default=os.environ.get("YBI_TOM", "tom@ybi.org"))
+    ap.add_argument("--as-user", default=os.environ.get("YBI_TOM", EMAIL["tom"]))
     args = ap.parse_args()
 
     with httpx.Client(base_url=args.base, timeout=120) as c:

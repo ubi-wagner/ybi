@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import {
   Card, Drawer, Empty, PageHead, Pill, Segmented, Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
@@ -378,7 +378,7 @@ function TermForm({ awardId, onDone }) {
       await api.putAwardTerm(awardId, f);
       setF({ term_key: "", term_value: "", citation: "" });
       onDone();
-    } catch (e) { toast(String(e.message || e), { tone: "bad" }); }
+    } catch (e) { toast(explain(e), { tone: "bad" }); }
   };
   return (
     <div className="grid form" style={{ marginTop: 12 }}>
@@ -405,7 +405,7 @@ function MilestoneForm({ awardId, onDone }) {
         ...f, value: Number(f.value || 0), due_on: f.due_on || null });
       setF({ milestone_id: "", name: "", clin: "", value: "", due_on: "" });
       onDone();
-    } catch (e) { toast(String(e.message || e), { tone: "bad" }); }
+    } catch (e) { toast(explain(e), { tone: "bad" }); }
   };
   return (
     <div className="grid form" style={{ marginTop: 12 }}>
@@ -576,7 +576,7 @@ function ReceiptForm({ invoiceId, onDone }) {
     try {
       await api.addReceipt(invoiceId, { ...f, amount: Number(f.amount || 0) });
       setOpen(false); onDone();
-    } catch (e) { toast(String(e.message || e), { tone: "bad" }); }
+    } catch (e) { toast(explain(e), { tone: "bad" }); }
   };
   return (
     <div className="grid form">
@@ -676,7 +676,7 @@ function NewCode({ onClose, onDone }) {
     try {
       await api.createChargeCode({ ...f, cfda: f.cfda || null });
       onDone();
-    } catch (e) { toast(String(e.message || e), { tone: "bad", sticky: true }); }
+    } catch (e) { toast(explain(e), { tone: "bad", sticky: true }); }
   };
   return (
     <Drawer open title="Open a charge code" onClose={onClose}>
@@ -726,7 +726,7 @@ function CodeDrawer({ objectiveId, canWrite, onClose }) {
       await api.authoriseCharge(objectiveId, f);
       setF({ employee_key: "", role_on_project: "", reason: "" });
       load(); toast(`${f.employee_key} may charge ${objectiveId}`);
-    } catch (e) { toast(String(e.message || e), { tone: "bad", sticky: true }); }
+    } catch (e) { toast(explain(e), { tone: "bad", sticky: true }); }
   };
   const revoke = async (key) => {
     const reason = window.prompt(`Why is ${key} coming off ${objectiveId}?`);
@@ -736,7 +736,7 @@ function CodeDrawer({ objectiveId, canWrite, onClose }) {
     try {
       await api.revokeCharge(objectiveId, { employee_key: key, reason });
       load(); toast(`${key} removed`);
-    } catch (e) { toast(String(e.message || e), { tone: "bad" }); }
+    } catch (e) { toast(explain(e), { tone: "bad" }); }
   };
 
   return (

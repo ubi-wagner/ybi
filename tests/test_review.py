@@ -205,6 +205,49 @@ def test_coverage_is_defined_once():
         "is a second definition of the scope")
 
 
+def test_no_handler_anywhere_derives_coverage_for_itself():
+    """And the list of handlers to check is not kept by hand.
+
+    The assertion above names `classify.py`, which is the file the defect was
+    found in — so `dashboard.py` grew the next copy of the scope and nothing
+    saw it. It scoped to `l.statement = 'P&L'`, which is the predicate `064`
+    moved into `v_cost_line` because **income is on the P&L**, and the
+    controller's home screen read **59.7% classified** while the view read
+    **100.0%**, at the same moment, over the same 757 judgments. The figure a
+    reader quotes was the wrong one, on a denominator that was 41% grant
+    income.
+
+    A test written about one file is the hand-kept map wearing a test's
+    clothes. Every router is swept and there is no list in it.
+
+    The shape is specific, because four legitimate queries join these two
+    registers and aggregate: a **period-wide** total — `ledger_line` driving,
+    LEFT JOIN to live decisions so undecided lines survive, an aggregate, and
+    no GROUP BY. That is a denominator. The four that are fine either group
+    (the queue, by account and payee) or inner-join from the decision side,
+    which can only ever measure what *is* classified, never the scope.
+    """
+    offenders = []
+    for f in sorted((ROOT / "app" / "routers").glob("*.py")):
+        src = f.read_text()
+        for m in re.finditer(r'"""(.*?)"""', src, re.S):
+            q = m.group(1)
+            if "ledger_line" not in q or "decision_line" not in q:
+                continue
+            if not re.search(r"\b(sum|count)\s*\(", q):
+                continue
+            if re.search(r"\bGROUP\s+BY\b", q, re.I):
+                continue
+            if not re.search(r"LEFT\s+JOIN\s+decision_line", q, re.I):
+                continue
+            offenders.append(f"{f.name}:{src[:m.start()].count(chr(10)) + 1}")
+    assert not offenders, (
+        "a handler derives a classification scope from the ledger instead of "
+        "reading v_classification_coverage, which is where `039` put the "
+        "definition after it answered 13.0% and 2.2% at once: "
+        + ", ".join(offenders))
+
+
 def test_the_coverage_row_can_be_checked_by_hand():
     """classified + unclassified = scope, and the percentage comes from them.
 
@@ -283,3 +326,52 @@ def test_no_income_reaches_the_scope_on_a_loaded_ledger():
     bad = one("SELECT count(*) AS n FROM v_cost_line WHERE section = 'Income'")
     assert bad["n"] == 0, (
         f"{bad['n']} income lines are being offered as cost to classify")
+
+
+# ── Part IX cross-foots ───────────────────────────────────────────────
+
+def test_the_return_puts_every_dollar_of_compensation_in_a_function():
+    """Part IX printed $2,191,777.54 of payroll with nothing in any of the
+    three columns the return prints.
+
+    `EXCLUDED` is a rate judgment and it is right — `add_labor()` already puts
+    the distribution in MTDC, so a DIRECT judgment on a wage account would
+    count the payroll twice. What it says nothing about is which column of the
+    return a salary belongs in, and the classification log set both from one
+    judgment. The row did not cross-foot on a tax return.
+    """
+    import os
+    if not os.getenv("DATABASE_URL"):
+        import pytest
+        pytest.skip("needs a database")
+    from app.db import query
+
+    rows = query("""SELECT function_990, sum(amount) AS amount
+                      FROM v_form_990_functional
+                     WHERE period = '2025'
+                       AND natural_category = '5129 Payroll Expenses'
+                     GROUP BY 1""")
+    if not rows:
+        import pytest
+        pytest.skip("no payroll on this record")
+    by = {r["function_990"]: r["amount"] for r in rows}
+    printed = sum(v for k, v in by.items()
+                  if k in ("PROGRAM", "MANAGEMENT_AND_GENERAL", "FUNDRAISING"))
+    assert printed == sum(by.values()), (
+        "compensation is on the return in a function or it is nowhere: "
+        f"{ {k: str(v) for k, v in by.items()} }")
+    assert by.get("NOT_APPLICABLE", 0) == 0
+
+
+def test_the_990_workbook_prints_every_column_the_handler_accumulates():
+    """The handler has always carried a NOT_APPLICABLE bucket and the sheet
+    never showed it, so a row whose total exceeded its three functions left
+    the reader nothing to reconcile to."""
+    import inspect
+
+    from app.domain import review_workbooks
+
+    src = inspect.getsource(review_workbooks.build_form_990)
+    for key in ("PROGRAM", "MANAGEMENT_AND_GENERAL", "FUNDRAISING",
+                "NOT_YET_CLASSIFIED", "NOT_APPLICABLE", "total"):
+        assert f'"{key}"' in src, f"Part IX does not print {key}"

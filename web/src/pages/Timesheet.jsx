@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, useToast } from "../components/ui.jsx";
 import TimeRoster from "./TimeRoster.jsx";
 
@@ -22,8 +22,6 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const parse = (s) => new Date(s + "T00:00:00");
-const money = (v) => Number(v ?? 0).toLocaleString(undefined,
-  { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const hours = (v) => Number(v ?? 0).toLocaleString(undefined, {
   minimumFractionDigits: Number(v ?? 0) % 1 === 0 ? 0 : 2,
   maximumFractionDigits: 2 });
@@ -124,7 +122,7 @@ function Sheet({ actor, viewing, onBack }) {
       ]);
       setData(d); setSummary(s); setError("");
     } catch (e) {
-      setError(String(e.message || e));
+      setError(explain(e));
     }
     /* The draft is only ever the caller's own — `adopt` writes under the
        calling actor and takes no employee key, so offering it while reading
@@ -177,13 +175,8 @@ function Sheet({ actor, viewing, onBack }) {
       }
       await load();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try {
-        const parsed = JSON.parse(msg);
-        detail = parsed.detail?.message || parsed.detail || msg;
-      } catch { /* not JSON, use it as it stands */ }
-      toast(detail, { tone: "bad", sticky: true });
+      const msg = explain(e);
+      toast(msg, { tone: "bad", sticky: true });
       await load();
     }
   }
@@ -526,10 +519,8 @@ function DraftCard({ draft, onDone }) {
       setAck(false);
       await onDone();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "fail", sticky: true });
     }
     setBusy(false);
@@ -724,10 +715,8 @@ function SubmitCard({ summary, onDone }) {
       toast(`Submitted — ${(r.coverage * 100).toFixed(0)}% of the period`);
       await onDone();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { detail = JSON.parse(msg).detail || msg; } catch { /* plain text */ }
-      toast(detail, { tone: "bad", sticky: true });
+      const msg = explain(e);
+      toast(msg, { tone: "bad", sticky: true });
     }
     setBusy(false);
   }
@@ -740,7 +729,7 @@ function SubmitCard({ summary, onDone }) {
       setWithdrawing(false); setReason("");
       await onDone();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad" });
+      toast(explain(e), { tone: "bad" });
     }
     setBusy(false);
   }
@@ -905,11 +894,11 @@ function Donated({ given, actor, onDone }) {
       const r = await api.putDonationRate({
         employee_key: key, hourly_rate: rate, basis,
       });
-      toast.ok(`${r.hours} donated hours valued at $${r.valued_at}`
+      toast.ok(`${r.hours} donated hours valued at $${money(r.valued_at)}`
                + (r.superseded ? " — the earlier rate is superseded" : ""));
       setOpen(null); setRate(""); setBasis("");
       await onDone();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
     setBusy(false);
   }
 
@@ -917,7 +906,7 @@ function Donated({ given, actor, onDone }) {
     <Card title="Donated time"
           aside={given.unvalued
             ? `${given.unvalued} person${given.unvalued === 1 ? "" : "s"} not yet valued`
-            : `valued at $${Number(given.valued_total).toLocaleString()}`}>
+            : `valued at $${money(given.valued_total)}`}>
       <p className="quiet small" style={{ marginTop: -4, marginBottom: 12 }}>
         Hours given rather than paid. They never enter the paid labour
         distribution — that would move every other share — so they are valued
@@ -942,7 +931,7 @@ function Donated({ given, actor, onDone }) {
               <td className="num">{Number(p.hours).toFixed(2)}</td>
               <td className="num">{p.hourly_rate ? `$${p.hourly_rate}` : "—"}</td>
               <td className="num">
-                {p.valued_at ? `$${Number(p.valued_at).toLocaleString()}`
+                {p.valued_at ? `$${money(p.valued_at)}`
                              : <span className="quiet">not valued</span>}
               </td>
               <td className="l wrap quiet small">

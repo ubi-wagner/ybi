@@ -17,6 +17,7 @@ from app.audit import record
 from app.auth import Actor, require_reader
 from app.db import one, query
 from app.domain.audit_package import build_audit_package
+from app.routers.rates import rate_certification
 from app.settings import settings
 
 router = APIRouter(prefix="/export", tags=["export"],
@@ -237,6 +238,7 @@ def audit_package(period: str = None, actor: Actor = Depends(require_reader)):
         exceptions=exceptions, materiality=materiality, rates=rates,
         allocations=allocations, gl_pl=gl_pl, gl_bs=gl_bs,
         reconciling_items=reconciling_items,
+        certification=rate_certification(period),
         generated_by=f"{actor.display_name} ({actor.role.value})")
 
     record(actor, "EXPORT", "audit_package", name,
@@ -276,6 +278,7 @@ def rate_buildup_export(period: str = None,
     d = _rate(period)
     out, name = _out(period, "indirect-rate")
     build_rate_buildup(period=period, out_path=out, rates=d["rates"],
+                       certification=rate_certification(period),
                        carve_outs=d["carve_outs"], coverage=d["coverage"],
                        open_controls=d["open_controls"], final=d["final"])
     record(actor, "EXPORT", "rate_buildup", name,
@@ -299,7 +302,8 @@ def auditors_report_export(period: str = None,
         period=period, out_path=out, controls=d["controls"],
         asset_control=d["asset_control"], exceptions=d["exceptions"],
         coverage=d["coverage"], evidence_coverage=d["evidence_coverage"],
-        rates=d["rates"], reconciling_items=d["reconciling_items"])
+        rates=d["rates"], reconciling_items=d["reconciling_items"],
+        certification=rate_certification(period))
     record(actor, "EXPORT", "auditors_report", name,
            after={"period": period, "controls": len(d["controls"]),
                   "exceptions": len(d["exceptions"])},
@@ -320,7 +324,8 @@ def form_990_export(period: str = None, actor: Actor = Depends(require_reader)):
     out, name = _out(period, "form-990-part-ix")
     build_form_990(period=period, out_path=out, functions=d["functions"],
                    categories=d["categories"], totals=d["totals"],
-                   readiness=d["readiness"], documents=docs)
+                   readiness=d["readiness"], documents=docs,
+                   certification=rate_certification(period))
     record(actor, "EXPORT", "form_990", name,
            after={"period": period,
                   "unallocated": str((d["readiness"] or {}).get("unallocated")),

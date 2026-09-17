@@ -516,3 +516,44 @@ def test_the_written_log_shows_both_what_stands_and_why():
         "the writer must fill a judged row's reasoning from judge_on_merits")
     assert 'f"{RECORDED} · {shown.basis}"' in source, (
         "the basis column must say it is recorded and say how it was reached")
+
+
+def test_the_log_records_its_judgments_as_proposals_and_not_as_his_own():
+    """`--apply` writes 757 judgments in six seconds under Tom's credentials.
+
+    That is the right way for a script to write — each one carries a person's
+    name and an audit row, and nothing here reaches the cost record behind
+    the API. What it must also say is *what kind of act it was*. `083` gave
+    `decision.origin` that meaning and backfilled the rows already on the
+    record; nothing wrote it going forward, so replaying this script against
+    an empty database recorded all 757 as `CONTROLLER` and
+    `/classify/review` — the screen the restaging exists for — had nothing
+    to show. The migration corrected a history and the writer was never
+    built.
+
+    Two halves, because either alone passes over the defect: the script has
+    to send it, and the route has to accept it and write it.
+    """
+    import re
+
+    script = (ROOT / "scripts" / "classification_log.py").read_text()
+    body = script[script.index('"/api/classify/decide"') - 1400:
+                  script.index('"/api/classify/decide"')]
+    assert '"origin": "MACHINE_PROPOSAL"' in body, (
+        "scripts/classification_log.py --apply no longer says its judgments "
+        "are proposals, so they land as the controller's own and the review "
+        "screen has nothing to show him.")
+
+    router = (ROOT / "app" / "routers" / "classify.py").read_text()
+    router = re.sub(r"#.*", "", router)
+    decide_in = router[router.index("class DecideIn"):router.index("class CoverageOut")]
+    assert re.search(r"origin\s*:\s*DecisionOrigin", decide_in), (
+        "DecideIn no longer takes an origin, so pydantic drops the key and "
+        "the default applies — the shape that computed a rate under a "
+        "policy nobody chose.")
+
+    insert = router[router.index("INSERT INTO decision ("):]
+    insert = insert[:insert.index("RETURNING decision_id")]
+    assert "origin" in insert, (
+        "the decision insert no longer writes origin, so the field is taken "
+        "off the wire and thrown away.")

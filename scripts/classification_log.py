@@ -46,6 +46,7 @@ from app.domain.classification_log import (
     OBJECTIVES_TO_OPEN, RECORDED, Group, disagreements, judge,
     judge_on_merits, summarise, walk)
 from app.domain.core import money
+from app.foundation import EMAIL  # noqa: E402
 
 BOLD, DIM, OK, WARN, FAIL, END = (
     "\033[1m", "\033[2m", "\033[32m", "\033[33m", "\033[31m", "\033[0m")
@@ -390,7 +391,15 @@ def apply(walked, base: str, email: str, password: str, period: str) -> int:
                 "objective_id": j.objective_id, "grade": j.grade,
                 "citation": j.citation, "period": period,
                 "rationale": f"{j.rationale} [{j.basis}; "
-                             f"scripts/classification_log.py]"}
+                             f"scripts/classification_log.py]",
+                # What this act *is*. The rationale has always carried the
+                # script's name and `decided_by` has always been the
+                # controller — correct, because this writes through the real
+                # API signed in as him — but neither says that a machine
+                # proposed it. Without this the whole run lands as his own
+                # judgment and `/classify/review` has nothing to show him,
+                # which is what a replay from an empty database produced.
+                "origin": "MACHINE_PROPOSAL"}
         r = c.post("/api/classify/decide", json=body)
         if r.status_code == 200:
             ok += 1
@@ -417,7 +426,7 @@ def main() -> int:
     ap.add_argument("--write", action="store_true", help="write docs/CLASSIFICATION_LOG.md")
     ap.add_argument("--apply", action="store_true", help="record through the API")
     ap.add_argument("--base", default=os.environ.get("BASE", "http://127.0.0.1:8000"))
-    ap.add_argument("--email", default="tom@ybi.org")
+    ap.add_argument("--email", default=EMAIL["tom"])
     ap.add_argument("--password", default=os.environ.get("YBI_SEED_PASSWORD", ""))
     a = ap.parse_args()
 

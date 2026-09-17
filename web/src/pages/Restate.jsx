@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, count, explain, money } from "../api.js";
+import CertificationBand from "../components/CertificationBand.jsx";
 import {
   Card, Drawer, Empty, Field, PageHead, Pill, Stat, Table, Tick, useToast,
 } from "../components/ui.jsx";
@@ -81,6 +82,7 @@ export default function Restate({ actor }) {
         signed their name to.
       </PageHead>
 
+      <CertificationBand />
       {/* "Not yet, because" rather than an empty list. The reasons are the
           work — the same answer the candidates route gives. */}
       {blocked.length > 0 ? (
@@ -178,6 +180,7 @@ export default function Restate({ actor }) {
                 {r.invoices} invoice(s) · rate {(Number(r.rate_applied) * 100).toFixed(2)}%
               </span>
             </div>
+            <Overtaken r={r} />
             <Movement r={r} />
           </div>
         ))}
@@ -212,10 +215,38 @@ export default function Restate({ actor }) {
               setProposing(null);
               await load();
               nav(`/restate/${got.restatement_id}`);
-            } catch (e) { toast.fail(String(e.message || e)); }
+            } catch (e) { toast.fail(explain(e)); }
           }} />
         )}
       </Drawer>
+    </div>
+  );
+}
+
+
+/* ── A claim measured against a register that has since moved ─────────
+   `project_claim.saw_*` in a second place: *an approval has to be of
+   something specific, or the record moves underneath it and the approval
+   silently comes to cover something else.* Three restatements stood as
+   claims for a week against one April-2026 invoice each, after the invoices
+   were re-periodised out of 2025 and nothing recomputed them.
+
+   Never shown on a SUPERSEDED row. A superseded restatement is history and
+   is *supposed* to disagree; flagging it would be the sweep that cries wolf,
+   and the next real one the reader dismisses. */
+function Overtaken({ r }) {
+  if (r.status === "SUPERSEDED" || r.still_agrees !== false) return null;
+  return (
+    <div className="gate bad" style={{ margin: "8px 0" }}>
+      <strong>Overtaken — not a position to send.</strong>{" "}
+      <span className="rowsub wrap">
+        This measured {count(r.invoices)} invoice(s) totalling{" "}
+        {money(r.billed_total)}. The register now holds{" "}
+        {count(r.register_invoices)} for {r.objective_id} in this period,
+        totalling {money(r.register_billed)}. Measure it again before anything
+        goes to a sponsor — recomputing supersedes this rather than editing
+        it, so the position taken today stays on the record.
+      </span>
     </div>
   );
 }
@@ -259,6 +290,7 @@ function Detail({ d, canWrite, toast, onChange }) {
   const [deciding, setDeciding] = useState(null);
   return (
     <>
+      <Overtaken r={r} />
       <Movement r={r} />
 
       <div className="grid three" style={{ margin: "14px 0" }}>
@@ -306,6 +338,33 @@ function Detail({ d, canWrite, toast, onChange }) {
         ))}
       </Card>
 
+      {/* The two papers the restatement cannot travel without. Offered to
+          anybody who may read the record, not only the controller: rendering
+          them asserts nothing — the position was taken when the restatement
+          was recorded, and both say PROPOSED on their first line. The
+          auditor reads everything and holds no portfolio, and this is the
+          paper they will ask for first. */}
+      <Card variant="quiet" title="The papers that go with it"
+            aside="On the face NCDMM's payables recognises"
+            style={{ marginTop: 14 }}>
+        <div className="rowsub wrap" style={{ marginBottom: 10 }}>
+          A payables clerk holding a reissued invoice and nothing else has two
+          questions it cannot answer: why this differs from the one they paid,
+          and how to say yes. The memorandum quotes the clause from the
+          record; the form keeps both directions apart and is what they sign.
+        </div>
+        <div className="btn-row">
+          <a className="btn" target="_blank" rel="noreferrer"
+             href={api.amendmentMemoUrl(r.award_id, r.period)}>
+            Amendment memorandum (.pdf)
+          </a>
+          <a className="btn" target="_blank" rel="noreferrer"
+             href={api.acceptanceFormUrl(r.award_id, r.period)}>
+            Acceptance form (.pdf)
+          </a>
+        </div>
+      </Card>
+
       <Card variant="quiet" title="Where it stands" style={{ marginTop: 14 }}>
         <div className="rowsub wrap" style={{ marginBottom: 10 }}>
           <Pill tone={STATUS[r.status]?.tone}>{r.status}</Pill>{" "}
@@ -347,7 +406,7 @@ function Detail({ d, canWrite, toast, onChange }) {
               toast.ok(`Moved to ${deciding.toLowerCase()}`);
               setDeciding(null);
               onChange();
-            } catch (e) { toast.fail(String(e.message || e)); }
+            } catch (e) { toast.fail(explain(e)); }
           }} />
         )}
       </Drawer>

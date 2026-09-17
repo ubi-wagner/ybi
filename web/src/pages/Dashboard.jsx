@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Stat, Pill, Tick, Meter, Table, Empty } from "../components/ui.jsx";
 import { forKind } from "../worklistKinds.js";
 
-const money = (v) =>
-  v === null || v === undefined
-    ? "—"
-    : Number(v).toLocaleString(undefined, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
 
 const when = (t) =>
   !t ? "" : new Date(t).toLocaleString(undefined,
@@ -26,7 +19,7 @@ export default function Dashboard() {
   useEffect(() => {
     api.dashboard()
       .then(setData)
-      .catch((e) => setError(String(e.message || e)));
+      .catch((e) => setError(explain(e)));
   }, []);
 
   if (error) return <Empty mark="!" title="Could not load">{error}</Empty>;

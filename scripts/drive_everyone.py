@@ -32,6 +32,7 @@ from datetime import date, timedelta
 import httpx
 
 from app.db import one, open_pool, query
+from app.foundation import EMAIL  # noqa: E402
 
 CHECKS = 0
 FINDINGS: list[str] = []
@@ -201,7 +202,7 @@ def main() -> int:
 
     barb = sign_in(args.base, "bewing@ybi.org", pw)
     eric = sign_in(args.base, "eric.c.wagner@gmail.com", pw)
-    tom = sign_in(args.base, "tom@ybi.org", pw)
+    tom = sign_in(args.base, EMAIL["tom"], pw)
     heidi = sign_in(args.base, "hruby@ybi.org", pw)
     steph = sign_in(args.base, "sgaffney@ybi.org", pw)
     auditor = sign_in(args.base, "auditor@ybi.org", pw)
@@ -830,8 +831,10 @@ def drive_feed(args, c, started):
     for a in actors:
         ok(f"{a['actor']} ({a['role']}) — {a['n']} change(s) on the record")
 
-    orphan = one("""SELECT count(*) AS n FROM audit_log
-                     WHERE actor_id IS NULL OR session_id IS NULL""")
+    # One definition, in the schema — `drive_state_machine` asked the same
+    # question with its own copy of this predicate, and both reported the
+    # deployment bootstrap's 24 honest rows as violations. Migration `087`.
+    orphan = one("""SELECT count(*) AS n FROM v_audit_orphan""")
     if orphan["n"] == 0:
         ok("every entry names an account and the session it was made in")
     else:

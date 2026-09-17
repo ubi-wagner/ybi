@@ -25,6 +25,8 @@ from pathlib import Path
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 WHO = "Tom Metzinger"
 
 #: Account fragment -> the judgment to record against it. Matching is on a
@@ -231,7 +233,7 @@ def main() -> int:
     applied = skipped = failed = 0
     with httpx.Client(base_url=args.base, timeout=120) as c:
         c.get("/api/health").raise_for_status()
-        sign_in(c, "YBI_CONTROLLER_EMAIL", "tom@ybi.org")
+        sign_in(c, "YBI_CONTROLLER_EMAIL", EMAIL["tom"])
         groups = fetch_queue(c)
         print(f"{len(groups)} groups in the queue\n")
 

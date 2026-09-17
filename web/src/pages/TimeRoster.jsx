@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, Field, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 /*
@@ -13,8 +13,6 @@ import { Card, Empty, Field, Pill, Stat, Table, Tick, useToast } from "../compon
 */
 
 const hrs = (v) => v === null || v === undefined ? "—"
-  : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
-const money = (v) => v === null || v === undefined ? "—"
   : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const pct = (v) => v === null || v === undefined ? "—" : `${(Number(v) * 100).toFixed(0)}%`;
 
@@ -31,7 +29,7 @@ export default function TimeRoster({ onOpen }) {
   const load = useCallback(() =>
     api.timesheetRoster()
       .then((r) => { setRows(r); setError(""); })
-      .catch((e) => setError(String(e.message || e))), []);
+      .catch((e) => setError(explain(e))), []);
   useEffect(() => { load(); }, [load]);
 
   if (error) return <Empty mark="!" title="Could not load">{error}</Empty>;
@@ -148,13 +146,7 @@ function TermsDialog({ row, onClose, onSaved }) {
       toast(`${row.employee_key}: ${Number(r.expected_hours).toLocaleString()} hours expected`);
       onSaved();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try {
-        const p = JSON.parse(msg);
-        detail = p.detail?.message || p.detail || msg;
-      } catch { /* plain text */ }
-      toast(detail, { tone: "bad", sticky: true });
+      toast(explain(e), { tone: "bad", sticky: true });
     }
     setBusy(false);
   }

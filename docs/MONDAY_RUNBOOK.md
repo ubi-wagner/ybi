@@ -2,7 +2,7 @@
 
 *Generated from the record by `scripts/runbook.py`, which will not write over a failing crosscheck. Every figure below was read by `scripts/drive_invoice_ties.py`; none was typed beside it.*
 
-*14 September 2026*
+*16 September 2026*
 
 **Read §0 first.** The record is at the end of the path this document used to describe, so every step is **verification, not construction**. Following an earlier version literally would have had the controller press *Seal* on a sealed set.
 
@@ -23,7 +23,7 @@ YBI_SEED_PASSWORD=... ./scripts/monday.sh --full  # the sandbox test
 | the eleven control points | **11 of 11 tie** | a rate is refused while any is open |
 | the classification | **757 of 757 groups**, 100.0% | 0.00 unclassified |
 | the seal | **Tom Metzinger**, 12 Sep 2026 22:50 UTC | covering 757 live judgments |
-| the rate | FRINGE **21.90%** · INDIRECT_COMBINED **43.99%** | administrative labour on the **POOL** basis |
+| the rate | FRINGE **21.90%** · INDIRECT_COMBINED **24.71%** | administrative labour on the **POOL** basis |
 | the rate anchors | **4 of 4 tie** | 4 of 4 pools at variance 0.00 |
 | the invoice register | **61 invoices**, 2,964,077.32 | all of 2025, reconciled to the ledger |
 
@@ -80,9 +80,9 @@ Sealed 12 September 2026 by Tom Metzinger, covering 757 live judgments. **Nothin
 | | | |
 | --- | ---: | --- |
 | FRINGE | **21.90%** | pool 401,783.60 over 1,835,047.17 SALARIES_WAGES |
-| OVERHEAD | **31.62%** | pool 1,497,879.12 over 4,736,602.11 MTDC |
+| OVERHEAD | **12.35%** | pool 584,774.52 over 4,736,602.11 MTDC |
 | G&A | **12.37%** | pool 585,875.91 over 4,736,602.11 MTDC |
-| INDIRECT_COMBINED | **43.99%** | pool 2,083,755.03 over 4,736,602.11 MTDC |
+| INDIRECT_COMBINED | **24.71%** | pool 1,170,650.43 over 4,736,602.11 MTDC |
 
 **If you recompute for any reason, choose POOL again.** The screen defaults to `OBJECTIVE`, which is worth about nine points of combined rate on the same sealed judgments.
 
@@ -90,21 +90,16 @@ Sealed 12 September 2026 by Tom Metzinger, covering 757 live judgments. **Nothin
 
 `/review/rate`. **4 of 4 pools** at `pool_variance` 0.00 and **4 of 4 rate anchors** tying. Nothing on that screen is computed — every figure is read from the row it was recorded in.
 
-And read what it says above the figures: **no 200.465 facilities carve-out is in this rate** — 0 facilities carry measured space and 0 carve-outs are recorded, so every dollar of tenant and vacant occupancy cost sits in the federal pool. The rate reads high, which is the honest direction to err.
+---
 
-## 6 · The restatement — what it now says
+## 7 · The paper, at any time — Tom or the auditor
 
-The position is the **rebuild** against the cost record: labour taken down to wages plus fringe before indirect goes on, because these invoices bill labour that already carries indirect. The invoice-only reading is beside it and is **never** the position.
+Nothing downstream is blocked by a missing signature or a missing document. A workbook, a reissued invoice, the amendment memorandum and the acceptance form can all be produced today; what changes is what the paper *says* about itself.
 
-| award | billed | position | as-billed would say | recovered |
-| --- | ---: | ---: | ---: | ---: |
-| DRIVE-AM | 37,593.90 | **+16,537.56** | 0.00 | — |
-| LTM | 18,993.52 | **+4,035.55** | -3,000.00 | — |
-| HYBRID-II | 1,374.00 | **+604.42** | 0.00 | — |
+- **On a screen.** `/reports` and `/review` for the workbooks; `/restate`, open a proposal, **The papers that go with it** for the memorandum and the acceptance form. Every one of those screens carries the certification band at the top, in whichever direction is true.
+- **The whole set at once.** `YBI_SEED_PASSWORD=... python3 scripts/publish.py` writes every workbook, every reissued invoice and both papers per award into `docs/publications/`, with a manifest and a README rendered from it. It fetches each document from the route the screen calls, so a figure in the set and the same figure on the screen cannot disagree, and it **writes nothing to the cost record**.
 
-The last column is the indirect rate the billing **actually** recovered, against a **10.00%** de minimis election. That election is written down in two places and they are different kinds of evidence: Last Tactical Mile's **executed** Schedule B budgets 10.0000% of total direct, and Hybrid Phase 2's **cost proposal** computes *ICR 10% maximum 45,457.00* into its labour line.
-
-**Nothing goes to a sponsor off this table today.** Everything is PROPOSED until a sponsor says otherwise in writing, and an acceptance must name the §4.4 modification that authorised the change of basis.
+The acceptance form prints two readings and they are not meant to add up: *as billed, line by line* is each invoice's indirect against what the rate supports on its own base, and **THE POSITION** is the objective rebuilt against the cost record. The position is the only figure the form asks a sponsor to accept.
 
 ---
 
@@ -122,7 +117,8 @@ The last column is the indirect rate the billing **actually** recovered, against
 ## P · Running in parallel, and none of it blocks the above
 
 - **The 43 timesheets.** 0 of 43 certified, and **0 employment terms are on the record**, so no draft can be built for anybody. Two gates, and both come out of the roster reply — which also carries the addresses the accounts are opened against. Opening them is a second act and it is the administrator's.
-- **The square footage.** 0 facilities carry measured space. It is the largest open item and **it gates no classification** — occupancy is OVERHEAD in the 2025 chart and the tenant share comes out at rate time.
+- **The square footage.** 5 facilities carry measured space. It is the largest open item and **it gates no classification** — occupancy is OVERHEAD in the 2025 chart and the tenant share comes out at rate time.
+- **The funding source on each asset.** 0 of 263 assets name **no** funding source, against 23,419,573.64 of gross cost. 2 CFR 200.313(d)(1) requires the column and the schedule does not carry it, so it is the one thing here that no amount of reading the books can settle. It gates no classification either — depreciation is OVERHEAD whatever the answer — but 200.436(b) cannot be answered until it lands, so the federal treatment on it stays PENDING.
 - **Barb's decisions.** `docs/BARB_ONE_PAGE_AM.pdf`.
 
 ## What must not be automated, and why

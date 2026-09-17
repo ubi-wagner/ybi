@@ -17,10 +17,11 @@ import sys
 
 from app.auth import hash_password
 from app.db import execute, one, open_pool
+from app.foundation import EMAIL  # noqa: E402
 
 ACTORS = [
     ("eric.c.wagner@gmail.com", "Eric Wagner", "ADMIN", None),
-    ("tom@ybi.org", "Tom Metzinger", "CONTROLLER", None),
+    (EMAIL["tom"], "Tom Metzinger", "CONTROLLER", None),
     ("auditor@ybi.org", "Engagement Auditor", "AUDITOR", None),
     ("bewing@ybi.org", "Barb Ewing", "EMPLOYEE", "EWING"),
     ("sgaffney@ybi.org", "Stephanie Gaffney", "EMPLOYEE", "GAFFNEY"),

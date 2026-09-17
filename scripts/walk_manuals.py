@@ -39,6 +39,8 @@ from pathlib import Path
 import httpx
 from playwright.sync_api import sync_playwright
 
+from app.foundation import EMAIL  # noqa: E402
+
 OUT = Path("web/public/help")
 MANIFEST = OUT / "taken.json"
 CHROME_CANDIDATES = [
@@ -62,15 +64,15 @@ SHOTS = [
     ("hruby@ybi.org",   "/certify",    "m-certify",       "Signing for your own effort", []),
     ("hruby@ybi.org",   "/documents",  "m-documents",     "Sending a document in", []),
     # Controller
-    ("tom@ybi.org",     "/classify",   "m-classify",      "The classification queue", []),
-    ("tom@ybi.org",     "/reconcile",  "m-reconcile",     "Schedule A-1", []),
-    ("tom@ybi.org",     "/rates",      "m-rates",         "Sealing, and the rate", []),
-    ("tom@ybi.org",     "/imports",    "m-imports",       "Importing from QuickBooks", []),
+    (EMAIL["tom"],     "/classify",   "m-classify",      "The classification queue", []),
+    (EMAIL["tom"],     "/reconcile",  "m-reconcile",     "Schedule A-1", []),
+    (EMAIL["tom"],     "/rates",      "m-rates",         "Sealing, and the rate", []),
+    (EMAIL["tom"],     "/imports",    "m-imports",       "Importing from QuickBooks", []),
     # Portfolios
     ("hruby@ybi.org",   "/space",      "m-space",         "Buildings and the rent roll", []),
     ("hruby@ybi.org",   "/inventory",  "m-inventory",     "The equipment register", []),
     ("hruby@ybi.org",   "/evidence",   "m-evidence",      "Filing what people send in", []),
-    ("tom@ybi.org",     "/requests",   "m-requests",      "Asking for what is missing", []),
+    (EMAIL["tom"],     "/requests",   "m-requests",      "Asking for what is missing", []),
     # The shelf, as the person who arrives wanting to read something rather
     # than to file anything — which is the auditor, who holds no portfolio.
     ("auditor@ybi.org", "/library",    "m-library",       "The document library", []),
@@ -98,20 +100,20 @@ SHOTS = [
     # retaken. A picture nobody can reproduce is the thing this file exists
     # to stop.
     (None,              "/",            "01-signin",       "The sign-in screen", []),
-    ("tom@ybi.org",     "/",            "02-dashboard",    "The dashboard, and the activity feed under it", []),
-    ("tom@ybi.org",     "/worklist/UNCLASSIFIED", "03-worklist", "One class of open work", []),
-    ("tom@ybi.org",     "/imports",     "05-import",       "Importing each report", []),
-    ("tom@ybi.org",     "/reconcile",   "05a-reconcile",   "The eleven cross-reference points", []),
-    ("tom@ybi.org",     "/reconcile",   "05b-reconcile-gl-pl", "Ledger against the P&L, account by account",
+    (EMAIL["tom"],     "/",            "02-dashboard",    "The dashboard, and the activity feed under it", []),
+    (EMAIL["tom"],     "/worklist/UNCLASSIFIED", "03-worklist", "One class of open work", []),
+    (EMAIL["tom"],     "/imports",     "05-import",       "Importing each report", []),
+    (EMAIL["tom"],     "/reconcile",   "05a-reconcile",   "The eleven cross-reference points", []),
+    (EMAIL["tom"],     "/reconcile",   "05b-reconcile-gl-pl", "Ledger against the P&L, account by account",
      [("tab", "Ledger vs P&L")]),
-    ("tom@ybi.org",     "/reconcile",   "05c-reconcile-items", "Each named difference and the lines behind it",
+    (EMAIL["tom"],     "/reconcile",   "05c-reconcile-items", "Each named difference and the lines behind it",
      [("tab", "Reconciling items")]),
-    ("tom@ybi.org",     "/classify",    "06-classify-sweep", "Sweep mode — the dense table", []),
-    ("tom@ybi.org",     "/classify",    "07-classify-focus", "Focus mode — one group, set large",
+    (EMAIL["tom"],     "/classify",    "06-classify-sweep", "Sweep mode — the dense table", []),
+    (EMAIL["tom"],     "/classify",    "07-classify-focus", "Focus mode — one group, set large",
      [("tab", "Focus")]),
-    ("tom@ybi.org",     "/classify",    "11-editor",       "Classifying differently",
+    (EMAIL["tom"],     "/classify",    "11-editor",       "Classifying differently",
      [("tab", "Focus"), ("click", "button:has-text('Classify differently')")]),
-    ("tom@ybi.org",     "/classify",    "12-split",        "A split being composed — shares, drivers and citations",
+    (EMAIL["tom"],     "/classify",    "12-split",        "A split being composed — shares, drivers and citations",
      [("tab", "Focus"), ("click", "button:has-text('Split this group')"),
       ("fill", ("input[placeholder='What this part is'] >> nth=0", "Direct programme delivery")),
       ("fill", ("input[placeholder='%'] >> nth=0", "70")),
@@ -127,7 +129,7 @@ SHOTS = [
     # edited in place — and the empty box below it at the same time. The
     # manual used to show those as separate pictures, and the second was a
     # state only a write could produce.
-    ("tom@ybi.org",     "/classify",    "08-note",         "A note on the record, and the box for the next one",
+    (EMAIL["tom"],     "/classify",    "08-note",         "A note on the record, and the box for the next one",
      [("tab", "Focus"), ("click", "button:has-text('Notes and documents')"),
       ("fill", ("textarea", "The invoice is in the inbox but not yet filed; "
                             "this group stays open until it is cited.")),
@@ -239,6 +241,44 @@ def main() -> int:
         raise SystemExit("YBI_SEED_PASSWORD is required.")
     OUT.mkdir(parents=True, exist_ok=True)
 
+    # Refuse before a browser starts, rather than photograph the gate.
+    #
+    # `YBI_SEED_PASSWORD` is the *organisation's* password, and an account
+    # still on it meets `FirstPassword` in front of every screen — so the
+    # walk signs in perfectly, lands on the must-set-password card, and
+    # writes that card over all thirty-six screenshots. Every file comes out
+    # the same size, which is the only tell; `tests/test_manual.py` passes,
+    # because a picture of the wrong screen is still a picture; and
+    # `git add -A` commits the lot. That is this repository's own recorded
+    # near-miss — seven screens overwritten with a login box — reached by a
+    # *correct* password instead of a wrong one.
+    #
+    # `must_set_password` is on the login response for exactly this, so ask.
+    unset = []
+    for email in sorted({e for e, *_ in SHOTS if e}):
+        try:
+            r = httpx.post(f"{args.base}/api/auth/login", timeout=30,
+                           json={"email": email, "password": pw_pass})
+        except httpx.HTTPError as exc:
+            raise SystemExit(f"{args.base} did not answer: {exc}")
+        if r.status_code != 200:
+            raise SystemExit(
+                f"{email} cannot sign in on YBI_SEED_PASSWORD "
+                f"({r.status_code}). The walk photographs screens as real "
+                f"people and has no way past a sign-in card.")
+        if r.json().get("must_set_password"):
+            unset.append(email)
+    if unset:
+        raise SystemExit(
+            "these accounts are still on the password somebody else chose:\n"
+            "  " + "\n  ".join(unset) + "\n\n"
+            "Every screen behind that is the must-set-password card, so a "
+            "walk now would write that card over every screenshot in the "
+            "manual and no test would fail on it. Have each of them choose "
+            "their own password first — POST /api/auth/password, which is "
+            "what the drives do — and run this again."
+        )
+
     commit = head_commit()
     taken: dict[str, dict] = {}
     with sync_playwright() as pw:
@@ -263,6 +303,28 @@ def main() -> int:
                               passwords.get(email, pw_pass))
                     page.click("button[type=submit]")
                     page.wait_for_timeout(1500)
+                    # The landing page offers two doors and `App.jsx` renders
+                    # it in place of every screen until one is picked. Without
+                    # this the walk photographs the chooser over every
+                    # screenshot in the manual — sixteen files at exactly
+                    # 93,358 bytes, because they are the same picture — and
+                    # `tests/test_manual.py` passes on all of them, since a
+                    # photograph of the wrong screen is still a photograph.
+                    #
+                    # `sweep_screens.py` was fixed for precisely this and said
+                    # so in a comment; this walk has the same defect and kept
+                    # it. An instrument that cannot tell a screen from a door
+                    # is worse than no instrument.
+                    door = page.get_by_text("2025 Audit", exact=True)
+                    if door.count():
+                        door.first.click()
+                        page.wait_for_timeout(1200)
+                    if "Pick the one you are doing" in page.inner_text("body"):
+                        browser.close()
+                        raise SystemExit(
+                            f"still on the product chooser as {email} — every "
+                            f"screenshot below this would be a picture of it, "
+                            f"and no test would fail on that.")
                 signed_in = email
             page.goto(args.base + path, wait_until="networkidle")
             # Wait for the screen to have drawn something, not for a fixed

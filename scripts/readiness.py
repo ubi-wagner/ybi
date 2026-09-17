@@ -299,6 +299,143 @@ def worklist(r: Report) -> None:
                + (f", {row['blocking']} blocking" if row["blocking"] else ""))
 
 
+def requests(r: Report) -> None:
+    """What has been asked for from outside, and what has come back.
+
+    A reply that is filed and not accepted is the easiest thing in this system
+    to lose: it is on the record, it changes nothing, and no control reads it
+    because it is not in a register yet. Heidi's floor plan sat in exactly
+    that state, and it is the single largest adjustment in the rate model.
+    """
+    r.head("Asked for from outside")
+    rows = query("""SELECT form, state::text AS state, received_from,
+                           received_at, rows_accepted, sent_to,
+                           form_version
+                      FROM information_request
+                     WHERE period = %s ORDER BY issued_at""", (PERIOD,))
+    if not rows:
+        r.line("note", "nothing has been asked for",
+               "the three things the record cannot infer are the asset "
+               "funding source, the square footage and the roster")
+        return
+    # **The version is part of the name here.** A second pass over the same
+    # form is the ordinary case — v2 of the space book asks the tenancy
+    # question v1 could not — and two rows reading `SPACE_INVENTORY` in
+    # different states, with nothing saying which is which, is two true
+    # figures about one thing on one page.
+    for x in rows:
+        who = f"{x['form']} v{x['form_version']}"
+        if x["state"] == "ACCEPTED":
+            r.line("ok", who,
+                   f"accepted — {x['rows_accepted'] or 0} row(s) written")
+        elif x["state"] == "RECEIVED":
+            r.line("waiting", who,
+                   f"came back from {x['received_from'] or 'somebody'} and is "
+                   f"**not accepted** — it is filed as evidence and no "
+                   f"register has it yet, so it moves no figure until "
+                   f"somebody presses Accept on /requests")
+        else:
+            r.line("waiting", who,
+                   f"{x['state'].lower()} — sent to {x['sent_to'] or 'nobody named'}")
+
+
+def determinations(r: Report) -> None:
+    """200.331, per party over the 200.1 cap."""
+    r.head("Contractor or subrecipient — 2 CFR 200.331")
+    rows = query("""SELECT payee, objective_id, amount, determination, at_stake,
+                           state FROM v_subaward_exposure
+                     WHERE period = %s ORDER BY at_stake DESC""", (PERIOD,))
+    if not rows:
+        r.line("note", "no party clears the 200.1 cap", "nothing to determine")
+        return
+    open_ = [x for x in rows if x["determination"] == "UNDETERMINED"]
+    stake = sum((Decimal(str(x["at_stake"])) for x in open_), Decimal(0))
+    for x in rows:
+        if x["determination"] == "UNDETERMINED":
+            r.line("waiting", (x["payee"] or "(no payee on the ledger line)")[:40],
+                   f"{money(x['amount'])} on {x['objective_id']} — "
+                   f"{money(x['at_stake'])} of MTDC turns on it")
+        else:
+            r.line("ok", (x["payee"] or "(no payee)")[:40],
+                   f"{x['determination'].lower()}")
+    if open_:
+        r.line("waiting", f"{len(open_)} undetermined",
+               f"{money(stake)} of MTDC, and UNDETERMINED is NO DATA rather "
+               f"than a pass. The substance of the relationship governs, so "
+               f"it is read off an agreement and not off an invoice category.")
+
+
+def rate_decisions(r: Report) -> None:
+    """What is waiting on the controller before a rate can leave the building."""
+    r.head("On the controller's desk, before anything goes to a sponsor")
+
+    pend = query("""SELECT d.pool, round(sum(l.amount), 2) AS amt
+                      FROM decision d
+                      JOIN decision_line dl ON dl.decision_id = d.decision_id
+                                           AND dl.live
+                      JOIN ledger_line l ON l.line_id = dl.line_id
+                     WHERE d.reversed_at IS NULL AND d.federal = 'PENDING'
+                       AND d.pool IN ('OVERHEAD', 'G&A', 'FRINGE')
+                     GROUP BY 1""")
+    for x in pend:
+        r.line("waiting", f"{x['pool']} at PENDING",
+               f"{money(x['amt'])} — the federal treatment is unresolved. The "
+               f"fixed-asset register now answers the funding source on every "
+               f"asset, which is the document this judgment named as its own "
+               f"release condition.")
+    if not pend:
+        r.line("ok", "federal treatment", "every indirect judgment is resolved")
+
+    # Appendix IV B.2.a asks for an organisation's activities to be
+    # segregated, and the same segregation that keeps let occupancy out of the
+    # federal overhead pool makes the letting an activity that bears general
+    # administration. `cost_objective` has carried a RENTAL row since the
+    # master was built; if nothing is on it, the letting is in no base
+    # anywhere and the G&A rate is taken over the programmes alone.
+    let = one("""SELECT o.objective_id,
+                        (SELECT count(*) FROM decision d
+                          JOIN decision_set ds ON ds.set_id = d.set_id
+                         WHERE d.reversed_at IS NULL AND ds.period = %s
+                           AND d.objective_id = o.objective_id) AS judged,
+                        (SELECT count(*) FROM allocation a
+                          JOIN rate r USING (rate_id)
+                         WHERE r.period = %s AND r.status <> 'SUPERSEDED'
+                           AND a.objective_id = o.objective_id) AS allocated
+                   FROM cost_objective o
+                  WHERE o.objective_type = 'RENTAL'""", (PERIOD, PERIOD))
+    if let and not let["judged"] and not let["allocated"]:
+        r.line("waiting", f"the letting carries nothing ({let['objective_id']})",
+               "no cost is classified to it and no indirect is allocated to "
+               "it, so the letting bears no share of G&A — which the same "
+               "Appendix IV B.2.a segregation that sizes the overhead pool "
+               "asks for. See docs/RATE_HEADROOM_2025.md; it is worth points "
+               "of rate and it runs against YBI.")
+    elif let:
+        r.line("ok", f"the letting is an activity ({let['objective_id']})",
+               f"{let['judged']} judgment(s), {let['allocated']} allocation(s)")
+
+    cert = one("""SELECT certified, certified_by, why_not FROM v_rate_certified
+                   WHERE period = %s""", (PERIOD,))
+    if cert and cert["certified"]:
+        r.line("ok", "the rate is certified", f"by {cert['certified_by']}")
+    else:
+        r.line("waiting", "the rate is not certified",
+               (cert or {}).get("why_not") or "nobody has signed it")
+
+    for x in query("""SELECT objective_id, status, still_agrees,
+                             register_invoices, invoices
+                        FROM v_restatement
+                       WHERE period = %s AND status <> 'SUPERSEDED'
+                       ORDER BY objective_id""", (PERIOD,)):
+        if x["still_agrees"] is False:
+            r.line("waiting", f"restatement {x['objective_id']}",
+                   f"measured {x['invoices']} invoice(s) and the register now "
+                   f"holds {x['register_invoices']} — recompute before sending")
+        else:
+            r.line("note", f"restatement {x['objective_id']}",
+                   f"{x['status'].lower()}, and still agrees with the register")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", action="store_true",
@@ -312,7 +449,8 @@ def main() -> int:
     print(f"{BOLD}Readiness — {PERIOD}{OFF}")
     print(f"{DIM}Read-only. Nothing in this report writes to the record.{OFF}")
     for section in (baseline, reconciliation, classification, certification,
-                    rate_stack, worklist):
+                    rate_stack, requests, determinations, rate_decisions,
+                    worklist):
         try:
             section(r)
         except Exception as exc:                       # noqa: BLE001

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 import {
   Card, Drawer, Empty, Keys, PageHead, Pill, Search, Segmented, Stat, Table,
   Tick, useToast,
@@ -60,7 +60,7 @@ export default function Library() {
     setLoading(true);
     api.documentLibrary({ q, kind, period, attached })
       .then((d) => { setData(d); setCursor(0); })
-      .catch((e) => toast.show(String(e.message || e), { tone: "fail" }))
+      .catch((e) => toast.show(explain(e), { tone: "fail" }))
       .finally(() => setLoading(false));
   }, [q, kind, period, attached, toast]);
 

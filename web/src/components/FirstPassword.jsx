@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api } from "../api.js";
+import { api, explain } from "../api.js";
 
 /* The first screen a new person sees, and the only one until it is done.
  *
@@ -28,9 +28,8 @@ export default function FirstPassword({ actor, onDone, onSignOut }) {
       await api.changePassword({ current_password: current, new_password: next });
       onDone();
     } catch (err) {
-      setError(String(err.message || err)
-        .replace(/^\d+:\s*/, "")
-        .replace(/^\{"detail":"?|"?\}$/g, "") || "That did not work.");
+      setError(explain(err)
+        || "That did not work.");
       setBusy(false);
     }
   }

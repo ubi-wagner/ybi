@@ -24,7 +24,15 @@ import pytest
 from app.domain.invoice import (Category, DirectCost, Invoice, InvoiceLine,
                                 assess, rebuild)
 
-RATE = D("0.4399")          # the sealed INDIRECT_COMBINED, POOL basis
+#: The sealed INDIRECT_COMBINED on the POOL basis **before any carve-out was
+#: recorded**. It is deliberately frozen here rather than read from the live
+#: rate: these tests prove the rebuild engine reproduces figures that were
+#: derived by hand, months before this code existed, and a fixture that
+#: followed the record would be the engine agreeing with itself.
+#: The live rate is 24.71% — the same sealed judgments after the 200.465 and
+#: 200.436(b) carve-outs — and the positions it produces are in
+#: `docs/WP_AM_2025_RESTATED_INVOICES.md` and `docs/SETTLEMENT_2025.md`.
+RATE = D("0.4399")
 FRINGE = D("0.2190")
 ELECTED = D("0.10")
 
@@ -53,9 +61,15 @@ def ltm(**kw):
 # ────────────────────────────────── the published figures
 
 def test_drive_am_reproduces_the_published_workpaper():
-    """$(58,786.31) is in WP_AM_2025_RESTATED_INVOICES and
-    WP_AM_RESTATEMENT_IF_ACCEPTED, derived months before this code existed.
-    Reproducing it is the check; agreeing with myself would not be."""
+    """$(58,786.31) was derived by hand months before this code existed, at
+    the 43.99% rate `RATE` holds. Reproducing it is the check; agreeing with
+    myself would not be.
+
+    It is **no longer the published Drive AM position** — the carve-outs
+    took the rate to 24.71% and the position to $(128,474.23), which is what
+    `docs/SETTLEMENT_2025.md` carries and what
+    `tests/test_the_settlement_states_the_record.py` holds against the live
+    record. This one anchors the arithmetic, not the paper."""
     assert drive_am().position == D("-58786.31")
 
 

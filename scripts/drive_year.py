@@ -33,6 +33,7 @@ import sys
 import httpx
 
 from app.db import one, open_pool, query
+from app.foundation import EMAIL  # noqa: E402
 
 FINDINGS: list[str] = []
 CHECKS = 0
@@ -169,7 +170,7 @@ def main() -> int:
 
     # ── The controller ───────────────────────────────────────────────
     print("Controller — classifying, splitting, evidencing, sealing")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         group = query("""SELECT account, COALESCE(payee,'') AS payee
                            FROM ledger_line l
@@ -406,7 +407,7 @@ def main() -> int:
 
     # ── Walking things back ──────────────────────────────────────────
     print("\nUndo — a fat finger, and a mass reclassification")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         # A bulk mistake: five groups into the wrong pool in one go.
         groups = query("""SELECT account, COALESCE(payee,'') AS payee
@@ -534,7 +535,7 @@ def main() -> int:
 
     # ── The balance sheet, and the basis it carries ──────────────────
     print("\nBalance sheet — the basis behind the depreciation question")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         ctl = one("SELECT * FROM v_balance_sheet_control WHERE period='2025'")
         if not ctl:
@@ -592,7 +593,7 @@ def main() -> int:
     # why it would be tempting to write it off. It is not written off: each
     # difference is attributed to the specific ledger lines behind it.
     print("\nCross-reference reconciliation — the ledger against both statements")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         reg = call(tom, "GET", "/api/reconcile", 200, "reads the register")
         controls = reg.json()["controls"] if reg.status_code == 200 else []
@@ -794,7 +795,7 @@ def main() -> int:
 
     # ── Materiality, rates, and the exceptions schedule ──────────────
     print("\nMateriality, the rate, and the exceptions schedule")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         call(tom, "PUT", "/api/classify/materiality", 422,
              "a policy where a bigger cost needs weaker evidence is refused",
@@ -924,7 +925,7 @@ def main() -> int:
 
     # ── Buildings, the kit in them, and what it is worth ─────────────
     print("\nSpace and equipment — five buildings, and the cost-share line")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         # Five buildings. Shapes and rates are illustrative; the point of the
         # drive is that the arithmetic and the guardrails hold, not the survey.
@@ -1035,11 +1036,12 @@ def main() -> int:
 
     # ── The restatement, and the 2026 splits ─────────────────────────
     print("\nRestating the America Makes invoices")
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     try:
         loaded = one("SELECT count(*) AS n FROM invoice WHERE period='2025'")["n"]
         if not loaded:
-            raise CannotRun("no invoices on file; run scripts/load_invoices.py")
+            raise CannotRun("no invoices on file; run "
+                            "scripts/load_invoices_2025.py --apply.")
 
         cand = call(tom, "GET", "/api/restate/candidates", 200,
                     "what can be restated")

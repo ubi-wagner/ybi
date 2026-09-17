@@ -200,24 +200,24 @@ class Recovery:
             # this reading is zero and a reader will take that for a finding
             # of "nothing owed" rather than "nothing measurable".
             out.append(
-                f"NOT ASSESSABLE from the invoice: {self.billed_total} billed "
-                f"and no line in an MTDC category, so there is no base to "
-                f"apply a rate to. This is not a variance of zero. The "
+                f"NOT ASSESSABLE from the invoice: {self.billed_total:,.2f} "
+                f"billed and no line in an MTDC category, so there is no base "
+                f"to apply a rate to. This is not a variance of zero. The "
                 f"rebuilt position against the cost record is the figure to "
                 f"read.")
         elif self.indirect_billed == 0 and self.mtdc_as_billed > 0:
             out.append(
                 f"No indirect line. On a cost-reimbursement award this forgoes "
-                f"recovery outright: {self.indirect_supported} is supported on "
-                f"an invoiced base of {self.mtdc_as_billed}.")
+                f"recovery outright: {self.indirect_supported:,.2f} is "
+                f"supported on an invoiced base of {self.mtdc_as_billed:,.2f}.")
         elif self.indirect_variance > 0:
             out.append(
-                f"Indirect under-recovered by {self.indirect_variance} "
-                f"({self.indirect_billed} billed against "
-                f"{self.indirect_supported} supported).")
+                f"Indirect under-recovered by {self.indirect_variance:,.2f} "
+                f"({self.indirect_billed:,.2f} billed against "
+                f"{self.indirect_supported:,.2f} supported).")
         elif self.indirect_variance < 0:
             out.append(
-                f"Indirect over-collected by {abs(self.indirect_variance)}. "
+                f"Indirect over-collected by {abs(self.indirect_variance):,.2f}. "
                 f"This is returnable, not a negotiating position.")
         return out
 

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api } from "../api.js";
+import { api, count, explain, money } from "../api.js";
 import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import Propose from "../components/Propose.jsx";
+import SubjectNotes from "../components/SubjectNotes.jsx";
 
 /*
   Five buildings, the space in them, and what it is all worth.
@@ -13,8 +15,6 @@ import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, Tick, useTo
   report.
 */
 
-const money = (v) => v === null || v === undefined ? "—"
-  : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const sqft = (v) => v === null || v === undefined ? "—"
   : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const pct = (v) => v === null || v === undefined ? "—" : `${(Number(v) * 100).toFixed(0)}%`;
@@ -23,22 +23,53 @@ const USES = ["TENANT", "PROGRAM", "ADMINISTRATIVE", "SHARED_LAB", "COMMON",
               "VACANT", "COMMITTED"];
 const STATUSES = ["OCCUPIED", "VACANT", "INTERNAL", "COMMITTED", "COMMON"];
 
-export default function Facilities({ actor }) {
-  const canWrite = actor?.role === "CONTROLLER";
-  const [tab, setTab] = useState("buildings");
+const USE_HINT = {
+  TENANT: "Let to somebody outside YBI. Comes out of the federal pool.",
+  PROGRAM: "Delivering a programme. Names the cost objective it serves.",
+  ADMINISTRATIVE: "YBI's own offices.",
+  SHARED_LAB: "Shared equipment floor.",
+  COMMON: "Corridors, stairs, plant.",
+  VACANT: "Nobody in it. Comes out of the federal pool like tenant space.",
+  COMMITTED: "Let from a date but not yet occupied.",
+};
+
+export default function Facilities({ actor, tab: initialTab }) {
+  /* Portfolio, not rank.
+     `actor.role === "CONTROLLER"` was rank, and CONTROLLER is the name of a
+     portfolio *and* of a rank — the one place this file's rules say is
+     easiest to collapse. Every facilities route is
+     require_portfolio(FACILITIES, CONTROLLER) and every equipment route is
+     require_portfolio(INVENTORY, CONTROLLER), so reading rank hid the write
+     forms from exactly the person who holds the portfolio and nothing else:
+     a nav stricter than the API, which is the same defect as one looser. */
+  const held = new Set(actor?.portfolios || []);
+  const canSpace = held.has("FACILITIES") || held.has("CONTROLLER");
+  const canKit = held.has("INVENTORY") || held.has("CONTROLLER");
+  const canWrite = canSpace;
+  /* The tab was a prop that nothing read, so `/classify/assets` — the
+     destination the worklist and the walk both print for the asset register —
+     opened on Buildings. */
+  const [tab, setTab] = useState(initialTab || "buildings");
   const [data, setData] = useState(null);
   const [space, setSpace] = useState(null);
   const [kit, setKit] = useState(null);
   const [inKind, setInKind] = useState(null);
+  const [funding, setFunding] = useState(null);
+  const [notesOn, setNotesOn] = useState(null);
+  const [answering, setAnswering] = useState(null);
+  const [assetsShown, setAssetsShown] = useState(25);
+  const [kitShown, setKitShown] = useState(25);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const [f, s, e, k] = await Promise.all([
+      const [f, s, e, k, fu] = await Promise.all([
         api.facilities(), api.spaceUnits({}), api.equipment(), api.inKind(),
+        api.assetFunding(),
       ]);
-      setData(f); setSpace(s); setKit(e); setInKind(k); setError("");
-    } catch (err) { setError(String(err.message || err)); }
+      setData(f); setSpace(s); setKit(e); setInKind(k); setFunding(fu);
+      setError("");
+    } catch (err) { setError(explain(err)); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -85,9 +116,48 @@ export default function Facilities({ actor }) {
 
       {tab === "buildings" && (
         <Card title="Buildings" aside="Square footage has to account for itself">
+          <Propose
+            subject="FACILITY"
+            title="a building"
+            subjectLabel="Building reference"
+            /* A count belongs on a screen that reads it from the record.
+               This asserted one — "no building carries square footage" — and
+               went on saying it with a building on the table underneath. The
+               rule is what is worth saying anyway, and the rule does not
+               expire. */
+            hint="Until a building carries its area the 200.465 carve-out
+                  cannot be sized, and every dollar of tenant and vacant
+                  occupancy cost stays in the federal pool. It is the single
+                  largest adjustment in the rate model."
+            fields={[
+              /* The six buildings YBI's own lease book names, offered rather
+                 than typed. The book cannot create a facility — it carries no
+                 square footage and `usable_sqft` is NOT NULL above zero, so a
+                 row from it would mean inventing the driver of the largest
+                 adjustment in the rate model. It can stop somebody typing a
+                 building's name from memory, which is the difference between
+                 "tell us about your space" and "here are your buildings; how
+                 many square feet is each one?" */
+              { name: "name", label: "Name", required: true,
+                type: (data.known_buildings || []).length ? "suggest" : "text",
+                options: (data.known_buildings || []).map((b) => b.name),
+                hint: (data.known_buildings || []).length
+                  ? `Your lease book names ${(data.known_buildings || []).length} buildings. Pick one or type another.`
+                  : undefined },
+              { name: "usable_sqft", label: "Usable square feet",
+                type: "number", required: true,
+                hint: "What the carve-out is sized by." },
+              { name: "rentable_sqft", label: "Rentable square feet",
+                type: "number", hint: "Optional; never less than usable." },
+              { name: "address", label: "Address", type: "text" },
+              { name: "owned", label: "Owned by YBI", type: "bool" },
+            ]}
+            onDone={load} />
           {f.length === 0 ? (
             <Empty mark="—" title="No buildings recorded">
-              Add the five buildings and their usable area, then the rent roll.
+              Nothing is on the record yet. Propose a building above, or record
+              one directly if the measurement is settled — both end in the same
+              place and only one of them puts it in front of the controller.
             </Empty>
           ) : (
             <Table columns={[
@@ -119,6 +189,12 @@ export default function Facilities({ actor }) {
                     <td className="num strong">{money(r.subsidy)}</td>
                     <td className="num quiet">{sqft(r.equipment_sqft)}</td>
                     <td className="l quiet small">
+                      <a href="#" onClick={(e) => {
+                           e.preventDefault();
+                           setNotesOn({ subject: "FACILITY", id: r.facility_id,
+                                        title: r.name });
+                         }}>Notes</a>
+                      {" · "}
                       {r.owned ? "owned" : `leased · ${r.landlord}`}
                       {r.units_without_market > 0 &&
                         <div className="amt neg">{r.units_without_market} without a market rate</div>}
@@ -135,6 +211,36 @@ export default function Facilities({ actor }) {
       {tab === "space" && (
         <Card title="Rent roll"
               aside={`${(space?.space || []).length} spaces · market beside actual`}>
+          <Propose
+            subject="SPACE_UNIT"
+            title="a space"
+            subjectLabel="Space reference"
+            hint="Every square foot of a building has to be accounted for —
+                  tenant, programme, administrative, shared lab, common or
+                  vacant. A building that does not add up drops out of the
+                  carve-out entirely, and all of its occupancy cost reaches the
+                  federal pool unchallenged."
+            fields={[
+              { name: "facility_id", label: "Building", type: "select",
+                required: true, options: f.map((x) => x.facility_id),
+                hint: "Or a building you have just proposed." },
+              { name: "label", label: "What it is called", type: "text",
+                required: true },
+              { name: "usable_sqft", label: "Usable square feet",
+                type: "number", required: true },
+              { name: "use", label: "Use", type: "select", required: true,
+                options: USES,
+                hint: "Tenant and vacant space is what comes out of the pool." },
+              { name: "status", label: "Status", type: "select",
+                required: true, options: STATUSES },
+              { name: "occupant", label: "Occupant", type: "text",
+                hint: "Required where the status is OCCUPIED." },
+              { name: "objective_id", label: "Cost objective", type: "text",
+                hint: "Required where the use is PROGRAM." },
+              { name: "floor", label: "Floor", type: "text" },
+            ]}
+            onDone={load} />
+
           {(space?.space || []).length === 0 ? (
             <Empty mark="—" title="No spaces recorded" />
           ) : (
@@ -172,6 +278,104 @@ export default function Facilities({ actor }) {
 
       {tab === "equipment" && (
         <>
+          <Card title="Who paid for each asset"
+                variant="raised"
+                aside={funding?.totals
+                  ? `${count(funding.totals.unanswered)} of ${count(funding.totals.assets)} unanswered`
+                  : "the register is empty"}>
+            <p className="muted">
+              2 CFR 200.313(d)(1) requires the funding source on the property
+              record and the fixed-asset schedule has no such column — which is
+              a finding of its own. It decides 200.436(b): depreciation on a
+              federally funded asset is unallowable, and{" "}
+              <strong>$850,383</strong> of depreciation is waiting on it.{" "}
+              <em>A blank is unanswered, and unanswered is a value</em> — there
+              is no federal money in this asset and nobody has looked are
+              different facts, so the second is never written as 0.00.
+            </p>
+            <Propose
+              key={answering || "new"}
+              presetId={answering || ""}
+              startOpen={!!answering}
+              subject="ASSET_FUNDING"
+              title="a funding source"
+              subjectLabel="Asset id"
+              hint="One source for one asset. An asset may carry several; each
+                    is proposed on its own, because a federal share and a
+                    private share are two answers and not one."
+              fields={[
+                { name: "kind", label: "Source", type: "select", required: true,
+                  options: ["FEDERAL", "STATE", "LOCAL", "PRIVATE", "DEBT",
+                            "UNRESTRICTED"] },
+                { name: "amount", label: "Amount", type: "number",
+                  required: true,
+                  hint: "0.00 is a real answer: this source paid nothing." },
+                { name: "award_reference", label: "Award reference",
+                  type: "text",
+                  hint: "Required for a federal source — 200.313(d)(1)." },
+                { name: "funder", label: "Funder", type: "text" },
+              ]}
+              onDone={() => { setAnswering(null); load(); }} />
+            {!funding || (funding.assets || []).length === 0 ? (
+              <Empty mark="—" title="The asset register is empty">
+                It arrives whole, from the fixed-asset schedule YBI already
+                holds — ask for it on the Requests screen. The funding source is
+                the one column that schedule does not carry, and it is the
+                column that answers 200.436(b).
+              </Empty>
+            ) : (
+              <Table columns={[
+                { label: "Asset", align: "left" },
+                { label: "Gross cost" }, { label: "Depreciation" },
+                { label: "Funding on file", align: "left" },
+              ]}>
+                {funding.assets.slice(0, assetsShown).map((a) => (
+                  <tr key={a.asset_id}>
+                    <td className="l">
+                      <span className="strong">{a.description}</span>
+                      <div className="rowsub">{a.asset_id}</div>
+                    </td>
+                    <td className="num">{money(a.gross_cost)}</td>
+                    <td className="num">{money(a.depreciation)}</td>
+                    <td className="l">
+                      <a href="#" onClick={(e) => {
+                           e.preventDefault();
+                           setNotesOn({ subject: "ASSET_FUNDING",
+                                        id: a.asset_id,
+                                        title: a.description });
+                         }}>Notes</a>{" · "}
+                      {Number(a.sources) === 0
+                        ? <>
+                            <Pill tone="warn">nobody has looked</Pill>{" · "}
+                            <a href="#" onClick={(e) => {
+                                 e.preventDefault();
+                                 setAnswering(a.asset_id);
+                                 window.scrollTo({ top: 0, behavior: "smooth" });
+                               }}>Answer</a>
+                          </>
+                        : (a.funding || []).map((x, n) => (
+                            <div key={n} className="rowsub">
+                              {x.kind} {money(x.amount)}
+                              {x.award_reference ? ` · ${x.award_reference}` : ""}
+                            </div>))}
+                    </td>
+                  </tr>
+                ))}
+              </Table>
+            )}
+            {funding && (funding.assets || []).length > assetsShown && (
+              <div className="row-actions">
+                <button onClick={() => setAssetsShown(assetsShown + 25)}>
+                  Show 25 more
+                </button>
+                <span className="rowsub">
+                  {count(assetsShown)} of {count(funding.assets.length)} shown
+                  — unanswered first, then by what the asset cost.
+                </span>
+              </div>
+            )}
+          </Card>
+
           <Card title="Equipment"
                 aside="What its use was worth, against what was charged">
             {(kit?.equipment || []).length === 0 ? (
@@ -185,7 +389,7 @@ export default function Facilities({ actor }) {
                 { label: "Footprint" }, { label: "Hours" }, { label: "Charged" },
                 { label: "At market" }, { label: "Given" },
               ]}>
-                {kit.equipment.map((a) => (
+                {kit.equipment.slice(0, kitShown).map((a) => (
                   <tr key={a.asset_id}>
                     <td className="l">
                       <span className="strong">{a.description}</span>
@@ -206,6 +410,17 @@ export default function Facilities({ actor }) {
                   </tr>
                 ))}
               </Table>
+            )}
+            {(kit?.equipment || []).length > kitShown && (
+              <div className="row-actions">
+                <button onClick={() => setKitShown(kitShown + 25)}>
+                  Show 25 more
+                </button>
+                <span className="rowsub">
+                  {count(kitShown)} of {count(kit.equipment.length)} shown
+                  — programme equipment first, then by name.
+                </span>
+              </div>
             )}
           </Card>
 
@@ -272,6 +487,9 @@ export default function Facilities({ actor }) {
           )}
         </Card>
       )}
+      <SubjectNotes subject={notesOn?.subject} subjectId={notesOn?.id}
+                    title={notesOn?.title}
+                    onClose={() => setNotesOn(null)} />
     </div>
   );
 }
@@ -299,11 +517,8 @@ function FacilityForm({ onSaved }) {
       setOpen(false);
       await onSaved();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { const p = JSON.parse(msg); detail = p.message || p.detail || msg; }
-      catch { /* plain */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "bad", sticky: true });
     }
   }
@@ -359,7 +574,8 @@ function SpaceForm({ facilities, onSaved }) {
                                status: "OCCUPIED", occupant: "",
                                months_occupied: "12", actual_annual_charge: "",
                                market_rate_psf: "", market_basis: "",
-                               market_source: "", objective_id: "" });
+                               market_source: "", objective_id: "",
+                               occupancy_basis: "" });
   const set = (k, x) => setV((s) => ({ ...s, [k]: x }));
 
   async function save() {
@@ -377,11 +593,8 @@ function SpaceForm({ facilities, onSaved }) {
       setOpen(false);
       await onSaved();
     } catch (e) {
-      const msg = String(e.message || e).replace(/^\d+:\s*/, "");
-      let detail = msg;
-      try { const p = JSON.parse(msg); detail = p.message || p.detail || msg; }
-      catch { /* plain */ }
-      toast(typeof detail === "string" ? detail : JSON.stringify(detail),
+      const msg = explain(e);
+      toast(msg,
             { tone: "bad", sticky: true });
     }
   }
@@ -425,6 +638,14 @@ function SpaceForm({ facilities, onSaved }) {
         </Field>
         <Field label="Objective" hint="Required when the use is a programme">
           <input value={v.objective_id} onChange={(e) => set("objective_id", e.target.value)} />
+        </Field>
+        <Field label="The agreement that says which"
+               hint={"A commercial lease, or an incubation or residency agreement. " +
+                     "Required where the space is charged for and called programme " +
+                     "space \u2014 that reading takes its occupancy cost out of the " +
+                     "rental side and into the federal pool, so it does not rest on " +
+                     "nobody\u2019s document. Blank is fine and means nobody has read one."}>
+          <input value={v.occupancy_basis} onChange={(e) => set("occupancy_basis", e.target.value)} />
         </Field>
       </div>
       <div className="splitter-foot">

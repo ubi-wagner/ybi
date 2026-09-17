@@ -61,7 +61,7 @@ sits underneath everything below:
 > twelve months** and $11,400.00 in February. So 18.76% is what a flat monthly
 > figure happened to come to on *this* invoice's base; February's identical
 > method came to 20.54%. There is no rate — there is a monthly amount that
-> moves with nothing. `WP_AM_2025_RESTATED_INVOICES.md` §3.3.
+> moves with nothing. `WP_AM_2025_RESTATED_INVOICES.md` §4.
 
 - 10018 and 10023 **forgo recovery outright**. On a cost-reimbursement award
   there is no mechanism that gives it back later.
@@ -81,6 +81,25 @@ of an indirect line is therefore a statement, not an omission.
 ---
 
 ## 2. The three invoices restated at 43.99%
+
+> **These three were examples, and they are off the record.** Migrations
+> `088` and `089`. The arithmetic below is right about the three invoices in
+> `YBI_Invoices_1.pdf`, and that file was the whole register when this was
+> written — but those three are dated 1 May 2026 for April 2026 service and
+> were a sample of the *shape* of an America Makes invoice, not YBI's
+> billing. `089` removed them and the six restatements measured against
+> them.
+>
+> **The 2025 register is 61 invoices**, from the six PDFs of invoices as
+> issued, and those three objectives carry 12, 12 and 9 of them. §8 below
+> carries the year, which is the restatement: Drive AM $(58,786.31), LTM
+> $107,683.52, Hybrid $(55,250.32). Two of the three run the *other way* from
+> the table below, because the indirect was recovered inside a loaded labour
+> rate and no 2025 invoice carries an indirect line at all.
+>
+> The section is kept rather than deleted because three findings elsewhere
+> rest on it — the `TERM` failure on Drive AM among them — and a reader who
+> meets one of those has to be able to arrive here and see why it went.
 
 Engine-computed, per invoice, recorded as `PROPOSED`:
 

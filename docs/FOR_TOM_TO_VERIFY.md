@@ -233,22 +233,26 @@ payroll IDs, and that is a change to the ingest rather than to a form.
 
 ## 5. The invoices
 
-### 5.1 The invoice dates on file are ours, not YBI's
+### 5.1 The invoice dates on file are ours, not YBI's — **closed**
 
-All three invoices carry `2026-05-01` with a service period of April 2026,
-sitting in period **2025**. Those dates are a placeholder in
-`scripts/load_invoices.py` — the line items and totals are real, the dates
-were never supplied.
+**Answered by removing them.** All three carried `2026-05-01` with a service
+period of April 2026, and the dates were a placeholder in what was
+`scripts/load_invoices.py`. They were a sample of the *shape* of an America
+Makes invoice, loaded before the year's own register existed — not YBI's
+billing — and migration `089` removed them. The register is the 61 invoices
+`load_invoices_2025.py` loads from the six PDFs of invoices as issued, each
+under its own date.
 
-| Invoice | Objective | Total |
-|---|---|---:|
-| 10018 | DRIVE-AM | 37,593.90 |
-| 10023 | HYBRID-II | 1,374.00 |
-| 10039 | LTM | 18,993.52 |
+| Invoice | Objective | Total | |
+|---|---|---:|---|
+| 10018 | DRIVE-AM | 37,593.90 | removed |
+| 10023 | HYBRID-II | 1,374.00 | removed |
+| 10039 | LTM | 18,993.52 | removed |
 
-**Tom:** the real invoice dates and service periods for these three. A
-restatement is measured per invoice within a period, so a wrong date puts a
-claim in the wrong year.
+**Nothing for Tom here.** 2026's billing is entered when 2026 is worked. It
+stays on this list because the answer is part of the trail: three findings
+elsewhere rested on these — the `TERM` failure on Drive AM among them — and
+a reader who meets one of those wants to arrive here.
 
 ### 5.2 No cash has been recorded against any of them
 

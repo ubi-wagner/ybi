@@ -50,6 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx                                              # noqa: E402
 
 from app.db import one, open_pool, query                  # noqa: E402
+from app.foundation import EMAIL  # noqa: E402
 
 #: Who ran the projects in 2025. The project-manager role here was a helper
 #: to the controller rather than a separate job, which is why Stephanie holds
@@ -93,7 +94,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8000")
     ap.add_argument("--period", default="2025")
-    ap.add_argument("--who", default="tom@ybi.org")
+    ap.add_argument("--who", default=EMAIL["tom"])
     ap.add_argument("--password", default="")
     args = ap.parse_args()
     password = (args.password or os.environ.get("YBI_SEED_PASSWORD")

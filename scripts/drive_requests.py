@@ -35,6 +35,7 @@ import httpx
 from openpyxl import load_workbook
 
 from app.domain.verification_items import ITEMS as VERIFICATION_ITEMS
+from app.foundation import EMAIL  # noqa: E402
 
 FINDINGS: list[str] = []
 CHECKS = 0
@@ -782,7 +783,7 @@ def main() -> int:
     if not args.password:
         raise SystemExit("YBI_SEED_PASSWORD (or --password) is required.")
 
-    tom = sign_in(args.base, "tom@ybi.org", args.password)
+    tom = sign_in(args.base, EMAIL["tom"], args.password)
     heidi = sign_in(args.base, "hruby@ybi.org", args.password)
     barb = sign_in(args.base, "bewing@ybi.org", args.password)
     auditor = sign_in(args.base, "auditor@ybi.org", args.password)

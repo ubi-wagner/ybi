@@ -52,6 +52,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 FINDINGS: list[str] = []
 CHECKS = 0
 
@@ -457,7 +459,7 @@ def main() -> int:
     if not args.password:
         raise SystemExit("YBI_SEED_PASSWORD (or --password) is required.")
 
-    tom = sign_in(args.base, "tom@ybi.org", args.password)
+    tom = sign_in(args.base, EMAIL["tom"], args.password)
     heidi = sign_in(args.base, "hruby@ybi.org", args.password)
     print("Tom and Heidi are both signed in, in separate sessions.")
 

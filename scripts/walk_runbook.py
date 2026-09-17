@@ -40,11 +40,13 @@ from pathlib import Path
 import httpx
 from playwright.sync_api import sync_playwright
 
+from app.foundation import EMAIL  # noqa: E402
+
 OUT = Path("docs/runbook-walk")
 CHROME = ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
           "/opt/pw-browsers/chromium/chrome-linux/chrome"]
 
-CONTROLLER = "tom@ybi.org"
+CONTROLLER = EMAIL["tom"]
 EMPLOYEE = "hruby@ybi.org"
 AUDITOR = "auditor@ybi.org"
 

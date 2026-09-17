@@ -105,14 +105,18 @@ def form_990(period: str | None = None) -> dict:
         cat = by_cat.setdefault(r["natural_category"], {
             "natural_category": r["natural_category"], "total": Decimal(0),
             "lines": 0, **{f: Decimal(0) for f in FUNCTIONS},
-            "NOT_YET_CLASSIFIED": Decimal(0)})
+            # Both of the return's non-function columns start at zero rather
+            # than being created on demand. A category with no not-applicable
+            # cost genuinely holds none of it, and the sheet's rule is that a
+            # blank means nobody has answered — which is a different fact.
+            "NOT_YET_CLASSIFIED": Decimal(0), "NOT_APPLICABLE": Decimal(0)})
         amount = Decimal(str(r["amount"] or 0))
         key = r["function_990"] if r["function_990"] in cat else "NOT_APPLICABLE"
-        if key == "NOT_APPLICABLE":
-            # The enum carries NOT_APPLICABLE for cost that is on the ledger
-            # but outside the return's scope. It is still shown, under its own
-            # name, rather than folded into a function it does not belong to.
-            cat.setdefault("NOT_APPLICABLE", Decimal(0))
+        # The enum carries NOT_APPLICABLE for cost that is on the ledger but
+        # outside the return's scope — contra-income sitting in the expense
+        # section, and nothing else since `092`. It is shown under its own
+        # name rather than folded into a function it does not belong to, and
+        # the column is printed so every row cross-foots.
         cat[key] = cat.get(key, Decimal(0)) + amount
         cat["total"] += amount
         cat["lines"] += r["lines"]
@@ -201,3 +205,32 @@ def auditors_report(period: str | None = None,
             "exceptions": exceptions, "coverage": coverage,
             "evidence_coverage": evidence, "rates": rates,
             "reconciling_items": items}
+
+
+@router.get("/ties")
+def report_ties(period: str | None = None) -> dict:
+    """Whether everything this system publishes ties to the financials.
+
+    Twenty-two control-shaped views and nothing collecting them, so the
+    question a reviewer actually arrives with — *does all of this tie to the
+    books* — had twenty-two answers on twenty-two screens and the reader kept
+    the list. `v_report_tie` is one row per report and anchor, each reading
+    the control that already owns its figure.
+
+    Nothing is computed here or on the screen, for the reason every review
+    route gives: a figure derived twice is one that can disagree with itself.
+    """
+    period = period or settings.period
+    return {
+        "period": period,
+        "summary": one("""SELECT anchors, ties, open, no_data, state,
+                                 open_anchors
+                            FROM v_report_tie_summary WHERE period = %s""",
+                       (period,)) or {"anchors": 0, "ties": 0, "open": 0,
+                                      "no_data": 0, "state": "NO DATA",
+                                      "open_anchors": ""},
+        "anchors": query("""SELECT seq, report, anchor, ties_to, state,
+                                   variance, needs
+                              FROM v_report_tie WHERE period = %s
+                             ORDER BY seq, anchor""", (period,)),
+    }

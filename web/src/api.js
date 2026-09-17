@@ -151,7 +151,27 @@ export const api = {
   logout: () => req("/auth/logout", { method: "POST" }),
   changePassword: (body) =>
     req("/auth/password", { method: "POST", body: JSON.stringify(body) }),
-  dashboard: (period) => req("/dashboard" + (period ? `?period=${period}` : "")),
+  /* `product` scopes the rollup to the job being done. Omitted is
+     unfiltered, which is what a script reading the whole list expects. */
+  dashboard: (period, product = "") =>
+    req("/dashboard" + (period || product
+      ? "?" + new URLSearchParams({ ...(period && { period }),
+                                    ...(product && { product }) })
+      : "")),
+  /* The walk: the ten steps of the 2025 audit and where each one stands.
+     Read, never computed — `v_audit_walk` owns it. */
+  walk: (period = "2025") =>
+    req(`/dashboard/walk?period=${encodeURIComponent(period)}`),
+  /* The one fact every output reads: does the rate carry a signature.
+     Certifying blocks nothing — it decides whether the paper says so. */
+  certification: (period = "2025") =>
+    req(`/rates/certification?period=${encodeURIComponent(period)}`),
+  certify: (signature, note = "", period = "2025") =>
+    req(`/rates/certify?period=${encodeURIComponent(period)}`,
+        { method: "POST", body: JSON.stringify({ signature, note }) }),
+  withdrawCertification: (reason, period = "2025") =>
+    req(`/rates/certify/withdraw?period=${encodeURIComponent(period)}`,
+        { method: "POST", body: JSON.stringify({ reason }) }),
   worklist: (params) => req("/dashboard/worklist?" + new URLSearchParams(params)),
   activity: (params) => req("/dashboard/activity?" + new URLSearchParams(params)),
   timesheetObjectives: (period = "2025") =>
@@ -193,7 +213,12 @@ export const api = {
   auditPackageUrl: (period = "2025") => `/api/export/audit-package?period=${period}`,
 
   // What this person owes, rather than what is outstanding in general.
-  myWorklist: (period = "2025") => req(`/dashboard/worklist/mine?period=${period}`),
+  /* `product` scopes the list to the job being done — the audit or the
+     ongoing system. Omitted means unfiltered, which is what a script reading
+     the whole list expects. */
+  myWorklist: (period = "2025", product = "") =>
+    req(`/dashboard/worklist/mine?period=${period}`
+        + (product ? `&product=${product}` : "")),
   // A helper recommends; the controller verifies and seals. Raises a todo
   // against the outstanding item, never a row in the register it points at.
   recommend: (body, period = "2025") =>
@@ -240,10 +265,20 @@ export const api = {
   reviewForm990: (period = "2025") => req(`/review/form-990?period=${period}`),
   reviewAttachments: (period = "2025") => req(`/review/attachments?period=${period}`),
   auditorsReport: (period = "2025") => req(`/review/auditors-report?period=${period}`),
+  // Whether everything above ties to the financials. One row per report
+  // and anchor, each read from the control that already owns its figure.
+  reportTies: (period = "2025") => req(`/review/ties?period=${period}`),
   rateBuildupUrl: (period = "2025") => `/api/export/rate-buildup?period=${period}`,
   auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
   form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,
   coverage: (period = "2025") => req(`/classify/coverage?period=${period}`),
+  /* The whole book, and the three sheets it divides into. Both read views
+     and compute nothing — the screen that shows "100% of the general ledger"
+     has to be able to prove it against the ledger, not assert it. */
+  partitions: (period = "2025") =>
+    req(`/classify/partitions?period=${encodeURIComponent(period)}`),
+  glAccounted: (period = "2025") =>
+    req(`/classify/ledger?period=${encodeURIComponent(period)}`),
   queue: (params) => req("/classify/queue?" + new URLSearchParams(params)),
   vocabulary: () => req("/classify/vocabulary"),
   undoable: (params) => req("/undo?" + new URLSearchParams(params || {})),
@@ -292,6 +327,14 @@ export const api = {
     req(`/restate?period=${period}`, { method: "POST", body: JSON.stringify(body) }),
   restateStatus: (id, body) =>
     req(`/restate/${id}/status`, { method: "POST", body: JSON.stringify(body) }),
+  // The two papers a restated invoice cannot travel without. Links rather
+  // than `req` calls, because a PDF opens in the page the way a document in
+  // the library does — and a download link is a door too, which is what
+  // `test_every_capability_has_a_door` had to learn.
+  amendmentMemoUrl: (awardId, period = "2025") =>
+    `/api/restate/award/${encodeURIComponent(awardId)}/memo?period=${period}`,
+  acceptanceFormUrl: (awardId, period = "2025") =>
+    `/api/restate/award/${encodeURIComponent(awardId)}/acceptance?period=${period}`,
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   // The rate itself. `POST /api/rates/compute` was complete on the server and
@@ -437,6 +480,13 @@ export const api = {
       body: JSON.stringify({ email, password, display_name }) }),
 
   guides: () => req("/documents/guides"),
+  /* Served out of the image rather than the document register: a manual is
+     not evidence, and the 2025 audit's register carries foundation documents
+     only. */
+  guideViewUrl: (name) =>
+    `/api/documents/guides/${encodeURIComponent(name)}?inline=1`,
+  guideDownloadUrl: (name) =>
+    `/api/documents/guides/${encodeURIComponent(name)}`,
 
   documentViewUrl: (id) =>
     `/api/documents/${encodeURIComponent(id)}/file?inline=1`,
@@ -484,11 +534,90 @@ export const api = {
     req("/reconcile/items", { method: "POST", body: JSON.stringify(body) }),
   retractReconcilingItem: (id, reason) =>
     req(`/reconcile/items/${id}/retract`, { method: "POST", body: JSON.stringify({ reason }) }),
+
+  /* Working positions: the 757 the classification log proposed, what people
+     have written against them, and what they have asked for instead. */
+  positions: ({ period = "2025", state = "all", limit = 80, offset = 0,
+                decision_id = "" } = {}) =>
+    req(`/positions?period=${period}&state=${state}&limit=${limit}` +
+        `&offset=${offset}` +
+        (decision_id ? `&decision_id=${encodeURIComponent(decision_id)}` : "")),
+  positionReview: (period = "2025") => req(`/positions/review?period=${period}`),
+  confirmPositions: (decision_ids, note = "", period = "2025") =>
+    req(`/positions/confirm?period=${period}`,
+        { method: "POST", body: JSON.stringify({ decision_ids, note }) }),
+  withdrawConfirmation: (decision_id, reason, period = "2025") =>
+    req(`/positions/confirm/withdraw?period=${period}`,
+        { method: "POST", body: JSON.stringify({ decision_id, reason }) }),
+  /* Notes and recommendations reach four subjects: a classification group, a
+     building, a space inside it, and one asset's funding. `decision_id` is
+     the classification convenience the queue screens already send. */
+  positionNotes: (decision_id, period = "2025") =>
+    req(`/positions/notes?period=${period}&decision_id=${encodeURIComponent(decision_id)}`),
+  subjectNotes: (subject, subject_id, period = "2025") =>
+    req(`/positions/notes?period=${period}&subject=${subject}` +
+        `&subject_id=${encodeURIComponent(subject_id)}`),
+  recommend: (body, period = "2025") =>
+    req(`/positions/recommend?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  assetFunding: (period = "2025") =>
+    req(`/facilities/asset-funding?period=${period}`),
+  putAssetFunding: (body, period = "2025") =>
+    req(`/facilities/asset-funding?period=${period}`,
+        { method: "PUT", body: JSON.stringify(body) }),
+  writeNote: (body, period = "2025") =>
+    req(`/positions/notes?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  redesignateNote: (note_id, kind, reason, period = "2025") =>
+    req(`/positions/notes/${note_id}?period=${period}`,
+        { method: "PATCH", body: JSON.stringify({ kind, reason }) }),
+  recommendReclass: (body, period = "2025") =>
+    req(`/positions/recommend?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  acceptRecommendation: (id, body = {}, period = "2025") =>
+    req(`/positions/recommendations/${id}/accept?period=${period}`,
+        { method: "POST", body: JSON.stringify(body) }),
+  declineRecommendation: (id, reason, period = "2025") =>
+    req(`/positions/recommendations/${id}/decline?period=${period}`,
+        { method: "POST", body: JSON.stringify({ reason }) }),
+  withdrawRecommendation: (id, reason = "", period = "2025") =>
+    req(`/positions/recommendations/${id}/withdraw?period=${period}`,
+        { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
+/* Money, to the cent, in one place.
+
+   Eight screens carried their own spelling of this and six of them rounded to
+   the whole dollar, so the record's $1,835,047.17 reached an auditor as
+   $1,835,047 on the home screen and as $1,835,047.17 on the seal screen — one
+   figure in two readings, which is the defect that produced 13.0% and 2.2% at
+   the same moment in a smaller place. Everything behind the rendering is
+   Decimal and exact; only the printing was lossy, and a cent is the unit a
+   reviewer ties in.
+
+   A blank is unanswered and prints as such. `Number(null || 0)` is 0, so the
+   first version of this printed "nobody has read this off" and "this is nil"
+   identically — the intake rule, applied to the screen.
+
+   Negatives in parentheses, which is the accounting convention the workpapers
+   already use and what a payables clerk reads. */
 export const money = (n) => {
-  const v = Number(n || 0);
+  if (n === null || n === undefined || n === "") return "\u2014";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "\u2014";
   return (v < 0 ? "(" : "") +
-    Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 }) +
+    Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2 }) +
     (v < 0 ? ")" : "");
+};
+
+/* A count is not money. Groups, lines, documents and people are whole things
+   and printing "757.00 groups" would be absurd; the separator is still wanted
+   above a thousand. Kept beside money() so the choice is made by naming the
+   thing rather than by reaching for the nearest formatter. */
+export const count = (n) => {
+  if (n === null || n === undefined || n === "") return "\u2014";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "\u2014";
+  return v.toLocaleString("en-US", { maximumFractionDigits: 0 });
 };

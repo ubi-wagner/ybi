@@ -134,6 +134,28 @@ STAFF = (
 
 ROSTER = (SYSTEM_ADMIN, ORG_ADMIN, *STAFF)
 
+#: Addresses by the name everybody says out loud, derived from the roster
+#: above rather than written a second time.
+#:
+#: Fifty-two literal `tom@ybi.org` across twenty-seven scripts is what this
+#: replaces — every drive, the classification log and the request issuer each
+#: carrying its own copy of one person's address. That was the naming
+#: convention rather than a lookup, and when `079` retired the old address
+#: every one of them would have exited on a 401 against a system that was
+#: working perfectly: the proof harness going red for a reason that is not a
+#: defect is how a reader learns to ignore it.
+#:
+#: There is one list of who these people are, and this reads it.
+#: Keyed on the first name because that is what the scripts were saying —
+#: `sign_in(base, "tom@ybi.org")` means *sign in as Tom*. A first draft
+#: offered `CONTROLLER_EMAIL` instead and picked by position: Stephanie and
+#: Heidi hold CONTROLLER too, so it returned Tom only because he is listed
+#: first, which is a hand-kept map wearing a derivation.
+EMAIL = {p.display_name.split()[0].lower(): p.email for p in ROSTER}
+assert len(EMAIL) == len(ROSTER), (
+    "two people on the roster share a first name, so EMAIL would silently "
+    "drop one of them; key it on something that tells them apart")
+
 #: The organisation's administrator holds no portfolio, and the reason column
 #: is where that is said rather than inferred from an empty set.
 BARB_REASON = ORG_ADMIN.why
@@ -287,6 +309,14 @@ GUIDES = (
     Guide("manuals/administrator.md", "The administrator",
           "Accounts, access and the roster: who may do what, and how to give "
           "somebody their way in.", "admin"),
+    Guide("manuals/facilities-and-inventory.md", "Facilities and inventory",
+          "The two measurements the rate cannot be computed without: the "
+          "square footage of each building, and which assets federal money "
+          "paid for.", "FACILITIES"),
+    Guide("manuals/classification-team.md", "Working the classification",
+          "Reviewing the 757 working positions, citing the paper behind "
+          "them, and the timesheet every person on the payroll signs for "
+          "themselves.", "CONTROLLER"),
     Guide("manuals/auditor.md", "The auditor",
           "What to read and in what order, and where every figure on a "
           "workpaper comes from.", "AUDITOR"),
@@ -306,27 +336,18 @@ GUIDES = (
           "admin"),
 )
 
-#: A guide is filed as `GENERATED` — the channel `038` added because every
-#: other value means the document arrived from outside and there was no way
-#: to say *this system made it*. That is exactly what a manual rendered from
-#: this repository is, and it is what keeps them out of the inbox: the inbox
-#: is what nobody has filed yet, and a manual is not waiting for a judgment.
-GUIDE_KIND = "guide"
-
-#: Looked up by filename, because a guide has no key that survives being
-#: regenerated: `evidence_id` is derived from the SHA-256, so editing a
-#: sentence in the controller's manual files a new row with a new id. The
-#: name is what stays the same, and these eight are distinct. A stored guide
-#: the list does not name still reaches the screen under its own filename —
-#: never hidden, because it was filed as a guide by something.
-GUIDES_BY_FILENAME = {Path(g.path).name: g for g in GUIDES}
-
-#: The year a guide is *of*. They describe the engagement rather than a
-#: figure in it, so they carry the period whose work they are about.
+#: The year the guides describe. Not a document period — nothing about a
+#: guide reaches the cost record — but the manuals are written about this
+#: engagement and the shelf says so.
 GUIDE_PERIOD = "2025"
 
 
 # ── Filing one document, the same way the upload route does ──────────
+
+#: Addressed by filename, which is the key a guide has. These eight are
+#: distinct, and the map is what stops a request naming a path of its own.
+GUIDES_BY_NAME = {Path(g.path).name: g for g in GUIDES}
+
 
 def _file(path: Path, kind: str, period: str, note: str, channel: str,
           uploaded_by: str | None, received_from: str) -> str | None:
@@ -483,25 +504,29 @@ def ensure_documents() -> list[str]:
     return filed
 
 
-def ensure_guides() -> list[str]:
-    """File the manuals and the generated PDFs, so they are readable in the
-    library rather than only on somebody's laptop."""
-    controller = one("""SELECT actor_id FROM actor
-                         WHERE role = 'CONTROLLER' ORDER BY created_at LIMIT 1""")
-    filed: list[str] = []
-    for guide in GUIDES:
-        path = GUIDE_DIR / guide.path
-        if not path.exists():
-            log.warning("guide not in the image: %s", guide.path)
-            continue
-        eid = _file(path, GUIDE_KIND, GUIDE_PERIOD, guide.note, "GENERATED",
-                    controller["actor_id"] if controller else None,
-                    "deployment bootstrap")
-        if eid:
-            filed.append(guide.path)
-            _note("EVIDENCE_UPLOAD", "evidence", eid,
-                  f"filed by the deployment bootstrap: {guide.path}")
-    return filed
+def guide_path(name: str) -> Path | None:
+    """Where a guide lives on disk, or None if the name is not one.
+
+    Guides are **not documents and must not be filed as evidence.** They were,
+    for one morning: `ensure_guides()` put eight manuals and PDFs into
+    `evidence`, which put them in the document register beside the eighteen
+    foundational documents the 2025 audit rests on. The audit's register is
+    the paper the engagement stands on — an agreement, a statement, a return,
+    a ledger export — and a manual about how to use the software is none of
+    those. A reviewer opening the library should find the lease and nothing
+    that is not of that kind.
+
+    So the shelf reads from the image instead. `foundation.GUIDES` names the
+    files, they ship in `docs/`, and nothing about them touches the database:
+    no row, no SHA, no period, no inbox, no library. The name is the key, and
+    it is checked against the definition rather than joined against anything —
+    a caller cannot ask for a path this module does not name.
+    """
+    guide = GUIDES_BY_NAME.get(name)
+    if not guide:
+        return None
+    path = GUIDE_DIR / guide.path
+    return path if path.exists() else None
 
 
 def restore() -> dict[str, list[str]]:
@@ -518,11 +543,11 @@ def restore() -> dict[str, list[str]]:
         return {}
     accounts = ensure_accounts()
     documents = ensure_documents()
-    guides = ensure_guides()
     if accounts:
         log.warning("opened %d account(s) on the organisation's password: %s",
                     len(accounts), ", ".join(accounts))
-    if documents or guides:
-        log.info("filed %d foundational document(s) and %d guide(s)",
-                 len(documents), len(guides))
-    return {"accounts": accounts, "documents": documents, "guides": guides}
+    if documents:
+        log.info("filed %d foundational document(s)", len(documents))
+    # Guides are deliberately absent: they are served from the image by
+    # `guide_path()` and are not documents in the cost record.
+    return {"accounts": accounts, "documents": documents}

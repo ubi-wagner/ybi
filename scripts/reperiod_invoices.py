@@ -5,9 +5,14 @@
         --check [--base http://127.0.0.1:8000]
     PYTHONPATH=. YBI_SEED_PASSWORD=... python3 scripts/reperiod_invoices.py --apply
 
-`load_invoices.py` wrote `period` as the literal `'2025'` while its three
-invoices are dated April 2026, so every 2025 figure taken off the register
-compared thirteen months to twelve — 19,145.79 of Drive AM ODCs on its own.
+Written for `load_invoices.py`, which wrote `period` as the literal `'2025'`
+while its three invoices were dated April 2026, so every 2025 figure taken off
+the register compared thirteen months to twelve — 19,145.79 of Drive AM ODCs
+on its own. Those three were example data and migration `089` removed them,
+so this has nothing outstanding to correct. It is kept for the same reason
+`retype_documents.py` and `read_documents.py` are: the next loader that files
+a year by a constant will need it, and the rules below are what a repair out
+of band has to obey.
 The invoice itself is untouched: the date, the amount, the lines and the
 status all stand. Only the fiscal period it is filed under moves, and it moves
 to the one its own date names.
@@ -41,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import httpx  # noqa: E402
 
 from app.db import one, open_pool, query, transaction  # noqa: E402
+from app.foundation import EMAIL  # noqa: E402
 
 
 def sign_in(base: str, email: str, password: str) -> dict:
@@ -68,7 +74,7 @@ def main() -> int:
     g.add_argument("--apply", action="store_true")
     ap.add_argument("--base", default=os.environ.get("BASE",
                                                      "http://127.0.0.1:8000"))
-    ap.add_argument("--actor", default="tom@ybi.org")
+    ap.add_argument("--actor", default=EMAIL["tom"])
     args = ap.parse_args()
 
     open_pool()

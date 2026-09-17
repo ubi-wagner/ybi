@@ -12,15 +12,39 @@ export PYTHONPATH=.
 PY=${PY:-.venv/bin/python}
 BASE=${BASE:-http://127.0.0.1:8000}
 fail=0
+unevaluable=0
 
 step() {
   printf '\n\033[1m%s\033[0m\n' "$1"
 }
 
+# Three states, not two — the control register's, applied to the harness.
+#
+# A drive exits **2** when its precondition is absent: `drive_recertify` needs
+# a certified rate, `drive_restage` a record the classification log has
+# written, `drive_partitions` a sealed set. None of those exist after a bare
+# `seed.sh`, because classifying and sealing are judgments and no script here
+# makes one. So on a database built from empty three drives printed
+# **COULD NOT RUN** and this rendered all three as `FAIL`, and the run ended
+# *"Something did not"* over a system with nothing wrong with it.
+#
+# That is `029` pointed at the proof harness: **a control that cannot be
+# evaluated has not passed, and it has not failed either.** And the cost is
+# the one this repository keeps paying — a harness going red for a reason
+# that is not a defect is how a reader learns to ignore it, and then to
+# ignore the run that finds something.
+#
+# `1` is still a finding and still fails the run.
 run() {
   local label="$1"; shift
-  if "$@" > /tmp/prove-last.txt 2>&1; then
+  local code=0
+  "$@" > /tmp/prove-last.txt 2>&1 || code=$?
+  if [ "$code" -eq 0 ]; then
     printf '  PASS  %-34s %s\n' "$label" "$(tail -1 /tmp/prove-last.txt)"
+  elif [ "$code" -eq 2 ]; then
+    printf '  ----  %-34s %s\n' "$label" \
+      "$(grep -m1 'COULD NOT RUN' /tmp/prove-last.txt || tail -1 /tmp/prove-last.txt)"
+    unevaluable=$((unevaluable + 1))
   else
     printf '  FAIL  %-34s %s\n' "$label" "$(tail -1 /tmp/prove-last.txt)"
     sed -n '/FINDING\|FAIL\|Error/p' /tmp/prove-last.txt | head -12
@@ -49,6 +73,50 @@ then
   printf '\n  %s is missing something it needs.\n' "$PY"
   printf '  This is the environment, not the system:\n\n'
   printf '      %s -m pip install -r requirements.txt\n\n' "$PY"
+  exit 2
+fi
+
+# And the database the drives read directly, for the same reason one line up.
+#
+# Every drive below talks to the API over `--base` **and** reads rows through
+# `app.db`, so it needs `DATABASE_URL` as well as a running service. Nothing
+# here named it. Run without one and `app/settings.py` falls back to `.env` —
+# which on a machine that is not the one `.env` was written for points at a
+# socket that does not exist — and `psycopg_pool` answers a caller that can
+# never connect with **`PoolTimeout: couldn't get a connection after 30.00
+# sec`**, swallowing the connection error that would have said why.
+#
+# So twelve drives go red in a row, each naming a pool timeout, and none of
+# them names the variable. That is `YBI_JWT_SECRET` in a second place: the
+# worst shape a configuration fault can take is one that reports as something
+# else, and a proof harness going red for a reason that is not a defect is
+# how a reader learns to ignore it.
+#
+# One connection, before anything, and it says which URL it tried.
+if ! $PY - <<'DBCHECK' 2>/tmp/prove-db.txt
+import sys
+
+import psycopg
+
+from app.settings import settings
+
+# Deliberately not `app.db`: its pool retries in the background and prints
+# a line per attempt, so the one fact worth reading — which URL, and what
+# the server said — arrives eight times and under eight copies of itself.
+# One connection, one answer.
+try:
+    with psycopg.connect(settings.database_url, connect_timeout=5) as con:
+        con.execute("SELECT 1")
+except Exception as exc:                       # noqa: BLE001 - reported below
+    first = str(exc).strip().splitlines()[0]
+    print(f"tried  {settings.database_url}\n{first}", file=sys.stderr)
+    sys.exit(1)
+DBCHECK
+then
+  printf '\n  the database is not reachable.\n'
+  printf '  This is the environment, not the system:\n\n'
+  sed 's/^/      /' /tmp/prove-db.txt
+  printf '\n      DATABASE_URL=postgresql://... %s\n\n' "$0"
   exit 2
 fi
 
@@ -123,6 +191,40 @@ step "The rate build-up, and everything that moves it"
 # can fail — so it must run where it can seal freely and put the record back.
 run "drive_buildup" $PY scripts/drive_buildup.py --base "$BASE"
 
+step "The auditor rejects a classification inside a sealed, certified set"
+# After drive_buildup, because it needs a rate to certify and drive_buildup is
+# what leaves one. It certifies, withdraws, unseals, reclassifies, re-seals,
+# recomputes and re-certifies — then puts every one of those back, checked
+# against a census of the pools taken before it started. The cycle an auditor
+# actually triggers, and until this existed nobody had walked it end to end.
+run "drive_recertify" $PY scripts/drive_recertify.py --base "$BASE"
+
+step "A restaged year: a note, a recommendation, an adoption"
+# After drive_recertify, because it needs a sealed set to be refused by — its
+# sharpest check is that accepting an auditor's recommendation under a seal is
+# refused by the seal, in the seal's own words, since there is no second path
+# to the cost record for the ask to travel down. It runs against whatever
+# working positions the record carries and reports COULD NOT RUN where there
+# are none, rather than manufacturing some to measure.
+run "drive_restage" $PY scripts/drive_restage.py --base "$BASE"
+
+step "Heidi measures, Tom verifies, and the carve-out fires"
+# After drive_restage, which is the same mechanism pointed at classification.
+# This is the pair the walk reports as NO DATA — the square footage the 200.465
+# carve-out is sized by, and the funding source 200.436(b) turns on — proposed
+# by the portfolio that holds them and accepted by the controller who signs the
+# rate they feed. It puts its building back and says what it could not.
+run "drive_partitions" $PY scripts/drive_partitions.py --base "$BASE"
+
+step "Five registers changed at once, and every figure that must not move"
+# After drive_partitions, because it needs a sealed set with a live rate and
+# an estate to change. Five people change five registers — labour, G&A, a
+# subcontractor, a suite's square footage, an asset's funding source — and
+# three hundred figures are watched through each one. It puts every change
+# back and the census at the end has to equal the census at the start, which
+# is the whole of *what the system writes is what it reads back*.
+run "drive_symbiosis" $PY scripts/drive_symbiosis.py --base "$BASE"
+
 step "Every person, every process, every change on the record"
 run "drive_everyone" $PY scripts/drive_everyone.py --base "$BASE"
 
@@ -149,8 +251,15 @@ step "The boundaries"
 run "drive_access" $PY scripts/drive_access.py --base "$BASE"
 run "drive_actors" $PY scripts/drive_actors.py --base "$BASE"
 
-if [ "$fail" -eq 0 ]; then
+if [ "$fail" -eq 0 ] && [ "$unevaluable" -eq 0 ]; then
   printf '\n\033[1mEverything proved.\033[0m\n'
+elif [ "$fail" -eq 0 ]; then
+  printf '\n\033[1mEverything that could be evaluated proved.\033[0m\n'
+  printf '  %d step(s) had no precondition to run against — a bare seed\n' \
+    "$unevaluable"
+  printf '  carries no classification and no seal, because both are\n'
+  printf '  judgments and nothing here makes one. Apply the classification\n'
+  printf '  log and seal, then run those again.\n'
 else
   printf '\n\033[1mSomething did not.\033[0m See the findings above.\n'
 fi

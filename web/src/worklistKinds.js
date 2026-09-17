@@ -28,6 +28,22 @@ export const KINDS = {
     where: "Resolved in Classify.",
     to: "/classify",
   },
+  POSITION_UNCONFIRMED: {
+    title: "Working position",
+    plural: "Positions nobody has adopted",
+    short: "A script proposed it; it is not yet a judgment",
+    why: "Proposed by the classification log and recorded under the controller's credentials, which is how a script writes honestly and is not the same claim as a person having judged it. Adopting it moves no figure — the rate is the same before and after — so this is about whose judgment the record says it is, and nothing else.",
+    where: "Adopted in Classify \u203a Review.",
+    to: "/classify/review",
+  },
+  RECOMMENDATION_OPEN: {
+    title: "Recommendation to answer",
+    plural: "Recommendations to answer",
+    short: "Somebody has proposed a change",
+    why: "Somebody who may read the cost record has proposed a change — to a classification, to a building's area, to what a space is used for, or to who paid for an asset — with a reason. It writes nothing: accepting it records the change through the ordinary route for that register, under the controller's name, citing the recommendation.",
+    where: "Answered in Classify \u203a Review.",
+    to: "/classify/review",
+  },
   BLOCKS_SEAL: {
     title: "Blocks the seal",
     plural: "Judgments that block the seal",

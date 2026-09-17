@@ -20,7 +20,8 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 
-from app.domain.audit_package import BOLD, TITLE, WRAP, _sheet, _table
+from app.domain.audit_package import (BOLD, TITLE, WRAP, certification_lines,
+                                      _sheet, _table)
 
 RULE = Font(italic=True, size=9)
 
@@ -40,7 +41,8 @@ def _caveat(ws, row: int, lines: list[str]) -> int:
     for text in lines:
         c = ws.cell(row=row, column=1, value=text)
         c.alignment = WRAP
-        c.font = BOLD if text.startswith("NOT FINAL") else Font(size=10)
+        c.font = (BOLD if text.startswith(("NOT ", "CERTIFIED"))
+                  else Font(size=10))
         ws.row_dimensions[row].height = 28
         row += 1
     return row + 1
@@ -65,7 +67,8 @@ def _as_rate(ws, first_row: int, last_row: int, col: int) -> None:
 
 def build_rate_buildup(*, period: str, out_path: Path, rates: list[dict],
                        carve_outs: list[dict], coverage: dict | None,
-                       open_controls: list[dict], final: bool) -> Path:
+                       open_controls: list[dict], final: bool,
+                       certification: dict | None = None) -> Path:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -74,7 +77,9 @@ def build_rate_buildup(*, period: str, out_path: Path, rates: list[dict],
                 "the base, and the seal the whole thing hangs off.")
     _stamp(ws, period)
     pct = Decimal(str((coverage or {}).get("pct_dollars_covered") or 0))
-    r = 5
+    # The signature first, because it is the question a reader asks of a rate
+    # before they ask how complete it is.
+    r = _caveat(ws, 5, certification_lines(certification))
     if not final:
         why = []
         if open_controls:
@@ -124,7 +129,8 @@ def build_auditors_report(*, period: str, out_path: Path, controls: list[dict],
                           asset_control: dict | None, exceptions: list[dict],
                           coverage: dict | None, evidence_coverage: list[dict],
                           rates: list[dict],
-                          reconciling_items: list[dict]) -> Path:
+                          reconciling_items: list[dict],
+                          certification: dict | None = None) -> Path:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -134,7 +140,8 @@ def build_auditors_report(*, period: str, out_path: Path, controls: list[dict],
     _stamp(ws, period)
     open_controls = [c for c in controls if not c.get("ties")]
     pct = Decimal(str((coverage or {}).get("pct_dollars_covered") or 0))
-    r = _caveat(ws, 5, [
+    r = _caveat(ws, 5, certification_lines(certification))
+    r = _caveat(ws, r, [
         ("All cross-reference points tie."
          if not open_controls else
          f"NOT FINAL — {len(open_controls)} cross-reference point(s) open: "
@@ -214,7 +221,8 @@ def build_auditors_report(*, period: str, out_path: Path, controls: list[dict],
 
 def build_form_990(*, period: str, out_path: Path, functions: list[str],
                    categories: list[dict], totals: dict,
-                   readiness: dict | None, documents: list[dict]) -> Path:
+                   readiness: dict | None, documents: list[dict],
+                   certification: dict | None = None) -> Path:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -224,7 +232,7 @@ def build_form_990(*, period: str, out_path: Path, functions: list[str],
     _stamp(ws, period)
 
     unallocated = Decimal(str((readiness or {}).get("unallocated") or 0))
-    r = 5
+    r = _caveat(ws, 5, certification_lines(certification))
     if unallocated:
         r = _caveat(ws, r, [
             "NOT FILEABLE — the allocation is incomplete.",
@@ -235,12 +243,18 @@ def build_form_990(*, period: str, out_path: Path, functions: list[str],
             "The column totals are therefore short by that amount, on purpose.",
         ])
 
+    # "Not applicable" is printed, not dropped. The handler has always
+    # accumulated it and the sheet has never shown it, so a row whose total
+    # exceeded its three functions gave the reader nothing to reconcile to —
+    # and until `092` that was the entire payroll, $2,191,777.54 of it, on a
+    # tax return. A column that is usually zero is cheaper than a total that
+    # does not foot.
     headers = ["Natural category", "Lines", "Program", "Management and general",
-               "Fundraising", "Not yet classified", "Total"]
+               "Fundraising", "Not yet classified", "Not applicable", "Total"]
     keys = ["natural_category", "lines", "PROGRAM", "MANAGEMENT_AND_GENERAL",
-            "FUNDRAISING", "NOT_YET_CLASSIFIED", "total"]
+            "FUNDRAISING", "NOT_YET_CLASSIFIED", "NOT_APPLICABLE", "total"]
     r = _table(ws, r, headers, categories, keys,
-               [42, 10, 18, 24, 18, 22, 18], {3, 4, 5, 6, 7})
+               [42, 10, 18, 24, 18, 22, 18, 18], {3, 4, 5, 6, 7, 8})
 
     r += 1
     ws.cell(row=r, column=1, value="Total").font = BOLD

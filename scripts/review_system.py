@@ -34,6 +34,8 @@ from pathlib import Path
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 
 #: Severity, most serious first. A FAULT is the system not working; a GAP is
@@ -69,7 +71,7 @@ WHO = [
      "stands the software up; reads the record only on a written grant"),
     ("bewing@ybi.org", "Barb", "ORG_ADMIN",
      "hands out access; holds no portfolio and judges no cost"),
-    ("tom@ybi.org", "Tom", "CONTROLLER",
+    (EMAIL["tom"], "Tom", "CONTROLLER",
      "classifies, seals, computes the rate, restates"),
     ("sgaffney@ybi.org", "Stephanie", "CONTROLLER+ALL",
      "project manager, holding every portfolio for the 2025 push"),
@@ -379,8 +381,11 @@ def auditability(c: httpx.Client) -> None:
     total = one("SELECT count(*) AS n FROM audit_log")["n"]
     facts["audit_rows"] = total
 
-    orphan = one("""SELECT count(*) AS n FROM audit_log
-                     WHERE actor_id IS NULL OR session_id IS NULL""")["n"]
+    # The third copy of one predicate — `drive_state_machine` and
+    # `drive_everyone` held the other two, and all three reported the
+    # deployment bootstrap's honest rows as faults on a record built from
+    # nothing. Defined once in `v_audit_orphan`; migration `087`.
+    orphan = one("""SELECT count(*) AS n FROM v_audit_orphan""")["n"]
     if orphan:
         finding("AUDITABILITY", FAULT,
                 f"{orphan} audit entries name no account or no session",

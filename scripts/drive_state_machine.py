@@ -45,6 +45,8 @@ from decimal import Decimal
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 FINDINGS: list[str] = []
 CHECKS = 0
 TURN = 0
@@ -189,9 +191,13 @@ INVARIANTS = [
      """SELECT count(*) FROM restatement
          WHERE coalesce(seal_hash,'') = ''"""),
 
+    # `v_audit_orphan`, not the predicate, because `drive_everyone` held a
+    # second copy of it and two copies of one rule is the defect most of
+    # this repository is about. The view excludes the deployment bootstrap,
+    # which acts when no person is present and says so in `actor` — see
+    # migration `087`.
     ("every audit entry names an account and a session",
-     """SELECT count(*) FROM audit_log
-         WHERE actor_id IS NULL OR session_id IS NULL"""),
+     """SELECT count(*) FROM v_audit_orphan"""),
 
     ("a decision set is sealed or open, never half",
      """SELECT count(*) FROM decision_set
@@ -318,7 +324,7 @@ def main() -> int:
     from app.db import one, open_pool
     open_pool()
 
-    tom = sign_in(args.base, "tom@ybi.org", password)
+    tom = sign_in(args.base, EMAIL["tom"], password)
     heidi = sign_in(args.base, "hruby@ybi.org", password)
     auditor = sign_in(args.base, "auditor@ybi.org", password)
 

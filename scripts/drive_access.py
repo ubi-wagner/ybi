@@ -19,6 +19,8 @@ import sys
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 PASS, FAIL = [], []
 
 
@@ -61,7 +63,7 @@ def main() -> int:
     print("\nRank — who may create an account")
     eric = sign_in(args.base, "eric.c.wagner@gmail.com", pw)
     barb = sign_in(args.base, "bewing@ybi.org", pw)
-    tom = sign_in(args.base, "tom@ybi.org", pw)
+    tom = sign_in(args.base, EMAIL["tom"], pw)
     heidi = sign_in(args.base, "hruby@ybi.org", pw)
     auditor = sign_in(args.base, "auditor@ybi.org", pw)
     try:
@@ -339,7 +341,7 @@ def main() -> int:
               "nobody lets themselves into the books",
               json={"granted": True,
                     "reason": "Access drive: this must be refused."})
-        tom_id = roster["tom@ybi.org"]["actor_id"]
+        tom_id = roster[EMAIL["tom"]]["actor_id"]
         check(barb, "POST", f"/api/auth/actors/{tom_id}/record-access", 422,
               "and there is nothing to grant somebody who reads by rank",
               json={"granted": True,
@@ -363,7 +365,7 @@ def main() -> int:
                 "and correcting it is what marks it checked")
             check(barb, "PATCH", f"/api/auth/actors/{who['actor_id']}", 409,
                   "an address already in use is refused",
-                  json={"email": "tom@ybi.org",
+                  json={"email": EMAIL["tom"],
                         "reason": "Access drive: must be refused."})
         else:
             ok("no derived addresses outstanding")

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Drawer, Empty, Field, PageHead, Pill, Table, Tick, useToast } from "../components/ui.jsx";
 import { POOLS, PoolChip } from "../components/pool.jsx";
 
@@ -25,7 +25,7 @@ export default function Lanes() {
   const compare = async () => {
     try {
       setComparison(await api.compareLanes(order(picked)));
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   const toggle = (id) =>
@@ -47,7 +47,7 @@ export default function Lanes() {
       toast(`Lane "${creating.name}" created as a sandbox`);
       setCreating(null);
       load();
-    } catch (e) { toast(String(e.message || e), { tone: "bad" }); }
+    } catch (e) { toast(explain(e), { tone: "bad" }); }
   };
 
   return (
@@ -309,7 +309,7 @@ function Overrides({ lane, rows, onChange, toast }) {
       setAdding(false); setChosen(null); setQ(""); setGroups([]);
       setF({ pool: "G&A", grade: "TEST_ASSUMPTION", reason: "" });
       onChange();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   const drop = async (id) => {
@@ -317,7 +317,7 @@ function Overrides({ lane, rows, onChange, toast }) {
       await api.removeLaneOverride(lane.lane_id, id);
       toast.ok("Withdrawn");
       onChange();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   return (
@@ -436,7 +436,7 @@ function Assumptions({ lane, rows, onChange, toast }) {
       toast.ok(`${f.key} set`);
       setF({ key: "", value: "", basis: "", grade: "TEST_ASSUMPTION" });
       onChange();
-    } catch (e) { toast.fail(String(e.message || e)); }
+    } catch (e) { toast.fail(explain(e)); }
   };
 
   return (

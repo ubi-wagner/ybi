@@ -15,11 +15,15 @@ grant income, and the billed categories meet the cost classified underneath.
 **Backward** is the same chain from the other end: a classified ledger line
 reaches its objective, its award, and the invoices issued against it.
 
-**Period discipline.** Three invoices carry `period = '2025'` and an invoice
-date in **April 2026** — `load_invoices.py` wrote the period as a constant.
-Any 2025 tie that includes them is comparing thirteen months to twelve, so
-every comparison below filters on the invoice *date*, not the period column.
-It is worth 19,145.79 of Drive AM ODCs on its own.
+**Period discipline, and it is kept even though the instance is gone.**
+Three invoices carried `period = '2025'` and an invoice date in **April
+2026** — `load_invoices.py` wrote the period as a constant, and any 2025 tie
+that included them compared thirteen months to twelve, worth 19,145.79 of
+Drive AM ODCs on its own. Migration `089` removed them: they were a sample of
+the invoice format and not YBI's billing, and the record is 2025. Every
+comparison below still filters on the invoice *date* rather than the period
+column, because the discipline is what stops the next loader that writes a
+constant, and `tests/test_the_record_is_one_year.py` now fails one.
 
 It writes nothing.
 """

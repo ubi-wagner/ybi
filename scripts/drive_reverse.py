@@ -164,7 +164,7 @@ def main() -> int:
                     "cannot get past the invoice whichever one it picks")
         if not inv:
             print("\nCOULD NOT RUN — no invoice on file either; "
-                  "run scripts/load_invoices.py.", file=sys.stderr)
+                  "run scripts/load_invoices_2025.py --apply.", file=sys.stderr)
             return 2
     claimed = (Decimal(str(inv["direct_claimed"]))
                + Decimal(str(inv["indirect_claimed"]))

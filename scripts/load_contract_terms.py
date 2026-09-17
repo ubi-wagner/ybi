@@ -33,6 +33,8 @@ import sys
 
 import httpx
 
+from app.foundation import EMAIL  # noqa: E402
+
 #: (award, key, value, citation, note)
 TERMS = [
     # ── AM-DRIVE-AM ───────────────────────────────────────────
@@ -188,7 +190,7 @@ TERMS = [
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8000")
-    ap.add_argument("--who", default="tom@ybi.org")
+    ap.add_argument("--who", default=EMAIL["tom"])
     ap.add_argument("--password", default="")
     args = ap.parse_args()
 

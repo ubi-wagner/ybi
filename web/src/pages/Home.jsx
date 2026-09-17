@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, money, count } from "../api.js";
 import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import Walk from "../components/Walk.jsx";
 import Manual from "../components/Manual.jsx";
 import { forKind } from "../worklistKinds.js";
 
@@ -45,7 +46,7 @@ const PORTFOLIO_WORK = {
   },
 };
 
-export default function Home({ actor }) {
+export default function Home({ actor, product }) {
   const [docs, setDocs] = useState(null);
   const [dash, setDash] = useState(null);
   const [lib, setLib] = useState(null);
@@ -57,7 +58,7 @@ export default function Home({ actor }) {
     api.myDocuments().then(setDocs).catch(() => {});
     api.guides().then(setGuides).catch(() => {});
     if (actor.can_read) {
-      api.dashboard().then(setDash).catch(() => {});
+      api.dashboard("2025", product).then(setDash).catch(() => {});
       // Only the counts are wanted here; the rows stay on the library
       // screen, where there is room to read them.
       api.documentLibrary({ limit: 1 }).then(setLib).catch(() => {});
@@ -65,7 +66,7 @@ export default function Home({ actor }) {
     if ((actor.portfolios || []).includes("OFFICE"))
       api.documentInbox().then(setInbox).catch(() => {});
     if (actor.is_admin) api.rosterGaps().then(setGaps).catch(() => {});
-  }, [actor]);
+  }, [actor, product]);
 
   const held = actor.portfolios || [];
   const open = dash?.controls?.filter((c) => !c.ties) || [];
@@ -76,7 +77,16 @@ export default function Home({ actor }) {
         {describe(actor)}
       </PageHead>
 
-      <MyWork actor={actor} />
+      {/* Behind the 2025 door the landing page *is* the walk. The generic
+          dashboard answers "what is outstanding" and never "where am I in
+          this", and the second is the question a controller closing a year
+          holds — the file is closed in an order and the order is the whole
+          guarantee. The worklist stays underneath it, because what is
+          outstanding is still worth knowing; it is no longer the first
+          thing on the page. */}
+      {product === "audit" && actor.can_read && <Walk period="2025" />}
+
+      <MyWork actor={actor} product={product} />
 
       {/* ── Mine ─────────────────────────────────────────────── */}
       {actor.employee_key && (
@@ -265,7 +275,7 @@ export default function Home({ actor }) {
         <Card title="Where the engagement stands"
               aside={open.length ? `${open.length} control open` : "every control ties"}>
           <div className="grid three">
-            <Stat label="Ledger lines" value={dash.rollup?.ledger_lines ?? "—"} />
+            <Stat label="Ledger lines" value={count(dash.rollup?.ledger_lines)} />
             <Stat label="Classified"
                   value={dash.coverage ? `${dash.coverage.pct_dollars ?? 0}%` : "—"}
                   note="of dollars" />
@@ -286,7 +296,13 @@ export default function Home({ actor }) {
                   <td className="l">
                     <Tick state={w.severity === "BLOCKING" ? "flagged" : "open"} />
                   </td>
-                  <td className="l">{w.kind.replaceAll("_", " ").toLowerCase()}</td>
+                  {/* `forKind` is the one place a kind's meaning is written
+                      down, and it was imported at the top of this file and
+                      used by the list below while this one lowercased the
+                      raw database name. A fourth copy of the defect
+                      worklistKinds.js exists to end: a screen that starts
+                      speaking SQL. */}
+                  <td className="l">{forKind(w.kind).plural}</td>
                   <td className="amt">{w.items}</td>
                   <td className="amt">{money(w.amount)}</td>
                 </tr>
@@ -336,7 +352,7 @@ function describe(actor) {
 
 const SEV = { BLOCKING: "fail", HIGH: "warn", MEDIUM: "" };
 
-function MyWork({ actor }) {
+function MyWork({ actor, product }) {
   const [d, setD] = useState(null);
   /* `require_own_work` admits somebody who holds a portfolio *or* reads the
      record, and nobody else — so for an employee with a timesheet and
@@ -349,10 +365,17 @@ function MyWork({ actor }) {
      matters. Never offer something that will answer 403. */
   const mine = Boolean((actor.portfolios || []).length) || actor.can_read;
   useEffect(() => {
-    if (mine) api.myWorklist().then(setD).catch(() => {});
-  }, [mine]);
+    if (mine) api.myWorklist("2025", product).then(setD).catch(() => {});
+  }, [mine, product]);
   if (!mine) return null;
-  if (!d || (!d.groups.length && !d.certification_chase.length)) return null;
+  /* The chase list is the certification question in another shape — who has
+     not signed, on whose work — and a controller cannot sign any of it.
+     It moved behind the ongoing-system door with NEEDS_CERTIFICATION and
+     EMPLOYMENT_UNKNOWN; leaving it on the audit home would have been the
+     same defect one component further down. */
+  const chase = product === "audit" ? [] : (d?.certification_chase || []);
+
+  if (!d || (!d.groups.length && !chase.length)) return null;
 
   const everything = (actor.portfolios || []).includes("CONTROLLER");
 
@@ -381,10 +404,13 @@ function MyWork({ actor }) {
                 <div className="rowsub">{note}</div>
               </td>
               <td className="amt">{g.items}</td>
-              <td className="amt">
-                {Number(g.amount || 0) ? money(g.amount)
-                                       : <span className="rowsub">—</span>}
-              </td>
+              {/* The guard that used to live here printed a blank for a
+                  *genuine* zero as well as for a kind that carries no
+                  amount, and the rollup below printed 0.00 for both — so
+                  one row read "—" here and "0.00" there at the same
+                  moment. The handler keeps a missing amount missing now,
+                  and money() prints the two apart. */}
+              <td className="amt">{money(g.amount)}</td>
               <td className="l"><Pill>{g.owner_portfolio}</Pill></td>
               <td className="l">
                 <Link className="btn sm" to={g.goes_to}>Open</Link>
@@ -394,7 +420,7 @@ function MyWork({ actor }) {
         })}
       </Table>
 
-      {d.certification_chase.length > 0 && (
+      {chase.length > 0 && (
         <>
           <div className="card-title" style={{ margin: "18px 0 4px" }}>
             People to chase
@@ -408,7 +434,7 @@ function MyWork({ actor }) {
             { label: "Work", align: "left" }, { label: "Contract", align: "left" },
             { label: "People" }, { label: "Wages" }, { label: "Stale" },
           ]}>
-            {d.certification_chase.map((c) => (
+            {chase.map((c) => (
               <tr key={c.objective_id}>
                 <td className="l">
                   <strong>{c.objective_id}</strong>

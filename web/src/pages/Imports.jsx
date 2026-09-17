@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
 
 const REPORTS = [
@@ -28,7 +28,7 @@ export default function Imports() {
       setPreview({ ...p, batch_id: r.batch_id, name: file.name });
       load();
     } catch (e) {
-      toast(String(e.message || e), { tone: "bad", sticky: true });
+      toast(explain(e), { tone: "bad", sticky: true });
     } finally {
       setBusy("");
     }
@@ -60,7 +60,7 @@ export default function Imports() {
       setPreview(null);
       load();
     } catch (e) {
-      toast.fail(String(e.message || e));
+      toast.fail(explain(e));
     } finally {
       setBusy("");
     }

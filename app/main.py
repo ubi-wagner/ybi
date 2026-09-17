@@ -32,7 +32,7 @@ from app.refusals import RecordRefusals
 from app.routers import (auth, awards, certify, chart, classify, contracts,
                          dashboard,
                          documents, evidence, export, facilities, health,
-                         imports, lanes, rates, reconcile, restate, review,
+                         imports, lanes, positions, rates, reconcile, restate, review,
                          requests, timesheet, undo, reports, projects)
 from app.settings import settings
 
@@ -138,6 +138,7 @@ app.add_middleware(
 )
 
 for r in (health, auth, dashboard, imports, chart, classify, lanes,
+          positions,
           rates, evidence, documents, awards, facilities, certify,
           timesheet, undo, restate, review, contracts, reconcile,
           export, reports, requests, projects):

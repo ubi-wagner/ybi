@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, money } from "../api.js";
+import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import Certification from "../components/Certification.jsx";
 
 /* Schedule D — the indirect rate, built up rather than asserted.
  *
@@ -30,12 +31,12 @@ const KIND = {
   INDIRECT_COMBINED: ["Indirect, combined", "Overhead and G&A, one base"],
 };
 
-export default function RateReview({ embedded = false }) {
+export default function RateReview({ embedded = false, actor }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    api.reviewRate().then(setD).catch((e) => setErr(String(e.message || e)));
+    api.reviewRate().then(setD).catch((e) => setErr(explain(e)));
   }, []);
 
   if (err) return <div className="page"><Card><Empty mark="!" title="Could not read the rate">{err}</Empty></Card></div>;
@@ -60,6 +61,11 @@ export default function RateReview({ embedded = false }) {
         on file, read back.
       </PageHead>
       )}
+
+      {/* The signature, and the only door to putting one there. Above the
+          figures, because whether the rate is certified is the first thing a
+          reader needs and the last thing they should have to scroll for. */}
+      <Certification actor={actor} />
 
       {!final && (
         <div className="gate bad" style={{ marginBottom: 16 }}>

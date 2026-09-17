@@ -287,3 +287,49 @@ def test_the_manual_counts_the_controls_the_schema_defines():
     assert "PAYROLL_REGISTER" in controls, (
         "the payroll register is no longer one of the controls; the manual "
         "chapter describing it needs to change with it")
+
+
+def test_no_two_screens_are_the_same_picture():
+    """The walk photographed the product chooser thirty-five times.
+
+    `App.jsx` renders the two-door landing in place of every screen until one
+    is picked, so a walk that signs in and navigates straight to `/classify`
+    photographs the chooser — and then does it again for every other path.
+    Sixteen files came out at exactly 93,358 bytes and ten more at 92,153,
+    because they were the same picture; the manual's most important chapter
+    showed a card headed *Pick the one you are doing*.
+
+    **Every test here passed on that**, this file included: a photograph of
+    the wrong screen is still a photograph, it exists, it is in the manifest,
+    and nothing compared one to another. `sweep_screens.py` was fixed for
+    this exact defect and says so in a comment; `walk_manuals.py` had it
+    still.
+
+    Two *different* screens are never byte-identical — different content,
+    and the masthead carries the reader's own name. Two shots of the **same
+    path as the same person** legitimately are: six chapters and their menu
+    thumbnails are one screen filed twice, and a first draft of this test
+    reported all six as defects, which is a test arguing against correct
+    code. So the pair is read out of the manifest rather than allowlisted by
+    name, and there is no list here to fall out of date.
+    """
+    import hashlib
+    from collections import defaultdict
+
+    taken = json.loads(MANIFEST.read_text())
+    seen: dict[str, list[str]] = defaultdict(list)
+    for png in sorted(SHOTS.glob("*.png")):
+        seen[hashlib.sha256(png.read_bytes()).hexdigest()].append(png.stem)
+
+    same = []
+    for names in seen.values():
+        if len(names) < 2:
+            continue
+        where = {(taken.get(n, {}).get("path"), taken.get(n, {}).get("as"))
+                 for n in names}
+        if len(where) > 1:
+            same.append(", ".join(sorted(names)))
+    assert not same, (
+        "these are one picture filed under names that claim different "
+        "screens, which is what a walk produces when it never gets past the "
+        "product chooser:\n  " + "\n  ".join(sorted(same)))

@@ -87,8 +87,7 @@ def identity_line(form: Form, period: str) -> str:
     return f"YBI · {form.name} v{form.version} · {period} · {form.title}"
 
 
-def _write_start_here(wb: Workbook, form: Form, period: str,
-                      controls: dict[str, Decimal] | None = None) -> None:
+def _write_start_here(wb, form: Form, period: str, controls, notes=()) -> None:
     ws = wb.create_sheet(IDENTITY_SHEET, 0)
     ws.sheet_view.showGridLines = False
     ws.column_dimensions["A"].width = 104
@@ -115,7 +114,7 @@ def _write_start_here(wb: Workbook, form: Form, period: str,
     if form.instructions:
         ws.cell(row=row, column=1, value="How to fill it in").font = BOLD
         row += 1
-        for line in form.instructions:
+        for line in tuple(form.instructions) + tuple(notes):
             cell = ws.cell(row=row, column=1, value=f"·  {line}")
             cell.font = INK
             cell.alignment = Alignment(wrap_text=True, vertical="top")
@@ -264,17 +263,25 @@ def _write_grid(wb: Workbook, form: Form, period: str,
 def build_request_workbook(form: Form, period: str, *,
                            known_rows: list[dict] | None = None,
                            blank_rows: int = 40,
-                           controls: dict[str, Decimal] | None = None) -> bytes:
+                           controls: dict[str, Decimal] | None = None,
+                           notes: tuple[str, ...] = ()) -> bytes:
     """The workbook to send out, as bytes.
 
     `known_rows` are what we already hold, keyed by column key — they are
     written into the grid and, where the column is marked `known`, locked.
     `blank_rows` are the empty rows after them; the sheet is not the limit,
     a person may add more and the parser reads to the end.
+
+    `notes` are instructions the **record** supplies rather than the form: the
+    names the register already holds for the things being asked about. They
+    cannot live on the `Form`, because a form is a definition and this is a
+    reading of the database at the moment the workbook is made. Filing a row
+    against a name the record does not hold creates a second thing beside the
+    first, and on the space book that turned five buildings into nine.
     """
     wb = Workbook()
     wb.remove(wb.active)
-    _write_start_here(wb, form, period, controls)
+    _write_start_here(wb, form, period, controls, notes)
     ranges = _write_choices(wb, form)
     _write_grid(wb, form, period, known_rows or [], blank_rows, ranges)
     wb.properties.title = identity_line(form, period)
