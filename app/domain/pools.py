@@ -22,6 +22,12 @@ from .core import (AllocationBase, Decision, DecisionSet, EvidenceGrade,
                    FederalTreatment, PoolType, money)
 from .ingest import Ledger
 
+#: 2 CFR 200.1. MTDC takes the first $25,000 of each **subaward** and no more;
+#: a contract for services goes in whole. Defined here, where `mtdc` is, so the
+#: handler that records a 200.331 determination and the engine that applies it
+#: cannot hold two opinions about where the line is.
+SUBAWARD_CAP = Decimal("25000")
+
 
 @dataclass
 class CarveOut:

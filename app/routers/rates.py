@@ -221,7 +221,8 @@ def _build_model(period: str,
                                  FederalTreatment, Function990, PoolType)
     from app.domain.core import AllocationBase
     from app.domain.ingest import Ledger, LedgerLine
-    from app.domain.pools import CarveOut, PoolModel
+    from app.domain.core import money
+    from app.domain.pools import CarveOut, PoolModel, SUBAWARD_CAP
 
     fringe_base = fringe_base or AllocationBase.SALARIES_WAGES
 
@@ -391,6 +392,35 @@ def _build_model(period: str,
                     f"{federally_funded:,.2f}, against {ceiling:,.2f} of "
                     f"depreciation classified to this pool"),
             evidence=EvidenceGrade.CORROBORATED))
+
+    # And the third adjustment to the base, which is not a carve-out at all:
+    # 2 CFR 200.1 takes the first $25,000 of each **subaward** into MTDC and a
+    # contract for services whole. That sits on the objective rather than on a
+    # pool — it changes the denominator a rate is allocated over, not the
+    # numerator — which is why `ObjectiveCost.subaward_excess` has been on the
+    # domain model since it was written.
+    #
+    # **And nothing had ever written it.** `115` opened the register, priced
+    # the exposure at $313,605.35 of MTDC across six parties, and the engine
+    # went on reading a field that was zero for everybody. The fourteenth
+    # instance of the dead-register shape and the softest: the table has a
+    # writer, and its *answer* reached no figure.
+    #
+    # **Nothing changes by default, and that is the property to keep.**
+    # UNDETERMINED contributes nothing, because it is not a number — it is
+    # `NO DATA`, and defaulting it either way would decide a 200.331 question
+    # by omission. So a record where nobody has determined anything computes
+    # exactly the rate it computed before this existed, and only a
+    # determination somebody signed their name to moves the base.
+    for party in query("""SELECT objective_id, payee, amount
+                            FROM party_determination
+                           WHERE period = %s AND determination = 'SUBRECIPIENT'""",
+                       (period,)):
+        obj = model.objectives.get(party["objective_id"])
+        if obj is None:
+            continue
+        excess = max(Decimal(str(party["amount"])) - SUBAWARD_CAP, Decimal(0))
+        obj.subaward_excess = money(obj.subaward_excess + excess)
     return model
 
 

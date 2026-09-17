@@ -91,6 +91,18 @@ def main() -> int:
     ap.add_argument("--base", default="http://127.0.0.1:8141")
     ap.add_argument("--shots", action="store_true",
                     help="photograph every screen, not only the faulted ones")
+    #: Which door. `App.jsx` renders the two-product chooser **in place of
+    #: every screen** until one is picked, so a sweep that does not pick one
+    #: walks every path and photographs the same card. `sweep_screens.py` was
+    #: fixed for exactly this and says so in a comment — *"it walked 23 paths,
+    #: photographed the chooser 23 times, and reported 46 figures, 100%
+    #: clickable — a green that describes nothing"* — and `walk_manuals.py`
+    #: was fixed after it. This is the third instrument with the same defect,
+    #: which is *fixing one instance is not fixing the rule* in as many words:
+    #: it reported **203 screen-visits, 0 faults** over 203 pictures of the
+    #: chooser, because a card that makes no request cannot make a bad one.
+    ap.add_argument("--product", default="audit", choices=["audit", "fcs"],
+                    help="which door to open before walking (default: audit)")
     args = ap.parse_args()
     password = os.environ.get("YBI_SEED_PASSWORD", "")
     if not password:
@@ -117,12 +129,31 @@ def main() -> int:
                     if m.type == "error" else None)
             page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
 
+            # The door, before anything. `App.jsx` remembers it per browser
+            # in localStorage, which is a fresh context per actor here — so
+            # every walk starts on the chooser unless it is set.
+            page.goto(args.base + "/", wait_until="domcontentloaded")
+            page.evaluate("(p) => { try { localStorage.setItem('ybi.product', p); }"
+                          " catch (e) { /* private window */ } }", args.product)
             page.goto(args.base + "/", wait_until="networkidle")
             if email:
                 page.fill("input[type=email]", email)
                 page.fill("input[type=password]", password)
                 page.click("button[type=submit]")
                 page.wait_for_timeout(1800)
+                page.evaluate("(p) => { try { localStorage.setItem('ybi.product', p); }"
+                              " catch (e) { /* private window */ } }", args.product)
+                page.goto(args.base + "/", wait_until="networkidle")
+                # A sweep still on the chooser measures the chooser. Exit
+                # rather than report, which is what `sweep_screens.py` does:
+                # a green that describes nothing is worse than a red, because
+                # somebody acts on it.
+                if "Pick the one you are doing" in page.evaluate(
+                        "document.body.innerText"):
+                    print(f"  still on the chooser as {who} — nothing below "
+                          f"this line would describe a screen.")
+                    browser.close()
+                    return 2
 
             # What the nav offers this person — the screens that are *theirs*.
             offered = set(page.eval_on_selector_all(

@@ -981,3 +981,206 @@ def list_segments(period: str = "2025") -> list[dict]:
                      WHERE s.period = %s
                      GROUP BY s.batch_key, s.label, s.created_by
                      ORDER BY min(s.created_at) DESC, s.label""", (period,))
+
+
+# ---------------------------------------------------------------- 200.331 ---
+#
+# Contractor or subrecipient, per party, per objective.
+#
+# The door `115` said it stood in for and did not build. Until this existed
+# the six determinations on the live record — $313,605.35 of MTDC — could be
+# answered only by writing SQL against `party_determination`, which is the
+# capability-with-no-door shape in the one register whose answer changes the
+# base every indirect rate is taken over.
+#
+# It lives here rather than in `awards.py` on purpose. 200.331 decides what
+# MTDC takes, which is the same question the queue asks of every other dollar
+# — *what kind of cost is this* — asked of a payment already judged DIRECT.
+# Space and assets fold in under `/classify` for exactly that reason, and a
+# fourth register of judgments about the base under a different tab would be
+# the fold undone one screen at a time.
+
+class DeterminationIn(BaseModel):
+    objective_id: str
+    payee: str = ""
+    determination: str
+    basis: str = ""
+    agreement_ref: str = ""
+
+
+#: The three values `party_determination` accepts, read from the enum-shaped
+#: CHECK rather than kept here by hand would be better still — but the column
+#: is `text` with a CHECK, not an enum, so `pg_enum` has nothing to offer and
+#: a literal list is what the constraint itself is. It is validated against
+#: the database on every write regardless: a value the CHECK refuses is a 422
+#: from the handler and a refusal from the schema behind it.
+DETERMINATIONS = ("CONTRACTOR", "SUBRECIPIENT", "UNDETERMINED")
+
+#: 200.331's own two tests, as the regulation words them. Offered to the screen
+#: so the person making the judgment is looking at the rule, not recalling it.
+DETERMINATION_TESTS = {
+    "SUBRECIPIENT": [
+        "determines who is eligible to receive the federal assistance",
+        "has its performance measured against whether the objectives of the "
+        "federal programme were met",
+        "has responsibility for programmatic decision making",
+        "is responsible for adherence to applicable federal programme "
+        "requirements specified in the federal award",
+        "in accordance with its agreement, uses the federal funds to carry "
+        "out a programme for a public purpose specified in authorizing "
+        "statute, as opposed to providing goods or services for the benefit "
+        "of the pass-through entity",
+    ],
+    "CONTRACTOR": [
+        "provides the goods and services within normal business operations",
+        "provides similar goods or services to many different purchasers",
+        "normally operates in a competitive environment",
+        "provides goods or services that are ancillary to the operation of "
+        "the federal programme",
+        "is not subject to compliance requirements of the federal programme "
+        "as a result of the agreement",
+    ],
+}
+
+#: 2 CFR 200.1's cap, from the engine that applies it. Below it a
+#: determination cannot change what MTDC takes, so a party under it is not on
+#: the register at all.
+from app.domain.pools import SUBAWARD_CAP  # noqa: E402
+
+
+@router.get("/parties")
+def parties(period: str = "2025") -> dict:
+    """Every party a 200.331 determination is open on, and what it is worth.
+
+    Ordered by what is **unanswered first** and then by what turns on it,
+    which is the asset register's ordering for the same reason: the register
+    is mostly open and the whole question is which rows nobody has been
+    through.
+
+    `at_stake` and not the payment. The first $25,000 of any subaward is in
+    MTDC under either answer, so it is not in question — a screen printing the
+    gross would say $463,605.35 was open where $313,605.35 is.
+    """
+    rows = query("""SELECT x.objective_id, x.payee, x.amount, x.determination,
+                           x.basis, x.decided_by, x.in_mtdc, x.at_stake,
+                           x.state, x.needs,
+                           p.agreement_ref, p.decided_at,
+                           o.label AS objective_label, o.is_federal
+                      FROM v_subaward_exposure x
+                      JOIN party_determination p
+                        ON p.period = x.period
+                       AND p.objective_id = x.objective_id
+                       AND p.payee = x.payee
+                      LEFT JOIN cost_objective o
+                        ON o.objective_id = x.objective_id
+                     WHERE x.period = %s
+                     ORDER BY x.determination = 'UNDETERMINED' DESC,
+                              x.at_stake DESC""", (period,))
+    totals = one("""SELECT count(*) AS parties,
+                           count(*) FILTER (WHERE determination = 'UNDETERMINED')
+                             AS undetermined,
+                           COALESCE(sum(amount), 0) AS paid,
+                           COALESCE(sum(at_stake) FILTER (
+                               WHERE determination = 'UNDETERMINED'), 0)
+                             AS at_stake
+                      FROM v_subaward_exposure WHERE period = %s""", (period,))
+    return {"period": period, "parties": rows, "totals": totals,
+            "cap": str(SUBAWARD_CAP),
+            "determinations": list(DETERMINATIONS),
+            "tests": DETERMINATION_TESTS}
+
+
+@router.put("/parties")
+def put_determination(body: DeterminationIn, period: str = "2025",
+                      actor: Actor = Depends(require_controller)) -> dict:
+    """Record a 200.331 determination, or withdraw one.
+
+    **CONTROLLER and nothing narrower.** Every other gate in this system is
+    `require_portfolio(X, Portfolio.CONTROLLER)` so a narrow portfolio reaches
+    its own area; there is no portfolio whose own area this is. A
+    determination moves MTDC, which is the base every indirect rate is taken
+    over, and moving that is the act `seal`, `compute` and `restate` already
+    reserve to the controller.
+
+    The refusals are answered here and the schema still stands behind them.
+    `a_determination_says_who_and_why` is a CHECK, and a person meeting it raw
+    reads *"The database refused this write:
+    a_determination_says_who_and_why"* — which is the shape
+    `acceptance_names_its_modification` was answered for in `061`, in the
+    place most likely to become a finding.
+
+    Withdrawing is `UNDETERMINED`, and it clears the basis and the name with
+    it: a determination that has been withdrawn and still carries who made it
+    is half a determination, which is the shape that reads as an answer and
+    is not one.
+    """
+    value = (body.determination or "").strip().upper()
+    if value not in DETERMINATIONS:
+        raise HTTPException(
+            422, f"A determination is one of {', '.join(DETERMINATIONS)}. "
+                 f"200.331 turns on the substance of the relationship, so "
+                 f"there is no fourth answer and no partial one.")
+
+    row = one("""SELECT objective_id, payee, amount, determination, basis,
+                        decided_by
+                   FROM party_determination
+                  WHERE period = %s AND objective_id = %s AND payee = %s""",
+              (period, body.objective_id, body.payee))
+    if not row:
+        raise HTTPException(
+            404, f"No party {body.payee or '(no payee)'} on "
+                 f"{body.objective_id} in {period}. A determination is opened "
+                 f"by the sweep over cost already judged DIRECT on a federal "
+                 f"objective, because a party under the 200.1 cap has nothing "
+                 f"turning on the answer.")
+
+    basis = (body.basis or "").strip()
+    if value == "UNDETERMINED":
+        basis, decided_by, decided_at = "", "", None
+    else:
+        # 40 characters is the schema's own floor and the reason for it is the
+        # one this repository keeps re-learning: "cannot be classified" on its
+        # own is a dead end, and a determination with no reasoning is the next
+        # person's puzzle. The handler says so in words; the CHECK is what
+        # holds when a handler is wrong.
+        if len(basis) < 40:
+            raise HTTPException(
+                422, "Say why, in at least forty characters. 200.331 decides "
+                     "this on the substance of the relationship — which of "
+                     "the five tests carried it is the reason a reviewer will "
+                     "ask for, and neither the invoice category nor the "
+                     "account name settles it.")
+        decided_by, decided_at = (actor.display_name or actor.email), "now()"
+
+    with turn(period) as cur:
+        cur.execute(f"""UPDATE party_determination
+                           SET determination = %s, basis = %s,
+                               agreement_ref = %s, decided_by = %s,
+                               decided_at = {decided_at or 'NULL'}
+                         WHERE period = %s AND objective_id = %s AND payee = %s
+                     RETURNING determination""",
+                    (value, basis, (body.agreement_ref or "").strip(),
+                     decided_by, period, body.objective_id, body.payee))
+        if not cur.fetchone():
+            raise HTTPException(409, "That party moved while you were "
+                                     "deciding. Reload and look again.")
+        record(actor, "PARTY_DETERMINATION", "party_determination",
+               f"{body.objective_id}|{body.payee}",
+               before={"determination": row["determination"],
+                       "basis": row["basis"], "decided_by": row["decided_by"]},
+               after={"determination": value, "basis": basis,
+                      "agreement_ref": (body.agreement_ref or "").strip()},
+               reason=basis or "determination withdrawn", cursor=cur)
+
+    after = one("""SELECT objective_id, payee, amount, determination, in_mtdc,
+                          at_stake, state, needs
+                     FROM v_subaward_exposure
+                    WHERE period = %s AND objective_id = %s AND payee = %s""",
+                (period, body.objective_id, body.payee))
+    return {"period": period, "party": after,
+            "moves_mtdc": value == "SUBRECIPIENT",
+            "note": ("The next computation takes only the first 25,000.00 of "
+                     "this payment into MTDC." if value == "SUBRECIPIENT" else
+                     "MTDC takes this payment whole." if value == "CONTRACTOR"
+                     else "Withdrawn. UNDETERMINED is NO DATA and never a "
+                          "pass, so this is open again.")}

@@ -36,6 +36,14 @@ export const KINDS = {
     where: "Adopted in Classify \u203a Review.",
     to: "/classify/review",
   },
+  PARTY_UNDETERMINED: {
+    title: "Party with no 200.331 determination",
+    plural: "Parties with no 200.331 determination",
+    short: "Contractor or subrecipient is unanswered",
+    why: "2 CFR 200.1 takes the first $25,000 of a subaward into MTDC and a contract for services whole, so the part of this payment above the cap is in the base or out of it depending on a 200.331 determination nobody has made. The substance of the relationship governs and not the form \u2014 every one of these is booked as CONSULTANT, which settles nothing. UNDETERMINED is NO DATA and never a pass: while it stands the payment sits in MTDC whole, which is the contractor answer applied by omission.",
+    where: "Answered in Classify \u203a Parties.",
+    to: "/classify/parties",
+  },
   RECOMMENDATION_OPEN: {
     title: "Recommendation to answer",
     plural: "Recommendations to answer",
