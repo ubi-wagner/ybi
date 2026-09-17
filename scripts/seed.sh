@@ -78,7 +78,6 @@ else
 fi
 
 step "The books"
-run "ledger, P&L, sheet" $PY scripts/load_2025.py --base "$BASE"
 # Everything that is a transcription of a document already in the image: the
 # effort distribution, the working calendar and the hours log, the 263-asset
 # register, the four awards and their budget schedules, the text of the
@@ -92,7 +91,6 @@ run "ledger, P&L, sheet" $PY scripts/load_2025.py --base "$BASE"
 # name, so the second pass costs nothing and picks up exactly those two.
 run "the transcriptions" $PY scripts/load_registers.py
 
-step "The awards, and what they say"
 # The register is the year, and only the year. This was
 # `load_invoices.py` — *"Load the three America Makes invoices"* — which
 # loaded exactly that: three, dated 1 May 2026, a sample of the invoice
@@ -104,9 +102,6 @@ step "The awards, and what they say"
 # the six PDFs of invoices as issued. Migration `089` removed the three
 # examples and `load_awards.py` no longer files them; 2026 billing is entered
 # when 2026 is worked.
-run "the 2025 invoice register" $PY scripts/load_invoices_2025.py --apply
-run "contract provisions" $PY scripts/load_contract_terms.py \
-    --base "$BASE" --password "$PASSWORD"
 
 step "The documents"
 run "foundational documents" $PY scripts/seed_documents.py \

@@ -920,6 +920,77 @@ Two things worth not repeating, both mine, both already in this file:
   `management`. A comparison whose two halves are both empty compares
   nothing, which is `029` in an experiment rather than in a control.
 
+### A boot has nobody to be, and that was never true of the books
+
+`scripts/load_books.py`, migration `124`, `REGISTERS` at eleven.
+**A deployment came up with the paper on the shelf and no books behind it,
+and the only fix was a person at a console.** The boot files
+`2025_General-Ledger_QuickBooks.xlsx` into the library and read no row out of
+it, and four of `seed.sh`'s steps were left to a person because they write
+through the API — so a controller opening `/classify/parties` on a rebuilt
+service saw *No party clears the cap* over 15,500 ledger lines that were not
+there.
+
+The reason recorded for that was *`refuse_issued_password` refuses every
+write from an account still on the organisation's password, so a boot has
+nobody to be*. **That is true about accounts and it was never a reason to
+leave the books out**, because the boot is not signing in. It is calling the
+same function the screen calls. What actually kept the ledger out was that
+the function was the *inside of an HTTP handler*, with an `Actor` in its
+signature.
+
+So the work came out of the handler. `stage_file`, `parse_batch` and
+`promote_batch` are plain functions now and the route is three lines around
+them — **one implementation, two callers**, the same parsers and the same
+trigger refusing a promote while any printed subtotal is off by more than
+half a cent. `record_term` is the same move for the twenty-six provisions.
+
+**The identity is a provenance label and not a user**, which is the whole of
+why this is safe. `audit.note()` writes a row that names the mechanism and
+carries no `actor_id` and no `session_id` — migration `087`'s shape, and
+exactly what this module already does for the eighteen documents. There is no
+account, no token, and nothing that can sign in. A first draft built a
+`bootstrap_actor()` holding CONTROLLER and all five portfolios; that is a
+fabricated user and it was wrong. Eric's two words were *no actor*.
+
+From an empty database, with no console and nobody:
+
+    healthcheck green in 29s          of the 300 railway.json now allows
+    ledger 15,500 · P&L 127 · balance sheet 97
+    invoices 61 · provisions 36, all 36 citing a document
+    assets 263 · labour 97 · documents 18 · accounts 6
+    decisions 0
+
+**The last figure is the point.** Nothing judged, nothing sealed, no rate, no
+signature — and the two audit rows for the promote name `deployment
+bootstrap` and no person.
+
+Two things stayed with a person on purpose. **The reconciling items**: naming
+a difference is the controller's act and `/reconcile` has the Propose button,
+which offers a combination only when exactly one adds up. And **the
+classification**, which is the judgment the seal exists to be evidence of.
+
+Three defects out of it:
+
+- **The alias was in a script.** The ledger prints the accumulated surplus as
+  *Retained Earnings* and the balance sheet as *3000 Fund Balance*, and until
+  somebody says so the sheet cannot be proved off the ledger — 13,535,775.43
+  unaccounted. It was a hard-coded pair inside `reconcile.py --record`: the
+  right content in the wrong place, because it is not a judgment about cost,
+  it is what two documents call one thing. `124` makes it data. Found only by
+  running the suite against a **boot-loaded record**, which is a third shape
+  nobody had ever tested — empty and fully-closed were the only two.
+- **Two structural sweeps read the handler's source**, so moving the work out
+  of `accept` made `record(actor, …)` and `accepted_by = actor.display_name`
+  vanish from where they look and both went red. The behaviour was right and
+  the sweeps could not see it. The handler keeps both visibly now, and
+  `promote_batch` writes a trail only when nobody above will — because
+  writing it in both places would put two rows on one promote.
+- **A predicate that counted one of two tables.** `load_invoices_2025.py`
+  writes `invoice` and `invoice_line` and the count named only the first —
+  the same shape as `contractor_identity` and `award_term.evidence_id` before
+  it, caught by the sweep written for it rather than by a reader.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.
