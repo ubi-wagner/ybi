@@ -165,4 +165,17 @@ def test_no_control_can_change_without_the_census_noticing():
     assert not missing, (
         f"the propagation drive would not notice these controls changing: "
         f"{missing}")
+    # The derived half above is the content and it holds on any database:
+    # every anchor the register carries has to be in the census by name. This
+    # is the magnitude smoke test beside it — *did somebody gut the census* —
+    # and 250 is a figure only a loaded record produces, because most of what
+    # the census counts is one entry per pool, per objective and per line of
+    # the return. Asserting it over an empty ledger is asserting the size of
+    # a population that is not there, which is the literal-threshold shape
+    # this repository has been caught by before. So it states its premise.
+    if not query("SELECT 1 FROM ledger_line WHERE period = '2025' LIMIT 1"):
+        pytest.skip("no ledger on this database, so the census is the shape "
+                    "of an empty record rather than a shrunken one. The "
+                    "anchor-by-anchor assertion above ran; prove.sh covers "
+                    "the magnitude against a loaded record.")
     assert len(taken) > 250, "the census has shrunk to something unwatchful"

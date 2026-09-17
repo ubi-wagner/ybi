@@ -4423,6 +4423,82 @@ assume: **the de minimis floor went 10% to 15% for awards issued on or after
 Tactical Mile by nine days — so the subaward instrument's own date decides it,
 not the prime's period.
 
+## The cost partition fell off a record with no books
+
+Migration `119`, and CI is what found it — **red since 15 September**, three
+commits before anybody looked, which is the thing this file already says about
+a status light nobody checks. I reported *1,541 tests pass* as evidence a
+branch was ready to merge, having run the suite against a **loaded** database.
+CI runs against an **empty** one, on purpose, and that is the whole of the
+difference: `8 failed, 1497 passed, 36 skipped`. The rule was already written
+down here — *a test that reads whatever happens to be in the database passes
+for a developer and fails in CI* — and the way to have known was to run the CI
+shape, which takes one scratch database and three minutes.
+
+Reproduced exactly, and the eight split two ways.
+
+**Three were one real defect.** `v_partition_coverage` has three arms and the
+COST arm reads `FROM v_classification_coverage`, which returns **no row at
+all** for a period with no ledger. So on a record with no books the view
+answers with **two partitions where there are three**, and the missing one is
+the cost classification — the partition this file calls *the one that
+matters*.
+
+**An absent row is worse than `NO DATA`, not a milder version of it.** `NO
+DATA` says *nobody has measured this*, which is `029`'s whole point; a row
+that is simply not there reads as *this partition does not apply here*, and
+nothing distinguishes the two. `v_report_tie` passes the state straight
+through, so the tie register loses the anchor as well.
+
+SPACE was fixed for exactly this — it drives from `fiscal_period` and LEFT
+JOINs its totals — and `v_asset_control` is built per period and answers
+`evaluable = false` over an empty register. COST is the third arm and kept the
+defect, which is `086`'s own closing sentence about these same three
+partitions: **a rule fixed in one arm is one somebody gets wrong in the other
+two.** It is visible on the live record too rather than only on an empty one:
+2021–2024 and 2026 each print SPACE and ASSETS at `NO DATA` and no COST row.
+`needs` gained the guard `093` gave the others, because `0 >= 0` satisfies the
+`classified >= scope_dollars` branch and a partition that cannot be evaluated
+was falling through it to print nothing at all. **Nothing on 2025 moves** —
+the row already existed there and already read TIES, asserted by diffing the
+2025 output either side of the migration.
+
+**Five were a premise the environment cannot meet**, and four of those were
+the dangerous half. `test_the_settlement_states_the_record.py` compares
+`docs/SETTLEMENT_2025.md` against the record it was written from. Five said so
+by failing. The other four **iterate over what the record holds** — so over an
+empty record they iterate over nothing, find nothing missing and **report
+success**. That is `test_a_plug_is_refused` again in as many words: *the
+dangerous one is the test whose assertion is still satisfied by the empty
+case.*
+
+The premise is stated once and **by dependency rather than by a list**: the
+skip lives in the `cur` fixture, so a test that reads the record takes it and
+a test that only reads the paper does not. A hand-kept list of which nine of
+the ten need a database is the map this file has been wrong about four times
+in one run. `prove.sh` covers the other direction, and the guard was checked
+against a loaded record — ten run there, and breaking one figure in the
+memorandum still fails two of them, so the skip is not swallowing anything.
+
+**And one was a literal threshold.** `test_no_control_can_change_without_the
+_census_noticing` derives both halves correctly — every anchor of the tie
+register has to be in the drive's census *by name*, and that held on the empty
+record. Beside it sat `assert len(taken) > 250`, which is a figure only a
+loaded record produces, because most of what the census counts is one entry
+per pool, per objective and per line of the return. Asserting the size of a
+population that is not there is the same shape as a test pinned to a literal
+line rather than the rule it names. The derived half stays unconditional; the
+magnitude states its premise.
+
+Watched failing, both directions, because a fix nobody has seen fail is not
+verified: the COST arm was put back **on the live view** — editing the applied
+migration mutates nothing, which is recorded here twice already — and the two
+partition tests failed on cue.
+
+Both shapes green now: **1,496 passed and 45 skipped on an empty database,
+1,541 passed and nothing skipped on a loaded one**, the two adding to the same
+1,541.
+
 ## Net zero was the hope, and the rate is not the lever
 
 `scripts/settlement_at_rate.py`, `docs/SETTLEMENT_AT_RATE_2025.md`. The

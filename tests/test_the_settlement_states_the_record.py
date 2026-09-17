@@ -45,10 +45,33 @@ def _cur(con):
 
 @pytest.fixture()
 def cur():
+    """A cursor, and the premise every check that takes one depends on.
+
+    Each of these compares the memorandum against the record it was written
+    from, so a database with no rate on it gives them nothing to compare and
+    they stop meaning anything. Five said so by failing. The other four were
+    worse: they iterate over what the record holds, so over an empty record
+    they iterate over nothing, find nothing missing and **report success** —
+    *the dangerous one is the test whose assertion is still satisfied by the
+    empty case*, which this repository has recorded once already in
+    `test_a_plug_is_refused`.
+
+    So the premise is stated once, here, and it is stated by *dependency*
+    rather than by a list: a test that reads the record takes this fixture and
+    a test that only reads the paper does not. `prove.sh` covers the other
+    direction — it drives a loaded record, where every one of these runs.
+    """
     import psycopg
 
     with psycopg.connect(os.environ["DATABASE_URL"]) as con:
         with _cur(con) as c:
+            c.execute("SELECT 1 FROM rate WHERE period = %s "
+                      "  AND status <> 'SUPERSEDED' LIMIT 1", (PERIOD,))
+            if not c.fetchone():
+                pytest.skip(
+                    "no rate stands on this database, so there is nothing for "
+                    "the memorandum to be checked against. Covered by "
+                    "prove.sh against a loaded record.")
             yield c
         con.rollback()
 
