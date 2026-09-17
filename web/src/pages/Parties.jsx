@@ -75,14 +75,21 @@ export default function Parties({ actor }) {
 
   const t = data.totals || {};
   const openCount = Number(t.undetermined || 0);
+  // Three states, not two. `all determined` over a register nobody has
+  // opened is an empty set matching an empty set perfectly — `029`'s rule on
+  // a badge, and it read that way on a deployment whose sweep had never run.
+  // A register with no parties in it has not been answered; it has not been
+  // asked.
+  const everOpened = Number(t.parties || 0) > 0;
 
   return (
     <>
       <PageHead
         title="Contractor or subrecipient"
         schedule="B"
-        aside={<Pill tone={openCount ? "warn" : "solid"}>
-          {openCount ? `${count(openCount)} undetermined` : "all determined"}
+        aside={<Pill tone={openCount || !everOpened ? "warn" : "solid"}>
+          {openCount ? `${count(openCount)} undetermined`
+            : everOpened ? "all determined" : "never opened"}
         </Pill>}
       >
         2 CFR 200.1 takes the first {money(data.cap)} of each <b>subaward</b>
@@ -109,9 +116,16 @@ export default function Parties({ actor }) {
             aside={<span className="quiet">unanswered first, then by what
               turns on it</span>}>
         {!(data.parties || []).length ? (
-          <Empty title="No party clears the cap">
-            A determination below {money(data.cap)} cannot change what MTDC
-            takes, so nothing is opened for one.
+          <Empty title={everOpened ? "No party clears the cap"
+                                   : "Nobody has opened this register"}>
+            {everOpened
+              ? `A determination below ${money(data.cap)} cannot change what `
+                + "MTDC takes, so nothing is opened for one."
+              : "The sweep that opens a question per party has not been run "
+                + "on this record. It reads the ledger through the live "
+                + "DIRECT judgments on federal objectives, so it needs both "
+                + "— an empty register here means the books are not in yet, "
+                + "not that every party has been answered."}
           </Empty>
         ) : (
           <Table columns={["", "Payee", "Objective", "Paid", "In MTDC",
