@@ -93,6 +93,39 @@ def _known_rows(form: FormDef, period: str) -> list[dict]:
         # total. So the ask is not "build us a register" — an afternoon of
         # somebody's week that comes back in six — it is "here are your
         # assets; which of these did federal money pay for?"
+        # **The register first, and the schedule only where there is none.**
+        # `_asset_schedule` re-parses the source xls, so a workbook issued
+        # today describes the document rather than the record — and the two
+        # part company the moment anybody corrects an asset. *Read the
+        # record, never recall it*, applied to what a form asks about.
+        #
+        # It also happens to be the only version of this that is safe over
+        # time. The parser's key changed once: `085` made it
+        # `FA-<gl account>-<system>` because system number 165 is two assets
+        # in two accounts and keying on the system number alone had already
+        # lost one of them. A workbook issued before that carries `FA-162`
+        # against a register holding `FA-1501-162`, so **not one of its 262
+        # ids matches** — which is a real reply now on file, and `_asset_keys`
+        # is what reads it. Pre-filling from the register cannot drift from
+        # the register; pre-filling from a parser can, and did.
+        held = query("""SELECT asset_id, description, gl_account,
+                               in_service_on, gross_cost, book_cost,
+                               useful_life_years, accum_depr_close,
+                               depreciation
+                          FROM asset WHERE period = %s
+                         ORDER BY gl_account, asset_id""", (period,))
+        if held:
+            return [{"asset_id": a["asset_id"],
+                     "description": a["description"],
+                     "gl_account": a["gl_account"],
+                     "in_service_on": a["in_service_on"],
+                     "gross_cost": a["gross_cost"],
+                     "book_cost": a["book_cost"] or a["gross_cost"],
+                     "useful_life_years": a["useful_life_years"],
+                     "accum_depr_close": a["accum_depr_close"],
+                     "depreciation": a["depreciation"],
+                     "note": ""}
+                    for a in held]
         assets = _asset_schedule(period)
         if assets:
             return [{"asset_id": a.asset_id,
@@ -618,7 +651,9 @@ def preview(request_id: int) -> dict:
         "problem_count": len(filled.problems),
         "controls": controls,
         "lands_on": (_space_lands_on(r["period"], filled)
-                     if form.name == "SPACE_INVENTORY" else []),
+                     if form.name == "SPACE_INVENTORY" else
+                     _asset_lands_on(r["period"], filled)
+                     if form.name == "ASSET_REGISTER" else []),
         "sample": [{"row": row.number,
                     "values": {k: str(v) for k, v in row.values.items()
                                if v is not None}}
@@ -811,9 +846,15 @@ def _write_assets(cur, period: str, filled: Filled, actor: Actor):
     """
     written = 0
     notes: list[str] = []
-    evidence = filled
+    keys = _asset_keys(period, filled)
+    landed = {"on": 0, "by account": 0, "new": 0}
     for row in filled.usable:
-        v = row.values
+        v = dict(row.values)
+        # Read through the same resolver the preview printed, so the panel
+        # and the write cannot disagree about which asset this is.
+        key, how = keys.get(row.number, (v.get("asset_id"), "new"))
+        v["asset_id"] = key
+        landed[how] += 1
         cur.execute("""
             INSERT INTO asset (asset_id, period, description, serial_number,
                                gl_account, title_holder, acquired_on,
@@ -870,6 +911,18 @@ def _write_assets(cur, period: str, filled: Filled, actor: Actor):
                          "From the asset register reply"))
         written += 1
 
+    if landed["by account"]:
+        notes.append(
+            f"{landed['by account']} row(s) named the schedule's own asset "
+            f"id and were resolved to the register through the account each "
+            f"names. The workbook went out carrying the wrong key; the rows "
+            f"landed on the assets already on file rather than beside them.")
+    if landed["new"]:
+        notes.append(
+            f"{landed['new']} row(s) are not on the register and were "
+            f"created. If that is more than you expected, the reply is "
+            f"keyed differently from the register and the rest of it has "
+            f"landed beside your assets rather than on them.")
     unanswered = sum(1 for r in filled.usable
                      if r.values.get("federal_amount") is None)
     if unanswered:
@@ -878,6 +931,92 @@ def _write_assets(cur, period: str, filled: Filled, actor: Actor):
                      f"still treated as fully allowable, which is the "
                      f"overstating direction — worth a second ask.")
     return written, notes
+
+
+def _asset_keys(period: str, filled) -> dict[int, tuple[str, str]]:
+    """Which asset each reply row lands on, by row number.
+
+    Returns `{row.number: (asset_id, how)}` where *how* is `on` for a row
+    that lands on an asset already on the register, `by account` for one
+    resolved through the account it names, and `new` for one that would
+    create an asset.
+
+    **One definition, read by the preview and by the writer**, the way
+    `subject_merged()` is for a recommendation: a panel that says what will
+    happen and a writer that does something else is worse than no panel.
+
+    Two ways to land, and the second exists because **a key changed under a
+    workbook that was already out.** `085` made the register's key
+    `FA-<gl account>-<system>` — system number 165 is two assets in two
+    accounts, and keying on the system number alone had already lost one of
+    them. A workbook issued before that carries `FA-162` against a register
+    holding `FA-1501-162`, so **not one of its 262 ids matches**: that is a
+    real reply, 263 rows, every one of them answered.
+
+    Nothing was wrong with the form when it went out, which is the point.
+    A register may be re-keyed for a good reason while an ask is in
+    somebody's inbox, and the answer that comes back is still the answer.
+
+    It is a rule and not a guess: the account is a column the reply carries,
+    the reconstruction is exactly the key `load_assets.py` builds, and it was
+    checked against `gross_cost` — an independent figure neither side derived
+    from the other — on all 263 rows. **More than one candidate means no
+    candidate**, which is the rule `/api/reconcile/propose` follows, so an id
+    that resolves ambiguously is treated as new rather than guessed at.
+    """
+    held = {r["asset_id"]: r["gl_account"] for r in
+            query("SELECT asset_id, gl_account FROM asset WHERE period = %s",
+                  (period,))}
+    out: dict[int, tuple[str, str]] = {}
+    for row in filled.usable:
+        rid = str(row.values.get("asset_id") or "").strip()
+        if not rid:
+            continue
+        if rid in held:
+            out[row.number] = (rid, "on")
+            continue
+        gl = str(row.values.get("gl_account") or "").strip()
+        candidates = [k for k in held
+                      if gl and k == f"FA-{gl}-{rid.removeprefix('FA-')}"]
+        if len(candidates) == 1:
+            out[row.number] = (candidates[0], "by account")
+        else:
+            out[row.number] = (rid, "new")
+    return out
+
+
+def _asset_lands_on(period: str, filled) -> list[dict]:
+    """What accepting an asset reply would land on, and what it would create.
+
+    `_space_lands_on` exists because a reply naming a building the register
+    does not hold **invents** one whose area is the sum of the rows just
+    written, so it ties by construction and says nothing at all. The asset
+    form has the identical shape — `_write_assets` upserts on `asset_id`, so
+    a key that never collides inserts — and it had no panel.
+
+    That is not hypothetical. A reply written against the pre-`085` key would
+    have put 263 new assets beside the 263 already on file and doubled a
+    $23,419,573.64 basis, and the only thing that could have said so in
+    advance was this panel. It was the empty `lands_on` on that preview that
+    made anybody look. A rule fixed in one arm is one somebody gets wrong in
+    the other two.
+    """
+    keys = _asset_keys(period, filled)
+    by_how: dict[str, list[str]] = {"on": [], "by account": [], "new": []}
+    for row in filled.usable:
+        hit = keys.get(row.number)
+        if hit:
+            by_how[hit[1]].append(str(row.values.get("asset_id")))
+    said = {
+        "on": "lands on an asset already on the register",
+        "by account": "resolved to the register through the account it names "
+                      "— the workbook carries the schedule's own id and the "
+                      "register is keyed by account and id",
+        "new": "is not on the register; accepting would create it",
+    }
+    return [{"how": how, "rows": len(ids), "what_it_means": said[how],
+             "examples": ids[:6]}
+            for how, ids in by_how.items() if ids]
 
 
 def _space_lands_on(period: str, filled) -> list[dict]:
