@@ -19,6 +19,8 @@ So this module is what the boot itself does, beside `run_migrations()`:
                                opens the way it is documented to
     the foundational documents content-addressed, so a second boot files
                                nothing twice
+    the registers              everything that is a transcription of one of
+                               those documents — see **The registers** below
     the guides                 the manuals and the three generated PDFs,
                                readable in the library like anything else
 
@@ -44,21 +46,35 @@ keeps this out of the way of `scripts/provision.py`, which is the other door
 to the same room: a development machine has no organisational password, so
 the ladder script runs against an empty roster exactly as it always has.
 
-**The roster and the document list live here and are read from here.**
-`provision.py` and `seed_documents.py` import them rather than keeping their
-own copies. Two lists of the same six people is the defect this file is
-about, one level up.
+**The roster, the document list and the register list live here and are
+read from here.** `provision.py` and `seed_documents.py` import the first
+two, and `scripts/seed.sh` walks the third rather than keeping its own copy
+of it. Two lists of the same six people is the defect this file is about,
+one level up.
 
 What it deliberately does **not** restore is everything that is a judgment:
-the ledger, the classifications, the seal, the rate. Those come from
-`scripts/seed.sh` and from people. A boot that classified would be the
-machine putting its name on the seal.
+the classifications, the seal, the rate, the certification, the
+restatement. A boot that classified would be the machine putting its name
+on the seal.
+
+**The ledger is on neither side of that line, and putting it on the wrong
+one cost the deployment its books.** An earlier draft of this paragraph
+read *"everything that is a judgment: the ledger, the classifications, the
+seal, the rate"* — and a ledger is not a judgment, it is a transcription of
+a document this same boot has already filed. What keeps the ledger itself
+out is narrower and is not this rule at all: it is loaded through the API as
+a person, and `refuse_issued_password` means a boot has nobody to be. See
+**The registers**.
 """
 
 from __future__ import annotations
 
 import hashlib
 import logging
+import os
+import subprocess
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -342,6 +358,142 @@ GUIDES = (
 GUIDE_PERIOD = "2025"
 
 
+# ── The registers ────────────────────────────────────────────────────
+#
+# The books, and everything else that is a **transcription** of a document
+# already in the image.
+#
+# `ensure_documents()` files `2025_General-Ledger_QuickBooks.xlsx` into the
+# library as bytes and reads no row out of it. `scripts/load_assets.py`
+# parses `2026_YBI_Fixed-Asset-Schedule.xls` out of the same directory, and
+# waited for somebody to run it. So a rebuilt service came back with the
+# paper on the shelf and every register behind it empty — measured on a
+# replayed first boot: six accounts, eighteen documents, and nought ledger
+# lines, nought assets, nought invoices, nought labour rows, with all eleven
+# steps of the walk reading NO DATA or WAITING.
+#
+# That is this module's own defect, one level down. Its opening says
+# `scripts/seed.sh` *"writes the steps down, and still waits for somebody to
+# run them"* — and then it did two of the eleven steps and waited for
+# somebody for the other nine. **Anything that only exists because a person
+# remembered to run it does not survive a recovery**, the ledger included,
+# because a ledger is not a judgment. It is a transcription of a document,
+# like the document it is transcribed from.
+#
+# The line this draws is not the one the docstring above used to draw:
+#
+#   transcription   the effort distribution, the working calendar and the
+#                   hours log under it, 263 assets, four awards, their
+#                   budget schedules, the text of the agreements
+#   judgment        the classification, the seal, the rate, the
+#                   certification, the restatement — and none of those is in
+#                   `seed.sh` either, so nothing here moves that line
+#
+# **Four of `seed.sh`'s steps are deliberately not on this list**, for one
+# reason: they write through the API as a person, and
+# `refuse_issued_password` means an account still on the organisation's
+# password can write nothing at all. The ledger, the contract provisions,
+# the projects and the eleven control points reach the record when somebody
+# who has set their own password runs them. A boot cannot do that, and the
+# fact that it cannot is the rule working rather than a gap in it.
+#
+# And a fifth declines on its own authority. `load_invoices_2025.py` checks
+# the register against `3900 Grant Income` before it writes, and against a
+# ledger of 0.00 it writes nothing and says why — *"the register has to
+# agree with the ledger before it is worth having"*. It belongs with the
+# ledger, so it stays with the half a person runs.
+
+
+@dataclass(frozen=True)
+class Register:
+    """One transcription, and the question that says it is already in.
+
+    `loaded` is the whole of *it never overwrites*, held here rather than
+    trusted to seven scripts. A register with anything in it has been loaded
+    and its loader is not run at all — so a loader that turns out not to be
+    idempotent still cannot reach a record somebody is using. All seven were
+    measured idempotent; the point is that the guarantee does not depend on
+    that staying true.
+
+    `always` is the one exception, and there is exactly one of it. No count
+    on `award` can tell *load_awards has run* from the placeholder row `004`
+    seeds and `058` names, so a count cannot be the skip. The loader carries
+    its own rule instead — it fills a ceiling that is zero and an
+    agreement_name that is NULL, and otherwise prints `exists` — and it is
+    run every time. `loaded` still counts, because **whether it changed
+    anything is read from the record and never from the fact that it ran.**
+    The first draft appended it to the list of what it had transcribed on
+    every redeploy, so a boot that did nothing reported a load.
+
+    `args` is the argv `scripts/seed.sh` passes, verbatim. A loader must not
+    behave one way for a person and another way for the boot.
+    """
+
+    name: str
+    script: str
+    args: tuple[str, ...]
+    loaded: str
+    why: str
+    always: bool = False
+
+
+#: Everything a boot can transcribe, in the order it has to happen.
+REGISTERS: tuple[Register, ...] = (
+    Register(
+        "the effort distribution", "load_labor.py", (),
+        "SELECT count(*) FROM labor_allocation",
+        "The distribution the whole rate model rests on, read off the "
+        "controller's workbook: $1,835,047.17 across forty-three people. "
+        "The fringe base is taken over this and not over the ledger's wage "
+        "accounts, which is the eleventh control point."),
+    Register(
+        "the calendar and the hours log", "load_calendar.py", (),
+        "SELECT count(*) FROM work_month",
+        "YBI counts 261 work days and 2,088 hours in 2025 and takes no "
+        "holiday out — their calendar, not a derived one. The hours log "
+        "beneath it is the independent source `v_labor_hours_check` "
+        "measures the distribution against. After the labour, because the "
+        "log maps its objective headings through labor_objective_map."),
+    Register(
+        "the fixed-asset register", "load_assets.py", (),
+        "SELECT count(*) FROM asset",
+        "263 assets, $23,419,573.64 of cost, every printed subtotal tying. "
+        "The funding source is deliberately not loaded: the schedule has no "
+        "such column, which is 200.313(d)(1) unanswered and is exactly what "
+        "Heidi answers one asset at a time."),
+    Register(
+        "the four awards", "load_awards.py", (),
+        "SELECT count(*) FROM award WHERE agreement_name IS NOT NULL",
+        "The ceiling, the term and the clause each was read out of. Run "
+        "every time, because `004` seeds one of these four as a placeholder "
+        "and `058` names it, so a count cannot tell a loaded register from "
+        "an empty one. It is its own guard: it fills a ceiling that is zero "
+        "and an agreement_name that is NULL, and otherwise prints `exists`.",
+        always=True),
+    Register(
+        "the budget schedules", "load_award_budgets.py", (),
+        "SELECT count(*) FROM award_budget",
+        "What each award funds by category, which decides the line set on "
+        "an invoice. A category named at zero and a category absent are "
+        "different findings, and only a loaded schedule can tell them "
+        "apart. After the awards, which it hangs off."),
+    Register(
+        "the text of the agreements", "read_documents.py", ("--write",),
+        "SELECT count(*) FROM evidence WHERE extracted_text IS NOT NULL",
+        "A citation with no document behind it is somebody's recollection. "
+        "`_file()` reads a document as it files it, so on a boot this is "
+        "already done and skips; it fires on a record whose evidence rows "
+        "predate that, which is what it was written for."),
+    Register(
+        "the awards to their agreements", "link_agreements.py", (),
+        "SELECT count(*) FROM award WHERE agreement_evidence_id IS NOT NULL",
+        "Points each award at the paper it was read out of, so "
+        "`v_award_citation_check` can ask the document whether the cited "
+        "clause is in it. Needs the documents filed, which is why the walk "
+        "is safe to run twice and `seed.sh` does."),
+)
+
+
 # ── Filing one document, the same way the upload route does ──────────
 
 #: Addressed by filename, which is the key a guide has. These eight are
@@ -404,7 +556,7 @@ def _note(action: str, entity: str, entity_id: str, reason: str) -> None:
             (action, entity, entity_id, reason))
 
 
-# ── The three acts ───────────────────────────────────────────────────
+# ── The four acts ────────────────────────────────────────────────────
 
 def ensure_accounts() -> list[str]:
     """Open any of the six accounts that is missing. Touch none that is not.
@@ -504,6 +656,138 @@ def ensure_documents() -> list[str]:
     return filed
 
 
+#: How long one transcription may take, and how long the whole walk may.
+#:
+#: `railway.json` waits 60 seconds for the first healthy answer, and the
+#: lifespan runs before anything is served — so an unbounded walk is a
+#: deployment that never comes up. Measured, the seven take 2.6 seconds
+#: together; the budget is what stops a cold volume or a pathological
+#: spreadsheet turning that into a failed deploy. Going over it is not a
+#: loss: every step is skipped rather than half-done, and the next boot or
+#: `scripts/seed.sh` picks up exactly where this one stopped.
+REGISTER_TIMEOUT = 30
+REGISTER_BUDGET = 40
+
+
+def _rows_in(r: Register) -> int:
+    """How many rows say this register is in.
+
+    As a scalar subquery rather than by appending an alias: `count(*)` names
+    its own column `count`, and a predicate ending in a WHERE clause cannot
+    take an `AS` after it. Both were true of the first draft, which reported
+    every register unreadable and — correctly — left all seven alone.
+    """
+    row = one(f"SELECT ({r.loaded}) AS n")
+    return int(row["n"]) if row else 0
+
+
+def ensure_registers() -> list[str]:
+    """Transcribe every register that is not already in, in order.
+
+    Run as a subprocess, with exactly the argv `scripts/seed.sh` uses, for
+    two reasons that are worth keeping apart.
+
+    **A parser must not be able to take the deployment down.** These read
+    spreadsheets and PDFs off a volume; `restartPolicyMaxRetries` is 3 and
+    the fourth outcome is a service that does not start. A register that is
+    missing and says so is a far better answer than a healthcheck that never
+    goes green — which this repository already records as *the worst shape a
+    configuration fault can take*. So a failure is logged with what the
+    loader actually said and the walk continues.
+
+    **And there is one door.** Running the same command a person runs, rather
+    than an imported entry point, is what stops a loader growing a boot-only
+    path. It is also why `args` is `seed.sh`'s argv verbatim.
+
+    Safe to run twice, and `seed.sh` does: once with the books, and once
+    after the documents are filed, for the two steps that need them.
+    """
+    done: list[str] = []
+    started = time.monotonic()
+    env = {**os.environ,
+           "PYTHONPATH": os.pathsep.join(
+               [str(ROOT)] + [q for q in os.environ.get("PYTHONPATH", "")
+                              .split(os.pathsep) if q])}
+    for r in REGISTERS:
+        path = ROOT / "scripts" / r.script
+        if not path.exists():
+            log.warning("register loader not in the image: %s", r.script)
+            continue
+        try:
+            before = _rows_in(r)
+        except Exception as exc:                          # pragma: no cover
+            log.warning("cannot tell whether %s is in (%s); leaving it alone",
+                        r.name, exc)
+            continue
+        if before and not r.always:
+            log.info("%s is already in (%d rows)", r.name, before)
+            continue
+        left = REGISTER_BUDGET - (time.monotonic() - started)
+        if left <= 1:
+            log.warning("the register walk is out of time; %s and anything "
+                        "after it will be loaded on the next boot or by "
+                        "scripts/seed.sh", r.name)
+            break
+        # The figure in the message is the one that was used. Capped by
+        # what is left of the budget, so a run that was stopped at five
+        # seconds must not report thirty — a log that states a number it did
+        # not act on is the shape this repository keeps finding.
+        allowed = int(min(REGISTER_TIMEOUT, left))
+        try:
+            out = subprocess.run(
+                [sys.executable, str(path), *r.args], cwd=str(ROOT), env=env,
+                capture_output=True, text=True, timeout=allowed)
+        except subprocess.TimeoutExpired:
+            log.warning("%s did not finish inside %ds and was stopped; "
+                        "nothing it had not committed was written",
+                        r.name, allowed)
+            continue
+        except Exception as exc:                          # pragma: no cover
+            log.warning("%s could not be run: %s", r.name, exc)
+            continue
+        said = (out.stdout or out.stderr or "").strip().splitlines()
+        tail = said[-1].strip() if said else ""
+        try:
+            after = _rows_in(r)
+        except Exception as exc:                          # pragma: no cover
+            # Never out of this function. The whole reason these run in
+            # their own process is that a boot must come up; raising here
+            # would hand back the failure mode the subprocess was for.
+            log.warning("%s ran and cannot be read back (%s)", r.name, exc)
+            continue
+        if out.returncode != 0:
+            # **Loud, because the next boot will not try again.** A loader
+            # that wrote some of its rows and then failed leaves the
+            # register non-empty, and non-empty is exactly what the skip
+            # reads as *already in* — so a half-loaded register would be
+            # treated as complete for ever, silently. The first draft
+            # reported a non-zero exit as "not loaded" without looking, and
+            # that is only true when nothing moved.
+            if after != before:
+                log.error("%s exited %d PART WAY THROUGH — %d rows where "
+                          "there were %d. The next boot will read that as "
+                          "already in and skip it: clear the register and "
+                          "run scripts/load_registers.py. It said: %s",
+                          r.name, out.returncode, after, before, tail[:200])
+            else:
+                log.warning("%s exited %d and loaded nothing: %s",
+                            r.name, out.returncode, tail[:200])
+            continue
+        # What the loader said it did is not the question; whether the rows
+        # moved is. A loader that declines on its own authority —
+        # load_invoices_2025 against a ledger of 0.00 — exits 0 and writes
+        # nothing, and a walk that called that a load would be reading the
+        # loader's prose rather than the record.
+        if after != before:
+            done.append(r.name)
+            log.info("loaded %s (%d rows)", r.name, after)
+        elif after:
+            log.info("%s is already in (%d rows)", r.name, after)
+        else:
+            log.info("%s had nothing to load yet: %s", r.name, tail[:200])
+    return done
+
+
 def guide_path(name: str) -> Path | None:
     """Where a guide lives on disk, or None if the name is not one.
 
@@ -543,11 +827,20 @@ def restore() -> dict[str, list[str]]:
         return {}
     accounts = ensure_accounts()
     documents = ensure_documents()
+    # After the documents, because two of the seven read them: the text of
+    # the agreements, and the link from each award to the paper it was read
+    # out of. Before nothing, because the four steps that need a person come
+    # later and from somewhere else entirely.
+    registers = ensure_registers()
     if accounts:
         log.warning("opened %d account(s) on the organisation's password: %s",
                     len(accounts), ", ".join(accounts))
     if documents:
         log.info("filed %d foundational document(s)", len(documents))
+    if registers:
+        log.info("transcribed %d register(s): %s",
+                 len(registers), ", ".join(registers))
     # Guides are deliberately absent: they are served from the image by
     # `guide_path()` and are not documents in the cost record.
-    return {"accounts": accounts, "documents": documents}
+    return {"accounts": accounts, "documents": documents,
+            "registers": registers}

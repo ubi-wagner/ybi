@@ -14,19 +14,18 @@
 #                     the ladder has to run downward from a bootstrapped root
 #   load_2025         the ledger, the P&L and the balance sheet, each proving
 #                     off its own printed subtotals before anything is promoted
-#   load_labor        the effort distribution, which the fringe base comes from
-#   load_assets       the 263-asset fixed-asset register, without the funding
-#                     column the schedule does not carry, which is the one
-#                     thing 200.436(b) waits on
-#   load_calendar     YBI's own working calendar and the hours log under it —
-#                     261 work days and 2,088 hours in 2025, which is what
-#                     every `Allow Hours` in their record is measured against
-#   load_awards       the four awards the register lacked, read out of the
-#                     executed agreements — the ceiling, the term and the clause
+#   load_registers    everything that is a transcription of a document already
+#                     in the image — the effort distribution the fringe base
+#                     comes from, YBI's own working calendar and the hours log
+#                     under it, the 263-asset register without the funding
+#                     column the schedule does not carry, the four awards and
+#                     their budget schedules, the text of the agreements. The
+#                     list is `app/foundation.py::REGISTERS`, which the boot
+#                     walks too, so a recovery brings these back without
+#                     anybody running anything
 #   load_contract_terms   what the signed agreements actually say, with the
-#                     clause each provision came from
-#   load_award_budgets    what each award budgets by category, which is what
-#                     decides the line set on an invoice
+#                     clause each provision came from. Through the API as a
+#                     person, which is why it is not on the list above
 #   seed_documents    the eighteen foundational documents, filed through the
 #                     real upload route as a real person
 #   reconcile --record    the eleven cross-reference points, with every
@@ -80,21 +79,20 @@ fi
 
 step "The books"
 run "ledger, P&L, sheet" $PY scripts/load_2025.py --base "$BASE"
-run "effort distribution" $PY scripts/load_labor.py
-# The calendar and the hours behind that distribution. After it, because the
-# hours log maps its objective headings through labor_objective_map, and the
-# cost objectives have to exist first.
-run "calendar and hours log" $PY scripts/load_calendar.py
-# The fixed-asset register, from the schedule YBI already holds. It is
-# transcription and not judgment — their own depreciation schedule, read as
-# printed, which is why it belongs beside the ledger's loader and not in the
-# application. The funding column is deliberately not loaded: the schedule
-# does not have one, which is 200.313(d)(1) unanswered and is exactly what
-# Heidi answers on Classify > Equipment.
-run "fixed-asset register" $PY scripts/load_assets.py
+# Everything that is a transcription of a document already in the image: the
+# effort distribution, the working calendar and the hours log, the 263-asset
+# register, the four awards and their budget schedules, the text of the
+# agreements. Seven `run` lines used to stand here, and `app/foundation.py`
+# needed the same seven to bring a rebuilt deployment back — two lists of one
+# thing, which is the defect that module is named after. The list is
+# `foundation.REGISTERS` now and both walk it.
+#
+# It is run twice on purpose. Two of the seven read the documents, and the
+# documents are filed three steps down; a register already in is skipped by
+# name, so the second pass costs nothing and picks up exactly those two.
+run "the transcriptions" $PY scripts/load_registers.py
 
 step "The awards, and what they say"
-run "the four awards" $PY scripts/load_awards.py
 # The register is the year, and only the year. This was
 # `load_invoices.py` — *"Load the three America Makes invoices"* — which
 # loaded exactly that: three, dated 1 May 2026, a sample of the invoice
@@ -109,7 +107,6 @@ run "the four awards" $PY scripts/load_awards.py
 run "the 2025 invoice register" $PY scripts/load_invoices_2025.py --apply
 run "contract provisions" $PY scripts/load_contract_terms.py \
     --base "$BASE" --password "$PASSWORD"
-run "budget schedules" $PY scripts/load_award_budgets.py
 
 step "The documents"
 run "foundational documents" $PY scripts/seed_documents.py \
@@ -120,8 +117,7 @@ step "The books against each other"
 # read out of — and the provisions are recorded at step five, before the
 # paper arrives. Without it every citation reports NO DOCUMENT on a fresh
 # deployment and the check that finds a clause which is not there is silent.
-run "agreements and their text" $PY scripts/read_documents.py --write
-run "awards to their agreements" $PY scripts/link_agreements.py
+run "the transcriptions, again" $PY scripts/load_registers.py
 
 # After the awards and the payroll, because a project hangs off a charge code
 # that exists, names the award it works under, and takes its team from the
