@@ -190,8 +190,7 @@ They are surfaced as a gap on the People screen rather than invented.
 | --- | --- |
 | `provision.py` | Nobody can record anything until there are accounts, and the ladder has to run downward from a bootstrapped root. |
 | `load_2025.py` | The ledger, the P&L and the balance sheet — each proving off its own printed subtotals before anything is promoted. |
-| `load_labor.py` | The effort distribution, which the fringe base comes from. |
-| `load_awards.py` | The four awards, read out of the executed agreements — the ceiling, the term, the rate method and the clause each came from. Was `load_invoices.py`, which also filed three April-2026 example invoices; `089` removed them. |
+| `load_registers.py` | Everything that is a transcription of a document already in the image: the effort distribution the fringe base comes from, YBI's own working calendar and the hours log under it, the 263-asset register, the four awards read out of the executed agreements (the ceiling, the term, the rate method and the clause each came from — this was `load_invoices.py`, which also filed three April-2026 example invoices, and `089` removed them), their budget schedules, and the text of the agreements. The list is `app/foundation.py::REGISTERS`, and **the deployment boot walks the same one**, so these seven come back on their own after a Postgres service is rebuilt. Run twice here: two of them read the documents, which are filed three rows down. |
 | `load_invoices_2025.py` | The 2025 invoice register — 61 invoices, $2,964,077.32, from the six PDFs of invoices as issued, tied to `3900 Grant Income`. |
 | `load_contract_terms.py` | What the signed agreements say, with the clause each provision came from. |
 | `seed_documents.py` | The eighteen foundational documents. |
@@ -199,6 +198,13 @@ They are surfaced as a gap on the People screen rather than invented.
 
 Re-runnable throughout. Everything is content-addressed or checks for itself
 first, so a second run loads nothing twice and says so.
+
+**Four of these still need a person, and that is the rule rather than a
+gap.** `load_2025.py`, `load_contract_terms.py`, `seed_documents.py`,
+`load_projects.py` and `reconcile.py --record` write through the API signed
+in as somebody, and `refuse_issued_password` refuses every write from an
+account still on the organisation's password — so a boot has nobody to be
+and cannot run them. The seven above it can, and do.
 
 ## What is deliberately not loaded
 

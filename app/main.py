@@ -103,10 +103,15 @@ async def lifespan(app: FastAPI):
     # could sign in, because the accounts were made by a script somebody runs
     # rather than by anything the deployment does. This opens whatever is
     # missing — the six accounts on the organisation's password, the
-    # foundational documents, the guides — and touches nothing that is
-    # already there. It stands down entirely unless YBI_INITIAL_PASSWORD is
-    # set, so a development machine is unaffected and scripts/provision.py
-    # remains the door there.
+    # foundational documents, and every register that is a transcription of
+    # one of them — and touches nothing that is already there. It stands
+    # down entirely unless YBI_INITIAL_PASSWORD is set, so a development
+    # machine is unaffected and scripts/provision.py remains the door there.
+    #
+    # It restores no judgment: no classification, no seal, no rate, no
+    # signature. The ledger is not among them either, and not because it is
+    # a judgment — it is loaded through the API as a person, and
+    # refuse_issued_password means a boot has nobody to be.
     foundation.restore()
 
     log.info("ready — period %s, env %s", settings.period, settings.env)

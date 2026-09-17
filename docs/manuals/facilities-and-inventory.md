@@ -10,11 +10,18 @@ this year neither of them could be computed at all.
 | the square footage of each building, and what each part is used for | the 2 CFR 200.465 facilities carve-out | nothing was carved out; **every dollar of tenant and vacant occupancy cost sat in the federal pool** |
 | which assets federal money paid for | 2 CFR 200.436(b) — depreciation on a federally funded asset is unallowable | nothing was excluded, on $850,383 of depreciation |
 
-Measured on the live 2025 record, those two answers took the combined
-indirect rate from **43.99% to 24.71%**. That is not a rounding. It is the
-difference between a rate an auditor can defend and one they cannot, and it
-runs *against* YBI — a lower rate means less recovery. That is the honest
-direction to err while the measurement is an estimate.
+Measured on the live 2025 record, those two answers have taken the combined
+indirect rate from **43.99% to 22.48%** — the estate first, and then your
+asset register. That is not a rounding. It is the difference between a rate
+an auditor can defend and one they cannot, and every step of it runs
+*against* YBI: a lower rate means less recovery, and it makes every give-back
+to NCDMM larger.
+
+**That direction is the design, not a run of bad luck.** While an answer is
+missing the model assumes nothing is carved out and nothing is unallowable,
+so the rate reads high. Each measurement that arrives removes something that
+should never have been in the pool. Expect the number to fall as you answer,
+and expect it to stop falling when the answers run out.
 
 ---
 
@@ -120,7 +127,8 @@ means the whole year. If a tenant left in May, that is 5.
 
 You have sent a measurement — the floor plan of 15 September 2026, filed as
 evidence — and **it has not been accepted into the register**, because
-accepting supersedes a certified rate and that is Tom's act. So until it is,
+accepting supersedes the rate and a signature on that rate dies with it,
+which makes it Tom's act rather than yours. So until it is,
 the record still carries the **estimate** below, marked `TEST_ASSUMPTION`,
 with its derivation in the note of every row:
 
@@ -159,6 +167,14 @@ tape measure replaces all of it. Two things to know before you start:
 **`/classify/assets`.** 263 assets, $23.4m of cost, and one column the
 schedule does not carry: **who paid for it.** 2 CFR 200.313(d)(1) requires
 that column and its absence is a finding in its own right.
+
+**You have answered it, and this is what it produced.** All 263 assets carry
+a funding answer; **17 of them are federally funded, $5,354,302.34** of the
+basis, which makes **$261,988.65** of the year's $872,811.91 of depreciation
+unallowable under 200.436(b) — 30% of it. The derived estimate that stood in
+for your answer had 20 assets and $2,732,725.89, so it understated federal
+participation by nearly half. What is below is how to correct a row, and how
+to answer the next asset that arrives.
 
 For each asset, one or more funding rows:
 

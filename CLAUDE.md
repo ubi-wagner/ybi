@@ -709,6 +709,217 @@ screen already learned: *thirty-two unread workbooks buried three real
 proposals*. `077` filters the inbox on the channel rather than the kind,
 because a regenerated invoice is the same case and was already in it.
 
+### It brought back the bytes and not the books
+
+`app/foundation.REGISTERS`, `ensure_registers()`, `scripts/load_registers.py`.
+**The boot filed the general ledger into the library and read no row out of
+it.** Replayed against an empty database, which is what production did: six
+accounts, eighteen documents, and **nought ledger lines, nought assets,
+nought invoices, nought labour rows, nought award terms** — every step of
+`v_audit_walk` reading NO DATA or WAITING.
+
+The module said why, and the reason was a category error sitting in its own
+docstring: *"what it deliberately does not restore is everything that is a
+judgment: the ledger, the classifications, the seal, the rate."* **A ledger
+is not a judgment.** It is a transcription of a document — and of a document
+*this same boot has already filed*. `ensure_documents()` files
+`2025_General-Ledger_QuickBooks.xlsx`; `scripts/load_assets.py` parses
+`2026_YBI_Fixed-Asset-Schedule.xls` out of the same directory. Both files
+are in the image, both parsers are in the image, and nothing connected them.
+
+So it is this module's own defect one level down. Its opening says
+`seed.sh` *"writes the steps down, and still waits for somebody to run
+them"* — and then it did two of the eleven steps and waited for somebody for
+the other nine. *Anything that only exists because a person remembered to
+run it does not survive a recovery.*
+
+**Seven are transcriptions and the boot does them now**: the effort
+distribution, the working calendar and the hours log, 263 assets, the four
+awards, their budget schedules, the text of the agreements, and the link
+from each award to the paper it was read out of. What stays out is what is
+genuinely a judgment — the classification, the seal, the rate, the
+certification, the restatement — and none of those was in `seed.sh` either,
+so the line moved without moving.
+
+**Four of `seed.sh`'s steps stay with a person, and not because they are
+judgments.** The ledger, the contract provisions, the projects and the
+eleven control points write through the API as somebody, and
+`refuse_issued_password` means an account still on the organisation's
+password can write nothing at all. **A boot has nobody to be.** That is the
+rule working rather than a gap in it — and it is why the books reach a
+recovered deployment only when somebody who has set their own password runs
+the other half.
+
+**And a fifth declines on its own authority**, which is the nicest thing
+found here. `load_invoices_2025.py` checks the register against `3900 Grant
+Income` before it writes, so against a ledger of 0.00 it writes nothing and
+prints *"the register has to agree with the ledger before it is worth
+having"*. It belongs with the ledger and it says so itself.
+
+**One list, walked twice.** Seven `run` lines stood in `seed.sh` and the
+boot needed the same seven — two lists of one thing, which is the defect
+this module is *named* after. `REGISTERS` is the list; `seed.sh` collapses
+to one call of `load_registers.py`, which walks it, and so does the boot.
+`seed.sh` calls it **twice on purpose**: two of the seven read the
+documents, the documents are filed three steps down, and a register already
+in is skipped by name — so the second pass costs 0.29 seconds and picks up
+exactly those two.
+
+**It never overwrites, and that guarantee is in one place rather than in
+seven promises.** Each register carries the SQL that says it is already in,
+and a register with anything in it is not run at all — so a loader that
+turns out not to be idempotent still cannot reach a record somebody is
+using. All seven were measured idempotent; the point is that the guarantee
+does not rest on that staying true.
+
+**Run as a subprocess**, with `seed.sh`'s argv verbatim. Two reasons worth
+keeping apart: a spreadsheet parser must not be able to take the deployment
+down — `restartPolicyMaxRetries` is 3 and the fourth outcome is a service
+that does not start, which is worse than a register that is missing and
+says so — and running the command a *person* runs is what stops a loader
+growing a boot-only path. A failure is logged with what the loader actually
+said and the walk continues. The whole walk is bounded at 40 seconds
+against a 60-second healthcheck; measured it is **2.6s on a first boot and
+0.29s on every redeploy after**, and going over the budget skips the rest
+rather than half-doing it, because the walk is resumable by construction.
+
+Three defects came out of building it, and two are shapes already in this
+file:
+
+- **The predicate had an alias appended** — `r.loaded + " AS n"`, when
+  `count(*)` names its own column and a predicate ending in a WHERE clause
+  will not take an `AS`. All seven read as unreadable, and the walk
+  **correctly left all seven alone** and said so seven times, which is the
+  failure policy doing its job. *And the test named for it composed the same
+  query itself*, so it passed with the defect pasted back in: it was
+  asserting that my SQL was real rather than the module's. Fifth instance of
+  a test that cannot fail for the thing it names, found the only way any of
+  them are.
+- **The log said `loaded the four awards` on a redeploy that loaded
+  nothing.** `load_awards` is the one loader run every time — `004` seeds one
+  of its four as a placeholder and `058` names it, so no count on `award`
+  can tell a loaded register from an empty one — and the first draft
+  appended it to what it had transcribed simply *because it had run*.
+  Whether anything moved is read from the record now, before and after. A
+  report that says something happened when it did not is the one thing a
+  deploy log must never do.
+- **A predicate satisfied by rows a migration seeds would skip in silence.**
+  That is the expensive one: the boot would decide the register was already
+  in, and a rebuilt deployment would come back without it with nothing
+  anywhere saying so — `029` inside the mechanism written to prevent it.
+  `test_no_predicate_is_satisfied_by_rows_a_migration_seeds` is that
+  property, and it guards on `evidence` and `ledger_line` rather than on the
+  predicates, because a guard that asked them would skip in exactly the case
+  the test exists for.
+
+**And the walk reads differently on a recovered deployment.** With the
+register in, step 5 goes `NO DATA` to **OPEN** — *263 assets and not one
+names where its money came from* — instead of saying nothing exists. That is
+the 200.436(b) question arriving on Heidi's list on the first boot after a
+rebuild rather than after somebody remembers to run a script.
+
+### A loader may fill more than one register
+
+And the from-empty proof is what found it. `load_calendar.py` writes the
+working calendar, the hours log **and** `contractor_identity` — the link
+that turns 781 hours with no payroll row into a 1099 contractor. The first
+draft of `REGISTERS` counted `work_month` alone, so the calendar landed on
+the boot, the walk called the register in, and the contractor link — which
+**needs the ledger**, and so cannot be written on the pass that loads the
+calendar — was skipped by name for ever after.
+
+`link_agreements.py` had the identical shape and cost more. Besides pointing
+each award at its agreement it carries that document down onto every
+provision cited from it, and `award_term` comes from the half a person runs.
+Counting the awards alone left **36 of 36 citations with no document behind
+them** on a from-empty seed, against 36 of 36 on the reference record —
+which is `056`'s *a citation with no document behind it is somebody's
+recollection of a contract*, reintroduced by the change that was supposed to
+make a recovery complete.
+
+So both are counted across everything their loader is responsible for, the
+contractor link is **its own register** — a register whose loader has run
+and whose rows are not there has to be visible as itself — and
+`test_every_table_a_loader_writes_is_accounted_for` sweeps the loaders
+rather than trusting the list to stay complete. It found a third on its
+first run: `load_awards.py` also links each invoice to the award that
+authorised it, and the invoice register is loaded by a person. That one is
+already safe, because `load_awards` is the `always` loader and is never
+skipped — which is what `always` buys, and the sweep says so rather than
+widening a count that did not need it.
+
+**Read end to end from nothing, the passes fall where the dependencies are:**
+
+    boot          5 transcribed; the contractor link and the citations
+                  report "had nothing to load yet"
+    the ledger
+    pass 1        1 transcribed: who is paid as a company
+    the invoices, the provisions, the documents
+    pass 2        1 transcribed: the awards to their agreements
+
+15,500 ledger lines · 263 assets · 61 invoices, 40 linked to their award ·
+36 provisions, all 36 citing a document · 488 person-months · 18 documents ·
+6 reconciling items. Eleven statement points TIE, the whole general ledger
+TIES, and Form 990 Part IX ties at variance 0.00.
+
+### The return was over by one salary, on every record mid-close
+
+Migration `123`. **Part IX over-reported by $192,087.13 on every record that
+has a ledger and no classifications** — the chief executive's compensation,
+to the cent. Line 7 read 1,789,993.94 against the reference record's
+1,597,906.81, the difference is line 5 exactly, and the return did not
+cross-foot: its lines added to 6,812,635.68 against a profit and loss of
+6,775,212.18.
+
+`098` is right about the rule — *line 5 is an amount lifted out of line 7 by
+person, and the two still add to the wage accounts*. What `099` did not hold
+is that **the two halves of that one act could happen separately.** The
+subtraction lives inside `comp`, which is `WHERE function_990 =
+'NOT_APPLICABLE'` — the compensation block, and that exists only once
+somebody has judged the wage accounts. The addition was `FROM officer o
+WHERE o.wages > 0`, which needs nothing at all. The lift was conditional and
+what it lifted was not.
+
+`099`'s own comment shows where the reasoning stopped: *"where no roster is
+on the record the officer amount is zero and line 7 is unchanged"*. It
+anticipated a missing **roster** — `096` seeds that, so it never is — and
+not a missing **block**, which is the state every record passes through
+between the ledger landing and the first judgment.
+
+**And the second half is worse than the arithmetic.** Line 5 splits by the
+OFFICER cohort's own effort shares, so on a record where nothing has been
+judged it was the one line claiming a function allocation — 81.6% programme,
+13.5% administration — while every other dollar sat in `NOT_YET_CLASSIFIED`.
+*That is a column of the 990, not a rounding*, and line 5 was jumping the
+queue out of it.
+
+Nothing on the reference record moves: 192,087.13 on line 5, 1,597,906.81 on
+line 7, Part IX at 6,620,548.55, the same function columns. On an
+unclassified record line 5 is empty, the whole payroll is on line 7, and the
+line check reads TIES at 0.00.
+
+**Four tests assert that the return foots and all four were passing**,
+because the only record anybody had ever run them against was one that had
+been classified since before `098` existed. Two more were premises stated
+one level too coarse and failed on the first from-empty seed: *every dollar
+of compensation is in a function* is about what a **judgment** does, not
+about a record with none — narrowly skipped, so the `NOT_APPLICABLE` defect
+it was written for still runs it; and the census magnitude needs a
+**computed rate**, not merely a ledger, because most of what it counts is
+one entry per pool and per objective.
+
+Two things worth not repeating, both mine, both already in this file:
+
+- **The semicolon was in the comment.** Lifting `099`'s body with a scanner
+  that looks for the statement's terminating `;` stopped at *"Line 7 gives up
+  the officers' wages; line 5 is what it gave up"* and produced half a view.
+  Lifted by line range instead.
+- **A diff of two error messages is not a diff.** The before/after check on
+  the reference record printed IDENTICAL because both sides had failed on a
+  column name written from memory — `management_and_general` for
+  `management`. A comparison whose two halves are both empty compares
+  nothing, which is `029` in an experiment rather than in a control.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.

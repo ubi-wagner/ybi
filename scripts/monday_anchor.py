@@ -32,6 +32,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.db import query  # noqa: E402
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "MONDAY_ANCHOR.html"
+from app.routers.restate import STANDING                       # noqa: E402
+
 PERIOD = "2025"
 
 
@@ -151,10 +153,20 @@ def facts() -> dict:
                blocking, detail
           from constraint_result order by award_id, code, evaluated_at desc""")
 
+    # `STANDING`, not `PROPOSED`. A restatement a sponsor has accepted is
+    # still a restatement on the record — and filtering it out is the defect
+    # that made the amendment memorandum and the acceptance form both answer
+    # 404 the moment NCDMM signed. `STANDING` was defined once for that and
+    # imported by `publish.py`; this sheet kept its own spelling and so said
+    # **nothing restated yet** over four accepted positions worth 521,848.42
+    # of give-back and a 43,960.60 claim, on the page the controller works
+    # Monday from. Two spellings of one predicate is how a script and a
+    # screen come to disagree about what is on the record.
     f["restate"] = query("""
         select objective_id, invoices, billed_total, indirect_billed,
                indirect_supported, under_recovered, over_collected
-          from restatement where status = 'PROPOSED' order by objective_id""")
+          from restatement where status = ANY(%s) order by objective_id""",
+                         (list(STANDING),))
 
     f["awards"] = query("""select award_id, ceiling_federal, cost_share_required,
                                   period_end, rate_method from award
@@ -176,8 +188,8 @@ def facts() -> dict:
         SELECT objective_id, invoices, billed_total, indirect_billed,
                indirect_supported, under_recovered, over_collected,
                as_billed_position, elected_indirect, implied_rate, method
-          FROM v_restatement WHERE period = %s AND status = 'PROPOSED'
-         ORDER BY billed_total DESC""", (PERIOD,))
+          FROM v_restatement WHERE period = %s AND status = ANY(%s)
+         ORDER BY billed_total DESC""", (PERIOD, list(STANDING)))
 
     f["contractor"] = query(
         "select * from v_contractor_effort_check where state = 'OPEN'"
@@ -493,11 +505,19 @@ def recommendations(f: dict) -> list[dict]:
     # ── Step 5 · /review/rate ───────────────────────────────────────────────
     R.append(dict(
         id="R15", step="5", screen="/review/rate — the build-up",
-        title="Quote 43.99% and 21.90% as a pair, and say what is not in them",
+        title=(f"Quote {pct(rate['INDIRECT_COMBINED']['rate'])} and "
+               f"{pct(rate['FRINGE']['rate'])} as a pair, and say what is "
+               f"not in them" if rate.get("INDIRECT_COMBINED")
+               and rate.get("FRINGE") else
+               "Quote the combined rate and fringe as a pair"),
         rec="These are the two figures that leave the building. Quote them "
-            "together, with the caveat above the figures: **no 200.465 "
-            "facilities carve-out is in this rate**, so it reads high — which "
-            "is the honest direction to err.",
+            "together, with the caveat above the figures — whatever the walk "
+            "says is still unfinished belongs above them, not in a footnote. "
+            + ("**No 200.465 facilities carve-out is in this rate**, so it "
+               "reads high, which is the honest direction to err."
+               if not f["carve_rows"] else
+               f"The 200.465 carve-out is in it: {f['carve_rows']} row(s) "
+               f"over {f['facilities']} measured facility(ies)."),
         record=[(k, f"{pct(rate[k]['rate'])} · pool {money(rate[k]['pool_amount'])}"
                  f" over {money(rate[k]['base_amount'])} {rate[k]['base_type']}")
                 for k in ("FRINGE", "OVERHEAD", "G&A", "INDIRECT_COMBINED")
@@ -530,13 +550,28 @@ def recommendations(f: dict) -> list[dict]:
     R.append(dict(
         id="R17", step="5", screen="/review/rate — the carve-out row",
         title="Nothing goes to NCDMM before the square footage lands",
-        rec="The carve-out reads zero on a pool of "
-            f"{money(oh['pool_amount']) if oh else '—'} because **no facility "
-            "on the record carries measured space** — so every dollar of tenant "
-            "and vacant occupancy cost is in the federal pool. At a realistic "
-            "tenant share the combined rate is nearer 37.67% than 43.99%. "
-            "Restating at 43.99% and then discovering 37.67% means "
-            "over-claiming on a rate YBI proposed itself.",
+        # Read, not written down. Both halves of this card were prose with
+        # the figures baked in, and they ended up contradicting the data row
+        # underneath them on the same card: *no facility on the record
+        # carries measured space* printed directly above *5 facilities with
+        # measured space*. This file's own docstring says every figure is
+        # read from the live record and names the last three times that was
+        # broken; this is the fourth.
+        rec=("The carve-out reads zero on a pool of "
+             f"{money(oh['pool_amount']) if oh else '—'} because **no "
+             "facility on the record carries measured space** — so every "
+             "dollar of tenant and vacant occupancy cost is in the federal "
+             "pool. Nothing should go to NCDMM on a rate that has never had "
+             "the carve-out evaluated: restating high and then measuring is "
+             "over-claiming on a rate YBI proposed itself."
+             if not f["facilities"] else
+             f"The carve-out has fired: {f['carve_rows']} row(s) against "
+             f"{f['facilities']} measured facility(ies), on an overhead pool "
+             f"of {money(oh['pool_amount']) if oh else '—'}. What is still "
+             "open is whether the estate on the record is the **measured** "
+             "one — a floor plan filed and not accepted moves no figure — "
+             "and every square foot that moves from let to programme puts "
+             "occupancy back in the federal pool and the rate back up."),
         record=[("carve-out rows recorded", f"{f['carve_rows']}"),
                 ("facilities with measured space", f"{f['facilities']}"),
                 ("worth", "about ±16 points of the combined rate")],

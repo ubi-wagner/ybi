@@ -149,12 +149,35 @@ exists because a person remembered to run it does not survive a recovery.
 
 So the boot opens whatever is missing — the six accounts on
 `YBI_INITIAL_PASSWORD`, the eighteen foundational documents, the manuals and
-the generated PDFs — and touches nothing that is already there. It never
-overwrites an account, never writes a password into a row, and restores
-nothing that is a judgment: the ledger, the classifications, the seal and
-the rate are people's work and come from `scripts/seed.sh` and from people.
-Without `YBI_INITIAL_PASSWORD` set it does nothing at all, because opening
-accounts nobody can sign into is not a recovery.
+the generated PDFs, and every register that is a **transcription** of one of
+those documents — and touches nothing that is already there. It never
+overwrites an account, never writes a password into a row, and never runs a
+loader against a register that already has rows in it. Without
+`YBI_INITIAL_PASSWORD` set it does nothing at all, because opening accounts
+nobody can sign into is not a recovery.
+
+**Seven registers come back on their own**: the effort distribution, the
+working calendar and the hours log, the 263-asset register, the four awards,
+their budget schedules, the text of the agreements, and the link from each
+award to the paper it was read out of. The list is
+`app/foundation.py::REGISTERS` and `scripts/seed.sh` walks the same one, so
+a recovery and a fresh seed cannot disagree about what the foundation is.
+
+**Four steps still need a person, and the ledger is one of them.** They
+write through the API signed in as somebody, and `refuse_issued_password`
+refuses every write from an account still on the organisation's password —
+so a boot has nobody to be. That is the rule working, not a gap in it. After
+a recovery, somebody who has set their own password runs:
+
+```bash
+railway run --service ybi-cost -- env BASE=https://<your-domain> \
+  YBI_SEED_PASSWORD='<their own password>' ./scripts/seed.sh
+```
+
+It is re-runnable: everything already in is skipped by name and said so.
+What it will not do is classify, seal, compute a rate or sign one — those
+are judgments, and a boot or a script that made one would be the machine
+putting its name on the seal.
 
 **And a person can open their own.** The sign-in card has a second tab: an
 `@ybi.org` address plus `YBI_INITIAL_PASSWORD` opens an `EMPLOYEE` account

@@ -118,8 +118,13 @@ def test_it_does_nothing_without_the_organisation_password(monkeypatch):
     import app.foundation as f
 
     monkeypatch.setattr(f, "shared_initial_password", lambda: "")
+    # Derived, not listed. The acts were two and are four; a hand-kept list
+    # here would have let a new one past the gate without failing, which is
+    # the shape this repository keeps finding.
+    acts = [n for n in dir(f) if n.startswith("ensure_")]
+    assert len(acts) >= 3, acts
     called: list[str] = []
-    for name in ("ensure_accounts", "ensure_documents"):
+    for name in acts:
         monkeypatch.setattr(f, name, lambda n=name: called.append(n) or [])
     assert f.restore() == {}
     assert not called, f"the bootstrap acted with no password set: {called}"

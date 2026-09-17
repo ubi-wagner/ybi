@@ -1,6 +1,6 @@
 # Run sheet — 2025 close
 
-*Generated from the record by `scripts/stage_the_run.py` on 16 September 2026. Nothing here has been done on anybody's behalf.*
+*Generated from the record by `scripts/stage_the_run.py` on 17 September 2026. Nothing here has been done on anybody's behalf.*
 
 Four acts are staged and deliberately not performed, because each is a judgment with a person's name on it: **accepting a measurement**, **determining a relationship**, **sealing or certifying**, and **anything sent to a sponsor**.
 
@@ -64,7 +64,7 @@ All 263 assets read `INTERNAL`, which is the column's default and not an answer 
 
 ### 2. 850,382.89 of OVERHEAD is still `PENDING`
 
-The depreciation judgment named its own release condition — *the unallowable share is an adjustment against this pool the day the register arrives*. **The register has arrived**: all 263 assets carry a funding answer, 20 are federally funded, and their 156,235.27 is already carved under 200.436(b).
+The depreciation judgment named its own release condition — *the unallowable share is an adjustment against this pool the day the register arrives*. **The register has arrived**: all 263 assets carry a funding answer, 17 are federally funded, and their 261,988.65 is already carved under 200.436(b).
 
 Resolving it to `ALLOWABLE` **moves no rate** — the cost is already in the pool and `PENDING` only ever held it out of the *claim*. It costs two deliberate acts: withdraw the signature, then unseal, each with a written reason.
 
@@ -73,11 +73,11 @@ Resolving it to `ALLOWABLE` **moves no rate** — the cost is already in the poo
 | | on the record | what the measured estate supports |
 | --- | ---: | ---: |
 | Fringe | 21.90% | 21.90% *(anchored — cannot move on a floor plan)* |
-| Overhead | 12.35% | 7.58% *(band 5.46 – 13.69)* |
+| Overhead | 10.11% | 7.58% *(band 5.46 – 13.69)* |
 | G&A | 12.37% | 12.37% *(carries no occupancy)* |
-| **Combined** | **24.71%** | **19.95%** *(band 17.83 – 26.05)* |
+| **Combined** | **22.48%** | **19.95%** *(band 17.83 – 26.05)* |
 
-Certified by Tom Metzinger. **Recomputing supersedes the rate and the certificate dies with it** — that is the design, not a fault.
+NOT CERTIFIED — nobody has put their name to the rate these figures rest on. The rate has been recomputed since it was certified, so the signature is on a build-up that no longer stands. Sign the new one. Nothing here is blocked by that: this is a working document, and it says so rather than waiting.
 
 
 The difference is not a correction to the arithmetic. It is whether the overhead **pool** was ever the right size: the certified rate is 31.62% with 61% carved back out, and on the measured estate the carve-out exceeds the pool. See `docs/DEFENSIBLE_RATE_2025.md`.

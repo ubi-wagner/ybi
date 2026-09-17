@@ -52,8 +52,23 @@ reclassifying in QuickBooks: it is the whole gap between a fringe rate of
 
 ### 2. You classify
 
-`/classify`. 999 groups, 17,057,405.96. This is the screen the engagement
-turns on.
+`/classify`. **757 cost groups, 10,180,642.10** — and every one of them
+already carries a position. This is the screen the engagement turns on.
+
+Two things about those figures, because the older numbers are still in
+circulation. It is 757 and not 999 because migration `064` took the Income
+section out of scope: 242 groups and 6,876,763.86 of it was grant revenue,
+which does not go in a cost pool, and a quarter of the queue could not be
+actioned at all. And the dollars are cost, not the whole ledger — the general
+ledger's 15,500 lines are on `/classify/ledger`, where every line lands in
+one of four buckets and the two that are out of scope say why.
+
+**What is on this screen today is review, not judgment.** The 757 positions
+were recorded by `scripts/classification_log.py` and carry
+`origin = MACHINE_PROPOSAL`; `/classify/review` is where you adopt them, at
+your own pace, inside the sealed set. Adopting moves no figure — that is the
+guarantee, and it is why the rate never depends on who got round to
+reviewing.
 
 **No rate is computed or shown anywhere during this phase.** Not a preview,
 not an indication, not a running total. If you find yourself wanting one, that
@@ -137,8 +152,9 @@ document library with a hash.
   different states. All 263 assets name where their money came from, so
   200.436(b) is answered. The estate on the record is a **derivation from the
   documents**, not a measurement — Heidi's floor plan is filed as evidence and
-  **not accepted**, because accepting it supersedes a certified rate and that
-  is your act.
+  **not accepted**, because accepting it supersedes the rate, and a signature
+  on that rate dies with it. That is your act either way; whether a signature
+  is currently on it is what the band on `/review` says.
 - **Accepting a floor plan adds to the estate; it does not replace it.** The
   derived rows are still there, so the rows a reply supersedes have to come
   off first or the estate is counted twice and the 200.465 carve-out is taken
