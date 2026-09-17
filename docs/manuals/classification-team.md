@@ -225,5 +225,13 @@ is one people route around. What changes is **what the paper says** — every
 document carries a band reading `NOT CERTIFIED` and the reason, or naming who
 signed and when, and repeats the walk's unfinished steps above its figures.
 
-This run was produced that way: the rate certified, the citations not yet
-made, and both facts printed on every page of it.
+This run was produced that way, and the band is worth reading rather than
+trusting. It has three states, not two: **certified** names who signed and
+when; **NOT CERTIFIED** gives the reason, which is usually that the rate has
+been recomputed since somebody signed and the signature is on a build-up that
+no longer stands; and **REHEARSAL** means a drive produced that signature to
+prove the mechanism and no person gave it. The third exists because one did,
+and 53 published documents said *CERTIFIED — Tom Metzinger* over a rate
+nobody had put their name to.
+
+Whatever it says, the citations are a separate fact and it prints that too.

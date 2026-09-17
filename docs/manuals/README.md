@@ -9,11 +9,40 @@ cost — so the split follows what somebody actually does.
 | [Everybody](everybody.md) | Signing in, your timesheet, certifying your effort, sending a document in. Read this one first; it is the only one most people need. |
 | [The controller](controller.md) | Classifying cost, the seal, the rate, restatement. Tom, Stephanie and Heidi. |
 | [The administrator](administrator.md) | Accounts, access, and who let whom in. Barb. |
+| [Facilities and inventory](facilities-and-inventory.md) | The two measurements the rate turns on: the square footage of each building and what federal money paid for each asset. Heidi. |
+| [The classification team](classification-team.md) | Reviewing the 757 working positions, citing the paper behind each, and the timesheet path. |
 | [The auditor](auditor.md) | Reading the record, and what each figure rests on. |
+
+**Six, and this table has been four.** A list of the manuals kept by hand
+beside the manuals is the shape the rest of this repository spends its time
+removing; `app/foundation.py::GUIDES` is the one the shelf reads, and it is
+what `/guidebook` serves.
 
 There is also a manual **inside the application**, on your landing page,
 assembled from what you hold — so it never describes a screen you cannot
 open. These are the longer version, for reading away from the screen.
+
+## A figure in here is a fact about the books, never the state of the work
+
+A manual is not generated, so nothing keeps it honest but somebody reading it
+against the record when the record moves — and that is exactly the kind of
+thing nobody does. The auditor's manual carried *999 groups unclassified,
+coverage 0.0%, no seal, no rate, no square footage, no funding source* for a
+week after every one of those stopped being true, and it is the manual read
+by the person with no other source.
+
+So the line is:
+
+- **A fact about the 2025 books may be stated.** 757 cost groups, 15,500
+  ledger lines, 43 people on the payroll register, $45,053.23 in an intern
+  wage account. The year is closed and the seed is final; these do not move.
+- **The state of the work may not.** Coverage, how many have certified, which
+  rate stands, whether a register has been answered. Those have a screen that
+  reads them from the record — the walk at `/`, the tie register at
+  `/review`, the readiness report — and a manual points at it instead.
+
+The test is whether doing the work would make the sentence false. If it
+would, it belongs on a screen.
 
 ## The one idea worth knowing before any of it
 

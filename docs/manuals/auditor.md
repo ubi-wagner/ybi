@@ -52,23 +52,50 @@ The document behind any figure opens from the library. The database is the
 index; where a document sits on disk is a convenience for browsing and
 enforces nothing.
 
-## What is deliberately incomplete, today
+## What is deliberately incomplete
 
-State this rather than discovering it:
+**Read it off the record, not off this page.** This section used to list the
+state of the work — *999 groups unclassified, coverage 0.0%, no seal, no
+rate, no square footage, no funding source* — and every one of those had
+stopped being true by the time anybody read it. A manual is not generated, so
+a snapshot in it is a figure that can only go stale, and the one it misleads
+is the reader who has no other source. Two screens answer it live, and both
+are built for exactly this question:
 
-- **999 groups, 17,057,405.96, unclassified.** Coverage is 0.0%.
-- **43 of 43 certifications outstanding.** Every distribution row is a
-  reconstruction from calendars and project logs, and each one names what it
-  rests on.
-- **No seal, no rate, no allocation.** A rate over an unsealed set is refused.
-- **45,053.23** between the payroll register and the ledger's wage accounts —
-  named down to zero unexplained, but not yet corrected at source.
-- **No square footage** on any building, so the facilities carve-out is
-  unsized.
-- **No funding source** on the asset register, so 200.436(b) is unanswered.
+- **`/` — the walk.** Eleven steps in the order the year is closed, each
+  reading the view that owns its figure, each `DONE`, `OPEN`, `NO DATA` or
+  `WAITING`. `NO DATA` is the one to look at: it means the step *cannot be
+  evaluated*, which is never a pass. Nothing on it is computed.
+- **`/review` — the tie register.** One row per report and anchor, twenty-one
+  of them, each reading the control that already owns its figure. A
+  difference is named to the cent rather than netted, and an anchor with
+  nothing behind it reads `NO DATA` rather than green.
+
+`GET /api/review/ties` and `GET /api/dashboard/walk` are the same two as
+JSON, and `docs/REPORT_TIES_2025.md` is the register as a document for
+reading away from a screen.
+
+What belongs here instead is what does **not** change when somebody does the
+work — facts about the year and about the agreements, not about the queue:
+
+- **45,053.23** between the payroll register and the ledger's wage accounts.
+  A donor credit sat in an intern wage account for a year; it is named down
+  to zero unexplained, and whether it has been reposted in QuickBooks is on
+  the eleventh control rather than on this page. It is the whole difference
+  between a fringe rate of 22.45% and one of 21.90%, and only the eleventh
+  control could ever have found it — the other ten do not touch the register.
 - **Drive AM's cost share contradicts itself** across §4.3, Schedule A and
   Schedule B. Recorded as a provision marked UNRESOLVED rather than resolved
-  by inference.
+  by inference. It needs counsel, not arithmetic.
+- **No America Makes award budgets meaningful indirect.** Drive AM carries no
+  indirect line at all against $583,594 of labour; ICAM budgets 10% of ODCs
+  only. That absence is the strongest evidence the restatement has, because
+  the document YBI issued is itself the record of what it was never budgeted
+  to claim.
+- **The effort distribution is a reconstruction**, from calendars and project
+  logs, and each row names what it rests on. Whether a given person has since
+  signed for theirs is `v_certification_status`, live — a count here would be
+  wrong within a week.
 
 ## The sequence, which is the thing to test
 
