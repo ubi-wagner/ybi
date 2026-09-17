@@ -372,10 +372,24 @@ def contract(award_id: str, period: str | None = None) -> dict:
             "invoices": invoices, "people": people}
 
 
-@router.put("/{award_id}/terms", status_code=201)
-def put_term(award_id: str, body: TermIn,
-             actor: Actor = Depends(require_project)) -> dict:
-    """Record a provision, with the clause it came from."""
+def record_term(award_id: str, term_key: str, term_value: str,
+                citation: str, note: str, by: str) -> dict:
+    """Record a provision, with the clause it came from — without an actor.
+
+    Lifted out of `PUT /contracts/{id}/terms` so the boot can transcribe the
+    twenty-six provisions read out of the executed agreements. Those are this
+    repository's own worked example of what a script that nobody runs costs:
+    *the twenty-six contract provisions read out of the executed agreements
+    lived in one developer's database and in no script*, so a seeded record
+    carried three contracts and nothing inside them, and an auditor walking
+    back from an invoice reached the agreement and then a dead end.
+    `load_contract_terms.py` fixed the script half and left the other — it
+    went through the API as a person, and a boot has nobody to be.
+
+    `by` is a provenance label, landing in `award_term.recorded_by`. The
+    handler below adds the audit row from the session; the boot writes one
+    that names itself and claims no account.
+    """
     if not one("SELECT 1 FROM award WHERE award_id = %s", (award_id,)):
         raise HTTPException(404, f"No contract {award_id}.")
     execute("""INSERT INTO award_term
@@ -387,13 +401,21 @@ def put_term(award_id: str, body: TermIn,
                      note = EXCLUDED.note,
                      recorded_by = EXCLUDED.recorded_by,
                      recorded_at = now()""",
-            (award_id, body.term_key, body.term_value, body.citation,
-             body.note, actor.display_name))
+            (award_id, term_key, term_value, citation, note, by))
+    return {"award_id": award_id, "term_key": term_key}
+
+
+@router.put("/{award_id}/terms", status_code=201)
+def put_term(award_id: str, body: TermIn,
+             actor: Actor = Depends(require_project)) -> dict:
+    """Record a provision, with the clause it came from."""
+    out = record_term(award_id, body.term_key, body.term_value, body.citation,
+                      body.note, actor.display_name)
     record(actor, "AWARD_TERM", "award", award_id,
            after={"term": body.term_key, "value": body.term_value[:200],
                   "citation": body.citation},
            reason=f"{body.term_key} recorded")
-    return {"award_id": award_id, "term_key": body.term_key}
+    return out
 
 
 @router.post("/{award_id}/milestones", status_code=201)

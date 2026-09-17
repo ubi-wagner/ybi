@@ -15,7 +15,7 @@ import psycopg
 from fastapi import Depends, APIRouter, File, HTTPException, UploadFile
 
 from app.auth import require_controller, require_reader
-from app.audit import record
+from app.audit import note, record
 from app.auth import Actor
 from app import storage
 from app.db import execute, one, query, transaction
@@ -28,6 +28,60 @@ router = APIRouter(prefix="/imports", tags=["imports"],
                    dependencies=[Depends(require_reader)])
 
 
+def _trail(actor, by: str, action: str, entity: str, entity_id: str,
+           **kw) -> None:
+    """The trail, from whoever is there. A person's act names their account
+    and their session; the deployment's names itself and claims neither."""
+    if actor is not None:
+        record(actor, action, entity, entity_id, **kw)
+    else:
+        note(by, action, entity, entity_id, **kw)
+
+
+def stage_file(raw: bytes, filename: str, report: str, period: str,
+               by: str) -> dict:
+    """Put a source file on the volume and open a staging batch for it.
+
+    The body of `POST /upload`, lifted so that **the boot can transcribe the
+    books without a person and without a socket.** `app/foundation.py` files
+    the eighteen foundational documents at boot and read no row out of them;
+    the ledger is one of those documents, and the only thing that kept it out
+    was that this work lived inside an HTTP handler with an `Actor` in its
+    signature.
+
+    `by` is a **provenance label and not a user** — `deployment bootstrap`
+    when the deployment transcribes its own shipped documents, the
+    controller's display name when a person uploads one. Migration `087`
+    defines that shape: a mechanism that names itself and carries no
+    `actor_id` had no session to record. There is no account and nothing that
+    can sign in.
+
+    One implementation, two callers. The handler below adds the audit row,
+    because a person uploading a file is an act; the boot writes the
+    provenance column and no audit row claiming anybody.
+    """
+    sha = hashlib.sha256(raw).hexdigest()
+
+    dup = one("""SELECT batch_id, status FROM staging_batch
+                  WHERE period=%s AND report=%s AND sha256=%s""", (period, report, sha))
+    if dup:
+        return {"batch_id": str(dup["batch_id"]), "status": dup["status"],
+                "sha256": sha, "deduplicated": True,
+                "note": "This exact file has already been uploaded."}
+
+    dest = storage.place(
+        storage.source_path(period, report, sha, filename), raw)
+
+    row = one("""INSERT INTO staging_batch
+                   (period, report, profile_id, original_name, storage_uri,
+                    sha256, byte_size, uploaded_by)
+                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING batch_id""",
+              (period, report, "qbo-gl-v1", filename, str(dest),
+               sha, len(raw), by))
+    return {"batch_id": str(row["batch_id"]), "status": "UPLOADED",
+            "sha256": sha, "byte_size": len(raw), "deduplicated": False}
+
+
 @router.post("/upload")
 async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
                  period: str = "2025", uploaded_by: str = "unknown",
@@ -36,44 +90,32 @@ async def upload(file: UploadFile = File(...), report: str = "GENERAL_LEDGER",
     # received on someone else's behalf, not a claim about who did this.
     uploaded_by = actor.display_name or uploaded_by
     raw = await file.read()
-    sha = hashlib.sha256(raw).hexdigest()
-
-    dup = one("""SELECT batch_id, status FROM staging_batch
-                  WHERE period=%s AND report=%s AND sha256=%s""", (period, report, sha))
-    if dup:
-        record(actor, "IMPORT_UPLOAD", "staging_batch", str(dup["batch_id"]),
-               after={"report": report, "sha256": sha, "deduplicated": True},
-               reason=f"{file.filename} — already on file")
-        return {"batch_id": str(dup["batch_id"]), "status": dup["status"],
-                "note": "This exact file has already been uploaded."}
-
-    dest = storage.place(
-        storage.source_path(period, report, sha, file.filename), raw)
-
-    row = one("""INSERT INTO staging_batch
-                   (period, report, profile_id, original_name, storage_uri,
-                    sha256, byte_size, uploaded_by)
-                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING batch_id""",
-              (period, report, "qbo-gl-v1", file.filename, str(dest),
-               sha, len(raw), uploaded_by))
-    record(actor, "IMPORT_UPLOAD", "staging_batch", str(row["batch_id"]),
-           after={"report": report, "sha256": sha, "byte_size": len(raw),
-                  "original_name": file.filename},
-           reason=f"{file.filename} received")
-    return {"batch_id": str(row["batch_id"]), "status": "UPLOADED", "sha256": sha}
+    out = stage_file(raw, file.filename, report, period, uploaded_by)
+    record(actor, "IMPORT_UPLOAD", "staging_batch", out["batch_id"],
+           after={"report": report, "sha256": out["sha256"],
+                  "byte_size": out.get("byte_size"),
+                  "original_name": file.filename,
+                  "deduplicated": out["deduplicated"]},
+           reason=(f"{file.filename} — already on file" if out["deduplicated"]
+                   else f"{file.filename} received"))
+    return {k: v for k, v in out.items()
+            if k in ("batch_id", "status", "sha256", "note")}
 
 
-@router.post("/{batch_id}/parse")
-def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
+def parse_batch(batch_id: str, by: str = "deployment bootstrap",
+                actor: Actor | None = None) -> dict:
+    """Read a staged file and write what it says, without an actor.
+
+    Lifted out of the handler for the same reason `stage_file` was: the boot
+    transcribes the books and has nobody to be. The controls are unchanged
+    and they are not in this function — the profit and loss must foot to net
+    income, the balance sheet must balance and agree with the P&L's net
+    income, and every printed subtotal must equal what sits under it, which a
+    trigger enforces at accept.
+    """
     b = one("SELECT * FROM staging_batch WHERE batch_id=%s", (batch_id,))
     if not b:
         raise HTTPException(404, "batch not found")
-    # A parse writes: it can replace every pl_account row for the period. That
-    # is a change to the cost scope every classification is then measured in,
-    # so it belongs on the record whatever its outcome.
-    record(actor, "IMPORT_PARSE", "staging_batch", batch_id,
-           after={"report": b["report"], "original_name": b["original_name"]},
-           reason=f"parsing {b['original_name']}")
     path = Path(b["storage_uri"])
 
     if b["report"] == "PROFIT_LOSS":
@@ -162,8 +204,8 @@ def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
                               SET status='ACCEPTED', parsed_at=now(),
                                   accepted_at=now(), accepted_by=%s
                             WHERE batch_id=%s""",
-                        (actor.display_name, batch_id))
-            record(actor, "IMPORT_ACCEPT", "staging_batch", batch_id,
+                        (by, batch_id))
+            _trail(actor, by, "IMPORT_ACCEPT", "staging_batch", batch_id,
                    after={"report": "BALANCE_SHEET",
                           "accounts": len(bs.accounts),
                           "assets": str(bs.assets),
@@ -238,6 +280,22 @@ def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
             "warnings": warnings, "skipped": staged.skipped}
 
 
+@router.post("/{batch_id}/parse")
+def parse(batch_id: str, actor: Actor = Depends(require_controller)) -> dict:
+    # A parse writes: it can replace every pl_account row for the period. That
+    # is a change to the cost scope every classification is then measured in,
+    # so it belongs on the record whatever its outcome — recorded before the
+    # work, so a parse that raises is still on the trail.
+    b = one("SELECT report, original_name FROM staging_batch WHERE batch_id=%s",
+            (batch_id,))
+    if not b:
+        raise HTTPException(404, "batch not found")
+    record(actor, "IMPORT_PARSE", "staging_batch", batch_id,
+           after={"report": b["report"], "original_name": b["original_name"]},
+           reason=f"parsing {b['original_name']}")
+    return parse_batch(batch_id, actor.display_name, actor)
+
+
 @router.get("/{batch_id}/preview")
 def preview(batch_id: str) -> dict:
     recon = one("SELECT * FROM v_staging_reconciliation WHERE batch_id=%s", (batch_id,))
@@ -256,21 +314,23 @@ def preview(batch_id: str) -> dict:
             "acceptable": bool(recon and recon["mismatches"] == 0)}
 
 
-@router.post("/{batch_id}/accept")
-def accept(batch_id: str, accepted_by: str = "",
-           actor: Actor = Depends(require_controller)) -> dict:
-    """A trigger refuses this while any subtotal is off by more than half a
-    cent, so the guarantee holds even if this handler is wrong.
+def promote_batch(batch_id: str, by: str,
+                  actor: Actor | None = None) -> dict:
+    """Promote a staged batch into the ledger.
 
-    Identity comes from the session. ``accepted_by`` is a label, the way it
-    is on ``upload`` two hundred lines up — and this was the one route of
-    nine that did not say so, while the screen sent the literal string
-    ``tom`` in the query string. It reached ``staging_batch.accepted_by`` and
-    ``ledger_import.imported_by``, which is the permanent provenance record
-    every ledger line points back to: who promoted the general ledger was
-    whatever the URL said.
+    A trigger refuses this while any subtotal is off by more than half a
+    cent, so the guarantee holds even if this function is wrong — and it is
+    why the boot can call it. The control is in the schema, not in the
+    handler, so a transcription done without a person is held to exactly the
+    same standard as one a controller presses Accept on.
+
+    `by` lands in `staging_batch.accepted_by` and `ledger_import.imported_by`,
+    which is the permanent provenance record every ledger line points back
+    to. It is a label and never an identity: `deployment bootstrap` when the
+    deployment transcribes the export it ships, the controller's display name
+    when a person promotes one.
     """
-    accepted_by = actor.display_name or accepted_by
+    accepted_by = by
     try:
         execute("""UPDATE staging_batch
                       SET status='ACCEPTED', accepted_at=now(), accepted_by=%s
@@ -379,14 +439,37 @@ def accept(batch_id: str, accepted_by: str = "",
                                import_id = EXCLUDED.import_id""",
             (imp["import_id"], batch_id))
 
-    record(actor, "IMPORT_ACCEPT", "ledger_import", str(imp["import_id"]),
-           after={"batch_id": batch_id,
-                  "lines_promoted": n["n"] if n else 0,
-                  "lines_in_ledger": landed["n"]},
-           reason="accepted after every printed subtotal tied")
+    # Only when nobody above will. A person promoting a file is an act and
+    # the handler records it from the session; the boot has no session, so
+    # the trail is written here and names the mechanism. Writing it in both
+    # places would put two rows on one promote.
+    if actor is None:
+        note(by, "IMPORT_ACCEPT", "ledger_import", str(imp["import_id"]),
+             after={"batch_id": batch_id,
+                    "lines_promoted": n["n"] if n else 0,
+                    "lines_in_ledger": landed["n"]},
+             reason="accepted after every printed subtotal tied")
     return {"batch_id": batch_id, "import_id": str(imp["import_id"]),
             "lines_promoted": n["n"] if n else 0,
             "lines_in_ledger": landed["n"]}
+
+
+@router.post("/{batch_id}/accept")
+def accept(batch_id: str, accepted_by: str = "",
+           actor: Actor = Depends(require_controller)) -> dict:
+    """Identity comes from the session. ``accepted_by`` is a label, the way
+    it is on ``upload`` — and this was the one route of nine that did not say
+    so, while the screen sent the literal string ``tom`` in the query string.
+    It reached the permanent provenance record every ledger line points back
+    to: who promoted the general ledger was whatever the URL said.
+    """
+    accepted_by = actor.display_name or accepted_by
+    out = promote_batch(batch_id, accepted_by)
+    record(actor, "IMPORT_ACCEPT", "ledger_import", out["import_id"],
+           after={"batch_id": batch_id,
+                  "lines_promoted": out.get("lines_promoted", 0)},
+           reason="accepted after every printed subtotal tied")
+    return out
 
 
 @router.get("")

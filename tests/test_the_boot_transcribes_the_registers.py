@@ -56,13 +56,20 @@ def test_every_register_says_what_it_is_for():
         assert len(r.why) >= 80, f"{r.name}: {len(r.why)} characters of why"
 
 
-def test_no_register_loader_writes_through_the_api():
+def test_no_register_loader_is_invoked_through_the_api():
     """The line between the two halves, as a property rather than a comment.
 
     A loader that goes through the API signs in as a person, and
-    `refuse_issued_password` means a boot has nobody to be — so it would
-    fail on every write, or worse, appear to work. `seed.sh` keeps four of
-    those and they must never migrate onto this list.
+    `refuse_issued_password` means a boot has nobody to be — so over HTTP it
+    would fail on every write, or worse, appear to work.
+
+    The rule is about **how the boot invokes it**, not about what the module
+    can do. `load_contract_terms.py` has both paths: a person runs it against
+    a URL and it records as them, the boot runs it with `--direct` and it
+    records as the deployment. So a loader that can reach the API has to be
+    invoked with the flag that does not — the first draft of this asserted
+    that the module never imports `httpx` at all, which would have forced a
+    second copy of the same twenty-six provisions.
     """
     for r in REGISTERS:
         tree = ast.parse((SCRIPTS / r.script).read_text())
@@ -73,10 +80,11 @@ def test_no_register_loader_writes_through_the_api():
             for n in ([a.name for a in node.names]
                       if isinstance(node, ast.Import) else [node.module or ""])
         }
-        assert "httpx" not in imported, (
-            f"{r.name}: scripts/{r.script} talks to the API, so a boot "
-            f"cannot run it — refuse_issued_password refuses every write "
-            f"from an account on the organisation's password")
+        if "httpx" in imported:
+            assert "--direct" in r.args, (
+                f"{r.name}: scripts/{r.script} can talk to the API and the "
+                f"boot invokes it without --direct, so it will try to sign "
+                f"in as somebody — and a boot has nobody to be")
 
 
 def test_no_register_loader_writes_a_judgment():
@@ -329,7 +337,18 @@ def test_every_table_a_loader_writes_is_accounted_for():
         writes = set(re.findall(r"INSERT\s+INTO\s+([a-z_]+)", src))
         writes |= set(re.findall(r"UPDATE\s+([a-z_]+)\b", src))
         writes -= {"audit_log"}          # every writer touches it
-        assert writes, f"{r.script} writes nothing this sweep can see"
+        if not writes:
+            # A loader whose writes are in the handler it calls rather than
+            # in its own SQL. `load_books.py` is the one: it calls
+            # `stage_file`, `parse_batch` and `promote_batch`, which is the
+            # whole point — one implementation shared with the screen — so
+            # there is no SQL here to sweep. The register it fills is counted
+            # the same way, and the handler's own writes are swept by
+            # `test_sql_is_real.py`.
+            assert re.search(r"from app\.routers\.\w+ import", src), (
+                f"{r.script} writes nothing this sweep can see and calls no "
+                f"handler either, so nothing it does is checked anywhere")
+            continue
         for t in sorted(writes):
             assert re.search(rf"\b{t}\b", named), (
                 f"scripts/{r.script} writes `{t}` and no register counts it, "

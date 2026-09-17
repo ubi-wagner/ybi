@@ -33,9 +33,12 @@ import sys
 
 import httpx
 
+from app.db import query
 from app.foundation import EMAIL  # noqa: E402
 
 #: (award, key, value, citation, note)
+BY = "deployment bootstrap"
+
 TERMS = [
     # ── AM-DRIVE-AM ───────────────────────────────────────────
     ("AM-DRIVE-AM", "Allowability",
@@ -192,7 +195,43 @@ def main() -> int:
     ap.add_argument("--base", default="http://127.0.0.1:8000")
     ap.add_argument("--who", default=EMAIL["tom"])
     ap.add_argument("--password", default="")
+    ap.add_argument("--direct", action="store_true",
+                    help="write without an API or an actor, as the deployment boot does")
     args = ap.parse_args()
+
+    # **No socket and nobody to be.** The twenty-six provisions are this
+    # repository's own worked example of what a script nobody runs costs —
+    # they lived in one developer's database and in no script, so a seeded
+    # record carried three contracts and nothing inside them. `seed.sh` fixed
+    # the script half and left the other: it went through the API as a
+    # person, so the deployment could not bring them back either.
+    #
+    # `--direct` writes through `contracts.record_term`, which is the same
+    # upsert the handler calls. The identity is a provenance label rather
+    # than an account, and the audit row names the mechanism and claims
+    # nobody, which is migration `087`'s shape.
+    if args.direct:
+        # Aliased: the HTTP branch below unpacks a loop variable
+        # called `note`, and the two would shadow each other.
+        from app.audit import note as audit_note
+        from app.routers.contracts import record_term
+        known = {r["award_id"] for r in query("SELECT award_id FROM award")}
+        written = skipped = 0
+        for award, key, value, citation, note_text in TERMS:
+            if award not in known:
+                print(f"  NO AWARD {award} — {key!r} not recorded",
+                      file=sys.stderr)
+                skipped += 1
+                continue
+            record_term(award, key, value, citation, note_text, BY)
+            audit_note(BY, "AWARD_TERM", "award", award,
+                       after={"term": key, "value": value[:200],
+                              "citation": citation},
+                       reason=f"{key} recorded")
+            written += 1
+        print(f"  {written} provision(s) on the record"
+              + (f", {skipped} not recorded" if skipped else ""))
+        return 1 if skipped else 0
 
     password = (args.password or os.environ.get("YBI_SEED_PASSWORD")
                 or getpass.getpass(f"password for {args.who}: "))

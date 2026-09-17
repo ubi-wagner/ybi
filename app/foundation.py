@@ -435,6 +435,10 @@ class Register:
     loaded: str
     why: str
     always: bool = False
+    #: Documentation only — the tuple's order is the order. It
+    #: marks the one every other entry depends on, so a future
+    #: reader moving entries around knows which one cannot move.
+    first: bool = False
 
 
 #: Everything a boot can transcribe, in the order it has to happen.
@@ -448,6 +452,20 @@ class Register:
 #: `test_every_table_a_loader_writes_is_accounted_for` sweeps the loaders
 #: rather than trusting this list to stay complete.
 REGISTERS: tuple[Register, ...] = (
+    Register(
+        "the books", "load_books.py", (),
+        "SELECT least((SELECT count(*) FROM ledger_line), "
+        "             (SELECT count(*) FROM pl_account), "
+        "             (SELECT count(*) FROM bs_account))",
+        "The general ledger, the profit and loss and the balance sheet, "
+        "through the same `stage_file`, `parse_batch` and `promote_batch` "
+        "the import screen calls — the same parsers and the same trigger "
+        "refusing a promote while any printed subtotal is off by more than "
+        "half a cent. It was left out because promoting lived inside an HTTP "
+        "handler with an `Actor` in its signature, and a boot has no socket "
+        "and nobody to be; the work is now a function and the identity is a "
+        "provenance label. **First, because six of the ten below read it.**",
+        first=True),
     Register(
         "the effort distribution", "load_labor.py", (),
         "SELECT count(*) FROM labor_allocation",
@@ -488,6 +506,28 @@ REGISTERS: tuple[Register, ...] = (
         "an invoice. A category named at zero and a category absent are "
         "different findings, and only a loaded schedule can tell them "
         "apart. After the awards, which it hangs off."),
+    Register(
+        "the 2025 invoice register", "load_invoices_2025.py", ("--apply",),
+        "SELECT least((SELECT count(*) FROM invoice), "
+        "             (SELECT count(*) FROM invoice_line))",
+        "61 invoices, $2,964,077.32, read off the six PDFs of invoices as "
+        "issued. **It declines on its own authority** until the register "
+        "agrees with `3900 Grant Income` in the ledger, writing nothing and "
+        "saying why — which is why it sits after the books rather than "
+        "beside them, and why it was left off this list entirely until the "
+        "books were on it."),
+    Register(
+        "the contract provisions", "load_contract_terms.py", ("--direct",),
+        "SELECT count(*) FROM award_term",
+        "The twenty-six provisions read out of the executed agreements, with "
+        "the clause each came from. **This repository's own worked example "
+        "of what a script nobody runs costs** — they lived in one "
+        "developer's database and in no script, so a seeded record carried "
+        "three contracts and nothing inside them and an auditor walking back "
+        "from an invoice reached the agreement and then a dead end. "
+        "`seed.sh` fixed the script half; it still went through the API as a "
+        "person, so a deployment could not bring them back either. After the "
+        "awards, which each one hangs off."),
     Register(
         "the text of the agreements", "read_documents.py", ("--write",),
         "SELECT count(*) FROM evidence WHERE extracted_text IS NOT NULL",
@@ -696,8 +736,8 @@ def ensure_documents() -> list[str]:
 #: spreadsheet turning that into a failed deploy. Going over it is not a
 #: loss: every step is skipped rather than half-done, and the next boot or
 #: `scripts/seed.sh` picks up exactly where this one stopped.
-REGISTER_TIMEOUT = 30
-REGISTER_BUDGET = 40
+REGISTER_TIMEOUT = 120
+REGISTER_BUDGET = 240
 
 
 def _rows_in(r: Register) -> int:
