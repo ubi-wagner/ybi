@@ -46,6 +46,10 @@ def seal(body: SealIn, period: str = "2025",
     the signed-in controller and body.sealed_by is only a label. An identity
     the client supplies is not evidence of who did this.
     """
+    # 200.1's cap, from the one place it is defined. `burdened_buildup.py`
+    # shipped its own and no line ever reached it.
+    from app.domain.pools import SUBAWARD_CAP
+
     # One transaction, with the period held.
     #
     # This used to be four statements on four pooled connections: find the
@@ -99,12 +103,60 @@ def seal(body: SealIn, period: str = "2025",
                               sealed_by=%s
                         WHERE set_id=%s""",
                     (h["seal"], sealed_by, st["set_id"]))
+        # **The 200.331 questions open here**, because this is the moment the
+        # DIRECT judgments they are about become final.
+        #
+        # `115` created `party_determination`, `121` gave it a door, and the
+        # sweep that opens a row per party over the 200.1 cap was written as
+        # `scripts/load_party_determinations.py` — **which nothing calls.**
+        # Not `seed.sh`, not the boot, not any script. So a deployment showed
+        # the controller *No party clears the cap* over a register nobody had
+        # ever opened, with $313,605.35 of MTDC turning on it. Anything that
+        # only exists because a person remembered to run it does not survive.
+        #
+        # Not at boot, which is where the other transcriptions go: this one
+        # reads the ledger *through the live DIRECT judgments on federal
+        # objectives*, so before anybody classifies there is nothing to find.
+        # Sealing is the first instant at which the question is answerable
+        # and the last at which it can still be answered cheaply.
+        #
+        # It opens and never answers. 200.331 turns on the substance of the
+        # relationship, read off an agreement, and a row already on the
+        # register is left exactly as it is — so a determination somebody has
+        # made is never overwritten by a later re-seal.
+        cur.execute("""
+            WITH over_cap AS (
+              SELECT d.objective_id,
+                     COALESCE(NULLIF(l.payee, ''), '') AS payee,
+                     round(sum(l.amount), 2) AS amount
+                FROM decision d
+                JOIN decision_line dl ON dl.decision_id = d.decision_id
+                                     AND dl.live
+                JOIN ledger_line l ON l.line_id = dl.line_id
+                JOIN cost_objective o ON o.objective_id = d.objective_id
+                                     AND o.period = l.period
+               WHERE d.reversed_at IS NULL AND d.pool = 'DIRECT'
+                 AND o.is_federal AND l.period = %s
+               GROUP BY 1, 2
+              HAVING sum(l.amount) > %s)
+            INSERT INTO party_determination (period, objective_id, payee, amount)
+            SELECT %s, c.objective_id, c.payee, c.amount
+              FROM over_cap c
+             WHERE NOT EXISTS (SELECT 1 FROM party_determination p
+                                WHERE p.period = %s
+                                  AND p.objective_id = c.objective_id
+                                  AND p.payee = c.payee)
+        """, (period, SUBAWARD_CAP, period, period))
+        opened = cur.rowcount or 0
+
         record(actor, "SEAL", "decision_set", str(st["set_id"]),
                after={"seal_hash": h["seal"], "decisions": counts["decisions"],
-                      "weakly_graded": counts["weak"]},
+                      "weakly_graded": counts["weak"],
+                      "parties_opened": opened},
                reason=body.note.strip() or "decision set sealed", cursor=cur)
     return {"set_id": str(st["set_id"]), "seal_hash": h["seal"],
-            "decisions": counts["decisions"]}
+            "decisions": counts["decisions"],
+            "parties_opened": opened}
 
 
 @router.post("/unseal")

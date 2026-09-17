@@ -12,6 +12,18 @@ the relationship, which is read off an agreement and is a judgment with a
 person's name on it. Opening the question is the work this can do; answering
 it is not.
 
+**`POST /api/rates/seal` does this now, and this is the backfill.** For the
+life of the register nothing called this script — not `seed.sh`, not the
+boot, not any other script — so a deployment showed the controller *No party
+clears the cap* over a register nobody had ever opened, with $313,605.35 of
+MTDC turning on it. Anything that only exists because a person remembered to
+run it does not survive. The sweep belongs at the seal because it reads the
+ledger *through the live DIRECT judgments*, so it has nothing to find until
+somebody has classified — which is the one thing a boot cannot wait for.
+
+What is left here is the same sweep for a record sealed before that shipped,
+and a dry run for anybody who wants to see what would open without sealing.
+
 Re-runnable: a party already on the register is left exactly as it is, so a
 determination somebody has made is never overwritten by a later sweep.
 
