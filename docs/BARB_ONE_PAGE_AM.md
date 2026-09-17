@@ -5,6 +5,31 @@ Printable version: `BARB_ONE_PAGE_AM.pdf`. Detail:
 `WP_AM_RESTATEMENT_IF_ACCEPTED.md`. Every figure below is computed from the
 2025 ledger, not estimated.
 
+> ### ⚠ The rate in this memo has moved, and this paper has not
+>
+> **This was written on 14 September 2026 against a record with no building
+> measured and no asset funding answered.** Both have since been answered, and
+> each answer took cost out of the federal pool that was never supposed to be
+> in it. Every rate below is therefore the *starting* figure, not the current
+> one:
+>
+> | | this memo | the record today |
+> | --- | ---: | ---: |
+> | Fringe | 21.90% | 21.90% *(anchored — it does not move)* |
+> | Overhead | 31.62% | 10.11% |
+> | G&A | 12.37% | 12.37% |
+> | **Combined indirect** | **43.99%** | **22.48%** |
+>
+> The **argument** here is unchanged and is why the memo is still worth
+> reading: the recovery is inside a loaded labour rate, the disclosure is the
+> finding, and a lower rate makes every give-back to NCDMM *larger*. What has
+> changed is the size of the number, and it moved against YBI.
+>
+> **This memo has no generator**, which is why it could go stale silently —
+> unlike `MONDAY_RUNBOOK.md` and `MONDAY_ANCHOR`, which are rebuilt from the
+> record. For the current figures read `/review` in the application, or
+> `docs/RUN_SHEET_2025.md`, which is generated.
+
 ---
 
 ## What we found

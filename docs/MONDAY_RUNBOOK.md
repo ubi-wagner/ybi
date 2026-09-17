@@ -2,7 +2,7 @@
 
 *Generated from the record by `scripts/runbook.py`, which will not write over a failing crosscheck. Every figure below was read by `scripts/drive_invoice_ties.py`; none was typed beside it.*
 
-*16 September 2026*
+*17 September 2026*
 
 **Read §0 first.** The record is at the end of the path this document used to describe, so every step is **verification, not construction**. Following an earlier version literally would have had the controller press *Seal* on a sealed set.
 
@@ -23,7 +23,7 @@ YBI_SEED_PASSWORD=... ./scripts/monday.sh --full  # the sandbox test
 | the eleven control points | **11 of 11 tie** | a rate is refused while any is open |
 | the classification | **757 of 757 groups**, 100.0% | 0.00 unclassified |
 | the seal | **Tom Metzinger**, 12 Sep 2026 22:50 UTC | covering 757 live judgments |
-| the rate | FRINGE **21.90%** · INDIRECT_COMBINED **24.71%** | administrative labour on the **POOL** basis |
+| the rate | FRINGE **21.90%** · INDIRECT_COMBINED **22.48%** | administrative labour on the **POOL** basis |
 | the rate anchors | **4 of 4 tie** | 4 of 4 pools at variance 0.00 |
 | the invoice register | **61 invoices**, 2,964,077.32 | all of 2025, reconciled to the ledger |
 
@@ -80,9 +80,9 @@ Sealed 12 September 2026 by Tom Metzinger, covering 757 live judgments. **Nothin
 | | | |
 | --- | ---: | --- |
 | FRINGE | **21.90%** | pool 401,783.60 over 1,835,047.17 SALARIES_WAGES |
-| OVERHEAD | **12.35%** | pool 584,774.52 over 4,736,602.11 MTDC |
+| OVERHEAD | **10.11%** | pool 479,021.14 over 4,736,602.11 MTDC |
 | G&A | **12.37%** | pool 585,875.91 over 4,736,602.11 MTDC |
-| INDIRECT_COMBINED | **24.71%** | pool 1,170,650.43 over 4,736,602.11 MTDC |
+| INDIRECT_COMBINED | **22.48%** | pool 1,064,897.05 over 4,736,602.11 MTDC |
 
 **If you recompute for any reason, choose POOL again.** The screen defaults to `OBJECTIVE`, which is worth about nine points of combined rate on the same sealed judgments.
 

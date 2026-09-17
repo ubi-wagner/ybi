@@ -78,10 +78,15 @@ def step(title: str) -> None:
     print(f"\n\033[1m{title}\033[0m", flush=True)
 
 
+from app.routers.restate import STANDING                       # noqa: E402
+
 def census() -> dict[str, int]:
+    # Imported rather than spelled again: this tuple is the definition of
+    # *standing as a claim* and a second copy of it is free to drift from the
+    # first, which is what `monday_anchor.py` did.
     return {"standing": one("""SELECT count(*) AS n FROM restatement
-                                WHERE status IN ('PROPOSED','SUBMITTED',
-                                                 'ACCEPTED')""")["n"]}
+                                WHERE status = ANY(%s)""",
+                            (list(STANDING),))["n"]}
 
 
 def sign_in(base: str, email: str, password: str) -> httpx.Client:
