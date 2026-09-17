@@ -176,11 +176,45 @@ reconstruction nobody ever saw does not**, which is where 2025 has been.
   faithfully, so it must not — otherwise the rate would depend on who had got
   round to signing.
 
-### A manager cannot sign for somebody
+### A manager cannot sign for somebody — and can file a page they signed
 
-200.430(i) wants the person whose effort it was. `v_certification_chase` is a
-project manager's list of **who to go and ask**, never an action. "Their
-projects" is read from the assignments they made.
+200.430(i) wants the person whose effort it was, so nobody signs on anybody's
+behalf. `v_certification_chase` is a project manager's list of **who to go and
+ask**, never an action. "Their projects" is read from the assignments they
+made.
+
+What you *can* do is file the page they signed. Thirty-seven of the
+forty-three have no account, and waiting for each of them to sign on a screen
+is waiting on an account somebody has to open first — while the signed sheet
+sits in a folder. **Time · a row · File signed**, on the roster, takes the
+scan and the date the page carries, and records:
+
+| | |
+| --- | --- |
+| `signed_by` | **them** — read off the record, never typed |
+| the account and session | **you**, because you filed it |
+| the page | mandatory; the row cannot exist without it |
+| the date on the page | kept apart from the date you filed it |
+
+Three things to know before you use it.
+
+**It is not a supervisor certification.** That is *you* asserting firsthand
+knowledge of their work, in your own words, and it says so on the record. This
+is you relaying what they asserted. The route refuses a request that claims
+both.
+
+**The page is not optional and not a formality.** A row saying somebody signed
+with nothing to check it against reads as a certification on every screen and
+in the audit package. The schema refuses it — `paper_names_its_page` — and so
+does the screen, before you get that far.
+
+**Do not put today's date in.** Put the date on the sheet. The gap between the
+two is the filing lag, and a reviewer is entitled to see it; collapsing them
+into one column throws away the only fact that says how long the page sat
+before it reached the record.
+
+A person who later signs on screen themselves does not cancel this — both
+stand, and the roster says which kind it counted.
 
 ### Uncertified is not blocked, and every paper says so
 

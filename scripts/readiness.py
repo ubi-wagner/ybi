@@ -222,7 +222,10 @@ def certification(r: Report) -> None:
            f"{len(monthly)} — the rest get the year's distribution, and the "
            f"draft says which it is showing")
     r.line("ok" if len(signed) == len(people) else "waiting", "certified",
-           f"{len(signed)} of {len(people)} — theirs to sign, nobody else's")
+           f"{len(signed)} of {len(people)} — theirs to sign, and nobody "
+           f"signs for them. A page they have already signed is filed on "
+           f"their behalf from Time · File signed, which records their "
+           f"signature and your filing as two different facts.")
 
 
 # ── the rate stack ────────────────────────────────────────────────────
