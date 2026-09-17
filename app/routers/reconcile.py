@@ -98,15 +98,25 @@ def payroll(period: str | None = None) -> dict:
                       ORDER BY abs(i.amount) DESC""", (period,))
     # Candidates: anything in a wage account that does not look like payroll.
     # A reading aid, not an accusation — the controller decides.
-    odd = query("""SELECT line_id, txn_date, account, payee, description,
-                          amount
-                     FROM ledger_line
-                    WHERE period = %s AND statement = 'P&L'
-                      AND account ILIKE '%%Wages%%'
-                      AND description NOT ILIKE 'GROSS%%'
-                      AND description NOT ILIKE '%%accrual%%'
-                      AND description NOT ILIKE '%%- Wages%%'
-                    ORDER BY abs(amount) DESC LIMIT 25""", (period,))
+    # `named_by` is what stops a line being explained twice from the screen.
+    # The schema refuses it outright (`reconciling_line_explained_once`), and
+    # a button that would meet that refusal is a screen offering what the
+    # server will not take — so the candidate says whether it is spoken for.
+    odd = query("""SELECT l.line_id, l.txn_date, l.account, l.payee,
+                          l.description, l.amount,
+                          (SELECT rl.item_id
+                             FROM reconciling_item_line rl
+                             JOIN reconciling_item i ON i.item_id = rl.item_id
+                            WHERE rl.line_id = l.line_id
+                              AND i.retracted_at IS NULL
+                            ORDER BY rl.item_id LIMIT 1) AS named_by
+                     FROM ledger_line l
+                    WHERE l.period = %s AND l.statement = 'P&L'
+                      AND l.account ILIKE '%%Wages%%'
+                      AND l.description NOT ILIKE 'GROSS%%'
+                      AND l.description NOT ILIKE '%%accrual%%'
+                      AND l.description NOT ILIKE '%%- Wages%%'
+                    ORDER BY abs(l.amount) DESC LIMIT 25""", (period,))
     return {"period": period, "reconciliation": row,
             "reconciling_items": items,
             "unlike_payroll": odd,

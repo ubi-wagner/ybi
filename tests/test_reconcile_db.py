@@ -323,3 +323,40 @@ def test_a_loaded_period_still_evaluates(cur):
     assert r["ok"] == r["total"], (
         f"only {r['ok']} of {r['total']} controls are evaluable on a period "
         f"that has been fully loaded")
+
+
+def test_a_ledger_line_is_explained_once(cur, lines):
+    """Two live items may not name one line.
+
+    Every item ties to itself, so nothing refused this and the difference
+    read as explained several times over — on a deployed record, within an
+    hour of the payroll register gaining a screen. Four presses of `Name
+    this` on one line put `named` at (180,000.00) against a difference of
+    45,053.23. Over-explained reads exactly like a plug and is worse,
+    because each individual item is impeccable.
+    """
+    import psycopg
+    a = lines(ACCOUNT, Decimal("4200.00"), "once-a")
+    first = insert_item(cur, a["amount"])
+    attach(cur, first, a)
+    second = insert_item(cur, a["amount"])
+    with pytest.raises(psycopg.errors.UniqueViolation) as exc:
+        attach(cur, second, a)
+    assert "already named" in str(exc.value)
+
+
+def test_a_retracted_item_releases_its_line(cur, lines):
+    """Because retraction is how this register expresses a correction.
+
+    A line held for ever by a withdrawn explanation would make the first
+    mistake permanent, which is the opposite of what a correction is for.
+    """
+    a = lines(ACCOUNT, Decimal("4200.00"), "release-a")
+    first = insert_item(cur, a["amount"])
+    attach(cur, first, a)
+    cur.execute("""UPDATE reconciling_item SET retracted_at = now(),
+                          retracted_by = 'test@ybi.org', retracted_reason = %s
+                    WHERE item_id = %s""", (REASON, first))
+    second = insert_item(cur, a["amount"])
+    attach(cur, second, a)                      # no refusal
+    cur.execute("SET CONSTRAINTS ALL IMMEDIATE")

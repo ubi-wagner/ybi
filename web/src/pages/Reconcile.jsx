@@ -92,6 +92,21 @@ export default function Reconcile({ actor }) {
      the screen finds the candidates — the route already does — and the
      wording is the controller's. `/propose` is deliberately not extended to
      it, because a proposal here would be the machine writing the judgment. */
+  const retract = async (item) => {
+    const reason = window.prompt(
+      "Why is this being retracted? A retraction stays on the record with "
+      + "its reason, because a position somebody took is part of the trail.\n\n"
+      + "Twenty characters or more.");
+    if (!reason) return;
+    try {
+      await api.retractReconcilingItem(item.item_id, reason);
+      toast.show(`Retracted ${money(item.amount)}`);
+      load();
+    } catch (e) {
+      toast.show(explain(e), { tone: "fail" });
+    }
+  };
+
   const openNaming = (what) => {
     setRefusal("");
     setForm({ to_account: what === "rounding" ? "the payroll register" : "",
@@ -327,6 +342,7 @@ export default function Reconcile({ actor }) {
               { label: "Amount" }, { label: "Lines" },
               { label: "Kind", align: "left" },
               { label: "Recorded by", align: "left" },
+              { label: "", align: "left" },
             ]}>
               {items.map((i) => (
                 <React.Fragment key={i.item_id}>
@@ -337,9 +353,16 @@ export default function Reconcile({ actor }) {
                     <td className="amt">{i.lines}</td>
                     <td className="l"><Pill>{KIND_LABEL[i.kind] || i.kind}</Pill></td>
                     <td className="l">{i.recorded_by}</td>
+                    <td className="l">
+                      {canWrite && (
+                        <button className="ghost" onClick={() => retract(i)}>
+                          Retract
+                        </button>
+                      )}
+                    </td>
                   </tr>
                   <tr className="subrow">
-                    <td className="l rowsub" colSpan={6}>{i.explanation}</td>
+                    <td className="l rowsub" colSpan={7}>{i.explanation}</td>
                   </tr>
                 </React.Fragment>
               ))}
@@ -442,11 +465,17 @@ export default function Reconcile({ actor }) {
                         <td className="l">{l.payee || "—"}</td>
                         <td className="amt">{money(l.amount)}</td>
                         <td className="l">
-                          {canWrite && (
-                            <button className="btn" onClick={() => openNaming(l)}>
-                              Name this
-                            </button>
-                          )}
+                          {/* A line already named is spoken for: the schema
+                              refuses a second explanation of it, so offering
+                              the button would be a screen promising what the
+                              server will not take. */}
+                          {l.named_by
+                            ? <Pill tone="pass">named</Pill>
+                            : canWrite && (
+                                <button className="btn" onClick={() => openNaming(l)}>
+                                  Name this
+                                </button>
+                              )}
                         </td>
                       </tr>
                       {l.description && (
