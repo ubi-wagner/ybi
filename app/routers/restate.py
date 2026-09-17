@@ -36,6 +36,7 @@ from app.audit import record
 from app.auth import Actor, require_controller, require_reader
 from app.db import one, query, transaction
 from app.statelock import turn
+from app.domain.audit_package import certification_lines
 from app.domain.amendment_document import (AmendmentPapers, Movement,
                                            render_acceptance, render_memo)
 from app.domain.core import money
@@ -672,10 +673,16 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
                 """SELECT step, detail FROM v_audit_walk
                     WHERE period = %s AND state <> 'DONE' ORDER BY seq""",
                 (period,)))),
-        certified=bool(cert.get("certified")),
-        certification_line=(f"Certified by {cert.get('certified_by')}."
-                            if cert.get("certified")
-                            else (cert.get("why_not") or "")),
+        # The one sentence-maker, not a second spelling of it. This composed
+        # its own line from `certified_by`, so when `drive_the_close.py` typed
+        # a controller's name into the certify route the memorandum addressed
+        # to NCDMM printed *"Certified by Tom Metzinger."* over a rate nobody
+        # had signed — and `122`'s rehearsal state could not reach the paper
+        # at all, because the paper was not asking the question through the
+        # thing that knows the answer. It is `money()`'s eight spellings in
+        # the place it costs most.
+        certified=bool(cert.get("certified")) and not cert.get("rehearsal"),
+        certification_line=" ".join(certification_lines(cert)),
         reference=f"{award_id} · {period}")
 
 

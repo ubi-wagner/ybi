@@ -4531,6 +4531,133 @@ though a signed page has nowhere to go — *fixing one instance is not fixing
 the rule*, and the rule here is that a manual not updated beside the
 mechanism is the next person's wrong answer.
 
+## The signature the machine gave itself
+
+Migration `122`. The question that found it was four words: *"Nope...that was
+you running a test drive."*
+
+I had read a certification off the reference record — *Tom Metzinger, 15
+September 2026* — and reported it as Tom's signature, **correcting a true
+statement I had made an hour earlier**. The note on that row is a verbatim
+string literal in `scripts/drive_the_close.py`:
+
+    def tom_certifies(t, period):
+        r = t.post(f"/api/rates/certify?period={period}",
+                   json={"signature": "Tom Metzinger",
+                         "note": "The build-up is mine. ..."})
+
+**Nobody has signed the rate.** And it had reached the repository:
+`docs/SETTLEMENT_2025.md` — the memorandum addressed to NCDMM — opened on
+*"certified by Tom Metzinger, Controller, on 15 September 2026"*, the
+publication README said *"**CERTIFIED** — Tom Metzinger. Every document says
+so on its own face"*, and sixteen rendered PDFs carried *"Certified by Tom
+Metzinger."*
+
+This file already records catching it once — **A set that says CERTIFIED must
+not be signed by the machine** — where a clone was rebuilt and the set
+regenerated. `drive_the_close.py` was written *afterwards*, did the same thing
+to the reference record, and the set was regenerated from that. **Fixing one
+instance is not fixing the rule**, for the third time, in a document that goes
+to a sponsor.
+
+### The drive was right and nothing enforced it
+
+Its own docstring says so, and always has:
+
+> *It is deliberately not in `prove.sh`. Every other drive leaves the record
+> as it found it ... this one closes a year — it accepts recommendations,
+> adopts 757 positions, certifies a rate and records a sponsor's acceptance —
+> and a cleanup that walked those back would be withdrawing a signature and a
+> position taken. **Run it against a clone.***
+
+A rule in a docstring is the hand-kept map: it cannot be checked, so it is
+never checked. `--rehearsal` is required now, and refusing without it is
+`password_round.py`'s rule in a second place — *the one act that takes
+something away from the person who should have made it is never automatic.*
+
+**And the full radius is wider than the signature.** The same run left four
+restatements at `ACCEPTED` — NCDMM accepting in writing, which NCDMM has not
+done — 757 position confirmations as Tom, and the seal. The reference record
+is a *simulated* closed year, and `docs/` was generated from it. That is
+recorded here rather than quietly undone: superseding a position somebody took
+is this system's model of change, and none of those positions was taken by a
+person to begin with, which is the finding.
+
+### A fifth value for the kind of act
+
+`rate_certification.origin` is `CONTROLLER` or `REHEARSAL`, defaults to
+CONTROLLER so **nothing changes by default**, and is write-once. It is the
+fifth time this schema has needed exactly this and the fifth time the answer
+is the same shape:
+
+| | | |
+| --- | --- | --- |
+| `038` | `ingest_channel = 'GENERATED'` | this system made the document |
+| `070` | `basis = 'ADOPTED'` | the organisation rebuilt it and the person affirmed it |
+| `083` | `origin = 'MACHINE_PROPOSAL'` | the machine proposed it |
+| `120` | `certifier_role = 'PAPER'` | they signed on paper and somebody else filed it |
+| `122` | `origin = 'REHEARSAL'` | a drive made this signature and no person gave it |
+
+`certified_by` still names the account the call was made as, and the audit row
+still says the same, because that is what happened — `079`'s rule about 891
+rows. What changes is that the paper can tell the two apart.
+
+The backfill is self-limiting on the drive's own note, which is `089`'s rule:
+a database the drive has never run against is untouched and says so.
+
+### Six spellings of one sentence, and the one that mattered
+
+`certification_lines()` is described in this file as *"one sentence-maker, and
+it is pure ... five workbook builders open with it, **both papers print it**,
+and the SPA renders the same three states."* The last clause was false. Six
+places composed their own sentence from `certified` and `certified_by`:
+
+    restate.py            the amendment memorandum and the acceptance form
+    publish.py            the README, the manifest payload, the console
+    stage_the_run.py      the run sheet
+    form_990_comparison   the return comparison
+    readiness.py          the controller's outstanding list
+
+So when the record gained a way to say *a drive made this*, **not one of them
+could see it** — and the first regeneration produced 53 papers correctly
+printing REHEARSAL under a README printing CERTIFIED, from one run. That is
+`money()`'s eight spellings in the place it costs most.
+
+**And a seventh reader was one level down.** `publish.py::certification()` had
+its own `SELECT period, certified, certified_by, ... FROM v_rate_certified` —
+a hand-written column list is a place a new column cannot reach. Four readers
+now take `SELECT *`, because that view exists to answer one question
+completely.
+
+### The test was written three times and the first two were wrong
+
+- **The first excused any file that imported `certification_lines`** — and the
+  offending file did, two lines above the composed sentence. It passed with
+  the defect pasted back in. A file-level escape hatch is a test that cannot
+  fail for the thing it names: the fifth instance here, found the only way any
+  of them are.
+- **The second tried to tell *saying* from *asserting* by regex** and reported
+  six drives that were doing neither. A test that argues with correct code is
+  worse than no test.
+- **The third asserts behaviour**: render both sponsor-facing papers against a
+  rehearsal signature and check that neither names a signatory. That one bites
+  — and it *still* proved only the renderer, passing while the handler
+  composed its own line again, so a second, deliberately narrow assertion
+  holds `_papers` itself. Both were watched failing.
+
+One smaller thing, and it is this file's own lesson: the narrow assertion
+first matched the **comment** I had written to explain the defect, which
+quotes the sentence it is about. Comments out before matching — *assert over
+what runs, not over the prose beside it.*
+
+### And a bulk edit that reverted three good fixes
+
+Widening the six selects, a regex anchored on `one("""SELECT` matched **the
+first select in each file** rather than the certification one, and corrupted
+four unrelated queries. `git checkout` put those files back and took three
+intentional fixes with them. Anchor a rewrite on the thing it is about — here
+the table name — and read the diff before trusting the count.
+
 ## The determination that decided the base and had no door
 
 Migrations `121`, `app/routers/classify.py`, `web/src/pages/Parties.jsx`.

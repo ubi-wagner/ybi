@@ -3,10 +3,16 @@
 **Youngstown Business Incubator · Fiscal year ended 31 December 2025**
 Prepared 15 September 2026 · UEI E38PN6F4AVU3 · CAGE 5EAR9
 
-> **The rate in this memorandum is CERTIFIED.** Sealed at 757 judgments,
-> computed, and certified by Tom Metzinger, Controller, on 15 September 2026.
-> The certificate records three matters still open at the moment of signature
-> and they are listed in §7.
+> **REHEARSAL — NOT CERTIFIED.** Sealed at 757 judgments and computed, and
+> the signature standing on that computation was produced by
+> `scripts/drive_the_close.py` to prove the mechanism end to end. **No person
+> gave it.** This memorandum reproduced it as *"certified by Tom Metzinger,
+> Controller"* until migration `122` gave the record a way to say which kind
+> of act a signature was; the arithmetic is unchanged and what is missing is
+> somebody putting their name to it.
+>
+> **Nothing here goes to NCDMM until it is signed.** The matters still open
+> at the moment of that signature are listed in §7 and travel with it.
 >
 > **Nothing in this memorandum is a claim until NCDMM accepts it in writing.**
 > Each restatement is PROPOSED. Each requires a §4.4 modification changing the

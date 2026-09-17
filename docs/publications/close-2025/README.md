@@ -1,11 +1,16 @@
 # YBI 2025 publication set
 
-Produced 2026-09-15T14:43:20+00:00 by `scripts/publish.py`. Every figure is
+Produced 2026-09-17T09:27:04+00:00 by `scripts/publish.py`. Every figure is
 read from the row it was recorded in; nothing in this set was
 written to the cost record.
 
-**CERTIFIED** — Tom Metzinger. Every document says so
-on its own face.
+**REHEARSAL — NOT CERTIFIED. A drive produced this signature to prove the mechanism; no person gave it. Nothing resting on it may be sent to a sponsor. The rate itself is arithmetic and stands; what is missing is somebody putting their name to it.**
+
+Nothing here is blocked by that. These are working documents
+and each one says so above its figures, which is `082`'s rule:
+a document silent either way leaves the reader to assume, and
+the assumption made about a figure on a letterhead is the
+generous one.
 
 ## The rate these rest on
 
@@ -24,11 +29,11 @@ on its own face.
 
 | file | what it is | bytes | sha256 |
 | --- | --- | ---: | --- |
-| `rate-buildup.xlsx` | the rate, the pool under it and the seal it hangs off | 6,775 | `5daf016d2071` |
-| `form-990-part-ix.xlsx` | Form 990 Part IX, functional allocation as classified | 7,748 | `e7811f61e0e1` |
-| `auditors-report.xlsx` | what the engagement asserts and what proves each assertion | 11,600 | `3a350a5fe0f2` |
-| `audit-package.xlsx` | the whole cost record, every sheet | 164,237 | `125e508ecc35` |
-| `timesheet-report.xlsx` | the distribution behind the fringe base, and who has certified | 18,044 | `e422a5903c7a` |
+| `rate-buildup.xlsx` | the rate, the pool under it and the seal it hangs off | 6,812 | `7bd036d853e8` |
+| `form-990-part-ix.xlsx` | Form 990 Part IX, functional allocation as classified | 7,911 | `6312386fb2d4` |
+| `auditors-report.xlsx` | what the engagement asserts and what proves each assertion | 11,628 | `a5b9d15cfd47` |
+| `audit-package.xlsx` | the whole cost record, every sheet | 172,480 | `78d2a4049e53` |
+| `timesheet-report.xlsx` | the distribution behind the fringe base, and who has certified | 18,081 | `1d52f98a88e1` |
 | `invoice-9062.pdf` | invoice 9062 on DIG-ENG, rendered from the register | 2,951 | `8cec649bca5b` |
 | `invoice-9078.pdf` | invoice 9078 on HYBRID-II, rendered from the register | 3,561 | `99c7df5885a8` |
 | `invoice-9091.pdf` | invoice 9091 on LTM, rendered from the register | 3,497 | `4148dc5d4da6` |
@@ -69,14 +74,14 @@ on its own face.
 | `invoice-9734.pdf` | invoice 9734 on DRIVE-AM, rendered from the register | 3,650 | `e351a8879b7e` |
 | `invoice-9801.pdf` | invoice 9801 on LTM, rendered from the register | 3,497 | `5620badafef8` |
 | `invoice-9907.pdf` | invoice 9907 on DRIVE-AM, rendered from the register | 3,622 | `581f6d363db1` |
-| `amendment-memo-AM-DRIVE-AM.pdf` | why AM-DRIVE-AM's invoices are being reissued, and the clause it is made under | 3,609 | `f280016c93ef` |
-| `acceptance-AM-DRIVE-AM.pdf` | what NCDMM signs for AM-DRIVE-AM — both directions, never netted | 4,739 | `9c87dab54094` |
-| `amendment-memo-AM-HYBRID-P2.pdf` | why AM-HYBRID-P2's invoices are being reissued, and the clause it is made under | 3,565 | `83d59fbeac8d` |
-| `acceptance-AM-HYBRID-P2.pdf` | what NCDMM signs for AM-HYBRID-P2 — both directions, never netted | 4,299 | `0cf90d550a68` |
-| `amendment-memo-AM-ICAM-DIGENG.pdf` | why AM-ICAM-DIGENG's invoices are being reissued, and the clause it is made under | 3,718 | `a3dbed0227bc` |
-| `acceptance-AM-ICAM-DIGENG.pdf` | what NCDMM signs for AM-ICAM-DIGENG — both directions, never netted | 4,167 | `24b76aa007b6` |
-| `amendment-memo-AM-LTM-PROJ88.pdf` | why AM-LTM-PROJ88's invoices are being reissued, and the clause it is made under | 3,666 | `38a347c5566d` |
-| `acceptance-AM-LTM-PROJ88.pdf` | what NCDMM signs for AM-LTM-PROJ88 — both directions, never netted | 4,441 | `2e4c329018c3` |
+| `amendment-memo-AM-DRIVE-AM.pdf` | why AM-DRIVE-AM's invoices are being reissued, and the clause it is made under | 3,814 | `a469a499cae0` |
+| `acceptance-AM-DRIVE-AM.pdf` | what NCDMM signs for AM-DRIVE-AM — both directions, never netted | 4,960 | `ce9457886b1f` |
+| `amendment-memo-AM-HYBRID-P2.pdf` | why AM-HYBRID-P2's invoices are being reissued, and the clause it is made under | 3,780 | `8d3acf54a58a` |
+| `acceptance-AM-HYBRID-P2.pdf` | what NCDMM signs for AM-HYBRID-P2 — both directions, never netted | 4,527 | `02151b047937` |
+| `amendment-memo-AM-ICAM-DIGENG.pdf` | why AM-ICAM-DIGENG's invoices are being reissued, and the clause it is made under | 3,928 | `94938d77cec3` |
+| `acceptance-AM-ICAM-DIGENG.pdf` | what NCDMM signs for AM-ICAM-DIGENG — both directions, never netted | 4,396 | `76bde615f574` |
+| `amendment-memo-AM-LTM-PROJ88.pdf` | why AM-LTM-PROJ88's invoices are being reissued, and the clause it is made under | 3,882 | `c33f239777e5` |
+| `acceptance-AM-LTM-PROJ88.pdf` | what NCDMM signs for AM-LTM-PROJ88 — both directions, never netted | 4,670 | `8c578ffdd18b` |
 
 The PDFs are rendered deterministically, so a digest that moves
 means a figure moved — which is how a set produced before the

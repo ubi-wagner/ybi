@@ -57,6 +57,25 @@ export default function CertificationBand({ period = "2025" }) {
   }
   if (!state) return null;
 
+  /* A drive's signature is not a signature, and it must not render as the
+     certified branch. `drive_the_close.py` types a controller's name into the
+     certify route to prove the mechanism; that reached the committed
+     publication set and a memorandum addressed to NCDMM. The record carries
+     the kind of act now (`122`), and this reads it — before the certified
+     branch, because `certified` is true either way: the signature stands, it
+     is simply nobody's. */
+  if (state.rehearsal) {
+    return (
+      <div className="cert-band cert-band-no">
+        <strong>REHEARSAL — NOT CERTIFIED</strong>
+        <span>
+          A drive produced this signature to prove the mechanism; no person
+          gave it. Nothing resting on it may be sent to a sponsor.
+        </span>
+      </div>
+    );
+  }
+
   if (state.certified) {
     const when = state.certified_at
       ? new Date(state.certified_at).toLocaleDateString(undefined,

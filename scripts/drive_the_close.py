@@ -579,8 +579,11 @@ def tom_computes(t: httpx.Client, period: str, basis: str) -> dict:
 
 def tom_certifies(t: httpx.Client, period: str) -> None:
     head("Tom certifies the rate")
+    # The signature says what made it. Typing a controller's name here is
+    # what put *"certified by Tom Metzinger"* on a memorandum to NCDMM.
     r = t.post(f"/api/rates/certify?period={period}",
-               json={"signature": "Tom Metzinger",
+               json={"origin": "REHEARSAL",
+                     "signature": "Tom Metzinger",
                      "note": "The build-up is mine. The square footage and "
                              "the asset funding are estimates taken off the "
                              "documents on file and are recorded as such; "
@@ -776,8 +779,25 @@ def main() -> int:
                                                 "http://127.0.0.1:8000"))
     ap.add_argument("--period", default="2025")
     ap.add_argument("--out", default="docs/publications/close-2025")
+    #: This drive closes a year: it seals, certifies, and records a sponsor's
+    #: acceptance. Its docstring has always said **run it against a clone**,
+    #: and nothing enforced that — so it was run against the reference record
+    #: and the committed publication set came out saying *"certified by Tom
+    #: Metzinger, Controller"* over a rate nobody has signed.
+    #:
+    #: `password_round.py`'s rule, which is the only other act here that takes
+    #: something away from the person who should have made it: **never
+    #: automatic, and behind an explicit flag.**
+    ap.add_argument("--rehearsal", action="store_true",
+                    help="required: this database is a clone and everything "
+                         "signed here is labelled REHEARSAL")
     args = ap.parse_args()
     period = args.period
+    if not args.rehearsal:
+        print("This drive seals, certifies and records a sponsor's "
+              "acceptance.\nRun it against a clone and pass --rehearsal, so "
+              "every signature it makes\nsays a drive made it.", file=sys.stderr)
+        return 2
     pw = os.getenv("YBI_SEED_PASSWORD") or os.getenv("YBI_INITIAL_PASSWORD")
     if not pw:
         print("set YBI_SEED_PASSWORD", file=sys.stderr)

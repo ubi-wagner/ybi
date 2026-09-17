@@ -693,6 +693,17 @@ class CertifyIn(BaseModel):
     """Typing your own name is the signature. Nothing else is."""
     signature: str = Field(..., min_length=2, max_length=120)
     note: str = ""
+    #: What kind of act this is. A person signing leaves it alone; a drive
+    #: proving the mechanism sends REHEARSAL, and every paper resting on the
+    #: signature then prints REHEARSAL instead of a name.
+    #:
+    #: **It can only ever be used to weaken a signature.** A caller may label
+    #: its own certification a rehearsal; nothing here lets one claim to be a
+    #: controller's that was not already, because CONTROLLER is the default
+    #: and the column is write-once. The direction is the whole safety of it:
+    #: the failure this exists for is a script that typed a person's name into
+    #: `signature` and put it on a memorandum to a sponsor.
+    origin: str = "CONTROLLER"
 
 
 @router.post("/certify")
@@ -762,6 +773,13 @@ def certify(body: CertifyIn, period: str = "2025",
         # dead certificate was not withdrawn — it was superseded, which is a
         # different fact. The schema holds the same rule through the same
         # view, so the handler and the trigger cannot disagree.
+        origin = (body.origin or "CONTROLLER").strip().upper()
+        if origin not in ("CONTROLLER", "REHEARSAL"):
+            raise HTTPException(
+                422, "A signature is a controller's or a rehearsal's. "
+                     "Leave it alone to sign, or send REHEARSAL if a script "
+                     "is proving the mechanism rather than a person signing.")
+
         live = one("""SELECT cert_id FROM v_rate_certified
                        WHERE period = %s AND certified""", (period,))
         if live:
@@ -773,12 +791,12 @@ def certify(body: CertifyIn, period: str = "2025",
             cur.execute(
                 """INSERT INTO rate_certification
                        (period, seal_hash, signature, certified_by,
-                        outstanding, note)
-                   VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                        outstanding, note, origin)
+                   VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s)
                 RETURNING cert_id, certified_at""",
                 (period, seal_hash, body.signature.strip(), actor.actor_id,
                  json.dumps([dict(o) for o in outstanding], default=str),
-                 body.note.strip()))
+                 body.note.strip(), origin))
             row = cur.fetchone()
             # The rate rows this signature is on. Recomputing supersedes them
             # and the certificate dies with them, which is what stops an
@@ -860,7 +878,8 @@ def rate_certification(period: str) -> dict | None:
     document silent about its own signature is read generously.
     """
     return one("""SELECT period, certified, cert_id, signature, certified_at,
-                         certified_by, seal_hash, outstanding, note, why_not
+                         certified_by, seal_hash, outstanding, note, why_not,
+                         origin, rehearsal
                     FROM v_rate_certified WHERE period = %s""", (period,))
 
 

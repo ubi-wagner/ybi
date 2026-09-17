@@ -34,6 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app.domain.audit_package import certification_lines  # noqa: E402
 from app.db import open_pool, query, one  # noqa: E402
 
 PERIOD = "2025"
@@ -241,8 +242,7 @@ def tom(w) -> None:
           "costs two deliberate acts: withdraw the signature, then unseal, "
           "each with a written reason.\n")
 
-    cert = one("""SELECT certified, certified_by, certified_at
-                    FROM v_rate_certified WHERE period = %s""", (PERIOD,))
+    cert = one("""SELECT * FROM v_rate_certified WHERE period = %s""", (PERIOD,))
     rates = {x["kind"]: D(str(x["rate"])) for x in query(
         """SELECT kind, rate FROM rate
             WHERE period = %s AND status <> 'SUPERSEDED'""", (PERIOD,))}
@@ -257,10 +257,13 @@ def tom(w) -> None:
       "occupancy)* |")
     w(f"| **Combined** | **{rates.get('INDIRECT_COMBINED', 0) * 100:.2f}%** | "
       "**19.95%** *(band 17.83 – 26.05)* |")
-    if cert and cert["certified"]:
-        w(f"\nCertified by {cert['certified_by']}. **Recomputing supersedes "
-          "the rate and the certificate dies with it** — that is the design, "
-          "not a fault.\n")
+    # The one sentence-maker — a fourth spelling here would go stale the same
+    # way the memorandum's and the README's did.
+    if cert:
+        w("\n" + " ".join(certification_lines(cert)) + "\n")
+        if cert["certified"] and not cert.get("rehearsal"):
+            w("\n**Recomputing supersedes the rate and the certificate dies "
+              "with it** — that is the design, not a fault.\n")
     w("\nThe difference is not a correction to the arithmetic. It is whether "
       "the overhead **pool** was ever the right size: the certified rate is "
       "31.62% with 61% carved back out, and on the measured estate the "

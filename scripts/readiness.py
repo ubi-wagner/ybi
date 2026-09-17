@@ -417,9 +417,16 @@ def rate_decisions(r: Report) -> None:
         r.line("ok", f"the letting is an activity ({let['objective_id']})",
                f"{let['judged']} judgment(s), {let['allocated']} allocation(s)")
 
-    cert = one("""SELECT certified, certified_by, why_not FROM v_rate_certified
+    cert = one("""SELECT * FROM v_rate_certified
                    WHERE period = %s""", (PERIOD,))
-    if cert and cert["certified"]:
+    # A drive's signature is not a signature, and this report exists to say
+    # what is outstanding. Reading `certified` alone reported the rate signed
+    # over a certificate `drive_the_close.py` had made.
+    if cert and cert.get("rehearsal"):
+        r.line("waiting", "the rate is not certified",
+               "the signature standing on it was made by a drive to prove "
+               "the mechanism; no person gave it")
+    elif cert and cert["certified"]:
         r.line("ok", "the rate is certified", f"by {cert['certified_by']}")
     else:
         r.line("waiting", "the rate is not certified",

@@ -230,12 +230,22 @@ def test_the_memorandum_says_the_two_directions_are_not_added(memo):
 # ── The band, and what it does not claim ─────────────────────────────
 
 def test_the_paper_says_whether_the_rate_is_certified(cur, memo):
-    cur.execute("SELECT certified, certified_by FROM v_rate_certified "
+    cur.execute("SELECT * FROM v_rate_certified "
                 "WHERE period = %s", (PERIOD,))
     row = cur.fetchone()
     if row is None:
         pytest.skip("no certification row for the period")
-    if row["certified"]:
+    # A drive's signature is not a signature. `drive_the_close.py` types a
+    # controller's name into the certify route, and this assertion read
+    # `certified` alone — so it *required* the memorandum to name a person as
+    # signatory over a signature nobody gave, and passed while it did. A test
+    # that enforces the defect is worse than one that misses it.
+    if row.get("rehearsal"):
+        assert "REHEARSAL" in memo, \
+            "the signature is a drive's and the paper does not say so"
+        assert "NOT CERTIFIED" in memo, \
+            "a rehearsal signature must not read as a certification"
+    elif row["certified"]:
         assert "CERTIFIED" in memo, "the rate is certified and the paper is silent"
         assert row["certified_by"] in memo, \
             f"the paper does not name {row['certified_by']} as the signatory"

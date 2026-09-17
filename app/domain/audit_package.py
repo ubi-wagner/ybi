@@ -89,6 +89,21 @@ def certification_lines(cert: dict | None) -> list[str]:
         return ["NOT CERTIFIED — nothing was read about the rate's signature "
                 "when this was produced, which is not the same as a rate "
                 "nobody has signed. Treat it as unsigned."]
+    # A signature a drive made is not a signature, and the paper says so
+    # before it says anything else. `drive_the_close.py` types a controller's
+    # name into `POST /api/rates/certify`, which is correct for proving the
+    # mechanism and is a forgery on any paper that leaves the building — and
+    # it reached `docs/SETTLEMENT_2025.md`, the memorandum addressed to NCDMM,
+    # which opened on *"certified by Tom Metzinger, Controller"* over a rate
+    # nobody had signed. `122` gives the row a value for the kind of act; this
+    # is the one place that value has to be read, because this is the one
+    # sentence-maker every workbook, paper and screen shares.
+    if cert.get("rehearsal"):
+        return ["REHEARSAL — NOT CERTIFIED. A drive produced this signature "
+                "to prove the mechanism; no person gave it.",
+                "Nothing resting on it may be sent to a sponsor. The rate "
+                "itself is arithmetic and stands; what is missing is somebody "
+                "putting their name to it."]
     if cert.get("certified"):
         who = cert.get("certified_by") or "the controller"
         when = cert.get("certified_at")

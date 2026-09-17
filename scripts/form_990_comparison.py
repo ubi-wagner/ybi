@@ -24,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app.domain.audit_package import certification_lines  # noqa: E402
 from app.db import one, open_pool, query                          # noqa: E402
 
 D = lambda x: Decimal(str(x or 0))                                # noqa: E731
@@ -125,8 +126,7 @@ def main() -> int:
               (period,))
     pri = one("SELECT * FROM v_form_990_prior_check WHERE period = %s",
               (prior,))
-    cert = one("""SELECT certified, certified_by, certified_at
-                    FROM v_rate_certified WHERE period = %s""", (period,))
+    cert = one("""SELECT * FROM v_rate_certified WHERE period = %s""", (period,))
     walk = query("""SELECT step, state, detail FROM v_audit_walk
                      WHERE period = %s AND state <> 'DONE' ORDER BY seq""",
                  (period,))
@@ -146,14 +146,12 @@ def main() -> int:
     w = out.append
 
     w(f"# Form 990 — {period} against {prior}, line for line\n")
-    if cert and cert["certified"]:
-        w(f"**The {period} rate is certified — {cert['certified_by']}, "
-          f"{cert['certified_at']:%d %B %Y}.** Nothing on this return depends "
-          f"on the indirect rate; it is stated because every document this "
-          f"system produces says where the signature stands.\n")
-    else:
-        w("**NOT CERTIFIED.** No signature stands on the rate. Nothing on "
-          "this return depends on it.\n")
+    # The one sentence-maker. A fifth spelling of the band lived here and
+    # could not see `122`'s rehearsal state, so this document asserted the
+    # rate was certified by a person over a signature a drive had made.
+    w("**" + " ".join(certification_lines(cert)) + "** Nothing on this return "
+      "depends on the indirect rate; it is stated because every document this "
+      "system produces says where the signature stands.\n")
     w(f"The {period} figures are read from `v_form_990_part_ix` and "
       f"`v_form_990_part_viii` — the ledger on the return's own numbered "
       f"lines. The {prior} figures are `form_990_prior_year`, the filed "

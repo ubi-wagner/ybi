@@ -1,15 +1,13 @@
 {
   "period": "2025",
-  "produced": "2026-09-15T13:25:43+00:00",
-  "certified": false,
-  "certified_by": null,
-  "why_not": "A rate stands and nobody has put their name to it.",
+  "produced": "2026-09-17T09:24:33+00:00",
+  "certified": true,
+  "certified_by": "Tom Metzinger",
+  "rehearsal": true,
+  "origin": "REHEARSAL",
+  "why_not": null,
   "unfinished": [
-    "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-    "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-    "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-    "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-    "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+    "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
   ],
   "rates": [
     {
@@ -28,14 +26,14 @@
     },
     {
       "kind": "INDIRECT_COMBINED",
-      "rate": "0.439900",
+      "rate": "0.247100",
       "base": "MTDC",
       "basis": "POOL",
       "seal": "60fb3f4b52219514d8f0dc8d20c962ad2fd902dee0cf2407da91f2a93d215a37"
     },
     {
       "kind": "OVERHEAD",
-      "rate": "0.316200",
+      "rate": "0.123500",
       "base": "MTDC",
       "basis": "POOL",
       "seal": "60fb3f4b52219514d8f0dc8d20c962ad2fd902dee0cf2407da91f2a93d215a37"
@@ -45,71 +43,61 @@
     {
       "file": "rate-buildup.xlsx",
       "what": "the rate, the pool under it and the seal it hangs off",
-      "bytes": 5942,
-      "sha256": "107ace55fefee63a10392b859ea94dedd7205eabe9c65be6813ea97fe164b4b8",
+      "bytes": 6813,
+      "sha256": "b2958be6bb26c991907352a4cb2235488a0c90713e3c83b77f001a28e1cca977",
       "stable": false,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "form-990-part-ix.xlsx",
       "what": "Form 990 Part IX, functional allocation as classified",
-      "bytes": 7674,
-      "sha256": "c2749075bfef6c1fb8f94fa362318c3910f1320113c4dea9dadc3858f4843386",
+      "bytes": 7911,
+      "sha256": "1e707bbb5767d55bb73fc56720cb4a082397278811d7236d824611f8c35bdd5e",
       "stable": false,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "auditors-report.xlsx",
       "what": "what the engagement asserts and what proves each assertion",
-      "bytes": 11669,
-      "sha256": "3e7332c23e7adf0807380cd145659783bfaa3ecf520ce00b41b4d1bdc34484b7",
+      "bytes": 11628,
+      "sha256": "f82f3098afc17ff74eab3246d2a614cc1148806e9a8efb357d1ad3d094e440dc",
       "stable": false,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "audit-package.xlsx",
       "what": "the whole cost record, every sheet",
-      "bytes": 184114,
-      "sha256": "2908fbec17464ad87ea9bc2e87a3415cdd0344265ef20dcffb67548b17578235",
+      "bytes": 170748,
+      "sha256": "40dca84edff86d966ad58b8b8f34195d0029f0d462d1c669bc2539549b633533",
       "stable": false,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "timesheet-report.xlsx",
       "what": "the distribution behind the fringe base, and who has certified",
-      "bytes": 18050,
-      "sha256": "4606d13a16854a2229059080977d4880e61308308a2cdf291e40f0c2656049bb",
+      "bytes": 18081,
+      "sha256": "5a87abd69f958b064db1cc1a97c717565043186d1ceba35d935d9dbfafcbaf31",
       "stable": false,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9062.pdf",
+      "what": "invoice 9062 on DIG-ENG, rendered from the register",
+      "bytes": 2951,
+      "sha256": "8cec649bca5b010f2a7eac16c021907af42fbd1ee666d5daa1623b11a776a275",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -119,11 +107,7 @@
       "sha256": "99c7df5885a87aef0473b042da53adf4ed27993782819d909f82628219164e88",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -133,11 +117,7 @@
       "sha256": "4148dc5d4da652ca074f0d7b6db487530ba254886c633ec9171d54eda48f0cc3",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -147,11 +127,7 @@
       "sha256": "8f602ceafa6fdfbda1011acb511e26907b3d2e067b6a5d8c814172e40bbdd491",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -161,11 +137,17 @@
       "sha256": "e6494c0b669a866d3d1e706950100fd62c5b3f604c34df66f4396523517eaf5e",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9127.pdf",
+      "what": "invoice 9127 on DIG-ENG, rendered from the register",
+      "bytes": 2951,
+      "sha256": "717f94b786607d2664d88290b88ef386773f84c6d02304d74360f2150a046181",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -175,11 +157,7 @@
       "sha256": "9c89dc562947ccf0160625aa75c03dbbb2d09710aa4d96a8ae9c59074056c14e",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -189,11 +167,7 @@
       "sha256": "709050c19c85124a2241c62e324d69f0fd4d43be9f70854e03bbef82e269cea8",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -203,11 +177,17 @@
       "sha256": "4fac9926d31009a7da289b7b4be45fd8a8c16bf371464faba2115a4b87b1e830",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9167.pdf",
+      "what": "invoice 9167 on DIG-ENG, rendered from the register",
+      "bytes": 2949,
+      "sha256": "8fad299725d1696d560ce1efe989c746825b8dc69d58a0a86d10757a4cbb6468",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -217,11 +197,7 @@
       "sha256": "13059b0461e6ca310614e51cdf7fc5d627a7c6c82eeac658caea8baad5beff9c",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -231,11 +207,7 @@
       "sha256": "2bb96ce9d06bb22bd1bc8b68d3d01238188018be0646026ceda3a7ddd2990a08",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -245,11 +217,17 @@
       "sha256": "abe7d9fb6595875f61edfde78e003879305735ec2b97e8b7358d4da29c40d49b",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9264.pdf",
+      "what": "invoice 9264 on DIG-ENG, rendered from the register",
+      "bytes": 2945,
+      "sha256": "eb3466dd830a6477fa5b8bb2681261af36342c39191ea1fd967ccee1dd46567f",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -259,11 +237,7 @@
       "sha256": "77c6347e7a8c15b048e41f1f78a506e7f0c54fb977c22543185553a73c2a6e31",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -273,11 +247,17 @@
       "sha256": "bd0716075062d55e77d63aefab2079ac6fde0635f9839b0a60541568c6180154",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9296.pdf",
+      "what": "invoice 9296 on DIG-ENG, rendered from the register",
+      "bytes": 2946,
+      "sha256": "2de2ff6bf9a9d9ddc2aa0dee13523ee5e7f20ac794e807488b15cba6e9972895",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -287,11 +267,7 @@
       "sha256": "bf1e6143f7f15934fccd35ccc3985ec1935b465f3f1d47d6a7972792a740b7f6",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -301,11 +277,7 @@
       "sha256": "535abc7171fb0a3310b58640684b02bdf413a6aa62613d737121dbdfbd882be8",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -315,11 +287,17 @@
       "sha256": "9f2384314489c081d2649493f17f9bd1dbbb6fc784c41e887726fbaca6648bab",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9418.pdf",
+      "what": "invoice 9418 on DIG-ENG, rendered from the register",
+      "bytes": 2944,
+      "sha256": "1f4bf8194d555b255681fe43aab0320fd85ddc2290f45c80793fc0cfb001e9ae",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -329,11 +307,17 @@
       "sha256": "637fbf02d640507b179dedc9332c34236631c24229d00fd0a310ee39576d8b6b",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "invoice-9428.pdf",
+      "what": "invoice 9428 on DIG-ENG, rendered from the register",
+      "bytes": 2959,
+      "sha256": "2f95d5fa991ef22ffda56b25a2754204066e9fb489e33cc79c238604ff718a86",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -343,11 +327,7 @@
       "sha256": "a6d766d0526480cf8606cac8da25c74dbf59a36f9ee7f17ee2de1825c601b549",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -357,11 +337,7 @@
       "sha256": "39c7ee990c227d0e61c55e22720d4e02a81f47a1239bd87356180521f50f5392",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -371,11 +347,7 @@
       "sha256": "27d8791173353ffac1c97cf084d54760cd8be0b20ee4619141c245f237b909a3",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -385,11 +357,7 @@
       "sha256": "759d6745a9d7764bfb2d21508fbdb121cea19eb467f431d46c1dbfeca8e720b2",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -399,11 +367,7 @@
       "sha256": "450253d9f2805a57ed6daf1ae6fee067e286e2e2479d27e89504ed117dce2696",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -413,11 +377,7 @@
       "sha256": "cf31974b42c33db70fd8121a45add826cbcdb51006ca358bba459ecae00805be",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -427,11 +387,7 @@
       "sha256": "21a245991fbc58edfef6fa0de27b0a2122fd8c72f60293e6fad2e5174eee1ec4",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -441,11 +397,7 @@
       "sha256": "142d64065c0a139e1e2fceb30a54fc558baed6f431ad8be5dd4d2ff3e8c52abc",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -455,11 +407,7 @@
       "sha256": "6f8596b11621f213c7e8c6f5d2db03ee0401e918966f3c5789c163f1d6aad2ae",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -469,11 +417,7 @@
       "sha256": "ce2d64758e0916f869ed55fae4a278e3d9b15c2eb475f7127f4feead8d15c81c",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -483,11 +427,7 @@
       "sha256": "17cf2cff0706e238148b0327cc587bdca7cdda4e9298b478433a4dce78e34250",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -497,11 +437,7 @@
       "sha256": "ce3be97d77e5aa1000675454cbb0d7e05231ec323adbf2b18f878dae9422a116",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -511,11 +447,7 @@
       "sha256": "90264a84601dc6bb59886ed3de2860977b13ae8a47f2cb04f1efa8e353414684",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -525,11 +457,7 @@
       "sha256": "a5990899589c0dd2fe62ae6928fb511e6ff46641925b4fc68ad5b667b7c070d9",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -539,11 +467,7 @@
       "sha256": "e351a8879b7e0b910c79247e3bb7b7d9f235aed06b365ca43ba086ec13222f79",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -553,11 +477,7 @@
       "sha256": "5620badafef8be014533300c3b1859a389a720a0a25e8ddfefc9d57fa799702b",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
@@ -567,99 +487,92 @@
       "sha256": "581f6d363db1b417f5fdf825fa7856f3d0be07345b45e4366d05f410c9a1ada3",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "amendment-memo-AM-DRIVE-AM.pdf",
       "what": "why AM-DRIVE-AM's invoices are being reissued, and the clause it is made under",
-      "bytes": 4184,
-      "sha256": "f132eb04b1f2a5b5d5bc2880e84c00c406c52ebb2866ac2db9cd4eeb218ebd64",
+      "bytes": 3814,
+      "sha256": "a469a499cae062526077a3be8b2d7da94353d0f298c736a11613b25f5ed3cf89",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "acceptance-AM-DRIVE-AM.pdf",
       "what": "what NCDMM signs for AM-DRIVE-AM \u2014 both directions, never netted",
-      "bytes": 5334,
-      "sha256": "89200992452fa74e3475b29cdb4514a4010df064629591cf84d7ff7d1bc11b1c",
+      "bytes": 4960,
+      "sha256": "ce9457886b1fe19afb0644609e056b5098979b36bce2e9ce1840b28f5736fa2d",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "amendment-memo-AM-HYBRID-P2.pdf",
       "what": "why AM-HYBRID-P2's invoices are being reissued, and the clause it is made under",
-      "bytes": 4155,
-      "sha256": "4f6f03dccf4c9ea3edfe536a765ebb2becefe7d45c01580352b07c3b0b7452f4",
+      "bytes": 3780,
+      "sha256": "8d3acf54a58a5fa83f51cea787c010a1bf2c76d7fe36b35c4cc82a3e744be2c5",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "acceptance-AM-HYBRID-P2.pdf",
       "what": "what NCDMM signs for AM-HYBRID-P2 \u2014 both directions, never netted",
-      "bytes": 4925,
-      "sha256": "95e6675353de441dc63a72f349538ec954412a5aa4fd139ec6bff1b684feefda",
+      "bytes": 4527,
+      "sha256": "02151b047937b750452f7463ea8ad8cd791277505ccfacb4d05d550d350d4db4",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "amendment-memo-AM-ICAM-DIGENG.pdf",
+      "what": "why AM-ICAM-DIGENG's invoices are being reissued, and the clause it is made under",
+      "bytes": 3928,
+      "sha256": "94938d77cec3af587ed1576821d1e3fda94ea96fe615ec8cfa19469b98251069",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
+      ]
+    },
+    {
+      "file": "acceptance-AM-ICAM-DIGENG.pdf",
+      "what": "what NCDMM signs for AM-ICAM-DIGENG \u2014 both directions, never netted",
+      "bytes": 4396,
+      "sha256": "76bde615f5741d71b828dbe4aa556602fd2fb40490aa08058831c1258e83ce2e",
+      "stable": true,
+      "says_unfinished": [
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "amendment-memo-AM-LTM-PROJ88.pdf",
       "what": "why AM-LTM-PROJ88's invoices are being reissued, and the clause it is made under",
-      "bytes": 4255,
-      "sha256": "f360d46ad075ef1170621f1886938c4dc4485a10c593fbad1fb48f16b0588e28",
+      "bytes": 3882,
+      "sha256": "c33f239777e5f521df8d017fbe5e85452539e9eff7768dc0c0f179777af328f0",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     },
     {
       "file": "acceptance-AM-LTM-PROJ88.pdf",
       "what": "what NCDMM signs for AM-LTM-PROJ88 \u2014 both directions, never netted",
-      "bytes": 5057,
-      "sha256": "5f2cf3d4b8168300e51815e242334175cc04824304e0cec4897af0ccce2f3732",
+      "bytes": 4670,
+      "sha256": "8c578ffdd18b94fe5ed4402b6a5fcd0a62a56af09ecdceab1eb792ad82306181",
       "stable": true,
       "says_unfinished": [
-        "Every cost judged \u2014 Every group carries a position. 757 of 757 are working positions a script proposed and nobody has adopted \u2014 classified, and not yet a judgment.",
-        "Every square foot accounted for \u2014 Needs the square footage per building, and what each part is used for. Until it lands the 200.465 carve-out cannot be computed at all, and every dollar of tenant and vacant occupancy cost sits in the federal pool.",
-        "Every asset's funding source \u2014 0.0% of the asset cost carries a funding source, so 200.436(b) cannot be answered on the depreciation the rest of it holds. It is the one column the schedule does not carry and 200.313(d)(1) requires.",
-        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires.",
-        "The rate certified \u2014 A rate stands and nobody has put their name to it. Nothing is blocked by this \u2014 an invoice or a workbook produced now simply carries NOT CERTIFIED."
+        "The paper behind the judgments \u2014 0 of 363 federally chargeable judgments cite a document, of 757 live. Attaching is not citing: a citation is why the judgment was made, and it is what VERIFIED requires."
       ]
     }
   ],
   "notes": [
-    "AM-DRIVE-AM: no change-of-basis clause on the record, so the memorandum asks NCDMM to name the instrument instead of citing one."
+    "AM-DRIVE-AM: no change-of-basis clause on the record, so the memorandum asks NCDMM to name the instrument instead of citing one.",
+    "AM-ICAM-DIGENG: no change-of-basis clause on the record, so the memorandum asks NCDMM to name the instrument instead of citing one."
   ]
 }
