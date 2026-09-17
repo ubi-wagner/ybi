@@ -85,7 +85,7 @@ export default function Timesheet({ actor }) {
   );
 
   if (!actor?.employee_key && !viewing) {
-    return <>{donated}<TimeRoster onOpen={setViewing} /></>;
+    return <>{donated}<TimeRoster onOpen={setViewing} actor={actor} /></>;
   }
   return <>{donated}
     <Sheet actor={actor} viewing={viewing} onBack={() => setViewing(null)} />

@@ -10,6 +10,15 @@ import { Card, Empty, Field, Pill, Stat, Table, Tick, useToast } from "../compon
   denominator: employment terms are payroll's fact, and until they are recorded
   nobody's sheet can be tested for completeness — a part-year employee measured
   against a full year can never submit.
+
+  And one act that is not entering an hour: filing a page somebody signed.
+  Thirty-seven of the forty-three have no account, so waiting for each of them
+  to sign on a screen is waiting on an account somebody has to open first. A
+  scan of their signature is the evidence 200.430(i) asks for, and until
+  migration 120 there was nowhere on the record to put it — the register read
+  0 of 43 with the pages in the library. It is deliberately not a supervisor
+  signature: that is the filer asserting firsthand knowledge of the work, and
+  this is the filer relaying somebody else's assertion.
 */
 
 const hrs = (v) => v === null || v === undefined ? "—"
@@ -21,10 +30,18 @@ const STATUSES = [
   ["TEMPORARY", "Temporary"], ["INTERN", "Intern"], ["CONTRACT", "Contract"],
 ];
 
-export default function TimeRoster({ onOpen }) {
+export default function TimeRoster({ onOpen, actor }) {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(null);
+  const [filing, setFiling] = useState(null);
+
+  // The same portfolio the route takes, read from what the person holds
+  // rather than from their rank — CONTROLLER is the name of a portfolio and
+  // of a rank, and reading the rank here would hide the button from exactly
+  // the person who holds the portfolio and nothing else.
+  const held = actor?.portfolios || [];
+  const canFile = held.includes("CONTROLLER") || held.includes("PROJECT");
 
   const load = useCallback(() =>
     api.timesheetRoster()
@@ -93,7 +110,9 @@ export default function TimeRoster({ onOpen }) {
               <td className="num">{hrs(r.entered_hours)}</td>
               <td className="num">{pct(r.coverage)}</td>
               <td className="l">
-                {r.certified && !r.stale ? <Pill tone="good">certified</Pill>
+                {r.certified && !r.stale
+                  ? <Pill tone="good">{r.by_paper && !r.by_employee
+                      ? "certified on paper" : "certified"}</Pill>
                   : r.stale ? <Pill tone="fail">stale</Pill>
                   : r.submitted_at ? <Pill tone="accent">submitted</Pill>
                   : Number(r.entered_hours) > 0 ? <Pill>in progress</Pill>
@@ -105,6 +124,11 @@ export default function TimeRoster({ onOpen }) {
                   <button className="sm" onClick={() => onOpen(r.employee_key)}>
                     Sheet
                   </button>
+                )}{" "}
+                {canFile && (
+                  <button className="sm" onClick={() => setFiling(r)}>
+                    {r.certified && !r.stale ? "Refile" : "File signed"}
+                  </button>
                 )}
               </td>
             </tr>
@@ -115,6 +139,11 @@ export default function TimeRoster({ onOpen }) {
       {editing && (
         <TermsDialog row={editing} onClose={() => setEditing(null)}
                      onSaved={() => { setEditing(null); load(); }} />
+      )}
+
+      {filing && (
+        <FileSignedDialog row={filing} onClose={() => setFiling(null)}
+                          onSaved={() => { setFiling(null); load(); }} />
       )}
     </div>
   );
@@ -201,6 +230,107 @@ function TermsDialog({ row, onClose, onSaved }) {
         <div className="modal-actions">
           <button className="btn primary" disabled={busy} onClick={save}>
             {busy ? "Recording…" : "Record the span"}
+          </button>
+          <button className="btn quiet" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/*
+  Filing a page somebody signed.
+
+  Two calls, in the order the rules require. The scan goes through
+  `POST /api/documents/upload`, which everybody signed in may use and which is
+  the only place `storage.place()` decides where a file lands — a second
+  bytes-writer would fail `tests/test_storage_paths.py`. Only then is the
+  certification filed, naming the document that came back.
+
+  Nothing here types a name. `signed_by` is read off the record for the
+  employee whose effort it is, because a name box would let a typo put one
+  person's signature against another's year and nothing downstream could catch
+  it.
+*/
+function FileSignedDialog({ row, onClose, onSaved }) {
+  const toast = useToast();
+  const [file, setFile] = useState(null);
+  const [signedOn, setSignedOn] = useState("");
+  const [read, setRead] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+
+  const name = row.employee_name || row.employee_key;
+
+  async function fileIt() {
+    setBusy(true);
+    setProblem("");
+    try {
+      // One: the page. Content-addressed, so filing the same scan twice
+      // files it once and answers with the id it already had.
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", "certification");
+      fd.append("period", "2025");
+      fd.append("note", `200.430(i) certification signed by ${name}`);
+      fd.append("doc_date", signedOn);
+      const doc = await api.uploadDocument(fd);
+
+      // Two: the certification, naming it.
+      const r = await api.sign({
+        employee_key: row.employee_key,
+        on_paper: true,
+        evidence_id: doc.evidence_id,
+        paper_signed_on: signedOn,
+        acknowledged: true,
+      });
+      toast(`Filed for ${r.signed_by}, signed ${r.paper_signed_on}`, { tone: "ok" });
+      onSaved();
+    } catch (e) {
+      // Where it happened, in warm pencil, and not only in a toast that
+      // fades while somebody is still reading the form.
+      setProblem(explain(e));
+      toast(explain(e), { tone: "bad", sticky: true });
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" role="dialog" onClick={(e) => e.stopPropagation()}>
+        <h2>File {name}'s signed certification</h2>
+        <p className="quiet small">
+          This records that <span className="strong">{name}</span> signed, and
+          that you filed the page. It is not a statement by you about their
+          work — that is a supervisor certification, which is a different act
+          and says so on the record.
+        </p>
+
+        <div className="terms-grid">
+          <Field label="The signed page"
+                 hint="PDF or a photograph. It is filed in the library and the certification points at it.">
+            <input type="file" onChange={(e) => setFile(e.target.files[0] || null)} />
+          </Field>
+          <Field label="Date on the page"
+                 hint="Not today's date unless that is what it says — the gap between the two is the filing lag.">
+            <input type="date" value={signedOn} max={new Date().toISOString().slice(0, 10)}
+                   onChange={(e) => setSignedOn(e.target.value)} />
+          </Field>
+        </div>
+
+        <label className="cert-ack">
+          <input type="checkbox" checked={read}
+                 onChange={(e) => setRead(e.target.checked)} />
+          <span>I have read this page and it carries {name}'s signature.</span>
+        </label>
+
+        {problem && <p className="refusal">{problem}</p>}
+
+        <div className="modal-actions">
+          <button className="btn primary"
+                  disabled={busy || !file || !signedOn || !read}
+                  onClick={fileIt}>
+            {busy ? "Filing…" : "File it"}
           </button>
           <button className="btn quiet" onClick={onClose}>Close</button>
         </div>

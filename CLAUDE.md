@@ -4423,6 +4423,114 @@ assume: **the de minimis floor went 10% to 15% for awards issued on or after
 Tactical Mile by nine days — so the subaward instrument's own date decides it,
 not the prime's period.
 
+## A page somebody signed had nowhere to go
+
+Migration `120`, `certifier_role = 'PAPER'`, a card on `/timesheet`'s roster.
+The question that found it: *we have the upload of signed certs from them that
+Tom can attach and seal, correct?* No — and the two halves of that were wrong
+in different ways.
+
+**There was no attach.** `labor_certification` had sixteen columns and **not
+one pointed at a document.** The signature it recorded was a click:
+`signed_by` was the calling actor's display name, beside their `actor_id`,
+`session_id` and user agent. So a page a person physically signed could be
+uploaded — everybody signed in may upload — land in the library attached to
+nothing, and leave `v_certification_status` reading *0 of 43 certified*.
+**Forty signed pages on file and forty uncertified people, at the same
+moment, on two screens**, which is 13.0%-and-2.2% in the register 200.430(i)
+turns on.
+
+**And "seal" is a different axis.** Certifications gate nothing — not the
+seal, not the rate, not a restatement, not a workbook, per `082`. What they
+decide is whether the direct labour charge is *allowable*, which is the whole
+$1,835,047.17, and every paper already says which state it was produced in.
+
+The only thing available instead was signing `as_supervisor`, which writes a
+**different assertion** — *I have firsthand knowledge of the work performed* —
+over forty-three people including those on projects the controller does not
+run. Forty-three of those from one account in one sitting is the reading
+problem `decision.origin` exists for, and the route's own docstring said the
+role "is not yet issued to anyone".
+
+**What was missing is a value for the kind of act**, for the fourth time in
+this schema: `038` had no `ingest_channel` meaning *this system made it*,
+`070` no `basis` meaning *the organisation reconstructed it and the person
+affirmed it*, `083` no `origin` meaning *the machine proposed it*. `PAPER` is
+**the person signed, on paper, and somebody else filed the page** — and the
+row keeps those apart, which is the whole of it:
+
+| | |
+| --- | --- |
+| `signed_by` | the person whose effort it is |
+| `actor_id`, `session_id` | whoever filed it |
+| `paper_signed_on` | the date the page carries |
+| `signed_at` | when the row was written |
+| `evidence_id` | the page |
+
+**The document is mandatory and the fence is an equivalence**, not two
+one-way checks: a PAPER row with no page is the citation-with-no-document
+shape this repository has paid for three times, and an EMPLOYEE row *with*
+one would claim a scan behind a click. `direct_needs_objective` is the same
+shape for the same reason. Two more fences the schema holds and the handler
+answers first: the page cannot predate the period it certifies, and a page
+dated after it was filed is a transcription error rather than a signature.
+
+**The name is read from the record and never typed.** A name box would let a
+typo put one person's signature against another's year, and **nothing
+downstream could catch it** — the row would be internally consistent and
+about the wrong person. So `employee_key` decides it: the account's display
+name, then the payroll register's, then the key. The register is terse enough
+to matter — it carries `Ewing` where the account says `Barb Ewing`.
+`test_the_request_cannot_name_the_person_who_signed` sweeps the request body,
+which is `test_a_name_in_the_request_is_only_ever_a_label` at the one place
+where the caller is deliberately *not* the signer.
+
+**One door, and two calls in the order the rules require.** The scan goes
+through `POST /api/documents/upload`, the only place `storage.place()` decides
+where a file lands; the certification is filed afterwards naming what came
+back. And the filing extends `POST /api/certify/sign` rather than opening a
+second route, because that handler holds the distribution read, the
+totals-100% check, the hash and the supersession — a second path is a second
+place all of that can be missing.
+
+Driven as Tom against a live API: five refusals each answered with a sentence
+rather than a constraint name, then the filing, and the register went
+`0 certified` to `1`, `by_paper` `0` to `1`. Refiling supersedes and the
+first row stays. **The lag is visible on the row** — signed 14 February,
+filed 17 September.
+
+### Three things the build could not see
+
+All three were in the screen, and all three would have shipped green.
+
+- **`TimeRoster` is never passed `actor`.** It is rendered from
+  `Timesheet.jsx` as `<TimeRoster onOpen={setViewing} />`, so the portfolio
+  gate I wrote read an empty list and **the button would never have appeared
+  for anybody** — a nav stricter than the API, in the one place this change
+  exists to open. Found by grepping the render site rather than by reading my
+  own diff.
+- **`.ack` and `.pencil` do not exist.** I invented two class names; the ones
+  in use are `.cert-ack` and `.refusal`. Vite builds a missing class happily,
+  which is `a drawer mounted in the wrong component` again — caught in the
+  stylesheet rather than in a browser only because I went looking.
+- **`evidence.evidence_id` is `text`, not `uuid`**, and `evidence` has
+  `filename`, not `original_name`. Both were written from memory and both
+  were caught by the database refusing, which is exactly what *read the
+  schema, never recall it* buys.
+
+Every assertion was watched failing against the defect restored — the three
+constraints dropped **on the live schema**, because editing an applied
+migration mutates nothing, and the two source rules broken in place. The
+counts came back 2, 1, 2, 1 and 1, which is what each names.
+
+**And two documents said the thing that had just stopped being true.**
+`docs/manuals/classification-team.md` carried *"A manager cannot sign for
+somebody"* with no second half, and `readiness.py` printed *"theirs to sign,
+nobody else's"*. Both are still right about signing and both now read as
+though a signed page has nowhere to go — *fixing one instance is not fixing
+the rule*, and the rule here is that a manual not updated beside the
+mechanism is the next person's wrong answer.
+
 ## The cost partition fell off a record with no books
 
 Migration `119`, and CI is what found it — **red since 15 September**, three

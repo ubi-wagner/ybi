@@ -1235,7 +1235,12 @@ def roster(period: str = None,
                (x.expected_hours IS NOT NULL)             AS terms_known,
                c.entered_hours, c.chargeable_hours, c.leave_hours,
                c.days_with_time, c.coverage, c.submitted_at,
-               s.certified, s.stale, s.signed_at, s.from_timesheet
+               s.certified, s.stale, s.signed_at, s.from_timesheet,
+               -- Which kind of signature, and whose. A screen that
+               -- prints only `certified` cannot tell a person who
+               -- signed here from a page somebody else filed, and
+               -- those are different facts about the same tick.
+               s.by_paper, s.by_employee, s.signed_by, s.paper_signed_on
           FROM labor_allocation a
           LEFT JOIN v_employment_expected x
                  ON x.period = a.period AND x.employee_key = a.employee_key
@@ -1247,7 +1252,12 @@ def roster(period: str = None,
          GROUP BY a.employee_key, x.expected_hours, x.weekly_hours, x.statuses,
                   x.from_date, x.to_date, c.entered_hours, c.chargeable_hours,
                   c.leave_hours, c.days_with_time, c.coverage, c.submitted_at,
-                  s.certified, s.stale, s.signed_at, s.from_timesheet
+                  s.certified, s.stale, s.signed_at, s.from_timesheet,
+               -- Which kind of signature, and whose. A screen that
+               -- prints only `certified` cannot tell a person who
+               -- signed here from a page somebody else filed, and
+               -- those are different facts about the same tick.
+               s.by_paper, s.by_employee, s.signed_by, s.paper_signed_on
          ORDER BY max(a.payroll_wages) DESC""", (period,))
 
 
