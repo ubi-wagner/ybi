@@ -41,6 +41,16 @@ PERIOD = "2025"
 OUT = Path(__file__).resolve().parent.parent / "docs" / "RUN_SHEET_2025.md"
 
 
+def count(v) -> str:
+    """A count is whole and prints whole.
+
+    `api.js` keeps `money()` and `count()` side by side so the choice is made
+    by naming the thing rather than by reaching for the nearest formatter.
+    Same rule here: 263 assets is not $263.00.
+    """
+    return f"{int(v or 0):,}"
+
+
 def money(v) -> str:
     return f"{D(str(v or 0)):,.2f}"
 
@@ -230,13 +240,38 @@ def tom(w) -> None:
                      WHERE d.reversed_at IS NULL AND d.federal = 'PENDING'
                        AND d.pool IN ('OVERHEAD', 'G&A', 'FRINGE')
                      GROUP BY 1""")
+    # Read, not recalled. This block carried `263`, `20` and `156,235.27` as
+    # literals — in the one document whose whole point is that it is
+    # generated so it cannot go stale. The register was answered and the
+    # sentence went on reporting the estimate it replaced, which is the
+    # defect this repository names in as many words: *a figure in a document
+    # for somebody else gets read from the record, not recalled*.
+    reg = one("""SELECT count(*) AS assets,
+                        count(*) FILTER (WHERE total_funding IS NOT NULL)
+                          AS answered,
+                        count(*) FILTER (WHERE federal_funding > 0) AS federal,
+                        round(coalesce(sum(depreciation
+                              - allowable_depreciation), 0), 2) AS unallowable
+                   FROM v_asset_allowability WHERE period = %s""", (PERIOD,))
     for x in pend:
         head(f"{money(x['amt'])} of {x['pool']} is still `PENDING`")
-        w("The depreciation judgment named its own release condition — *the "
-          "unallowable share is an adjustment against this pool the day the "
-          "register arrives*. **The register has arrived**: all 263 assets "
-          "carry a funding answer, 20 are federally funded, and their "
-          "156,235.27 is already carved under 200.436(b).\n")
+        arrived = reg and reg["answered"] and reg["answered"] >= reg["assets"]
+        if arrived:
+            w("The depreciation judgment named its own release condition — "
+              "*the unallowable share is an adjustment against this pool the "
+              "day the register arrives*. **The register has arrived**: all "
+              f"{count(reg['assets'])} assets carry a funding answer, "
+              f"{count(reg['federal'])} are federally funded, and their "
+              f"{money(reg['unallowable'])} is already carved under "
+              "200.436(b).\n")
+        else:
+            w("The depreciation judgment named its own release condition — "
+              "*the unallowable share is an adjustment against this pool the "
+              "day the register arrives*. It has not: "
+              f"{count((reg['assets'] - reg['answered']) if reg else 0)} of "
+              f"{count(reg['assets'] if reg else 0)} assets say nothing "
+              "about where their money came from, so the depreciation is "
+              "treated as fully allowable, which overstates the rate.\n")
         w("Resolving it to `ALLOWABLE` **moves no rate** — the cost is already "
           "in the pool and `PENDING` only ever held it out of the *claim*. It "
           "costs two deliberate acts: withdraw the signature, then unseal, "
