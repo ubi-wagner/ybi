@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api, count, explain, money } from "../api.js";
-import { Card, Empty, Field, PageHead, Pill, Segmented, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { Card, Drawer, Empty, Field, PageHead, Pill, Segmented, Stat, Table,
+         Tick, useToast } from "../components/ui.jsx";
 import Propose from "../components/Propose.jsx";
 import SubjectNotes from "../components/SubjectNotes.jsx";
 
@@ -39,6 +40,12 @@ export default function Facilities({ actor, tab: initialTab }) {
   // it was written — by retyping an identifier exactly, which is not a
   // thing anybody does. The capability was there and the door was not.
   const [editUnit, setEditUnit] = useState(null);
+  // And the asset he is answering. `putAssetFunding` has been in `api.js`
+  // since the route was written and was called by nothing: the only path
+  // on this screen was Propose, which Tom may not then accept — nobody
+  // disposes of their own recommendation. The refusal even names the way
+  // out, *record the change directly*, and there was no door for it.
+  const [fundAsset, setFundAsset] = useState(null);
   /* Portfolio, not rank.
      `actor.role === "CONTROLLER"` was rank, and CONTROLLER is the name of a
      portfolio *and* of a rank — the one place this file's rules say is
@@ -374,18 +381,43 @@ export default function Facilities({ actor, tab: initialTab }) {
                          }}>Notes</a>{" · "}
                       {Number(a.sources) === 0
                         ? <>
-                            <Pill tone="warn">nobody has looked</Pill>{" · "}
+                            <Pill tone="warn">nobody has looked</Pill>
+                            {canKit && <>
+                              {" · "}
+                              <a href="#" onClick={(e) => {
+                                   e.preventDefault();
+                                   setFundAsset({ asset: a });
+                                 }}>Answer</a>
+                            </>}
+                            {" · "}
                             <a href="#" onClick={(e) => {
                                  e.preventDefault();
                                  setAnswering(a.asset_id);
                                  window.scrollTo({ top: 0, behavior: "smooth" });
-                               }}>Answer</a>
+                               }}>Recommend</a>
                           </>
-                        : (a.funding || []).map((x, n) => (
-                            <div key={n} className="rowsub">
-                              {x.kind} {money(x.amount)}
-                              {x.award_reference ? ` · ${x.award_reference}` : ""}
-                            </div>))}
+                        : <>
+                            {(a.funding || []).map((x, n) => (
+                              <div key={n} className="rowsub">
+                                {x.kind} {money(x.amount)}
+                                {x.award_reference ? ` · ${x.award_reference}` : ""}
+                                {/* An answered asset offered nothing at all, so
+                                    a wrong answer was permanent from the screen.
+                                    The route upserts on (asset, kind, award). */}
+                                {canKit && <>
+                                  {" · "}
+                                  <a href="#" onClick={(e) => {
+                                       e.preventDefault();
+                                       setFundAsset({ asset: a, source: x });
+                                     }}>Correct</a>
+                                </>}
+                              </div>))}
+                            {canKit && (
+                              <a href="#" className="rowsub" onClick={(e) => {
+                                   e.preventDefault();
+                                   setFundAsset({ asset: a });
+                                 }}>+ another source</a>)}
+                          </>}
                     </td>
                   </tr>
                 ))}
@@ -518,6 +550,8 @@ export default function Facilities({ actor, tab: initialTab }) {
       <SubjectNotes subject={notesOn?.subject} subjectId={notesOn?.id}
                     title={notesOn?.title}
                     onClose={() => setNotesOn(null)} />
+      <AssetFundingForm target={fundAsset} onSaved={load}
+                        onClosed={() => setFundAsset(null)} />
     </div>
   );
 }
@@ -591,6 +625,105 @@ function FacilityForm({ onSaved }) {
         <button className="sm" onClick={() => setOpen(false)}>Cancel</button>
       </div>
     </div>
+  );
+}
+
+/* Answering an asset directly.
+ *
+ * `PUT /api/facilities/asset-funding` is `require_portfolio(INVENTORY,
+ * CONTROLLER)` and upserts on (asset, kind, award reference), so correcting
+ * an answer is the same act as giving one. Propose stays beside it and is
+ * the right door for somebody who is *not* going to dispose of it — the
+ * auditor, or Heidi asking Tom. Both are offered, because they mean
+ * different things: one records a judgment, the other asks for one.
+ *
+ * A blank amount is never written as 0.00. `there is no federal money in
+ * this asset` is a row at 0.00 and `nobody has looked` is no row, which is
+ * the intake's rule and the reason the register can state the gap. */
+function AssetFundingForm({ target, onSaved, onClosed }) {
+  const toast = useToast();
+  const src = target?.source;
+  const [v, setV] = useState({ kind: "FEDERAL", amount: "", award_reference: "",
+                               funder: "", note: "" });
+  const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState("");
+  const set = (k, x) => setV((s) => ({ ...s, [k]: x }));
+
+  useEffect(() => {
+    if (!target) return;
+    setRefusal("");
+    setV({ kind: src?.kind || "FEDERAL",
+           amount: src?.amount ?? "",
+           award_reference: src?.award_reference || "",
+           funder: src?.funder || "",
+           note: src?.note || "" });
+  }, [target]);
+
+  async function save() {
+    setBusy(true);
+    setRefusal("");
+    try {
+      await api.putAssetFunding({
+        asset_id: target.asset.asset_id,
+        kind: v.kind,
+        amount: Number(v.amount),
+        award_reference: v.award_reference,
+        funder: v.funder,
+        note: v.note,
+      });
+      toast(`${target.asset.description} — ${v.kind} recorded`);
+      onClosed();
+      await onSaved();
+    } catch (e) {
+      setRefusal(explain(e));
+      toast(explain(e), { tone: "fail" });
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Drawer
+      open={!!target}
+      title={src ? "Correct a funding source" : "Where the money came from"}
+      subtitle={target ? `${target.asset.description} · ${target.asset.asset_id}` : ""}
+      onClose={onClosed}
+      footer={<>
+        <button className="btn" onClick={onClosed}>Cancel</button>
+        <button className="btn primary" disabled={busy} onClick={save}>
+          {busy ? "Recording…" : src ? "Save the correction" : "Record it"}
+        </button>
+      </>}>
+      <p className="rowsub">
+        2 CFR 200.313(d)(1) wants the funding source on the property record, and
+        200.436(b) makes depreciation on a federally funded asset unallowable.
+        An asset may carry more than one source; each is recorded on its own,
+        because a federal share and a private share are two answers.
+      </p>
+      <Field label="Source" required>
+        <select value={v.kind} onChange={(e) => set("kind", e.target.value)}
+                disabled={!!src}>
+          {["FEDERAL","STATE","LOCAL","PRIVATE","DEBT","UNRESTRICTED"]
+            .map((k) => <option key={k} value={k}>{k.toLowerCase()}</option>)}
+        </select>
+      </Field>
+      <Field label="Amount" required
+             hint="0.00 is a real answer: this source paid nothing toward it.">
+        <input className="num" value={v.amount}
+               onChange={(e) => set("amount", e.target.value)} />
+      </Field>
+      <Field label="Award reference"
+             hint="Required for a federal source — 200.313(d)(1) names the award.">
+        <input value={v.award_reference} readOnly={!!src}
+               onChange={(e) => set("award_reference", e.target.value)} />
+      </Field>
+      <Field label="Funder"><input value={v.funder}
+             onChange={(e) => set("funder", e.target.value)} /></Field>
+      <Field label="What this rests on"
+             hint="The schedule, the SEFA, the grant agreement — whatever says so.">
+        <textarea rows={4} value={v.note}
+                  onChange={(e) => set("note", e.target.value)} />
+      </Field>
+      {refusal && <p className="refusal">{refusal}</p>}
+    </Drawer>
   );
 }
 
