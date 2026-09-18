@@ -23,6 +23,22 @@ import pytest
 
 from app.db import query
 
+
+@pytest.fixture
+def cur():
+    """A cursor in a transaction that is thrown away.
+
+    The tests above read views; the partition tests below have to *move* the
+    record to see what a state says, and a partition nobody has ever pushed
+    past 100% is exactly the state this file has now failed to cover twice.
+    """
+    from app.db import conn
+    with conn() as c:
+        with c.transaction(force_rollback=True):
+            with c.cursor() as cursor:
+                yield cursor
+
+
 # Everything here is derived from the views, which means it needs the views.
 # Without a database it failed with a connection error rather than skipping,
 # which is a test arguing against working code: a fresh clone has no Postgres
@@ -201,3 +217,65 @@ def test_no_screen_renders_a_worklist_kind_raw():
     assert not offenders, (
         "these render a worklist kind by reformatting the database name "
         "instead of reading worklistKinds.js:\n  " + "\n  ".join(offenders))
+
+
+def test_a_partition_over_its_whole_says_which_building(cur):
+    """101.8% with an empty reason, and 38 rooms over 5 buildings.
+
+    Three defects on the row the controller stopped at. `parts_done` was a
+    count of space units and `parts` a count of buildings, so the fraction
+    compared two populations — `085`'s unit confusion, which hid until an
+    estate was actually entered. `needs` was gated on `unit_sqft >=
+    usable_sqft`, so an estate attributing MORE floor area than it has
+    satisfied it and the step said nothing: `086` in the over direction,
+    which had never occurred. Both are asserted here against a database,
+    in every direction, inside a transaction that is thrown away.
+    """
+    def card():
+        cur.execute("""SELECT pct, parts_done, parts, state, needs
+                         FROM v_partition_coverage
+                        WHERE period = '2025' AND partition = 'SPACE'""")
+        return cur.fetchone()
+
+    cur.execute("SELECT facility_id, usable_sqft FROM facility WHERE period='2025' "
+                "ORDER BY facility_id LIMIT 1")
+    fac = cur.fetchone()
+    if not fac:
+        pytest.skip("needs an estate on the record")
+    cur.execute("SELECT count(*) n FROM facility WHERE period='2025'")
+    buildings = cur.fetchone()["n"]
+
+    # Start from an estate that ties, whatever the record happens to hold —
+    # otherwise this asserts against somebody else's open measurement and
+    # reports a fault in working code. Rolled back with the rest.
+    cur.execute("""UPDATE facility f SET usable_sqft = COALESCE(
+                     (SELECT sum(u.usable_sqft) FROM space_unit u
+                       WHERE u.facility_id = f.facility_id AND u.period = f.period),
+                     f.usable_sqft)
+                    WHERE f.period = '2025'""")
+    assert card()["state"] == "TIES", "the scaffold did not reach a tying estate"
+
+    cur.execute("""INSERT INTO space_unit (unit_id, facility_id, period, label,
+                     usable_sqft, use, status)
+                   VALUES ('TEST-OVER', %s, '2025', 'TEST-OVER', 10, 'VACANT', 'VACANT')""",
+                (fac["facility_id"],))
+    over = card()
+    # Both sides of the fraction are buildings: never more parts done than parts.
+    assert over["parts_done"] <= over["parts"] == buildings
+    assert over["state"] == "OPEN"
+    assert over["needs"].strip(), "a partition over its whole must say which building"
+    assert "more than" in over["needs"]
+
+    # And the other direction, which is not the same row made negative:
+    # `unit_sqft_sane` refuses that, correctly. Take the test row away and
+    # shrink a real one instead.
+    cur.execute("DELETE FROM space_unit WHERE unit_id = 'TEST-OVER'")
+    cur.execute("""UPDATE space_unit SET usable_sqft = usable_sqft - 10
+                    WHERE period = '2025' AND facility_id = %s
+                      AND unit_id = (SELECT unit_id FROM space_unit
+                                      WHERE facility_id = %s AND usable_sqft > 10
+                                      ORDER BY unit_id LIMIT 1)""",
+                (fac["facility_id"], fac["facility_id"]))
+    under = card()
+    assert under["state"] == "OPEN"
+    assert "not yet attributed" in under["needs"]
