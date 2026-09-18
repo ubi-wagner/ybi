@@ -34,6 +34,11 @@ const USE_HINT = {
 };
 
 export default function Facilities({ actor, tab: initialTab }) {
+  // The room the controller is correcting. `put_unit` has always been an
+  // upsert on `unit_id`, so the register could be corrected from the day
+  // it was written — by retyping an identifier exactly, which is not a
+  // thing anybody does. The capability was there and the door was not.
+  const [editUnit, setEditUnit] = useState(null);
   /* Portfolio, not rank.
      `actor.role === "CONTROLLER"` was rank, and CONTROLLER is the name of a
      portfolio *and* of a rank — the one place this file's rules say is
@@ -182,7 +187,20 @@ export default function Facilities({ actor, tab: initialTab }) {
                       <span className="strong">{r.name}</span>
                       <div className="quiet small">{r.code || r.address}</div>
                     </td>
-                    <td className="num">{sqft(r.usable_sqft)}</td>
+                    <td className="num">
+                      {sqft(r.usable_sqft)}
+                      {/* The figure was in the tick's `title` — a tooltip
+                          nobody hovers. A building that does not add up is
+                          the one thing on this table worth acting on, and
+                          the amount is what says how far off it is. */}
+                      {ctl && ctl.units > 0 && !ctl.ties && (
+                        <div className="amt neg small">
+                          {Number(ctl.variance) > 0
+                            ? `rooms are ${sqft(ctl.variance)} over`
+                            : `${sqft(-ctl.variance)} not attributed`}
+                        </div>
+                      )}
+                    </td>
                     <td className="num">{r.units}</td>
                     <td className="num">{money(r.charged)}</td>
                     <td className="num">{money(r.market_value)}</td>
@@ -249,6 +267,7 @@ export default function Facilities({ actor, tab: initialTab }) {
               { label: "Occupant", align: "left" }, { label: "Sqft" },
               { label: "Months" }, { label: "Charged" }, { label: "$/sqft" },
               { label: "At market" }, { label: "Subsidy" },
+              { label: "", align: "left" },
             ]}>
               {space.space.map((u) => (
                 <tr key={u.unit_id}>
@@ -268,11 +287,20 @@ export default function Facilities({ actor, tab: initialTab }) {
                   <td className={`num strong ${Number(u.subsidy) < 0 ? "amt neg" : ""}`}>
                     {money(u.subsidy)}
                   </td>
+                  <td className="l">
+                    {canWrite && (
+                      <button className="ghost" onClick={() => setEditUnit(u)}>
+                        Edit
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </Table>
           )}
-          {canWrite && <SpaceForm facilities={f} onSaved={load} />}
+          {canWrite && <SpaceForm facilities={f} onSaved={load}
+                                  editing={editUnit}
+                                  onClosed={() => setEditUnit(null)} />}
         </Card>
       )}
 
@@ -566,7 +594,7 @@ function FacilityForm({ onSaved }) {
   );
 }
 
-function SpaceForm({ facilities, onSaved }) {
+function SpaceForm({ facilities, onSaved, editing, onClosed }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ unit_id: "", facility_id: "", label: "",
@@ -575,8 +603,37 @@ function SpaceForm({ facilities, onSaved }) {
                                months_occupied: "12", actual_annual_charge: "",
                                market_rate_psf: "", market_basis: "",
                                market_source: "", objective_id: "",
-                               occupancy_basis: "" });
+                               occupancy_basis: "", floor: "" });
   const set = (k, x) => setV((s) => ({ ...s, [k]: x }));
+
+  /* Editing a room is the same act as recording one — `put_unit` upserts on
+     `unit_id` — so it is the same form, filled in. Every column the form can
+     write is read back from the rent roll (migration `127` carries the two
+     it did not), because an edit that puts back less than it read clears
+     what it did not show. */
+  useEffect(() => {
+    if (!editing) return;
+    setV({
+      unit_id: editing.unit_id || "",
+      facility_id: editing.facility_id || "",
+      label: editing.label || "",
+      usable_sqft: editing.usable_sqft ?? "",
+      use: editing.use || "TENANT",
+      status: editing.status || "OCCUPIED",
+      occupant: editing.occupant || "",
+      months_occupied: editing.months_occupied ?? "12",
+      actual_annual_charge: editing.actual_annual_charge ?? "",
+      market_rate_psf: editing.market_rate_psf ?? "",
+      market_basis: editing.market_basis || "",
+      market_source: editing.market_source || "",
+      objective_id: editing.objective_id || "",
+      occupancy_basis: editing.occupancy_basis || "",
+      floor: editing.floor || "",
+    });
+    setOpen(true);
+  }, [editing]);
+
+  const close = () => { setOpen(false); onClosed && onClosed(); };
 
   async function save() {
     try {
@@ -589,8 +646,8 @@ function SpaceForm({ facilities, onSaved }) {
         market_rate_psf: v.market_rate_psf ? Number(v.market_rate_psf) : null,
         objective_id: v.objective_id || null,
       });
-      toast(`${v.label} recorded`);
-      setOpen(false);
+      toast(`${v.label} ${editing ? "corrected" : "recorded"}`);
+      close();
       await onSaved();
     } catch (e) {
       const msg = explain(e);
@@ -609,7 +666,12 @@ function SpaceForm({ facilities, onSaved }) {
   return (
     <div className="splitter">
       <div className="terms-grid">
-        <Field label="Identifier"><input value={v.unit_id} onChange={(e) => set("unit_id", e.target.value)} /></Field>
+        <Field label="Identifier"
+               hint={editing ? "What the correction is keyed on — fixed here."
+                             : undefined}>
+          <input value={v.unit_id} readOnly={!!editing}
+                 onChange={(e) => set("unit_id", e.target.value)} />
+        </Field>
         <Field label="Building">
           <select value={v.facility_id} onChange={(e) => set("facility_id", e.target.value)}>
             {facilities.map((f) => (
@@ -636,6 +698,9 @@ function SpaceForm({ facilities, onSaved }) {
         <Field label="What that rate rests on">
           <input value={v.market_basis} onChange={(e) => set("market_basis", e.target.value)} />
         </Field>
+        <Field label="Floor" hint="Ground, 2, mezzanine">
+          <input value={v.floor} onChange={(e) => set("floor", e.target.value)} />
+        </Field>
         <Field label="Objective" hint="Required when the use is a programme">
           <input value={v.objective_id} onChange={(e) => set("objective_id", e.target.value)} />
         </Field>
@@ -649,8 +714,10 @@ function SpaceForm({ facilities, onSaved }) {
         </Field>
       </div>
       <div className="splitter-foot">
-        <button className="primary sm" onClick={save}>Record the space</button>
-        <button className="sm" onClick={() => setOpen(false)}>Cancel</button>
+        <button className="primary sm" onClick={save}>
+          {editing ? "Save the correction" : "Record the space"}
+        </button>
+        <button className="sm" onClick={close}>Cancel</button>
       </div>
     </div>
   );
