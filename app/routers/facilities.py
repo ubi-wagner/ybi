@@ -21,7 +21,7 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.audit import record
 from app.auth import (Actor, require_facilities, require_inventory,
@@ -36,7 +36,31 @@ router = APIRouter(prefix="/facilities", tags=["facilities"],
                    dependencies=[Depends(require_reader)])
 
 
-class FacilityIn(BaseModel):
+class BlankNotNull(BaseModel):
+    """A column that is NULL in the register arrives as a blank, not a 422.
+
+    These bodies are posted back by the screens that *read* the register —
+    correcting a building or a room is the same upsert as recording one, so
+    the form is pre-filled from the row it is about. A `str = ""` field
+    refuses `None`, and `facility.code` is nullable, so the API refused a row
+    the API itself had just produced, naming a field nobody had typed in.
+
+    The screens coerce with `|| ""` and were right by luck. This is the rule
+    rather than the habit: whatever the register answers with can be handed
+    straight back.
+    """
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _blank_for_null(cls, v, info):
+        if v is None:
+            f = cls.model_fields.get(info.field_name)
+            if f is not None and f.annotation is str:
+                return ""
+        return v
+
+
+class FacilityIn(BlankNotNull):
     facility_id: str
     name: str
     code: str = ""
@@ -53,7 +77,7 @@ class FacilityIn(BaseModel):
     note: str = ""
 
 
-class UnitIn(BaseModel):
+class UnitIn(BlankNotNull):
     unit_id: str
     facility_id: str
     label: str

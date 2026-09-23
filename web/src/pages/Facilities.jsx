@@ -46,6 +46,11 @@ export default function Facilities({ actor, tab: initialTab }) {
   // disposes of their own recommendation. The refusal even names the way
   // out, *record the change directly*, and there was no door for it.
   const [fundAsset, setFundAsset] = useState(null);
+  // And the building. `put_facility` upserts on `facility_id` too, and
+  // the Buildings tab offered `+ Add a building` and nothing else — so
+  // the one figure a partition turns on, the building's own usable area,
+  // could not be corrected from the screen at all.
+  const [editFacility, setEditFacility] = useState(null);
   /* Portfolio, not rank.
      `actor.role === "CONTROLLER"` was rank, and CONTROLLER is the name of a
      portfolio *and* of a rank — the one place this file's rules say is
@@ -219,6 +224,13 @@ export default function Facilities({ actor, tab: initialTab }) {
                            setNotesOn({ subject: "FACILITY", id: r.facility_id,
                                         title: r.name });
                          }}>Notes</a>
+                      {canWrite && <>
+                        {" · "}
+                        <a href="#" onClick={(e) => {
+                             e.preventDefault();
+                             setEditFacility(r);
+                           }}>Edit</a>
+                      </>}
                       {" · "}
                       {r.owned ? "owned" : `leased · ${r.landlord}`}
                       {r.units_without_market > 0 &&
@@ -229,7 +241,9 @@ export default function Facilities({ actor, tab: initialTab }) {
               })}
             </Table>
           )}
-          {canWrite && <FacilityForm onSaved={load} />}
+          {canWrite && <FacilityForm onSaved={load}
+                                     editing={editFacility}
+                                     onClosed={() => setEditFacility(null)} />}
         </Card>
       )}
 
@@ -558,14 +572,44 @@ export default function Facilities({ actor, tab: initialTab }) {
 
 /* ------------------------------------------------------------------ */
 
-function FacilityForm({ onSaved }) {
+function FacilityForm({ onSaved, editing, onClosed }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ facility_id: "", name: "", code: "", address: "",
                                owned: true, landlord: "", usable_sqft: "",
-                               rentable_sqft: "", market_rate_psf: "",
-                               market_basis: "", source_document: "" });
+                               rentable_sqft: "", year_built: "",
+                               annual_lease_cost: "", market_rate_psf: "",
+                               market_basis: "", source_document: "", note: "" });
   const set = (k, x) => setV((s) => ({ ...s, [k]: x }));
+
+  /* Correcting a building is the same act as recording one, because the
+     route upserts. Every column the form writes is read back — `128` carries
+     the four `v_facility_summary` did not, and `source_document` is the one
+     that matters: it is what the measurement rests on, and an edit that
+     dropped it would leave the estate asserting a figure with nothing
+     behind it. */
+  useEffect(() => {
+    if (!editing) return;
+    setV({
+      facility_id: editing.facility_id || "",
+      name: editing.name || "",
+      code: editing.code || "",
+      address: editing.address || "",
+      owned: editing.owned ?? true,
+      landlord: editing.landlord || "",
+      usable_sqft: editing.usable_sqft ?? "",
+      rentable_sqft: editing.rentable_sqft ?? "",
+      year_built: editing.year_built ?? "",
+      annual_lease_cost: editing.annual_lease_cost ?? "",
+      market_rate_psf: editing.market_rate_psf ?? "",
+      market_basis: editing.market_basis || "",
+      source_document: editing.source_document || "",
+      note: editing.note || "",
+    });
+    setOpen(true);
+  }, [editing]);
+
+  const close = () => { setOpen(false); onClosed && onClosed(); };
 
   async function save() {
     try {
@@ -573,10 +617,12 @@ function FacilityForm({ onSaved }) {
         ...v,
         usable_sqft: Number(v.usable_sqft),
         rentable_sqft: v.rentable_sqft ? Number(v.rentable_sqft) : null,
+        year_built: v.year_built ? Number(v.year_built) : null,
+        annual_lease_cost: v.annual_lease_cost ? Number(v.annual_lease_cost) : null,
         market_rate_psf: v.market_rate_psf ? Number(v.market_rate_psf) : null,
       });
-      toast(`${v.name} recorded`);
-      setOpen(false);
+      toast(`${v.name} ${editing ? "corrected" : "recorded"}`);
+      close();
       await onSaved();
     } catch (e) {
       const msg = explain(e);
@@ -596,7 +642,12 @@ function FacilityForm({ onSaved }) {
     <div className="splitter">
       <div className="terms-grid">
         <Field label="Code"><input value={v.code} onChange={(e) => set("code", e.target.value)} /></Field>
-        <Field label="Identifier"><input value={v.facility_id} onChange={(e) => set("facility_id", e.target.value)} /></Field>
+        <Field label="Identifier"
+               hint={editing ? "What the correction is keyed on — fixed here."
+                             : undefined}>
+          <input value={v.facility_id} readOnly={!!editing}
+                 onChange={(e) => set("facility_id", e.target.value)} />
+        </Field>
         <Field label="Name"><input value={v.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Address"><input value={v.address} onChange={(e) => set("address", e.target.value)} /></Field>
         <Field label="Usable square feet"><input className="num" value={v.usable_sqft} onChange={(e) => set("usable_sqft", e.target.value)} /></Field>
@@ -616,13 +667,31 @@ function FacilityForm({ onSaved }) {
         <Field label="Market rate $/sqft/year">
           <input className="num" value={v.market_rate_psf} onChange={(e) => set("market_rate_psf", e.target.value)} />
         </Field>
+        <Field label="Year built"><input className="num" value={v.year_built}
+               onChange={(e) => set("year_built", e.target.value)} /></Field>
+        <Field label="Annual lease cost" hint="Leased buildings only">
+          <input className="num" value={v.annual_lease_cost}
+                 onChange={(e) => set("annual_lease_cost", e.target.value)} />
+        </Field>
+        <Field label="What the square footage rests on"
+               hint={"The measured plan, the lease, an appraisal. It is the " +
+                     "reason on the audit row, so a figure entered without one " +
+                     "is a measurement with nothing behind it."}>
+          <input value={v.source_document}
+                 onChange={(e) => set("source_document", e.target.value)} />
+        </Field>
         <Field label="What the market rate rests on" hint="A comparable, a survey, an appraisal">
           <input value={v.market_basis} onChange={(e) => set("market_basis", e.target.value)} />
         </Field>
+        <Field label="Anything worth knowing">
+          <input value={v.note} onChange={(e) => set("note", e.target.value)} />
+        </Field>
       </div>
       <div className="splitter-foot">
-        <button className="primary sm" onClick={save}>Record the building</button>
-        <button className="sm" onClick={() => setOpen(false)}>Cancel</button>
+        <button className="primary sm" onClick={save}>
+          {editing ? "Save the correction" : "Record the building"}
+        </button>
+        <button className="sm" onClick={close}>Cancel</button>
       </div>
     </div>
   );
