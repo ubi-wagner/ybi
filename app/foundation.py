@@ -382,26 +382,44 @@ GUIDE_PERIOD = "2025"
 #
 # The line this draws is not the one the docstring above used to draw:
 #
-#   transcription   the effort distribution, the working calendar and the
-#                   hours log under it, 263 assets, four awards, their
-#                   budget schedules, the text of the agreements
+#   transcription   the books, the effort distribution, the working calendar
+#                   and the hours log under it, 263 assets, four awards,
+#                   their budget schedules, the 2025 invoice register, the
+#                   twenty-six contract provisions, the text of the
+#                   agreements, who is paid as a company, and each award to
+#                   the paper it was read out of — eleven registers
 #   judgment        the classification, the seal, the rate, the
 #                   certification, the restatement — and none of those is in
 #                   `seed.sh` either, so nothing here moves that line
 #
-# **Four of `seed.sh`'s steps are deliberately not on this list**, for one
-# reason: they write through the API as a person, and
-# `refuse_issued_password` means an account still on the organisation's
-# password can write nothing at all. The ledger, the contract provisions,
-# the projects and the eleven control points reach the record when somebody
-# who has set their own password runs them. A boot cannot do that, and the
-# fact that it cannot is the rule working rather than a gap in it.
+# **Two of `seed.sh`'s steps are deliberately not on this list**, for one
+# reason: they write through the API *as a person*. The projects are
+# somebody's judgment about who is on what, and naming a difference at the
+# eleven control points is the controller's act. A boot has nobody to be,
+# and the fact that it cannot do those is the rule working rather than a
+# gap in it.
 #
-# And a fifth declines on its own authority. `load_invoices_2025.py` checks
-# the register against `3900 Grant Income` before it writes, and against a
-# ledger of 0.00 it writes nothing and says why — *"the register has to
-# agree with the ledger before it is worth having"*. It belongs with the
-# ledger, so it stays with the half a person runs.
+# The ledger and the contract provisions stood here for the same reason and
+# do not any more, because the reason was wrong about them: `124` took the
+# promote out of its HTTP handler, so the boot calls the same function the
+# screen calls and the identity is a provenance label rather than a user.
+# **A boot has nobody to be, and that was never a reason to leave a
+# transcription out.**
+#
+# And the invoice register declines on its own authority.
+# `load_invoices_2025.py` checks itself against `3900 Grant Income` before
+# it writes, and against a ledger of 0.00 it writes nothing and says why —
+# *"the register has to agree with the ledger before it is worth having"*.
+# That is why it sits **after** the books rather than beside them, and why
+# it was off this list entirely until the books were on it.
+#
+# The six PDFs it reads are in `docs/source-documents/invoices/`, which
+# ships. They were in `intake/`, which is gitignored and which the
+# Dockerfile therefore never copied — so on every deployment the walk
+# reported `/srv/intake/Rising_Tides.pdf is not there` and loaded nothing.
+# A runner in the image with nothing in the image to run: this module's own
+# defect one directory along, and the reason a register is proved from an
+# empty database rather than from the one it was written against.
 
 
 @dataclass(frozen=True)

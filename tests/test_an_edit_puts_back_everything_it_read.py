@@ -77,3 +77,41 @@ def test_the_form_can_be_handed_a_room_to_correct():
     body = src[src.index("function SpaceForm("):]
     assert re.search(r"function SpaceForm\(\{[^}]*\bediting\b", body)
     assert "setOpen(true)" in body[body.index("editing"):]
+
+
+def test_a_null_from_the_register_is_a_blank_and_not_a_refusal():
+    """The other half: what the read produced has to be postable.
+
+    `facility.code` is nullable, `FacilityIn.code` is `str = ""`, and a
+    default does not accept `None` — so posting a row back exactly as the API
+    answered with it was a 422 naming a field nobody had typed in. The
+    screens coerce with `|| ""` and were right by luck; `BlankNotNull` makes
+    it the rule, so a correction is a round trip rather than a re-entry.
+    """
+    from app.routers.facilities import FacilityIn, UnitIn
+
+    facility = FacilityIn(**{
+        "facility_id": "T", "name": "T", "usable_sqft": 1,
+        # every string field, as the register answers when it holds nothing
+        "code": None, "address": None, "landlord": None,
+        "market_basis": None, "source_document": None, "note": None})
+    for f in ("code", "address", "landlord", "market_basis",
+              "source_document", "note"):
+        assert getattr(facility, f) == "", f"{f} should read blank, not None"
+
+    unit = UnitIn(**{
+        "unit_id": "U", "facility_id": "T", "label": "U", "usable_sqft": 1,
+        "use": "VACANT", "status": "VACANT",
+        "floor": None, "occupant": None, "market_basis": None,
+        "market_source": None, "note": None})
+    for f in ("floor", "occupant", "market_basis", "market_source", "note"):
+        assert getattr(unit, f) == "", f"{f} should read blank, not None"
+
+
+def test_it_does_not_blank_a_field_that_may_be_absent():
+    """A nullable non-string keeps its None — `year_built` unknown is not 0."""
+    from app.routers.facilities import FacilityIn
+    f = FacilityIn(facility_id="T", name="T", usable_sqft=1,
+                   year_built=None, rentable_sqft=None, market_rate_psf=None)
+    assert f.year_built is None and f.rentable_sqft is None
+    assert f.market_rate_psf is None
