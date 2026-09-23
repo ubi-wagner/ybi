@@ -12,24 +12,26 @@
 #
 #   provision         nobody can record anything until there are accounts, and
 #                     the ladder has to run downward from a bootstrapped root
-#   load_2025         the ledger, the P&L and the balance sheet, each proving
-#                     off its own printed subtotals before anything is promoted
 #   load_registers    everything that is a transcription of a document already
-#                     in the image — the effort distribution the fringe base
-#                     comes from, YBI's own working calendar and the hours log
-#                     under it, the 263-asset register without the funding
-#                     column the schedule does not carry, the four awards and
-#                     their budget schedules, the text of the agreements. The
-#                     list is `app/foundation.py::REGISTERS`, which the boot
-#                     walks too, so a recovery brings these back without
-#                     anybody running anything
-#   load_contract_terms   what the signed agreements actually say, with the
-#                     clause each provision came from. Through the API as a
-#                     person, which is why it is not on the list above
+#                     in the image, in the order the dependencies fall: the
+#                     books first, because six of the rest read them; then the
+#                     effort distribution the fringe base comes from, YBI's own
+#                     working calendar and the hours log under it, the
+#                     263-asset register without the funding column the
+#                     schedule does not carry, the four awards and their budget
+#                     schedules, the 2025 invoice register, the twenty-six
+#                     contract provisions with the clause each came from, and
+#                     the text of the agreements. The list is
+#                     `app/foundation.py::REGISTERS`, which the boot walks too,
+#                     so a recovery brings these back without anybody running
+#                     anything
 #   seed_documents    the eighteen foundational documents, filed through the
 #                     real upload route as a real person
+#   load_projects     who is on each piece of work — a judgment with a person's
+#                     name on it, which is why it is not on the list above
 #   reconcile --record    the eleven cross-reference points, with every
-#                     difference named rather than netted
+#                     difference named rather than netted. The controller's
+#                     act, for the same reason
 #
 # Re-runnable. Everything here is content-addressed or checks for itself
 # first, so a second run loads nothing twice and says so.

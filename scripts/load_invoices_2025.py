@@ -50,7 +50,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.db import one, open_pool, query, transaction  # noqa: E402
 
-INTAKE = Path(__file__).resolve().parent.parent / "intake"
+#: The six PDFs of invoices as issued, in the image.
+#:
+#: They lived in `intake/`, which is gitignored — deliberately, because that
+#: is where a roster reply carrying forty-three people's addresses lands. So
+#: the Dockerfile never copied them, and on a deployment the boot's own
+#: register walk reported `the 2025 invoice register exited 1 and loaded
+#: nothing: /srv/intake/Rising_Tides.pdf is not there`, on every deploy, for
+#: ever. That is `077`'s defect exactly — *a bootstrap script with nothing to
+#: bootstrap from*, where `docs/source-documents/` did not ship and the
+#: eighteen documents it files were not in the container.
+#:
+#: These are not a roster. They are six invoices YBI issued, which is what
+#: `docs/source-documents/` is for, and `docs/` ships. So the register comes
+#: back on a recovery like every other one, and there is nothing for anybody
+#: to run.
+INVOICES = Path(__file__).resolve().parent.parent / "docs/source-documents/invoices"
 
 #: Where each stream's invoices come from, what they are, and what the ledger
 #: account is that independently records the same billing.
@@ -225,7 +240,7 @@ def main() -> int:
     print(f"{'stream':<14} {'inv':>4} {'billed':>14} {'ledger':>14} "
           f"{'gap':>12}  {'indirect':>11}")
     for s in STREAMS:
-        pdf = INTAKE / s["pdf"]
+        pdf = INVOICES / s["pdf"]
         if not pdf.exists():
             faults.append(f"{s['key']}: {pdf} is not there")
             continue

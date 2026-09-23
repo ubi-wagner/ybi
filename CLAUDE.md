@@ -862,6 +862,78 @@ widening a count that did not need it.
 6 reconciling items. Eleven statement points TIE, the whole general ledger
 TIES, and Form 990 Part IX ties at variance 0.00.
 
+### A runner in the image, and nothing in the image to run
+
+`docs/source-documents/invoices/`, and a second way for a source document to
+be accounted for. **Every deployment's register walk reported
+`the 2025 invoice register exited 1 and loaded nothing:
+/srv/intake/Rising_Tides.pdf is not there`** — on every deploy, for as long
+as the register had been on the list.
+
+`load_invoices_2025.py` is entry 7 of `REGISTERS` and reads six PDFs of
+invoices as issued. They lived in `intake/`, which is **gitignored** —
+correctly, because that is where a roster reply carrying forty-three
+people's addresses lands — and the Dockerfile copies `app/`, `scripts/`,
+`docs/` and `web/dist`. So the loader shipped and what it reads did not.
+
+That is `077`'s own defect one directory along, in as many words: *the
+Dockerfile copies `scripts/` so seeding runs inside the deployment, and
+`docs/source-documents/` did not ship, so `seed_documents.py` was in the
+container and the eighteen documents it files were not* — **a bootstrap
+script with nothing to bootstrap from.** The fix there was to ship `docs/`.
+The fix here is to put these six where `docs/` already ships them, which is
+what `docs/source-documents/` is for: they are not a roster, they are six
+invoices YBI issued.
+
+**Proved from an empty database rather than from the record it was written
+against**, because the whole class of defect is invisible on a machine where
+the files happen to be somewhere. Dropped, created, booted:
+
+    loaded the books (97 rows)
+    ...
+    loaded the 2025 invoice register (61 rows)
+    loaded the contract provisions (36 rows)
+    transcribed 9 register(s)
+
+61 invoices, 197 lines, **$2,964,077.32**. Five of the six streams tie to
+`3900 Grant Income` to the cent; Hybrid is OPEN by the declared $4,222.00,
+and the four grants nobody has loaded invoices for read **`NO REGISTER`**
+rather than OPEN — `108`'s rule, arriving on a record that has never been
+touched by a person.
+
+**And the test that guards the directory could see only one of the two ways
+in.** `test_nothing_on_disk_is_left_unnamed` asks whether every file is in
+`seed_documents.DOCUMENTS` — *a document nobody declared is a document
+nobody files* — which is right and is one level too narrow: a source
+document reaches the record either by being **filed** into the library or by
+being **read** by a loader on `REGISTERS`, and these six are the second
+kind. Nothing files them, deliberately: a filed invoice PDF would sit in the
+library beside the invoice the sponsor received and be indistinguishable
+from it, which is `038`'s reason for `GENERATED` pointing the other way.
+The second half is **derived from the loaders' source**, not allowlisted,
+because a list of which files are exempt is the map this file has been wrong
+about four times in one run. Both halves were watched failing — a stray file
+added, and a PDF taken away.
+
+**Two comment blocks said the thing that had stopped being true.**
+`foundation.py`'s registers block still read *"the ledger, the contract
+provisions, the projects and the eleven control points reach the record when
+somebody who has set their own password runs them"* and *"the invoice
+register belongs with the ledger, so it stays with the half a person runs"*
+— written before `124` took the promote out of its HTTP handler, and false
+about three of the four. `seed.sh`'s header still listed `load_2025` and
+`load_contract_terms` as steps it no longer has and omitted
+`load_projects`, which it does. Two things genuinely stay with a person and
+both write through the API as one: **who is on each project**, and
+**naming a difference** at the eleven control points. A comment in the
+module that *is* the list is the hand-kept map at its shortest range.
+
+Three shapes green and each adding to 1,609: **1,557 passed / 52 skipped on
+an empty database**, **1,589 / 20 on the reference record**, and **1,588 /
+21 on a record the boot loaded and no person has touched** — which is the
+shape a recovered deployment is actually in, and the only one that could
+have found this.
+
 ### The return was over by one salary, on every record mid-close
 
 Migration `123`. **Part IX over-reported by $192,087.13 on every record that

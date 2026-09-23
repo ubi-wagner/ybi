@@ -36,7 +36,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.db import open_pool, query, transaction  # noqa: E402
 
-INTAKE = Path(__file__).resolve().parent.parent / "intake"
 
 
 def loader():
@@ -78,7 +77,7 @@ def main() -> int:
     print(f"{len(empty)} invoice(s) carry no line at all:\n")
     fixed = refused = 0
     for e in empty:
-        src = INTAKE / (e["source_document"] or "")
+        src = loader().INVOICES / (e["source_document"] or "")
         head = Decimal(str(e["header_total"] or 0))
         label = f"{e['objective_id']} {e['invoice_number']}"
         if not e["source_document"] or not src.exists():

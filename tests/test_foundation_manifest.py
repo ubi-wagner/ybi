@@ -39,13 +39,54 @@ def test_every_named_document_is_on_disk(name):
         f"register looking complete.")
 
 
+def _named_by_a_loader() -> set[str]:
+    """Filenames a script in `scripts/` reads by name.
+
+    A source document reaches the record two ways, not one: filed into the
+    library by `seed_documents.py`, or *read* by a loader on
+    `foundation.REGISTERS` — the six invoice PDFs are the second kind, and
+    nothing files them, because a rendering of the register would be filed
+    beside the invoice the sponsor received and indistinguishable from it.
+
+    Derived from the source rather than kept as a list here, because a list
+    of which files are exempt is the map this repository has been wrong
+    about four times in one run.
+    """
+    text = "\n".join(p.read_text(errors="ignore")
+                     for p in (ROOT / "scripts").glob("*.py"))
+    return {p.name for p in SOURCE.rglob("*")
+            if p.is_file() and f'"{p.name}"' in text}
+
+
 def test_nothing_on_disk_is_left_unnamed():
-    """A document nobody declared is a document nobody files."""
+    """A document nobody declared is a document nobody reaches."""
     on_disk = {p.name for p in SOURCE.rglob("*") if p.is_file()}
-    assert on_disk <= set(seed.DOCUMENTS), (
-        "these are in docs/source-documents/ but not in the seed manifest, "
-        "so they would never reach the register: "
-        + ", ".join(sorted(on_disk - set(seed.DOCUMENTS))))
+    unreachable = on_disk - set(seed.DOCUMENTS) - _named_by_a_loader()
+    assert not unreachable, (
+        "these are in docs/source-documents/ and nothing names them — not "
+        "the seed manifest, not a loader — so they would never reach the "
+        "record: " + ", ".join(sorted(unreachable)))
+
+
+def test_every_invoice_pdf_the_loader_reads_is_in_the_image():
+    """The runner and what it runs on ship together.
+
+    They did not. The six PDFs lived in `intake/`, which is gitignored, so
+    the Dockerfile never copied them and every deployment's register walk
+    reported `/srv/intake/Rising_Tides.pdf is not there` and loaded nothing.
+    A runner in the image with nothing in the image to run.
+    """
+    _s = importlib.util.spec_from_file_location(
+        "load_invoices_2025", ROOT / "scripts" / "load_invoices_2025.py")
+    li = importlib.util.module_from_spec(_s)
+    try:
+        _s.loader.exec_module(li)
+    except SystemExit:
+        pass
+    missing = [x["pdf"] for x in li.STREAMS if not (li.INVOICES / x["pdf"]).exists()]
+    assert not missing, (
+        "load_invoices_2025.py reads these and they are not under "
+        f"{li.INVOICES.relative_to(ROOT)}: " + ", ".join(missing))
 
 
 @pytest.mark.parametrize("name,kind", sorted(
