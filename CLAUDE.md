@@ -991,6 +991,94 @@ Three defects out of it:
   the same shape as `contractor_identity` and `award_term.evidence_id` before
   it, caught by the sweep written for it rather than by a reader.
 
+## The week the controller actually used it
+
+Migrations `125`–`128`. Everything above was built and proved against a
+record nobody was standing on. These five days are the first time somebody
+closed a year on a deployment, and **every defect came from a door that was
+not there** — five of them, in five days, all the same shape.
+
+**The eleventh control had no door** (`125`). `GET /api/reconcile/payroll`
+has been complete since `028` and nothing in the SPA called it, so the
+payroll register's $45,053.23 could only be named by
+`scripts/reconcile.py --record`. A deployment that loads its own books has
+nobody to run that, and `POST /api/rates/compute` returns 409 while any
+control is open — so on a freshly deployed record **the controller could not
+reach a rate at all.** It was sitting in `NO_DOOR_YET` with the note *"the
+eleventh control's detail"*, which is the list working: nobody had hit it
+because nobody had closed a year from a deploy before.
+
+**And the screen let one line be named four times.** Every reconciling item
+ties to itself — `reconciling_lines_total` asks whether an item's lines add
+to the amount it claims — and nothing asked whether the *same* line was
+already spoken for. Four presses of `Name this` put `named` at (180,000.00)
+against a difference of 45,053.23. Over-explained reads exactly like a plug
+and is worse, because each item is impeccable. `125` is the supersession
+rule in a register that had never needed it: a ledger line carries one live
+explanation, the way it carries one live decision. The repair keeps the
+earliest and **retracts** the rest, because a position somebody took stays
+on the record.
+
+**A partition at 101.8%, counting rooms against buildings, saying nothing**
+(`126`). `parts_done` was `sum(units)` and `parts` was `count(*) FROM
+facility`, so the fraction read **38 of 5** — `085`'s unit confusion, which
+could not be seen until an estate was entered. And `needs` was gated on
+`unit_sqft >= usable_sqft`, so an estate attributing *more* than it has
+satisfied it and the step said nothing: `086` in the **over** direction,
+which had never occurred because until then a partition could only be short.
+
+**An edit has to put back everything it read** (`127`, `128`). Correcting a
+room and correcting a building are the same upsert as recording one, so both
+forms are pre-filled from the row — and both sources were short. The rent
+roll did not carry `floor` or `market_source`; `v_facility_summary` did not
+carry `year_built`, `market_basis`, `source_document` or `note`. The first
+correction would have cleared them silently on the row somebody was fixing.
+`source_document` is the one that matters: it is the reason on the audit
+row, so an edit that dropped it leaves the estate asserting a figure with
+nothing behind it.
+
+**And the API refused a row the API had just produced.** `facility.code` is
+nullable and `FacilityIn.code` is `str = ""`, which does not accept `None` —
+so posting a row back exactly as the register answered it was a 422 naming a
+field nobody had typed in. The screens coerce with `|| ""` and were right by
+luck. `BlankNotNull` makes it the rule on both bodies; a nullable
+*non*-string keeps its None, because a year nobody knows is not 1900.
+
+**The asset half sent the controller round a loop that refuses him.**
+`/classify/assets` offered only Propose — and a recommendation is somebody
+asking somebody *else*, so `recommendation_disposed_by_another` refuses his
+own acceptance. The refusal even names the way out, *record the change
+directly*, and `api.putAssetFunding` had been in `api.js` since `084` with
+no caller. An **answered** asset offered nothing at all, so a wrong funding
+source was permanent from the screen.
+
+### The shape, rather than the sixth instance of it
+
+`tests/test_no_request_helper_is_dead.py`. `subjectNotes` was found by
+reading and `putAssetFunding` was found by reading; both are one thing, a
+helper in the request layer that no screen calls. It is
+`test_every_capability_has_a_door` one level down, because a route can have
+a helper and still have no screen — and the sweep **found sixteen more** on
+its first run. Each is named with the screen it belongs on rather than fixed
+blind, because several are somebody else's area.
+
+### What the controller's own reading was, and what it was not
+
+Tom reached the last thing standing between him and the rate and reported
+that Semple's 2,857 sq ft common area was *"not being counted towards the
+total usable space"*. Right about the effect, and it runs the other way: the
+common row **is** counted, in the rooms. Her three rows are 3,630 + 14,142 +
+2,857 = 20,629; the register held 17,772, which is the first two with the
+common area left out, and 17,772 appears nowhere in her workbook. Every
+other building equals her rows to the decimal with common inside it. So the
+rooms were right and the building was short — and the Buildings tab was
+`+ Add a building` and nothing else.
+
+**A person on the record finds what no drive does.** Five days of somebody
+actually using this found more missing doors than every sweep written for
+them, because a sweep asks whether a route answers and a person asks whether
+they can get their job done.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.
