@@ -18,7 +18,10 @@ export default function Rates() {
 
   const seal = async () => {
     try {
-      const r = await api.seal({ sealed_by: "tom" });
+      // `sealed_by` is reassigned from the session server-side — a name in
+      // the request is only ever a label. Sending one anyway is how the
+      // next route without that reassignment gets a literal in its trail.
+      const r = await api.seal({});
       toast(`Sealed — ${r.seal_hash.slice(0, 16)}…`);
       load();
     } catch (e) { toast(explain(e), { tone: "bad", sticky: true }); }

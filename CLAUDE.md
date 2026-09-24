@@ -1151,6 +1151,74 @@ actually using this found more missing doors than every sweep written for
 them, because a sweep asks whether a route answers and a person asks whether
 they can get their job done.
 
+### And the sixth: the seal itself
+
+Tom cleared the classification queue, opened **Rate** to seal, and found no
+way to do it. He was in the right place by every map the system gives him,
+and **every one of those maps was wrong**:
+
+- the nav's Rate tab, marked `7–9`, goes to `/review/rate`;
+- `v_audit_walk` sends step 7 `SEAL` and step 8 `RATE` to the same screen;
+- and that screen is the **read-only workpaper**. Sealing, unsealing and
+  computing live on `/rates`, which the eight-tab fold in `080` tagged as
+  belonging to the *other* door.
+
+So behind the 2025 audit door the act this whole system is built around had
+no tab, and nothing anywhere said where it was. `080`'s own rule is that **a
+fold removes nav and never capability** — it removed *reach*, which is the
+same thing wearing a different word: the route answers perfectly and the
+product never mentions it.
+
+**And the screen told him nothing, which is the worse half.** The gate
+renders its reasons from the open controls and the coverage. His queue was
+finished and his books tie, so both lists were empty — and the reason that
+actually applied, *the set is not sealed*, was the one reason the gate had no
+branch for. He got a red heading with **nothing under it** and a button back
+to a queue he had just emptied. *"Not yet, because", never an empty list* is
+the restatement screen's own rule, broken one screen along.
+
+`sealed` is on `GET /api/review/rate` now, read the way `v_audit_walk` reads
+it so the landing page and the screen cannot hold two opinions; the gate
+names it; and both the gate and the empty state link to `/rates`, which is
+where it happens. Reproduced first — a clone put into his exact state
+(100% classified, nothing sealed, no rate) answers `sealed: false ·
+rates: 0 · open_controls: 0 · coverage: 100.0`, and the gate rendered empty
+against it.
+
+**What is deliberately not done here is the nav.** Putting `/rates` on the
+audit door makes it a ninth tab, and
+`test_the_audit_door_is_the_eight_we_agreed` is the record of a decision
+somebody made — *"why so many branches?"* in its other costume. The test
+caught the change and it was right to. Three shapes are on the table and one
+of them is Eric's to pick: a ninth tab; the Rate tab pointing at `/rates`
+with the workpaper reached from it; or moving the certification door onto
+`/rates` so steps 7–9 are one screen and the review screens go back to being
+purely read-only, which is what this file says they are.
+
+**And the guard that should have caught it asked the wrong question.**
+`test_the_nav_marks_are_the_walk_s_step_numbers` asks whether every walk
+destination lands on a tab. `/review/rate` is a tab, so it passed for the
+whole life of the defect. **Reachable is not capable** — the same family as
+*a screenshot of the wrong screen is still a screenshot*.
+`test_a_walk_step_lands_where_its_act_happens.py` asks the second question,
+in the weaker of its two honest forms: a walk step that is an *act* must land
+on a screen that either performs it **or links to the screen that does**. A
+dead end fails; a signpost passes. It resolves the destination through
+`App.jsx`'s route table and walks the component's imports transitively — the
+first draft went one hop and reported the certification door missing from the
+screen it is plainly on, because `/review/rate` is `Review` → `RateReview` →
+`Certification`. Both assertions were watched failing against the defect
+restored.
+
+One thing the picture caught that neither test could: the first fix wrote
+*"that is done on **Seal**"* — naming a tab that, with the nav left alone,
+does not exist. A nav stricter than the API, read from the other end.
+
+And `Rates.jsx` sent `{sealed_by: "tom"}`. The handler reassigns it from the
+session, so it was inert — and it is a literal name in a request body, which
+is *a name in the request is only ever a label* sitting one route away from
+the next handler that forgets to reassign.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.

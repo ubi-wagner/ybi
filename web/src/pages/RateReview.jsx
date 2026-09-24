@@ -46,7 +46,7 @@ export default function RateReview({ embedded = false, actor }) {
      supersedes what it replaces rather than sitting beside it, so an empty
      list means there is no rate, not that the screen failed to find one. */
   const { rates: shown = [], carve_outs = [], coverage,
-          open_controls = [], final } = d;
+          open_controls = [], final, sealed } = d;
   const covered = Number(coverage?.pct_dollars_covered || 0);
 
   return (
@@ -89,17 +89,49 @@ export default function RateReview({ embedded = false, actor }) {
                 </span>
               </li>
             )}
+            {/* The reason this gate could not print, and the one Tom was
+                standing on: queue finished, books tying, nothing sealed. The
+                list rendered empty under a red heading, which tells somebody
+                who has done everything asked of them precisely nothing. */}
+            {!sealed && (
+              <li>
+                <strong>The classifications are not sealed</strong>
+                <span className="rowsub">
+                  {" — "}no rate can exist until they are, and the database
+                  refuses one whose seal does not match. Sealing is the
+                  assertion that the rate was not reverse-engineered, so it
+                  is yours to make.
+                </span>
+              </li>
+            )}
+            {sealed && shown.length === 0 && (
+              <li>
+                <strong>The set is sealed and no rate has been computed</strong>
+                <span className="rowsub">
+                  {" — "}computing is arithmetic from here.
+                </span>
+              </li>
+            )}
           </ul>
-          <Link className="btn sm" to="/classify">Open the queue</Link>
+          {/* Where the act actually happens. This screen is the workpaper and
+              cannot seal; sending somebody back to a queue they have already
+              finished was the whole of the dead end. */}
+          {!final && shown.length === 0
+            ? <Link className="btn sm" to="/rates">Seal and compute</Link>
+            : <Link className="btn sm" to="/classify">Open the queue</Link>}
         </div>
       )}
 
       {shown.length === 0 ? (
         <Card>
           <Empty mark="%" title="No rate on file">
-            Seal the decision set and compute a rate, and the build-up appears
-            here. If there was one, unsealing superseded it — a rate cannot
-            outlive the judgments it was computed from.
+            {/* Deliberately not "on the Seal tab": there is no such tab.
+                Naming one that is not in the nav is the same defect as a nav
+                stricter than the API, read from the other end. */}
+            <Link to="/rates">Seal the decision set and compute a rate</Link>,
+            and the build-up appears here. If there was one, unsealing
+            superseded it: a rate cannot outlive the judgments it was
+            computed from.
           </Empty>
         </Card>
       ) : (
