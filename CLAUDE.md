@@ -1219,6 +1219,129 @@ session, so it was inert — and it is a literal name in a request body, which
 is *a name in the request is only ever a label* sitting one route away from
 the next handler that forgets to reassign.
 
+## Will the next document break it?
+
+Migration `129`, `app/domain/document_shape.py`, `app/shapes.py`,
+`GET /api/documents/variability`, the panel on `/library`,
+`scripts/drive_documents.py`, `scripts/read_shapes.py`.
+
+Every drive above proves a **figure** is right. This asks the question
+underneath all of them, and the answer is uncomfortable: **every parser in
+this system was written against one instance of the document it parses**,
+and three have already been caught by the second one.
+
+- the asset schedule prints a system number **only when it changes**, so the
+  first parser dropped every row repeating one — $2.5m, including
+  $2,388,438.81 of Tech Block phase 2, **with every printed subtotal still
+  tying**;
+- two of the executed agreements are ARTICLE-numbered with no numbered
+  clause anywhere, and three provisions on each were cited to `§25` and
+  `§26`, which are ICAM's and appear in neither;
+- one agreement is thirty-six pages and seventy characters.
+
+Every one is a difference in **form** rather than content, and every one was
+found by a person reading. The form is read off the bytes at the door now,
+the way `storage.read_text()` already reads the text.
+
+**Form and content are kept apart, and that is the whole design.** Next
+year's general ledger will have wholly different content and had better have
+the same form; an export somebody saved differently has identical content and
+a form that breaks the parser. One column for both would hide exactly the
+case worth catching.
+
+### What it says about this record
+
+    family                          n   state     what differs
+    subrecipient-agreement          4   VARIES    heading_style, text_layer,
+                                                  pages, pages_without_text
+    grant-agreement                 2   VARIES    heading_style, text_layer, …
+    invoice                         6   VARIES    pages, chars_per_page
+    audited-financial-statements    2   VARIES    pages, pages_without_text
+    form-990                        2   VARIES    pages, chars_per_page
+    general-ledger                  1   NO DATA
+    profit-and-loss                 1   NO DATA
+    balance-sheet                   1   NO DATA
+    asset-register                  1   NO DATA
+    lease-schedule                  1   NO DATA        … eight in all
+
+**Eight of thirteen families hold exactly one document** — and they include
+the general ledger, the profit and loss, the balance sheet, the asset
+register and the lease schedule, which is to say **the five parsers the
+entire rate model rests on have never met a second instance.** That is the
+headline and it is not a defect to fix; it is a fact to know before somebody
+promises the 2026 close will be quick.
+
+**A family of one is `NO DATA`, never `UNIFORM`.** One document agrees with
+itself perfectly, and reporting that as uniform would read as *this parser
+has been proved against variation* where the truth is *nothing has varied
+because there has only ever been one*. `029` in the newest place in the
+system, and `test_a_family_of_one_is_no_data_and_never_uniform` holds both
+directions so the state cannot quietly become a constant.
+
+**Differences are named, never scored.** There is deliberately no
+variability index: a single number over twenty-four documents is a figure
+nobody can reproduce and nobody can act on, where `varies_on` names the
+attribute somebody goes and looks at. The reconciling item's rule, applied
+to a form.
+
+**And a text layer has three states, not two.** `none`, `sparse` and `text`
+— because `text_layer: true` over thirty-six pages and seventy characters
+says the document can be read and no clause of it ever could. `056`'s rule
+about `extracted_text` reappearing one column along, and the register names
+both offenders rather than counting them.
+
+### One reading, at five doors
+
+There are five doors a document can arrive by and a fact recorded at four of
+them is missing precisely where somebody later assumes it is present. So
+`app/shapes.py` is the one writer, all five call it, and
+`test_every_evidence_writer_records_a_shape` derives the doors from the
+source so a sixth fails on the day it is written — `test_storage_paths.py`'s
+rule pointed at a second column.
+
+**It is read on the boot**, so a recovered deployment comes back with it:
+18 of 18 on the first boot from an empty database, before anybody signs in.
+And the dedup branch **completes** a missing shape rather than returning
+early — the bytes are in hand and the row may predate the reading, which is
+the one moment the two are in the same place. It never *replaces* one;
+re-reading on a new reader is `read_shapes.py`'s job and is a decision
+somebody makes.
+
+### Four defects out of building it, and three are shapes already here
+
+- **The reader fell over on the asset schedule** — `ValueError: year 0 is
+  out of range`, a date cell holding something that is not a date. A reader
+  that raises trades a document nobody can analyse for a document nobody can
+  file, so it reads the cell as text and the row says what happened.
+- **The drive kept its own map of what each document is**, coarser than the
+  record's: it filed all eight award documents as `award-agreement` where
+  the register distinguishes a subrecipient agreement from a grant
+  agreement, a modification and a closeout letter. Not a tidiness point —
+  those are four instruments with different clause conventions, and a family
+  that lumps them reports variability that is a finding **about our filing**
+  rather than about the documents. It reads `foundation.DOCUMENTS` now.
+- **A bulk edit reported success and left a `ReferenceError`.** The import
+  was prepended against a pattern that did not match, because the import
+  spans three lines and I matched the continuation. The build passed; the
+  browser caught it. Recorded here twice already, found the same way both
+  times — and the sweep that answers it (does every JSX component a file
+  renders resolve to something it imports?) came back clean over all 50
+  screens once fixed.
+- **`>/dev/null` hid a failure and I asserted against a database I thought
+  I had rebuilt.** `DROP DATABASE` refused because the API still held two
+  sessions; the drop never happened, the mutated view survived, and two
+  tests failed against a defect I had already reverted. *Editing an applied
+  migration mutates nothing* has a sibling: dropping a database that is in
+  use drops nothing, and a redirect that swallows the error is how you spend
+  ten minutes debugging the wrong thing.
+
+`scripts/drive_documents.py` feeds all twenty-four papers through the real
+upload door and reads the register back: **24 of 24 shaped, 5 checks, 0
+findings, from an empty database.** It measures rather than writes — the
+door is content-addressed, so a second run deduplicates and the drive is
+reading the record rather than its own writing, which is what
+`review_system.py` was fixed for.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.

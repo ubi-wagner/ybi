@@ -81,6 +81,7 @@ from pathlib import Path
 from app import storage
 from app.auth import shared_initial_password, unusable_password_hash
 from app.db import execute, one, query
+from app import shapes
 
 log = logging.getLogger("ybi.foundation")
 
@@ -628,6 +629,9 @@ def _file(path: Path, kind: str, period: str, note: str, channel: str,
                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (eid, period, kind, str(dest), sha, received_from, len(raw),
              mime, channel, uploaded_by, safe, text, pages, note))
+    # The form as well as the text — one reading, at every door, so a
+    # family's shapes can be compared rather than discovered.
+    shapes.record_shape(eid, raw, mime)
     return eid
 
 
