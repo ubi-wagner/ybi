@@ -172,6 +172,19 @@ async def segment_error_handler(_, exc: SegmentError):
 #: hit one, say what it means; where they cannot, name the constraint so
 #: whoever reads the log has something to search for.
 CONSTRAINT_MESSAGES = {
+    # A negative rate is the carve-outs having consumed the pool they come
+    # out of. `131` makes that unreachable, and the message stays: a schema
+    # refusal a person meets must say what happened, never its own name.
+    "rate_rate_check":
+        "That computation produced a negative rate, so it was refused. It "
+        "means the carve-outs came to more than the pool they come out of — "
+        "on the overhead pool that is the 200.465 space split plus the "
+        "200.436(b) depreciation. Check the let, committed and vacant share "
+        "on Classify \u2192 Space: above about 82% of the estate the old "
+        "arithmetic had no answer.",
+    "rate_requires_seal":
+        "A rate has to carry the seal of a sealed decision set. Seal the "
+        "classifications first, on the Rate tab.",
     "one_live_entry_per_day_objective":
         "There is already time recorded against that objective on that day.",
     "one_live_submission_per_period":
@@ -255,16 +268,66 @@ async def check_handler(_, exc: psycopg.errors.CheckViolation):
                                  "message": _constraint_message(exc)})
 
 
+#: What a foreign key is *about*, so the refusal can name the register rather
+#: than the constraint. The table is the one being pointed at, which is the
+#: thing somebody has to go and open.
+FK_TARGETS = {
+    "cost_objective": ("cost objective",
+                       "Open it on the Contracts tab — a charge code is a "
+                       "cost objective — and then record the judgment."),
+    "fiscal_period":  ("period", "It has to be opened before anything can be "
+                                 "recorded against it."),
+    "evidence":       ("document", "File the document first, then cite it."),
+    "award":          ("award", "The award has to be on the register before "
+                                "anything can name it."),
+    "actor":          ("account", "The account has to exist before it can be "
+                                  "named."),
+}
+
+
 @app.exception_handler(psycopg.errors.ForeignKeyViolation)
 async def fk_handler(_, exc: psycopg.errors.ForeignKeyViolation):
-    """Something referred to a row that does not exist — an objective that is
-    not in the chart, a period that was never opened."""
+    """Something referred to a row that does not exist.
+
+    **It used to throw away everything it knew.** `exc.diag` carries the
+    constraint, the table being pointed at and the detail naming the value,
+    and the handler printed *"check the objective, period or account it
+    names"* without naming which — so a controller hit it four times in a row
+    on `POST /api/classify/decide` and had to guess each time. That is
+    `rate_rate_check` reaching a person as a constraint name, one handler
+    along: the refusal was correct and it told nobody anything.
+    """
+    diag = getattr(exc, "diag", None)
+    detail = (getattr(diag, "message_detail", None) or "")
+    # **The table being pointed at, not the one being written.**
+    # `diag.table_name` is the *referencing* table — `decision` — which is the
+    # one thing here nobody needs to be told. Postgres names the target in the
+    # detail: Key (objective_id)=(ARC Arise) is not present in table
+    # "cost_objective". The first draft printed `register: "decision"`, which
+    # is true and useless.
+    table = ""
+    if 'in table "' in detail:
+        table = detail.split('in table "', 1)[1].split('"', 1)[0]
+    table = table or (getattr(diag, "table_name", None) or "")
+    what, how = FK_TARGETS.get(table, ("", ""))
+    # Postgres phrases it as: Key (objective_id)=(ARC Arise) is not present
+    # in table "cost_objective". The value is the one thing a person needs.
+    named = ""
+    if "=(" in detail and ")" in detail.split("=(", 1)[1]:
+        named = detail.split("=(", 1)[1].split(")", 1)[0]
+    if what:
+        lead = (f"There is no {what} called \u201c{named}\u201d on file."
+                if named else f"That names a {what} the system does not have "
+                              f"on file.")
+        message = f"{lead} {how}"
+    else:
+        message = ("That refers to something the system does not have on "
+                   "file. Check the objective, period or account it names.")
+    log.info("foreign key violation: table=%s detail=%s", table, detail)
     return JSONResponse(
         status_code=422,
-        content={"error": "UNKNOWN_REFERENCE",
-                 "message": "That refers to something the system does not "
-                            "have on file. Check the objective, period or "
-                            "account it names."})
+        content={"error": "UNKNOWN_REFERENCE", "message": message,
+                 "missing": named or None, "register": table or None})
 
 
 @app.exception_handler(psycopg.errors.NotNullViolation)

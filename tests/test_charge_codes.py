@@ -164,6 +164,7 @@ def test_the_crosswalk_refuses_to_guess_a_split():
     """
     from app.domain.chart import pool_for
     from app.domain.crosswalk import CROSSWALK
+    from app.domain.classification_log import OBJECTIVE_BY_PATH
     from app.routers.classify import propose, GroupOut
 
     def group(account: str) -> GroupOut:
@@ -180,7 +181,10 @@ def test_the_crosswalk_refuses_to_guess_a_split():
     assert len(crossing) > 5, "no cross-pool splits left to check"
 
     for leaf in crossing:
-        p = propose(group(leaf))
+        # Every objective the crosswalk can name, so the register filter
+        # added in `131` cannot mask what this test is about: it asks whether
+        # a *split* proposes, not whether a charge code happens to be open.
+        p = propose(group(leaf), frozenset(o for _, o in OBJECTIVE_BY_PATH))
         assert p is None or p.get("source") != "crosswalk", (
             f"{leaf} divides across pools ({CROSSWALK[leaf][0]}) and the "
             f"crosswalk proposed {p.get('pool') if p else None} for it "

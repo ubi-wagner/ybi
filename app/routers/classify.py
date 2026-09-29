@@ -308,6 +308,12 @@ def queue(period: str = "2025",
     """, {"period": period, "status": status, "search": search,
           "like": f"%{search}%", "limit": limit, "offset": offset})
 
+    # What the register actually holds. Read once, because the proposal has to
+    # know whether the charge code it would name has ever been opened.
+    open_objectives = frozenset(
+        r["objective_id"] for r in
+        query("SELECT objective_id FROM cost_objective WHERE active"))
+
     out: list[GroupOut] = []
     for r in rows:
         g = GroupOut(
@@ -324,13 +330,18 @@ def queue(period: str = "2025",
             decided_by=r["decided_by"] or "",
             evidence_count=r["evidence_count"] or 0, note_count=r["note_count"] or 0,
         )
-        g.proposal = propose(g)
+        g.proposal = propose(g, open_objectives)
         out.append(g)
     return out
 
 
-def propose(g: GroupOut) -> dict | None:
+def propose(g: GroupOut, open_objectives: frozenset[str]) -> dict | None:
     """A proposal, never a decision.
+
+    `open_objectives` is what `cost_objective` actually holds. It is passed in
+    rather than read here because this runs once per group and the register is
+    one query — and because a proposal that names a charge code nobody has
+    opened is a refusal with a button on it.
 
     Ordered by strength of signal: QuickBooks already knowing the objective
     beats a name pattern, and a name pattern beats a guess. Anything without a
@@ -435,6 +446,23 @@ def propose(g: GroupOut) -> dict | None:
             # answer is no proposal rather than a refusable one.
             objective = objective_for(g.account) if pool == "DIRECT" else None
             if pool == "DIRECT" and objective is None:
+                return None
+            # **And the objective it names has to be on the register.**
+            # `objective_for()` reads a path fragment off a hand-kept map; it
+            # does not and cannot know whether anybody has opened the charge
+            # code. ARC Arise and SBA Growth Accelerator have no
+            # `cost_objective` row, so the proposal named them, the controller
+            # pressed Enter, and the insert failed the foreign key — four
+            # times in a row on the live record, each refusal saying only
+            # that something was not on file.
+            #
+            # That is the same defect this branch's own comment was written
+            # about, one level along: a screen offering what the server will
+            # not take. So a proposal naming an objective nobody has opened
+            # is no proposal, and the queue says which one to open instead
+            # (`missing_objective` below) rather than offering a refusal.
+            if pool == "DIRECT" and objective is not None \
+                    and objective not in open_objectives:
                 return None
             return {
                 "pool": pool,
