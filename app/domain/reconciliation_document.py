@@ -139,7 +139,13 @@ class Reconciliation:
     #: Why the rate is acceptable: each a statement the record can be asked
     #: to prove, never an adjective.
     grounds: tuple[str, ...] = ()
-    #: What is unfinished, above the figures, as everywhere else here.
+    #: **Above the figures**, in the warning colour: anything that makes the
+    #: table itself untrustworthy. A rate that has since been superseded is
+    #: the case `132` exists for — it moves every figure on the page, where
+    #: everything under `caveats` moves none of them — and a reader who has
+    #: to reach the last section to learn that has already formed a view.
+    warnings: tuple[str, ...] = ()
+    #: What is unfinished, under the figures, as everywhere else here.
     caveats: tuple[str, ...] = ()
     #: Awards deliberately not on the page, and why.
     excluded: tuple[tuple[str, str], ...] = ()
@@ -283,6 +289,18 @@ def _band(c, r: Reconciliation, y: float) -> float:
         c.drawString(MARGIN + 6, y - 7.5, sub)
     y -= height + 3
 
+    for w in r.warnings:
+        c.setFillColor(WARN_BG)
+        lines = _wrap(c, w, WIDTH - 12, "Helvetica-Bold", 7.8)
+        h = 7.5 + 10.4 * len(lines)
+        c.rect(MARGIN, y - h + 10, WIDTH, h, stroke=0, fill=1)
+        c.setFillColor(WARN_INK)
+        c.setFont("Helvetica-Bold", 7.8)
+        for line in lines:
+            c.drawString(MARGIN + 6, y, line)
+            y -= 10.4
+        y -= 3
+
     if r.certification_line:
         c.setFillColor(MUTED)
         c.setFont("Helvetica-Oblique", 7.6)
@@ -333,9 +351,19 @@ def _rates(c, r: Reconciliation, y: float) -> float:
                else "treated as a benefiting cost objective")
             + f" ({r.admin_labour_basis.lower()} basis).")
     if r.seal_hash:
+        # *The 0 classifications were sealed* is what a count printed without
+        # asking whether there is one to print says — `086`'s defect in a
+        # sentence rather than a state, and it reached a rendered page on a
+        # clone whose set had since been unsealed. Where the judgment count
+        # is not in hand the seal is still named, because the rate carries it
+        # either way and the hash is what a reviewer ties to.
+        counted = (f"The {r.judgments:,} classifications were sealed before "
+                   f"any rate was computed"
+                   if r.judgments else
+                   "The classifications were sealed before any rate was "
+                   "computed")
         provenance.append(
-            f"The {r.judgments:,} classifications were sealed before any rate "
-            f"was computed — seal {r.seal_hash[:12]} — and the rate carries "
+            f"{counted} — seal {r.seal_hash[:12]} — and the rate carries "
             f"that seal. A database trigger refuses a rate whose seal does "
             f"not match a sealed set.")
     if provenance:

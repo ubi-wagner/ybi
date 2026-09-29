@@ -442,7 +442,12 @@ def list_restatements(period: str = None) -> list[dict]:
                            -- measured. `088`: three claims stood for a week
                            -- over three invoices that had been moved to
                            -- another period, and nothing anywhere said so.
-                           register_invoices, register_billed, still_agrees
+                           register_invoices, register_billed, still_agrees,
+                           -- And what it was measured *on*. `132`: the same
+                           -- question one column along, and the worse half —
+                           -- a changed population moves which invoices a
+                           -- claim covers, a changed rate moves every figure.
+                           rate_status, rate_is_live
                       FROM v_restatement WHERE period = %s
                      ORDER BY computed_at DESC""", (period,))
 
@@ -551,7 +556,7 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
                            r.rate_kind, r.rate_applied, r.rate_base,
                            r.seal_hash, r.sponsor, r.billed_under,
                            r.register_invoices, r.register_billed,
-                           r.still_agrees,
+                           r.still_agrees, r.rate_is_live, r.rate_status,
                            r.status, r.modification_ref
                       FROM v_restatement r
                      WHERE r.period = %s AND r.status = ANY(%s)
@@ -665,7 +670,18 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
         # bullet to learn the figures measure a population that has moved has
         # already formed a view.
         caveats=(
+            # A rate that has since been superseded comes first, because it
+            # moves *every figure* on the paper where a changed invoice
+            # population only moves which invoices are covered. `132`.
             tuple(
+                f"Measured on a rate that no longer stands — "
+                f"{r['objective_id']} was computed against "
+                f"{(r['rate_applied'] or 0) * 100:.2f}% "
+                f"{r['rate_kind']}, which is now {r['rate_status']}. Every "
+                f"figure here is against arithmetic the record has moved "
+                f"past. Recompute before this goes to a sponsor."
+                for r in rows if r.get("rate_is_live") is False)
+            + tuple(
                 f"Overtaken — {r['objective_id']} measured "
                 f"{r['invoices']} invoice(s) totalling {r['billed_total']:,.2f}, "
                 f"and the register now holds {r['register_invoices']} "
@@ -788,8 +804,9 @@ def _reconciliation(period: str) -> Reconciliation:
                            r.indirect_billed, r.under_recovered,
                            r.over_collected, r.status, r.modification_ref,
                            r.decided_at, r.rate_id, r.seal_hash, r.sponsor,
-                           r.still_agrees, r.register_invoices,
-                           r.register_billed,
+                           r.still_agrees, r.rate_is_live, r.rate_status,
+                           r.rate_kind, r.rate_applied,
+                           r.register_invoices, r.register_billed,
                            a.agreement_name, a.prime_agreement, a.instrument
                       FROM v_restatement r
                       LEFT JOIN award a USING (award_id)
@@ -914,6 +931,15 @@ def _reconciliation(period: str) -> Reconciliation:
         # reason it does on the amendment papers: a reader who reaches the
         # fourth bullet before learning the figures measure a population
         # that has moved has already formed a view.
+        # Above the figures, because these are the ones that make the table
+        # itself untrustworthy rather than merely incomplete.
+        #
+        # One sentence for all of them, not one per award. Every standing
+        # restatement is measured on the same rate, so three copies of one
+        # fact at the top of the page is the defect the evidence screen
+        # already learned — *thirty-two unread workbooks buried three real
+        # proposals* — and the awards are named rather than counted.
+        warnings=_stale_rate_warning(ours),
         caveats=tuple(
             f"Overtaken — {r['objective_id']} measured {r['invoices']} "
             f"invoice(s) totalling {r['billed_total']:,.2f}, and the "
@@ -930,6 +956,23 @@ def _reconciliation(period: str) -> Reconciliation:
         certified=bool(cert.get("certified")) and not cert.get("rehearsal"),
         certification_line=" ".join(certification_lines(cert)),
         reference=f"America Makes · {period}")
+
+
+def _stale_rate_warning(rows: list[dict]) -> tuple[str, ...]:
+    """One line per rate that has been superseded, naming the awards on it."""
+    by_rate: dict[tuple, list[str]] = {}
+    for r in rows:
+        if r.get("rate_is_live") is False:
+            key = (r["rate_kind"], r["rate_applied"], r["rate_status"])
+            by_rate.setdefault(key, []).append(r["objective_id"])
+    return tuple(
+        f"Measured on a rate that no longer stands — "
+        f"{', '.join(sorted(names))} "
+        f"{'was' if len(names) == 1 else 'were'} computed against "
+        f"{(kind_rate or 0) * 100:.2f}% {kind}, which is now {status}. Every "
+        f"figure below is against arithmetic the record has moved past. "
+        f"Recompute before this is sent."
+        for (kind, kind_rate, status), names in by_rate.items())
 
 
 def _fmt(over, under) -> str:

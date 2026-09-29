@@ -208,6 +208,7 @@ export default function Restate({ actor }) {
                 {r.invoices} invoice(s) · rate {(Number(r.rate_applied) * 100).toFixed(2)}%
               </span>
             </div>
+            <OnADeadRate r={r} />
             <Overtaken r={r} />
             <Movement r={r} />
           </div>
@@ -262,6 +263,28 @@ export default function Restate({ actor }) {
    Never shown on a SUPERSEDED row. A superseded restatement is history and
    is *supposed* to disagree; flagging it would be the sweep that cries wolf,
    and the next real one the reader dismisses. */
+/* A restatement rests on two things: the invoices it measured and the rate
+   it measured them on. `Overtaken` is the first. This is the second, and it
+   is the worse half — a changed population moves which invoices a claim
+   covers, and a changed rate moves every figure on it. Nothing on this
+   screen said so until 132, while four settlements sat here reading ACCEPTED
+   against a rate a recompute had superseded. */
+function OnADeadRate({ r }) {
+  if (r.status === "SUPERSEDED" || r.rate_is_live !== false) return null;
+  return (
+    <div className="gate bad" style={{ margin: "8px 0" }}>
+      <strong>Measured on a rate that no longer stands.</strong>{" "}
+      <span className="rowsub wrap">
+        This was computed against {(Number(r.rate_applied) * 100).toFixed(2)}%{" "}
+        {r.rate_kind}, which is now {r.rate_status}. Every figure on it is
+        against arithmetic the record has moved past. Measure it again before
+        anything goes to a sponsor — recomputing supersedes this rather than
+        editing it, so the position taken today stays on the record.
+      </span>
+    </div>
+  );
+}
+
 function Overtaken({ r }) {
   if (r.status === "SUPERSEDED" || r.still_agrees !== false) return null;
   return (
