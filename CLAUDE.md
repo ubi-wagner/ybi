@@ -1393,6 +1393,137 @@ still proposes 'SBA-ACCEL', which is not on the register"*, and the first
 attempt at that watch failed on the function signature instead — which proves
 nothing, and is worth not mistaking for a proof.
 
+## One page, three contracts, one signature
+
+`app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,
+a card at the top of `/restate`, and a file in the publication set.
+
+The amendment memorandum and the acceptance form are per **award**, which is
+the right unit for a change of basis and the wrong one for the conversation
+actually being had. YBI is not asking NCDMM three separate questions about
+three agreements; it is asking one — *was the rate acceptable, and will you
+settle 2025 on it* — and a sponsor handed three memoranda has to work out
+that they are the same ask, then sign three times.
+
+- **The rate goes at the top**, with what stands behind it. The
+  reconciliation is arithmetic once the rate is agreed, and the rate is the
+  only thing on the page anybody can disagree with; burying it under the
+  figures it produces invites a reader to argue with the total instead.
+- **Both directions, in their own columns, and never netted.** `061` took
+  `net_movement` out of `v_restatement` because *$120,000 to ask for and
+  $120,000 to give back is not a quiet year*, and three awards on one page
+  make that single figure look like the natural summary.
+  `test_the_difference_between_them_is_never_printed` watches for it in
+  either sign.
+- **The give-back is raised first**, by the query's own ORDER BY rather than
+  by a list written down. Two of these three run against YBI, and a page
+  that led with the claim and mentioned the credits underneath is read
+  exactly once.
+- **The ask is the recorded position, never the sum of the lines** — the
+  mistake the acceptance form shipped once, where Drive AM's lines add to
+  254,808.06 *to claim* against a rebuilt position of 58,786.31 to **give
+  back**.
+- **The rate printed is the rate the restatement used**, read by `rate_id`
+  and not "the live rate". A page printing today's rate over yesterday's
+  settlement is `088`'s overtaken claim with the halves swapped.
+- **Digital Engineering is named on the page as excluded, not dropped.** Its
+  prime is N00174-20-1-0031 and the other three are AFRL FA8650-20-2-5700;
+  federal award funds are not fungible between programmes. Which awards
+  belong is read from `award.prime_agreement`.
+- **And it stops asking once they have answered.** `093` found the
+  acceptance form printing PROPOSED over a signature NCDMM had already
+  given; the same defect is available here in reverse, as ruled signature
+  lines under a band reading ACCEPTED inviting a second signature on a
+  settled matter.
+- **It refuses to become two pages** rather than overrunning quietly.
+
+Two defects found by *looking at the rendered page*, which no assertion
+could see. **The totals row printed `201,421.30` over `43,960.60`** — the
+two directions this page exists to keep apart, overlapping, in the one row a
+reader takes the settlement from, rendering as a run of digits that is
+neither figure. `pypdf` reads the two strings and not where they landed, so
+every text assertion passed over it.
+`test_no_two_columns_can_print_over_each_other` is the property: each money
+column must be at least as wide as the widest figure it could print. And the
+signature heading printed over its own sentence.
+
+### A claim measured on a rate that no longer stands
+
+Migration `132`, and it is what building the page above turned up.
+**All four standing America Makes settlements were computed against
+INDIRECT_COMBINED at 24.71%, and that rate is SUPERSEDED** — `131` changed
+how the 200.465 carve-out is constructed and a recompute gives 22.48%.
+Nothing anywhere said so: the restatements read ACCEPTED, the walk's step 10
+read DONE, the papers rendered cleanly, and the only sign of it on the whole
+record was `scripts/restate_2025_invoices.py` — which reads the *live* rate
+— reporting every award differing from its own settlement by four to eight
+thousand dollars with no explanation available anywhere.
+
+`088` asked whether the **invoice population** had moved underneath a claim
+and stopped there. A restatement rests on two things and the other one is
+the rate. *Fixing one instance is not fixing the rule* — and this is the
+worse half: a changed population moves which invoices a claim covers, a
+changed rate moves **every figure on it**. A settlement page printing 24.71%
+is not wrong about the rate it used, which is exactly what makes it
+unreadable: a reader who looks the rate up finds 22.48% and cannot tell
+which of the two documents is stale.
+
+`v_restatement` carries `rate_status` and `rate_is_live`, the walk says
+which of the two has moved, both papers carry it **above their figures** in
+the warning colour, and `/restate` shows it on the row. **Nothing is
+corrected**: the rows record what was measured, and they are superseded by
+recomputing, which is the controller's act and not a migration's.
+
+**`rate_is_live` is deliberately not `status = 'ACTIVE'`.** `rate.status`
+carries the *sponsor* conversation — PROPOSED means YBI has put the rate to
+NCDMM and they have not answered — and only SUPERSEDED says the arithmetic
+has moved. Reading it the other way would report every restatement in the
+file as stale.
+
+**One sentence per rate, not one per award.** Four awards on one rate is one
+fact, and four copies of it at the top of a one-page document is the defect
+the evidence screen already learned. The awards are named rather than
+counted. And the page printed *"The 0 classifications were sealed before any
+rate was computed"* on a clone whose set had since been unsealed — `086` as
+a sentence rather than as a state, a count printed without asking whether
+there is one to print.
+
+## The run happened three times, and the slow test was slow where CI never goes
+
+`.dockerignore`, `on: { push: { branches: [main] }, pull_request: }`, and a
+shared reading in `test_every_report_ties_to_the_financials.py`.
+
+**Three runs per change** — the push to the working branch, the
+pull_request event for the same commit, and the merge commit on main. Two of
+those three test an identical tree. CI runs on the pull request, which is
+where a change is read, and on main, which is what deploys; `concurrency`
+cancels a run whose tree has been superseded.
+
+**The build context carried 300MB nobody wanted.** There was no
+`.dockerignore`, so `.git` (250MB) and `web/node_modules` (49MB) went up on
+every deploy — and the second is worse than waste, because the web stage
+installs its own dependencies and `COPY web/ ./` then writes the host's tree
+over them, so whatever was on the build machine decided what the image was
+built against. Out with them go 47MB of *pictures of this system*.
+`docs/runbook-walk` deliberately stays: two scripts that ship in the image
+read it, and a script in the container with nothing to read is the defect
+`077` is named after.
+
+**And the slow test was slow somewhere CI never goes.** The tie-register
+file ran 43 seconds against a loaded record, 24 of them in one test asking
+the database, once per period, to count rows it already held. The read-only
+sweeps share one reading now and the summary test counts off it — which is
+also the more honest comparison, since *the summary is the register* means
+those two readings rather than the view against itself. 43s to 12s, and the
+whole suite 141s to 110s. **What that does not buy is a faster CI**, and the
+first draft of the commit claimed it did: CI builds an empty database, where
+six of those fourteen tests skip and the file costs 2.8 seconds. Measured
+there the suite is 1,583 tests in 70 seconds with no hot spot at all. The
+run felt long because it ran three times.
+
+Both fixtures assert they read something, because four sweeps iterate the
+register and every one of them is satisfied by an empty list.
+
 ## Will the next document break it?
 
 Migration `129`, `app/domain/document_shape.py`, `app/shapes.py`,
