@@ -1085,6 +1085,21 @@ function Editor({ state, setState, vocab, busy, onApply }) {
                 </option>
               ))}
             </select>
+            {/* **The loop needed an exit.** DIRECT has to name an objective
+                and this list is `cost_objective`, so a group whose charge
+                code nobody has opened — ARC Arise, SBA Growth Accelerator —
+                had no right answer on the screen and no way to make one:
+                the door that opens a charge code is the Contracts tab, which
+                belongs to the *other* product and is in no nav behind the
+                2025 audit door. The capability existed and the product never
+                mentioned it from where the controller was standing, which is
+                the shape this repository keeps paying for. A link, because a
+                fold removes nav and never capability. */}
+            <div className="rowsub" style={{ marginTop: 4 }}>
+              Not on the list?{" "}
+              <Link to="/contracts">Open a charge code</Link> — a charge code
+              is a cost objective — then come back and it will be here.
+            </div>
           </Field>
         )}
         <Field label="Evidence grade" hint="quality is earned">

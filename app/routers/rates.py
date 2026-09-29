@@ -382,13 +382,34 @@ def _build_model(period: str,
                                 usable_sqft, rental_share
                            FROM v_facility_occupancy WHERE period = %s""",
                       (period,))
+    # **The driver reaches only what the driver causes.** It was the whole
+    # OVERHEAD pool, and the pool also carries T1 access, telephone, insurance
+    # and equipment — cost a tenant's floor area does not cause. Carving that
+    # by square footage is what took the pool below zero on a measured estate
+    # and answered `rate_rate_check` to the controller. `overhead_driver` is
+    # the transcription of which accounts floor area drives; `131` has the
+    # reasoning and the proof that the rate can no longer go negative here.
+    split = one("""SELECT pool_gross, occupancy, not_area_driven
+                     FROM v_overhead_split WHERE period = %s""", (period,))
     overhead_gross = model.pools[PoolType.OVERHEAD].gross
+    carvable = Decimal(str((split or {}).get("occupancy") or 0))
+    if carvable <= 0:
+        # Nothing on the record says any of this pool is occupancy, so there
+        # is nothing for square footage to carve. Not the same fact as a pool
+        # with no tenant space in it, and the build-up says which.
+        carvable = Decimal(0)
     estate = sum((Decimal(str(f["usable_sqft"] or 0)) for f in occupancy),
                  Decimal(0))
+    # The estate-wide let share, which the 200.436(b) carve-out below needs so
+    # it does not remove depreciation 200.465 has already removed.
+    estate_excluded = sum((Decimal(str(f["tenant_sqft"] or 0))
+                           + Decimal(str(f["vacant_sqft"] or 0))
+                           + Decimal(str(f["committed_sqft"] or 0))
+                           for f in occupancy), Decimal(0))
     for f in occupancy:
         usable = Decimal(str(f["usable_sqft"] or 0))
         rental = Decimal(str(f["rental_share"] or 0))
-        if usable <= 0 or estate <= 0 or overhead_gross <= 0 or rental <= 0:
+        if usable <= 0 or estate <= 0 or carvable <= 0 or rental <= 0:
             continue
         excluded = (Decimal(str(f["tenant_sqft"] or 0))
                     + Decimal(str(f["vacant_sqft"] or 0))
@@ -397,10 +418,13 @@ def _build_model(period: str,
         model.add_carve_out(PoolType.OVERHEAD, CarveOut(
             name=f"Rental and vacant space — {f['name']}",
             citation="2 CFR 200.465",
-            amount=(overhead_gross * share).quantize(Decimal("0.01")),
+            amount=(carvable * share).quantize(Decimal("0.01")),
             driver=(f"{rental:.1%} of this building is let, committed or "
                     f"vacant ({excluded:,.0f} sq ft); the building is "
-                    f"{usable:,.0f} of the estate's {estate:,.0f}"),
+                    f"{usable:,.0f} of the estate's {estate:,.0f}. Taken over "
+                    f"the {carvable:,.2f} of occupancy in the pool, not the "
+                    f"whole {overhead_gross:,.2f} — floor area does not drive "
+                    f"the rest"),
             evidence=EvidenceGrade.MANAGEMENT_RECONSTRUCTION))
 
     # And the second carve-out the registers can now support: 2 CFR 200.436(b)
@@ -432,8 +456,20 @@ def _build_model(period: str,
                             AND l.account LIKE %s""", (period, "%5010%"))
     federally_funded = Decimal(str(unallowable["amount"] or 0))
     ceiling = Decimal(str(in_the_pool["amount"] or 0))
-    if federally_funded > 0 and ceiling > 0:
-        amount = min(federally_funded, ceiling)
+    # **Scaled by the share still YBI's own, because 200.465 has already taken
+    # the rest.** Depreciation sits inside occupancy, so the space split above
+    # removed the let share of this same figure; subtracting the whole of it
+    # again double-counts `share x federally_funded`. `defensible_rate.py`
+    # found and corrected this — "the 436(b) carve was subtracted twice ...
+    # 2.85 points against YBI" — in the script, and nobody carried it here.
+    #
+    # `estate_own` is 1 where nothing is let, so a record with no tenant space
+    # is unchanged, and 0 where the whole estate is let, where there is no
+    # federal share of the depreciation left to disallow.
+    estate_let = ((estate_excluded / estate) if estate > 0 else Decimal(0))
+    estate_own = Decimal(1) - estate_let
+    if federally_funded > 0 and ceiling > 0 and estate_own > 0:
+        amount = min(federally_funded, ceiling) * estate_own
         model.add_carve_out(PoolType.OVERHEAD, CarveOut(
             name="Depreciation on federally funded assets",
             citation="2 CFR 200.436(b)",
@@ -442,7 +478,10 @@ def _build_model(period: str,
                     f"register carry a federal funding source; the "
                     f"depreciation on the federally funded share of them is "
                     f"{federally_funded:,.2f}, against {ceiling:,.2f} of "
-                    f"depreciation classified to this pool"),
+                    f"depreciation classified to this pool. "
+                    f"{estate_own:.1%} of the estate is YBI's own and 2 CFR "
+                    f"200.465 has already removed the rest of this "
+                    f"depreciation with the occupancy it sits in"),
             evidence=EvidenceGrade.CORROBORATED))
 
     # And the third adjustment to the base, which is not a carve-out at all:

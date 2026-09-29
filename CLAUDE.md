@@ -1294,6 +1294,105 @@ the build-up reads NOT CERTIFIED with `why_not` — *"the rate has been
 recomputed since it was certified"* — which is the state a test rate is
 supposed to be in.
 
+### The carve-outs ate the pool they come out of
+
+Migration `131`, `overhead_driver`, `v_overhead_split`,
+`tests/test_the_carve_outs_cannot_eat_the_pool.py`. **The controller cleared
+the queue, entered every building, allocated every square foot, pressed
+Compute, and got `The database refused this write: rate_rate_check.`**
+
+That constraint is `CHECK (rate >= 0)`. The overhead rate had gone negative,
+and it was not his doing: **no amount of classifying reaches it.** At his
+measured estate the pool would have to be $1,908,147 for the rate to stay
+positive and a **complete** classification produces $1,497,879.12. The schema
+was right about arithmetic that had no answer, and the message it gave him
+was its own name.
+
+Two defects, compounding:
+
+- **200.465 was taken over the whole OVERHEAD pool.** The driver is square
+  footage, so it may only reach the cost square footage causes — and the pool
+  also carries T1 access, telephone, insurance and equipment, which a
+  tenant's floor area does not. That is **$181,276.15**, and
+  `DEFENSIBLE_RATE_2025.md` already names those four to the cent as the part
+  a space split must not touch.
+- **200.436(b) was subtracted unscaled.** Depreciation sits *inside*
+  occupancy, so 200.465 had already removed the let share of the same figure;
+  taking the whole of it again double-counts `share × 261,988.65`.
+  `defensible_rate.py` records finding and correcting exactly this — *"the
+  436(b) carve was subtracted twice … 2.85 points against YBI"* — **in the
+  script, and nobody carried it into the engine.** Fixing one instance is not
+  fixing the rule, in the one place where it stopped a year being closed.
+
+**The property is what was bought, not the points.** Write the pool as G, the
+occupancy inside it as C and the federally funded depreciation as D, with
+D ≤ C ≤ G. Allocable is `G − C·s − D·(1−s)`, linear in the let share s, equal
+to `G−D` at s=0 and `G−C` at s=1, both non-negative — so it is non-negative
+everywhere between, and the floor is the part floor area does not drive.
+**`rate_rate_check` is unreachable from this direction now** rather than
+being a cliff at 82.51% that nobody could see coming. Driven on a clone
+across the whole range:
+
+    let share   50.53%   72.84%   92.94%   99.82%   100.00%
+    OVERHEAD    14.84%    9.87%    5.40%    3.87%     3.83%
+    COMBINED    27.21%   22.24%   17.77%   16.24%    16.20%
+
+Above 82.51% every one of those used to be a refusal.
+
+**Which accounts floor area drives is a transcription, not a rule.** Same
+shape as the six fringe accounts named by hand in
+`v_payroll_reconciliation`: somebody read the chart and decided.
+`overhead_driver` holds the four exceptions with a reason each, and **the
+default is that floor area drives it** — so an account nobody has considered
+is carved, which is the conservative direction, and *nothing changes by
+default* for everything already in the pool. The first draft derived it with
+a regex, matched "Utilities" inside `…:5051 Utilities:5056 T1 Access`, and
+quietly called a data circuit occupancy.
+
+### A refusal a person meets must say what happened, never its own name
+
+Three more from the same afternoon, all on the failure panel — which is
+`041` earning its keep in production for the first time, and which handed
+over three defects nobody would have found by asking.
+
+**`rate_rate_check` reached the controller as `rate_rate_check`.** It is in
+`CONSTRAINT_MESSAGES` now and says the carve-outs came to more than the pool
+and where to look. `131` makes it unreachable; the sentence stays, because a
+schema refusal a person can meet has to be readable whether or not anybody
+expects it.
+
+**And the foreign-key handler threw away everything it knew.** `exc.diag`
+carries the constraint, the table and a detail naming the value, and the
+handler printed *"check the objective, period or account it names"* **without
+naming which** — so the controller hit it four times on `POST /api/classify/
+decide` and guessed each time. It names the register and the value now, and
+the register is read out of the *detail*: `diag.table_name` is the
+**referencing** table, so the first draft answered `register: "decision"`,
+which is true and useless.
+
+**The queue proposed a charge code nobody had opened.** `objective_for()`
+reads a path fragment off a hand-kept map and cannot know whether the code
+exists — `SBA Growth Accelerator → SBA-ACCEL` is on that map and
+`cost_objective` has no such row. So the queue offered it, the controller
+pressed Enter, and the insert failed the foreign key. That is this branch's
+*own comment* one level along — *a screen offering what the server will not
+take*, which it was written about. `propose()` takes the live register now
+and offers nothing rather than a refusal.
+
+**And the loop had no exit.** ARC Arise is the other half of the same
+afternoon and is **not** in the crosswalk, so nothing proposed it and the
+picker simply had no right answer: DIRECT must name an objective, the list is
+`cost_objective`, and the door that opens a charge code is the **Contracts**
+tab — which belongs to the *ongoing* product and is in no nav behind the 2025
+audit door. The capability existed and the product never mentioned it from
+where he was standing. A link on the field, because a fold removes nav and
+never capability.
+
+Both were watched failing: the proposal guard removed prints *"the queue
+still proposes 'SBA-ACCEL', which is not on the register"*, and the first
+attempt at that watch failed on the function signature instead — which proves
+nothing, and is worth not mistaking for a proof.
+
 ## Will the next document break it?
 
 Migration `129`, `app/domain/document_shape.py`, `app/shapes.py`,
