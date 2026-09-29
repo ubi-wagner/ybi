@@ -335,6 +335,12 @@ export const api = {
     `/api/restate/award/${encodeURIComponent(awardId)}/memo?period=${period}`,
   acceptanceFormUrl: (awardId, period = "2025") =>
     `/api/restate/award/${encodeURIComponent(awardId)}/acceptance?period=${period}`,
+  // The three America Makes contracts on one page, for one signature. Per
+  // period rather than per award: the memorandum and the form are the right
+  // unit for a change of basis and the wrong one for the conversation, and a
+  // sponsor handed three of each has to work out that they are one ask.
+  reconciliationUrl: (period = "2025") =>
+    `/api/restate/reconciliation?period=${period}`,
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   // The rate itself. `POST /api/rates/compute` was complete on the server and

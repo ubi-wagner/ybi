@@ -156,6 +156,34 @@ export default function Restate({ actor }) {
         )}
       </Card>
 
+      {/* One page, every America Makes contract that has a standing
+          restatement, one signature. The memorandum and the acceptance form
+          are per award and live inside each proposal below; this is the page
+          that asks the question once — the rate at the top, both directions
+          in their own columns underneath. Offered to anybody who may read
+          the record, like the other two papers: rendering it asserts nothing
+          that was not recorded when the restatements were computed, and the
+          band says where each stands. */}
+      {rows.length > 0 && (
+        <Card variant="quiet" title="The settlement, on one page"
+              aside="What NCDMM signs once"
+              style={{ marginTop: 14 }}>
+          <div className="rowsub wrap" style={{ marginBottom: 10 }}>
+            The rate and what stands behind it, then every America Makes
+            contract with what was billed, what the year supports, and the
+            true-up in the direction it runs. The two directions are in their
+            own columns and are never netted. An award primed elsewhere is
+            named on the page as excluded rather than dropped.
+          </div>
+          <div className="btn-row">
+            <a className="btn" target="_blank" rel="noreferrer"
+               href={api.reconciliationUrl(rows[0].period)}>
+              Contract reconciliation (.pdf)
+            </a>
+          </div>
+        </Card>
+      )}
+
       <Card title="Proposals" aside={`${rows.length} on the record`}
             style={{ marginTop: 14 }}>
         {rows.length === 0 ? (
