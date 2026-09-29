@@ -23,7 +23,7 @@ const PANES = [
   ["form-990", "Form 990"],
 ];
 
-export default function Review({ actor }) {
+export default function Review() {
   const { pane } = useParams();
   const nav = useNavigate();
   const current = PANES.some(([v]) => v === pane) ? pane : "report";
@@ -45,7 +45,7 @@ export default function Review({ actor }) {
           already keeps about what is unfinished. */}
       <ReportTies />
       {current === "report" && <Auditor embedded />}
-      {current === "rate" && <RateReview embedded actor={actor} />}
+      {current === "rate" && <RateReview embedded />}
       {current === "form-990" && <Form990 embedded />}
     </div>
   );

@@ -106,11 +106,18 @@ const ALL_TABS = [
      `/classify/assets` are where they live now. */
   ["/classify",  "Classify",   "3–5",     "CONTROLLER", "audit"],
   ["/evidence",  "Evidence",   "6",     "OFFICE",     "audit"],
-  /* The rate is read-only and is reached through the steps above rather than
-     opened first. Nothing on it is computed — every figure is read from the
-     row the computation recorded — which is the whole reason a reviewer can
-     be told the rate was not reverse-engineered. */
-  ["/review/rate", "Rate",     "7–9",     "reader",     "audit"],
+  /* Steps 7, 8 and 9 — seal, compute, certify — are one screen, because they
+     are one sitting: seal, read what came out, unseal, reclassify, recompute.
+     This tab was `/review/rate`, which is the read-only workpaper and cannot
+     seal, so it carried the mark `7–9` over a screen where none of the three
+     happens. Tom cleared the queue, came here to seal, and found no way to
+     do it.
+
+     The build-up is rendered on `/rates` from the same component the
+     workpaper uses, so nothing is lost by the move and there is still one
+     reading of the figure. `/review` is linked from there, which is how the
+     auditor's report and Form 990 keep their way in. */
+  ["/rates",       "Rate",     "7–9",     "reader",     "audit"],
   ["/restate",   "Restate",    "10",     "CONTROLLER", "audit"],
   ["/reports",   "Reports",    "11",     "reader",     "audit"],
   /* Reading what has been asked for takes the same gate the router asks for,
@@ -388,11 +395,11 @@ export default function App() {
           <Route path="/projects" element={<Projects actor={actor} />} />
           <Route path="/projects/:objectiveId" element={<Projects actor={actor} />} />
           <Route path="/lanes" element={<Lanes />} />
-          <Route path="/rates" element={<Rates />} />
+          <Route path="/rates" element={<Rates actor={actor} />} />
           <Route path="/restate" element={<Restate actor={actor} />} />
           <Route path="/restate/:restatementId" element={<Restate actor={actor} />} />
-          <Route path="/review" element={<Review actor={actor} />} />
-          <Route path="/review/:pane" element={<Review actor={actor} />} />
+          <Route path="/review" element={<Review />} />
+          <Route path="/review/:pane" element={<Review />} />
           <Route path="/awards" element={<Awards />} />
           <Route path="/contracts" element={<Contracts actor={actor} />} />
           <Route path="/contracts/:pane" element={<Contracts actor={actor} />} />

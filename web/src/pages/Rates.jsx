@@ -1,18 +1,54 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, explain, money } from "../api.js";
-import { Card, Empty, Meter, PageHead, Pill, Stat, Table, Tick, useToast } from "../components/ui.jsx";
+import { api, explain } from "../api.js";
+import { Card, Meter, PageHead, Stat, Tick, useToast } from "../components/ui.jsx";
+import Certification from "../components/Certification.jsx";
+import RateReview from "./RateReview.jsx";
 
-export default function Rates() {
+/* Steps 7, 8 and 9 of the walk, on one screen: seal, compute, certify.
+ *
+ * They were two screens, and the nav mark said `7–9` over the one where none
+ * of the three happened. Tom cleared the queue, opened Rate to seal, and
+ * found no way to do it — right place by every map the system gives him, and
+ * every one of those maps was wrong. A fold removes nav and never
+ * capability; that one removed *reach*, which is the same thing wearing a
+ * different word.
+ *
+ * So the three acts live here, and the review screens go back to being
+ * purely read-only, which is what this repository has always said they are.
+ *
+ * **The build-up is on this screen rather than a click away**, because the
+ * working loop is iterative: seal, compute, read the rate, unseal,
+ * reclassify, recompute. Sending somebody to another screen to see what
+ * their own button just produced is what makes an evaluation loop feel like
+ * a filing system. It is the same component the workpaper renders, not a
+ * second reading of it — a figure here and the same figure at `/review/rate`
+ * cannot disagree, because there is one of it.
+ *
+ * **And nothing downstream is blocked by any of this.** An invoice can be
+ * regenerated and a workbook produced against a rate nobody has signed;
+ * testing against real figures is ordinary work, and a machine that refused
+ * it is one people route around. What changes is that the paper says
+ * NOT CERTIFIED and why — which is the rule the invoice renderer already
+ * follows for a reproduction, pointed at the one fact every output reads.
+ */
+export default function Rates({ actor }) {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [cov, setCov] = useState(null);
   const [recon, setRecon] = useState(null);
+  /* The build-up below is a separate component reading a separate endpoint,
+     so it has to be told when a button here has moved the record. A counter
+     used as its `key` remounts it, which re-reads rather than patching a
+     copy — the same reason nothing on this screen is remembered from a call
+     returning. */
+  const [moved, setMoved] = useState(0);
 
   const load = useCallback(() => {
     api.rates().then(setData).catch(() => {});
     api.coverage().then(setCov).catch(() => {});
     api.reconcile().then(setRecon).catch(() => {});
+    setMoved((n) => n + 1);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -89,7 +125,6 @@ export default function Rates() {
   };
 
   const pct = Number(cov?.pct_dollars || 0);
-  const rates = data?.rates || [];
   /* Read from the record, never remembered. A flag set when the seal
      call returns is wrong the moment somebody reloads — or the moment
      the other controller unseals. */
@@ -103,6 +138,14 @@ export default function Rates() {
      refusal. Somebody could seal, ask for a rate, and meet a 409 explaining
      a condition no screen had mentioned. */
   const open = (recon?.controls || []).filter((c) => !c.ties);
+
+  /* Portfolio, never rank. CONTROLLER is the name of a portfolio *and* of a
+     rank, and reading `actor.role` here would hide these buttons from the
+     person who holds the portfolio and nothing else — a nav stricter than
+     the API, which `Facilities.jsx` shipped once. Every write below is
+     `require_portfolio(CONTROLLER)`; the reads are `require_reader`, which
+     is why the auditor gets the whole screen and none of the buttons. */
+  const mayAct = (actor?.portfolios || []).includes("CONTROLLER");
 
   return (
     <div className="page">
@@ -173,8 +216,21 @@ export default function Rates() {
           )
         )}
 
+        {!mayAct && (
+          /* "Not yet, because", never a screen that simply has no buttons on
+             it. An auditor may read every figure here and sign nothing, and
+             being told which of those two they are is the difference between
+             a screen that is theirs and a screen that looks broken. */
+          <div className="rowsub gate" style={{ marginBottom: 14 }}>
+            Sealing, computing and certifying are the controller&apos;s acts,
+            and you do not hold that portfolio. Everything on this screen is
+            readable — the gates, the build-up and whether the rate carries a
+            signature.
+          </div>
+        )}
+
         <div className="row-actions">
-          {!sealed && (
+          {mayAct && !sealed && (
             <button className="primary" onClick={seal}>Seal decision set</button>
           )}
           {/* **The way back had no door either.** The runbook's own recovery
@@ -183,20 +239,20 @@ export default function Rates() {
               could. The reason is required and the handler refuses a blank,
               because an unseal with no reason is a hole in the trail the
               seal exists to make. */}
-          {sealed && (
+          {mayAct && sealed && (
             <button className="btn" onClick={unseal}>Unseal…</button>
           )}
           {/* Offered only once something is sealed. Computing against an open
               set is refused by the trigger, and a button that answers a
               constraint violation is the nav-stricter-than-the-API defect
               pointing the other way. */}
-          {sealed && (
+          {mayAct && sealed && (
             <button className="btn" onClick={compute} disabled={computing}>
               {computing ? "Computing…" : "Compute the rate"}
             </button>
           )}
         </div>
-        {sealed && (
+        {mayAct && sealed && (
           <div className="rowsub" style={{ marginTop: 8 }}>
             <p style={{ margin: "0 0 8px" }}>
               Computing reads the sealed judgments and writes the rate against
@@ -230,33 +286,44 @@ export default function Rates() {
         )}
       </Card>
 
+      {/* Step 9. The signature, and the only door to putting one there.
+          It used to sit on `/review/rate`, which made the read-only
+          workpaper the one screen in the system that could certify. */}
       <div style={{ marginTop: 20 }}>
-        <div className="card-title" style={{ marginBottom: 8 }}>Computed rates</div>
-        {rates.length === 0 ? (
-          <Card><Empty mark="%" title="No rate yet">
-            Seal the decision set to unlock the rate phase. A database trigger refuses any
-            rate whose seal does not match a sealed set.
-          </Empty></Card>
-        ) : (
-          <Table columns={[
-            { label: "Rate", align: "left" }, { label: "Pool" }, { label: "Base", align: "left" },
-            { label: "Base amount" }, { label: "Rate" }, { label: "Status", align: "left" },
-            { label: "Seal", align: "left" },
-          ]}>
-            {rates.map((r, i) => (
-              <tr key={i} className="hoverable">
-                <td className="l" style={{ fontWeight: 600 }}>{r.kind.replace(/_/g, " ")}</td>
-                <td className="num">{money(r.pool_amount)}</td>
-                <td className="l rowsub">{r.base_type}</td>
-                <td className="num">{money(r.base_amount)}</td>
-                <td style={{ fontWeight: 700, fontSize: 14 }}>{(Number(r.rate) * 100).toFixed(2)}%</td>
-                <td className="l"><Pill tone={r.status === "ACCEPTED" ? "pass" : ""}>{r.status}</Pill></td>
-                <td className="l mono-ref">{String(r.seal_hash).slice(0, 12)}…</td>
-              </tr>
-            ))}
-          </Table>
-        )}
+        <Certification actor={actor} key={`cert-${moved}`} />
       </div>
+
+      {/* And the rate itself, read back — the same component the workpaper
+          renders, so there is one reading of it rather than two.
+
+          It is here because the loop is iterative: compute, read what came
+          out, unseal, reclassify, recompute. A rate nobody has signed is a
+          working figure and says so at the top of its own build-up; an
+          invoice or a workbook produced against it carries NOT CERTIFIED and
+          the reason, which is what makes previewing safe rather than
+          something to be protected from. */}
+      <div style={{ marginTop: 20 }}>
+        <div className="card-title" style={{ marginBottom: 8 }}>
+          The rate that came out
+        </div>
+        <RateReview embedded actsHere key={`buildup-${moved}`} />
+      </div>
+
+      {/* The three deliverables. `/review` left the audit nav when the eight
+          tabs became the order of operations, and this tab is its way back
+          in: the auditor's report and Form 990 are read *after* the rate and
+          have nowhere else to be reached from. A fold removes nav and never
+          capability. */}
+      <Card variant="quiet" style={{ marginTop: 20 }}>
+        <div className="card-head">
+          <div className="card-title">Read it as a workpaper</div>
+          <span className="rowsub">
+            The three things that leave the building — the auditor&apos;s
+            report, this build-up and Form 990 Part IX — read together
+          </span>
+        </div>
+        <Link className="btn" to="/review/rate">Final review</Link>
+      </Card>
     </div>
   );
 }
