@@ -41,20 +41,30 @@ AGREED = ["Audit", "Books", "Classify", "Evidence", "Rate", "Restate",
           "Reports", "Requests"]
 
 
-def audit_tabs() -> list[tuple[str, str]]:
+def audit_tabs() -> list[tuple[str, str, str]]:
+    """The audit door's tabs, as (path, label, mark).
+
+    The mark comes back with the row it belongs to rather than from a
+    path-keyed map over the whole table, because **a path can appear on both
+    doors**: `/rates` is `Rate` marked `7–9` behind the 2025 audit and
+    `Rates` marked `D` in the ongoing system. A dict keyed on path keeps
+    whichever came last, so the audit door's mark would have been read off
+    the other product's tab — a test quietly asserting against the wrong
+    row, which is the shape this repository keeps finding.
+    """
     src = APP.read_text()
     block = src[src.index("const ALL_TABS"):src.index("function tabsFor")]
     out = []
-    for path, label, _sched, _needs, product in re.findall(
+    for path, label, sched, _needs, product in re.findall(
             r'\["(/[^"]*)",\s*"([^"]+)",\s*"([^"]*)",\s*([^,]+),\s*"(\w+)"\]',
             block):
         if product in ("audit", "both"):
-            out.append((path, label))
+            out.append((path, label, sched))
     return out
 
 
 def test_the_audit_door_is_the_eight_we_agreed():
-    labels = [label for _, label in audit_tabs()]
+    labels = [label for _, label, _mark in audit_tabs()]
     assert labels == AGREED, (
         f"the 2025 audit door offers {labels}, and the agreement is {AGREED}")
 
@@ -76,6 +86,27 @@ def test_every_folded_screen_still_has_a_route():
         assert path in routed, (
             f"{path} has no route. Folding a tab takes it out of the nav; it "
             f"must not take the screen out of the building.")
+
+
+def test_the_review_shell_keeps_a_door_now_the_rate_tab_has_moved():
+    """`/review` holds three deliverables and the Rate tab was its only way in.
+
+    Moving the Rate tab to `/rates` — so the mark `7–9` lands where sealing,
+    computing and certifying actually happen — closes the only nav entry the
+    auditor's report and Form 990 Part IX have ever had. That is the
+    capability-with-no-door shape, arriving as a side effect of fixing it one
+    screen along, which is exactly how these are introduced.
+
+    So `/rates` links across. Asserted as a link somebody can click rather
+    than as the string `/review` appearing somewhere in the file, because a
+    comment mentioning it would satisfy the weaker test — and this
+    repository has shipped four of those.
+    """
+    src = (APP.parent / "pages" / "Rates.jsx").read_text()
+    src = re.sub(r"\{?/\*.*?\*/\}?", "", src, flags=re.S)
+    assert re.search(r'<Link[^>]*to="/review', src), (
+        "the Rate tab is /rates now and nothing on it reaches /review, so "
+        "the auditor's report and Form 990 are behind no nav entry at all")
 
 
 def test_the_guide_is_reachable_now_it_is_not_a_tab():
@@ -146,14 +177,13 @@ def test_the_nav_marks_are_the_walk_s_step_numbers():
     if not steps:
         pytest.skip("no period loaded")
 
-    tabs = audit_tabs()          # [(path, label)] in nav order
-    marks = dict(re.findall(
-        r'\["(/[^"]*)",\s*"[^"]+",\s*"([^"]*)"', APP.read_text()))
+    tabs = audit_tabs()          # [(path, label, mark)] in nav order
+    marks = {path: mark for path, _label, mark in tabs}
 
     # Which tab does a step's destination land on? The longest tab path that
     # the destination starts with — `/classify/space` belongs to `/classify`,
     # and `/` would otherwise swallow everything.
-    paths = sorted((p for p, _ in tabs), key=len, reverse=True)
+    paths = sorted((p for p, _l, _m in tabs), key=len, reverse=True)
 
     def owner(dest: str) -> str | None:
         for p in paths:
@@ -180,7 +210,7 @@ def test_the_nav_marks_are_the_walk_s_step_numbers():
 
     # And a tab covering no step carries no number rather than a wrong one.
     # Audit *is* the walk; Requests runs alongside the sequence, not inside it.
-    for path, _label in tabs:
+    for path, _label, _mark in tabs:
         if path not in covers:
             assert not marks.get(path, "").strip("· "), (
                 f"the {path} tab carries the number {marks[path]!r} and is "

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
-import Certification from "../components/Certification.jsx";
 
 /* Schedule D — the indirect rate, built up rather than asserted.
  *
@@ -14,7 +13,16 @@ import Certification from "../components/Certification.jsx";
  * This screen never computes anything. Every figure is read from the rate on
  * file, because a figure derived twice is a figure that can disagree with
  * itself, and the one on the workpaper would be the one nobody could
- * reproduce. */
+ * reproduce.
+ *
+ * **And it performs nothing.** The signature used to be put here, which made
+ * the one screen this file calls read-only the only place in the system that
+ * could certify — sealing and computing were on `/rates`, so steps 7, 8 and 9
+ * were split across two screens and the nav mark said 7–9 over a screen where
+ * none of the three happened. They are one screen now and it is `/rates`.
+ * What stays here is the *statement* of whether the rate is certified, which
+ * the `/review` shell already renders above this pane as `CertificationBand`
+ * — the read, not the write. */
 
 const pct = (v) => `${(Number(v || 0) * 100).toFixed(4)}%`;
 
@@ -31,7 +39,12 @@ const KIND = {
   INDIRECT_COMBINED: ["Indirect, combined", "Overhead and G&A, one base"],
 };
 
-export default function RateReview({ embedded = false, actor }) {
+/* `actsHere` says the screen this is rendered on is the one where sealing
+ * and computing happen. It only removes the signpost: a link to the screen
+ * the reader is already standing on is worse than no link, because it reads
+ * as somewhere else to go. The gate itself still prints, because what is
+ * unfinished is the first thing a reader needs wherever they are. */
+export default function RateReview({ embedded = false, actsHere = false }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
 
@@ -61,11 +74,6 @@ export default function RateReview({ embedded = false, actor }) {
         on file, read back.
       </PageHead>
       )}
-
-      {/* The signature, and the only door to putting one there. Above the
-          figures, because whether the rate is certified is the first thing a
-          reader needs and the last thing they should have to scroll for. */}
-      <Certification actor={actor} />
 
       {!final && (
         <div className="gate bad" style={{ marginBottom: 16 }}>
@@ -116,9 +124,11 @@ export default function RateReview({ embedded = false, actor }) {
           {/* Where the act actually happens. This screen is the workpaper and
               cannot seal; sending somebody back to a queue they have already
               finished was the whole of the dead end. */}
-          {!final && shown.length === 0
-            ? <Link className="btn sm" to="/rates">Seal and compute</Link>
-            : <Link className="btn sm" to="/classify">Open the queue</Link>}
+          {actsHere
+            ? null
+            : !final && shown.length === 0
+              ? <Link className="btn sm" to="/rates">Seal and compute</Link>
+              : <Link className="btn sm" to="/classify">Open the queue</Link>}
         </div>
       )}
 
@@ -128,8 +138,10 @@ export default function RateReview({ embedded = false, actor }) {
             {/* Deliberately not "on the Seal tab": there is no such tab.
                 Naming one that is not in the nav is the same defect as a nav
                 stricter than the API, read from the other end. */}
-            <Link to="/rates">Seal the decision set and compute a rate</Link>,
-            and the build-up appears here. If there was one, unsealing
+            {actsHere
+              ? "Seal the decision set above and compute a rate"
+              : <Link to="/rates">Seal the decision set and compute a rate</Link>}
+            , and the build-up appears here. If there was one, unsealing
             superseded it: a rate cannot outlive the judgments it was
             computed from.
           </Empty>

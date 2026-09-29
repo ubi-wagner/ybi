@@ -1185,15 +1185,12 @@ where it happens. Reproduced first — a clone put into his exact state
 rates: 0 · open_controls: 0 · coverage: 100.0`, and the gate rendered empty
 against it.
 
-**What is deliberately not done here is the nav.** Putting `/rates` on the
-audit door makes it a ninth tab, and
+**The nav was deliberately not touched here**, because putting `/rates` on
+the audit door makes it a ninth tab and
 `test_the_audit_door_is_the_eight_we_agreed` is the record of a decision
 somebody made — *"why so many branches?"* in its other costume. The test
-caught the change and it was right to. Three shapes are on the table and one
-of them is Eric's to pick: a ninth tab; the Rate tab pointing at `/rates`
-with the workpaper reached from it; or moving the certification door onto
-`/rates` so steps 7–9 are one screen and the review screens go back to being
-purely read-only, which is what this file says they are.
+caught the change and it was right to. Three shapes went to Eric and he
+picked the third, which is the next section.
 
 **And the guard that should have caught it asked the wrong question.**
 `test_the_nav_marks_are_the_walk_s_step_numbers` asks whether every walk
@@ -1218,6 +1215,84 @@ And `Rates.jsx` sent `{sealed_by: "tom"}`. The handler reassigns it from the
 session, so it was inert — and it is a literal name in a request body, which
 is *a name in the request is only ever a label* sitting one route away from
 the next handler that forgets to reassign.
+
+### Steps 7, 8 and 9 are one screen
+
+Migration `130`. The shape Eric picked, in his words: *"so that they can
+preview the rates with every test and repropagation but can still generate
+new invoices for AM based on the test rates, they are just called NOT
+CERTIFIED as we did previously."*
+
+So **seal, compute and certify are `/rates`**, the Rate tab points there and
+keeps its `7–9` mark, and `/review/rate` goes back to being what this file
+has always called it — the read-only workpaper. The certification door moved
+off it; the `/review` shell already renders `CertificationBand`, which is the
+read rather than the write, so the statement stays where a reviewer needs it
+and the act does not.
+
+**The build-up is rendered on `/rates` rather than a click away**, and that is
+the half the instruction is actually about. The working loop is iterative —
+seal, compute, read what came out, unseal, reclassify, recompute — and
+sending somebody to a different screen to see what their own button just
+produced is what makes an evaluation feel like a filing system. It is the
+**same component** the workpaper renders, not a second reading of it, so a
+figure here and the same figure at `/review/rate` cannot disagree. It takes
+`actsHere`, which removes only the signpost: a link to the screen the reader
+is standing on reads as somewhere else to go.
+
+**Nothing downstream is blocked, and that was already true** — `082` settled
+it and the confirmation was owed rather than the code. An America Makes
+invoice regenerated against a test rate renders through
+`certification_lines()` like everything else and carries **NOT CERTIFIED**
+with the reason on its face. The one thing to know rather than be surprised
+by is that **recomputing withdraws the signature**, because
+`rate_certification_line` names the rate rows and a recompute supersedes
+them — which is `082`'s *this system's own model of change, used for what it
+is for*, and is exactly what makes a test rate's paper say the right thing
+without anybody choosing to.
+
+**The body of `v_audit_walk` is lifted from `088`** — the definition in force
+— and the only change in `130` is three string literals. `070` records what
+retyping costs.
+
+Three things came out of it, and two are guards that were reading the wrong
+row:
+
+- **`/rates` offered its buttons to everybody who could reach it.** The
+  router is `require_reader` with `require_controller` on each write, and the
+  screen had no gate at all — it was only ever reached from a CONTROLLER-gated
+  tab in the *other* door, so the hole had no instance. Moving the Rate tab to
+  it gave the auditor the screen, and the auditor holds no portfolio. Read from
+  `actor.portfolios`, never `actor.role`: CONTROLLER is the name of a portfolio
+  *and* of a rank, and `Facilities.jsx` shipped that confusion once. And it is
+  *"Not yet, because"* rather than a screen that silently has no buttons —
+  being told which of the two you are is the difference between a screen that
+  is yours and a screen that looks broken.
+- **`test_the_nav_marks_are_the_walk_s_step_numbers` read the mark off a
+  path-keyed dict over the whole tab table**, and `/rates` is now on **both
+  doors** — `Rate` marked `7–9` behind the 2025 audit, `Rates` marked `D` in
+  the ongoing system. The dict keeps whichever came last, so the audit door's
+  assertion would have been made against the other product's mark. `audit_tabs()`
+  carries the mark back with the row it belongs to now. A test quietly
+  asserting against the wrong row is the shape this file keeps finding, and it
+  had no instance until two tabs shared a path.
+- **Moving the tab closed the only door `/review` has ever had.** The audit
+  fold took `/review` out of the nav and left the Rate tab as its way in, so
+  `/review/report` and `/review/form-990` — the auditor's report and Form 990
+  Part IX — were reached through the rate and nothing else. Fixing a
+  capability-with-no-door by introducing another one is how these arrive.
+  `/rates` links across, and the test asserts a **link somebody can click**
+  rather than the string `/review` appearing in the file, because a comment
+  mentioning it satisfies the weaker question and this repository has shipped
+  four of those.
+
+Watched in a browser on a clone of the reference record, as both people: the
+nav reads `7–9 Rate → /rates`; Tom gets Unseal, Compute, the basis picker,
+the signature card and the build-up on one page; the auditor gets the same
+page with **no button on it** and the sentence saying why; and the band on
+the build-up reads NOT CERTIFIED with `why_not` — *"the rate has been
+recomputed since it was certified"* — which is the state a test rate is
+supposed to be in.
 
 ## Will the next document break it?
 

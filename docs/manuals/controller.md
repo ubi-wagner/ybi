@@ -93,21 +93,51 @@ that you did.
 queue. That makes the rate read high while the work is unfinished, which is
 the honest direction to be wrong in.
 
-### 3. You seal
+### 3, 4 and 5 are one screen: the **Rate** tab
 
-`/rates`. The decision set is hashed across every judgment in it. After this,
-changing a classification requires unsealing with a written reason, and that
-supersedes the rate that was computed from it.
+Sealing, computing and signing all happen on the Rate tab (`/rates`), in that
+order, on one page. They used to be split — the tab went to the read-only
+workpaper, which cannot seal — so the walk marked it `7–9` over a screen where
+none of the three happened. If you have an older copy of this guide, that is
+the part that changed.
 
-### 4. Then, and only then, a rate
+**You seal.** The decision set is hashed across every judgment in it. After
+this, changing a classification requires unsealing with a written reason, and
+that supersedes the rate computed from it.
 
-Two proofs run before anything is written: the pool reconciles to the ledger,
-and every allocable dollar lands on exactly one objective. If either fails it
-is a 409 rather than a rate.
-
-The rate carries the seal hash. A database trigger refuses one whose seal does
-not match a sealed set, so the guarantee holds even when application code is
+**Then, and only then, a rate.** Two proofs run before anything is written:
+the pool reconciles to the ledger, and every allocable dollar lands on exactly
+one objective. If either fails it is a 409 rather than a rate. The rate
+carries the seal hash, and a database trigger refuses one whose seal does not
+match a sealed set — so the guarantee holds even when application code is
 wrong.
+
+The build-up appears on the same screen, so you can read what came out without
+going anywhere. **Administrative labour** is a choice on that card and it is
+worth about nine points of combined rate on the same judgments; it is recorded
+on the rate, so the workpaper says which was used.
+
+**Then you sign it**, on the card underneath. The signature names the rate
+rows it covers, so recomputing supersedes them and the signature dies with
+them — a certificate cannot come back to life over a rate you never saw.
+
+### Testing a rate is ordinary work, and nothing refuses it
+
+You can seal, compute, read the build-up, unseal with a reason, reclassify,
+and recompute as many times as the evaluation needs. **Nothing downstream is
+blocked by an unsigned rate.** A regenerated America Makes invoice, a
+workbook, the return — all of them produce against whatever rate is on file,
+and each one prints **NOT CERTIFIED** on its own face with the reason, rather
+than refusing to be made.
+
+That is deliberate: a machine that refused to let you test against real
+figures is one people route around, and the routing-around is what actually
+puts an unchecked number in front of a sponsor. So the paper carries the
+state instead. Once you sign, the same papers name you and the date.
+
+One thing to know rather than be surprised by: **recomputing withdraws the
+signature**, because the certificate names the rate rows it was given for. If
+you sign and then try another basis, sign again afterwards.
 
 ## Restatement
 
