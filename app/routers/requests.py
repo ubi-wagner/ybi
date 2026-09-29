@@ -52,6 +52,7 @@ from app.audit import record
 from app.auth import (Actor, current_actor, require_admin, require_controller, require_facilities,
                       require_inventory, require_own_writes, require_reader)
 from app.db import execute, one, query, transaction
+from app import shapes
 from app.domain.core import money
 from app.domain.request_forms import FORMS, Form as FormDef
 from app.domain.request_intake import (Filled, WorkbookNotRecognised,
@@ -583,6 +584,9 @@ async def reply(request_id: int, file: UploadFile = File(...),
                  actor.actor_id,
                  f"Reply to request {request_id} — {form.title}", safe,
                  text, pages))
+        # The form as well as the text — one reading, at every door, so a
+        # family's shapes can be compared rather than discovered.
+        shapes.record_shape(eid, raw, XLSX)
     else:
         eid = existing["evidence_id"]
 

@@ -1151,6 +1151,197 @@ actually using this found more missing doors than every sweep written for
 them, because a sweep asks whether a route answers and a person asks whether
 they can get their job done.
 
+### And the sixth: the seal itself
+
+Tom cleared the classification queue, opened **Rate** to seal, and found no
+way to do it. He was in the right place by every map the system gives him,
+and **every one of those maps was wrong**:
+
+- the nav's Rate tab, marked `7–9`, goes to `/review/rate`;
+- `v_audit_walk` sends step 7 `SEAL` and step 8 `RATE` to the same screen;
+- and that screen is the **read-only workpaper**. Sealing, unsealing and
+  computing live on `/rates`, which the eight-tab fold in `080` tagged as
+  belonging to the *other* door.
+
+So behind the 2025 audit door the act this whole system is built around had
+no tab, and nothing anywhere said where it was. `080`'s own rule is that **a
+fold removes nav and never capability** — it removed *reach*, which is the
+same thing wearing a different word: the route answers perfectly and the
+product never mentions it.
+
+**And the screen told him nothing, which is the worse half.** The gate
+renders its reasons from the open controls and the coverage. His queue was
+finished and his books tie, so both lists were empty — and the reason that
+actually applied, *the set is not sealed*, was the one reason the gate had no
+branch for. He got a red heading with **nothing under it** and a button back
+to a queue he had just emptied. *"Not yet, because", never an empty list* is
+the restatement screen's own rule, broken one screen along.
+
+`sealed` is on `GET /api/review/rate` now, read the way `v_audit_walk` reads
+it so the landing page and the screen cannot hold two opinions; the gate
+names it; and both the gate and the empty state link to `/rates`, which is
+where it happens. Reproduced first — a clone put into his exact state
+(100% classified, nothing sealed, no rate) answers `sealed: false ·
+rates: 0 · open_controls: 0 · coverage: 100.0`, and the gate rendered empty
+against it.
+
+**What is deliberately not done here is the nav.** Putting `/rates` on the
+audit door makes it a ninth tab, and
+`test_the_audit_door_is_the_eight_we_agreed` is the record of a decision
+somebody made — *"why so many branches?"* in its other costume. The test
+caught the change and it was right to. Three shapes are on the table and one
+of them is Eric's to pick: a ninth tab; the Rate tab pointing at `/rates`
+with the workpaper reached from it; or moving the certification door onto
+`/rates` so steps 7–9 are one screen and the review screens go back to being
+purely read-only, which is what this file says they are.
+
+**And the guard that should have caught it asked the wrong question.**
+`test_the_nav_marks_are_the_walk_s_step_numbers` asks whether every walk
+destination lands on a tab. `/review/rate` is a tab, so it passed for the
+whole life of the defect. **Reachable is not capable** — the same family as
+*a screenshot of the wrong screen is still a screenshot*.
+`test_a_walk_step_lands_where_its_act_happens.py` asks the second question,
+in the weaker of its two honest forms: a walk step that is an *act* must land
+on a screen that either performs it **or links to the screen that does**. A
+dead end fails; a signpost passes. It resolves the destination through
+`App.jsx`'s route table and walks the component's imports transitively — the
+first draft went one hop and reported the certification door missing from the
+screen it is plainly on, because `/review/rate` is `Review` → `RateReview` →
+`Certification`. Both assertions were watched failing against the defect
+restored.
+
+One thing the picture caught that neither test could: the first fix wrote
+*"that is done on **Seal**"* — naming a tab that, with the nav left alone,
+does not exist. A nav stricter than the API, read from the other end.
+
+And `Rates.jsx` sent `{sealed_by: "tom"}`. The handler reassigns it from the
+session, so it was inert — and it is a literal name in a request body, which
+is *a name in the request is only ever a label* sitting one route away from
+the next handler that forgets to reassign.
+
+## Will the next document break it?
+
+Migration `129`, `app/domain/document_shape.py`, `app/shapes.py`,
+`GET /api/documents/variability`, the panel on `/library`,
+`scripts/drive_documents.py`, `scripts/read_shapes.py`.
+
+Every drive above proves a **figure** is right. This asks the question
+underneath all of them, and the answer is uncomfortable: **every parser in
+this system was written against one instance of the document it parses**,
+and three have already been caught by the second one.
+
+- the asset schedule prints a system number **only when it changes**, so the
+  first parser dropped every row repeating one — $2.5m, including
+  $2,388,438.81 of Tech Block phase 2, **with every printed subtotal still
+  tying**;
+- two of the executed agreements are ARTICLE-numbered with no numbered
+  clause anywhere, and three provisions on each were cited to `§25` and
+  `§26`, which are ICAM's and appear in neither;
+- one agreement is thirty-six pages and seventy characters.
+
+Every one is a difference in **form** rather than content, and every one was
+found by a person reading. The form is read off the bytes at the door now,
+the way `storage.read_text()` already reads the text.
+
+**Form and content are kept apart, and that is the whole design.** Next
+year's general ledger will have wholly different content and had better have
+the same form; an export somebody saved differently has identical content and
+a form that breaks the parser. One column for both would hide exactly the
+case worth catching.
+
+### What it says about this record
+
+    family                          n   state     what differs
+    subrecipient-agreement          4   VARIES    heading_style, text_layer,
+                                                  pages, pages_without_text
+    grant-agreement                 2   VARIES    heading_style, text_layer, …
+    invoice                         6   VARIES    pages, chars_per_page
+    audited-financial-statements    2   VARIES    pages, pages_without_text
+    form-990                        2   VARIES    pages, chars_per_page
+    general-ledger                  1   NO DATA
+    profit-and-loss                 1   NO DATA
+    balance-sheet                   1   NO DATA
+    asset-register                  1   NO DATA
+    lease-schedule                  1   NO DATA        … eight in all
+
+**Eight of thirteen families hold exactly one document** — and they include
+the general ledger, the profit and loss, the balance sheet, the asset
+register and the lease schedule, which is to say **the five parsers the
+entire rate model rests on have never met a second instance.** That is the
+headline and it is not a defect to fix; it is a fact to know before somebody
+promises the 2026 close will be quick.
+
+**A family of one is `NO DATA`, never `UNIFORM`.** One document agrees with
+itself perfectly, and reporting that as uniform would read as *this parser
+has been proved against variation* where the truth is *nothing has varied
+because there has only ever been one*. `029` in the newest place in the
+system, and `test_a_family_of_one_is_no_data_and_never_uniform` holds both
+directions so the state cannot quietly become a constant.
+
+**Differences are named, never scored.** There is deliberately no
+variability index: a single number over twenty-four documents is a figure
+nobody can reproduce and nobody can act on, where `varies_on` names the
+attribute somebody goes and looks at. The reconciling item's rule, applied
+to a form.
+
+**And a text layer has three states, not two.** `none`, `sparse` and `text`
+— because `text_layer: true` over thirty-six pages and seventy characters
+says the document can be read and no clause of it ever could. `056`'s rule
+about `extracted_text` reappearing one column along, and the register names
+both offenders rather than counting them.
+
+### One reading, at five doors
+
+There are five doors a document can arrive by and a fact recorded at four of
+them is missing precisely where somebody later assumes it is present. So
+`app/shapes.py` is the one writer, all five call it, and
+`test_every_evidence_writer_records_a_shape` derives the doors from the
+source so a sixth fails on the day it is written — `test_storage_paths.py`'s
+rule pointed at a second column.
+
+**It is read on the boot**, so a recovered deployment comes back with it:
+18 of 18 on the first boot from an empty database, before anybody signs in.
+And the dedup branch **completes** a missing shape rather than returning
+early — the bytes are in hand and the row may predate the reading, which is
+the one moment the two are in the same place. It never *replaces* one;
+re-reading on a new reader is `read_shapes.py`'s job and is a decision
+somebody makes.
+
+### Four defects out of building it, and three are shapes already here
+
+- **The reader fell over on the asset schedule** — `ValueError: year 0 is
+  out of range`, a date cell holding something that is not a date. A reader
+  that raises trades a document nobody can analyse for a document nobody can
+  file, so it reads the cell as text and the row says what happened.
+- **The drive kept its own map of what each document is**, coarser than the
+  record's: it filed all eight award documents as `award-agreement` where
+  the register distinguishes a subrecipient agreement from a grant
+  agreement, a modification and a closeout letter. Not a tidiness point —
+  those are four instruments with different clause conventions, and a family
+  that lumps them reports variability that is a finding **about our filing**
+  rather than about the documents. It reads `foundation.DOCUMENTS` now.
+- **A bulk edit reported success and left a `ReferenceError`.** The import
+  was prepended against a pattern that did not match, because the import
+  spans three lines and I matched the continuation. The build passed; the
+  browser caught it. Recorded here twice already, found the same way both
+  times — and the sweep that answers it (does every JSX component a file
+  renders resolve to something it imports?) came back clean over all 50
+  screens once fixed.
+- **`>/dev/null` hid a failure and I asserted against a database I thought
+  I had rebuilt.** `DROP DATABASE` refused because the API still held two
+  sessions; the drop never happened, the mutated view survived, and two
+  tests failed against a defect I had already reverted. *Editing an applied
+  migration mutates nothing* has a sibling: dropping a database that is in
+  use drops nothing, and a redirect that swallows the error is how you spend
+  ten minutes debugging the wrong thing.
+
+`scripts/drive_documents.py` feeds all twenty-four papers through the real
+upload door and reads the register back: **24 of 24 shaped, 5 checks, 0
+findings, from an empty database.** It measures rather than writes — the
+door is content-addressed, so a second run deduplicates and the drive is
+reading the record rather than its own writing, which is what
+`review_system.py` was fixed for.
+
 ## Two doors that were not there
 
 **The shelf.** `GET /api/documents/guides`, `/guidebook`, `Guidebook.jsx`.

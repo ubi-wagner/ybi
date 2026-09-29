@@ -19,6 +19,7 @@ from app.audit import record
 from app.auth import Actor
 from app import storage
 from app.db import execute, one, query
+from app import shapes
 from app.settings import settings
 
 router = APIRouter(prefix="/evidence", tags=["evidence"],
@@ -68,6 +69,9 @@ async def upload(file: UploadFile = File(...), kind: str = Form("document"),
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'UPLOAD',%s,%s,%s,%s)""",
                 (eid, period, kind, str(dest), sha, uploaded_by,
                  len(raw), mime, actor.actor_id, safe, text, pages))
+        # The form as well as the text — one reading, at every door, so a
+        # family's shapes can be compared rather than discovered.
+        shapes.record_shape(eid, raw, mime)
 
     attached = 0
     if target_type and target_id:

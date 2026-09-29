@@ -75,8 +75,20 @@ def rate_buildup(period: str | None = None) -> dict:
                               state, note, unit, classification_complete
                          FROM v_rate_anchor WHERE period = %s ORDER BY seq""",
                     (period,))
+    # Whether the set is sealed, read from the record rather than inferred
+    # from whether a rate came back. The screen needs it to say *why* there is
+    # no rate: with the queue finished and the books tying, an unsealed set is
+    # the only reason left, and it was the one reason the gate could not
+    # print — so a controller who had done everything asked of him met a red
+    # box with an empty list under it. "Not yet, because", never an empty
+    # list, which is the restatement screen's own rule one screen along.
+    # Read the way `v_audit_walk` reads it, so the landing page and this
+    # screen cannot hold two opinions about whether a year is sealed.
+    sealed = bool(one("""SELECT 1 FROM decision_set
+                          WHERE period = %s AND sealed_at IS NOT NULL""",
+                      (period,)))
     return {"period": period, "rates": rates, "carve_outs": carves,
-            "anchors": anchors,
+            "anchors": anchors, "sealed": sealed,
             "coverage": cov, "open_controls": open_controls,
             # A rate is final when the judgments under it are finished and the
             # books they came from agree. Neither is a matter of opinion, so

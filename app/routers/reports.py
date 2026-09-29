@@ -31,6 +31,7 @@ from app import storage
 from app.audit import record
 from app.auth import Actor, require_controller, require_reader
 from app.db import execute, one, query
+from app import shapes
 from app.domain.invoice_document import (DocumentLine, InvoiceDocument, Party,
                                          render)
 from app.domain.timesheet_report import build_timesheet_report
@@ -349,6 +350,9 @@ def file_invoice(invoice_id: str, actor: Actor = Depends(require_controller)):
              if not doc.is_original else
              "Issued from the invoice register.",
              f"Invoice {doc.number}", filename, text, pages))
+    # The form as well as the text — one reading, at every door, so a
+    # family's shapes can be compared rather than discovered.
+    shapes.record_shape(eid, raw, "application/pdf")
     execute("UPDATE invoice SET evidence_id = COALESCE(evidence_id, %s) "
             "WHERE invoice_id = %s", (eid, head["invoice_id"]))
 

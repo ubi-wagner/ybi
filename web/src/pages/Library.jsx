@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, explain } from "../api.js";
+import FormVariability from "../components/FormVariability.jsx";
 import {
   Card, Drawer, Empty, Keys, PageHead, Pill, Search, Segmented, Stat, Table,
   Tick, useToast,
@@ -127,6 +128,11 @@ export default function Library() {
               size="lg" note="somebody has said what these prove" />
         <Stat label="On the volume" value={size(data?.total_bytes)} size="lg" />
       </div>
+
+      {/* Under the counts and above the shelf: it is about the whole
+          collection rather than about any one document, and somebody
+          looking for a single lease should not have to scroll past it. */}
+      <FormVariability />
 
       <Card variant="raised" title="Find one" aside={
         filtering

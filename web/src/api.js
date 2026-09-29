@@ -448,6 +448,10 @@ export const api = {
      The two URL helpers are not fetches: a <iframe> and a download both want
      a URL the browser goes to itself, carrying the session cookie, so the
      bytes never pass through JavaScript on the way to the screen. */
+  // How much the documents in each family differ in *form*. The question
+  // is whether the parsers survive next year's exports, and three of them
+  // have already been caught by a second instance.
+  documentVariability: () => req("/documents/variability"),
   documentLibrary: (params = {}) => {
     const q = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== "" && v != null));

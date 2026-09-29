@@ -33,6 +33,7 @@ from app.auth import (Actor, Portfolio, current_actor, require_office,
                       require_own_writes, require_reader)
 from app import storage
 from app.db import execute, one, query
+from app import shapes
 from app.domain.evidence_match import Document as MatchDocument
 from app.domain.evidence_match import Target as MatchTarget
 from app.domain.evidence_match import propose as match_propose
@@ -122,6 +123,13 @@ async def upload(file: UploadFile = File(...),
                after={"duplicate_of": existing["evidence_id"],
                       "sha256": sha},
                reason=note or "already on file")
+        # The bytes are in hand and the row may predate the form being read
+        # at all, so complete it rather than returning early on a document we
+        # are holding. It is not filing twice — nothing on the volume or in
+        # the register moves — it is the one moment the bytes and the row are
+        # in the same place.
+        shapes.record_missing_shape(existing["evidence_id"], raw,
+                                    storage.sniff_type(raw, file.filename))
         return {"evidence_id": existing["evidence_id"], "deduplicated": True,
                 "already_uploaded_by": existing["display_name"],
                 "message": ("That document is already on file"
@@ -154,6 +162,9 @@ async def upload(file: UploadFile = File(...),
             (eid, period, kind, str(dest), sha, actor.display_name, len(raw),
              mime, actor.actor_id, note, suggested_for, safe,
              amount, when, vendor, text, pages))
+    # The form as well as the text — one reading, at every door, so a
+    # family's shapes can be compared rather than discovered.
+    shapes.record_shape(eid, raw, mime)
     record(actor, "DOCUMENT_UPLOAD", "evidence", eid,
            after={"kind": kind, "filename": safe, "bytes": len(raw),
                   "suggested_for": suggested_for,
@@ -715,3 +726,52 @@ def attach_bulk(body: BulkAttachIn,
                    reason=a.relevance, cursor=cur)
     return {"attached": len(body.attachments),
             "documents": sorted({a.evidence_id for a in body.attachments})}
+
+
+@router.get("/variability")
+def variability(actor: Actor = Depends(require_reader)) -> dict:
+    """How much the documents in each family differ in form.
+
+    The question behind it is whether the parsers survive next year's
+    exports. Every one of them was written against a single instance, and
+    three have already been caught by the second: the asset schedule that
+    prints a system number only when it changes, the two agreements with no
+    numbered clause anywhere, and the one that is thirty-six pages and
+    seventy characters.
+
+    **A family of one reports `NO DATA`, never `UNIFORM`.** One document
+    agrees with itself perfectly; calling that uniform would read as *this
+    has been proved against variation* where the truth is *nothing has
+    varied because there has only ever been one*. That is `029` pointed at a
+    parser instead of a control.
+
+    `require_reader`, the same gate as the library and the review screens:
+    the form of a document is part of the cost record's provenance, and
+    somebody who may not read the record may not read what its papers look
+    like either.
+    """
+    return {
+        "coverage": one("SELECT * FROM v_document_shape_coverage"),
+        "families": query("""SELECT family, instances, unreadable,
+                                    without_usable_text, varies_on, values,
+                                    state, note
+                               FROM v_document_variability"""),
+        # The documents nobody could read, named. A count of them on the
+        # panel above and no way to see which is a figure a reader cannot
+        # act on.
+        "unreadable": query("""SELECT e.evidence_id, e.kind, e.filename,
+                                      s.form ->> 'why' AS why
+                                 FROM document_shape s
+                                 JOIN evidence e USING (evidence_id)
+                                WHERE s.form ->> 'container' = 'unreadable'
+                                ORDER BY e.kind, e.filename"""),
+        "thin": query("""SELECT e.evidence_id, e.kind, e.filename,
+                                s.form ->> 'text_layer' AS text_layer,
+                                (s.form ->> 'pages')::int AS pages,
+                                (s.form ->> 'chars_per_page')::numeric
+                                  AS chars_per_page
+                           FROM document_shape s
+                           JOIN evidence e USING (evidence_id)
+                          WHERE s.form ->> 'text_layer' IN ('none', 'sparse')
+                          ORDER BY (s.form ->> 'pages')::int DESC"""),
+    }
