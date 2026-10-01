@@ -43,6 +43,7 @@ from app.domain.reconciliation_document import (Contract, RateLine,
                                                 Reconciliation,
                                                 render_reconciliation)
 from app.domain.core import money
+from app.papers import as_pdf as _as_pdf
 from app.domain.invoice import (Category, DirectCost, Invoice, InvoiceLine,
                                 assess, rebuild)
 from app.domain.invoice_document import Party
@@ -321,6 +322,48 @@ def restate(body: RestateIn, period: str = None,
                             "likely the classifications were reopened. Nothing "
                             "was written."),
                 "rate_id": str(rate["rate_id"])})
+        # One objective carries one claim YBI would bill on, and the index
+        # `one_standing_restatement_per_objective` holds it. This is the
+        # same rule in the handler, where it can say what happened.
+        #
+        # Recomputing supersedes a PROPOSED position — YBI's own, unsent, and
+        # the recompute *is* the correction. It must not silently replace one
+        # the sponsor has SUBMITTED to or ACCEPTED: that is a position
+        # somebody agreed to, and `drive_recertify` settled the principle —
+        # *the one act that takes something away from the person who made it
+        # is never automatic.*
+        #
+        # The first draft declined to supersede those and **wrote the new row
+        # anyway**, so the guard produced the state it existed to prevent:
+        # two standing claims on one objective, added together by every
+        # reader, putting $265,008.84 on the acceptance form for an award
+        # that owes $136,534.61.
+        cur.execute("""SELECT restatement_id, status::text AS status,
+                              over_collected, under_recovered, modification_ref
+                         FROM restatement
+                        WHERE period = %s AND objective_id = %s
+                          AND status IN ('SUBMITTED', 'ACCEPTED')""",
+                    (period, body.objective_id))
+        held = cur.fetchone()
+        if held:
+            stands = (f"{held['over_collected']:,.2f} to return"
+                      if held["over_collected"] else
+                      f"{held['under_recovered']:,.2f} to claim")
+            raise HTTPException(409, {
+                "error": "A_POSITION_IS_STANDING",
+                "message": (
+                    f"{body.objective_id} already carries a position that has "
+                    f"been put to the sponsor — {held['status'].lower()}, at "
+                    f"{stands}"
+                    + (f", under {held['modification_ref']}"
+                       if (held.get("modification_ref") or "").strip() else "")
+                    + ". Measuring again would replace it, and taking back "
+                    "something a sponsor has seen is not something this does "
+                    "on your behalf. Withdraw that position first, with the "
+                    "reason, and then measure."),
+                "restatement_id": str(held["restatement_id"]),
+                "status": held["status"]})
+
         cur.execute("""UPDATE restatement SET status = 'SUPERSEDED'
                         WHERE period = %s AND objective_id = %s
                           AND status = 'PROPOSED'""",
@@ -452,6 +495,36 @@ def list_restatements(period: str = None) -> list[dict]:
                      ORDER BY computed_at DESC""", (period,))
 
 
+# Declared **before** `/{restatement_id}`, and that is load-bearing rather
+# than tidy. Starlette matches routes in declaration order, so a literal path
+# registered after a parameterised sibling never runs: `/restate/reconciliation`
+# reached `detail(restatement_id="reconciliation")` and answered 500 on
+# `invalid input syntax for type uuid`. The route existed, the sweep that asks
+# whether every capability has a door saw it, and the tests called the
+# assembly function directly — so nothing anywhere could see that the door was
+# walled up. `test_no_route_is_shadowed_by_a_parameterised_sibling` is the
+# property; it found exactly this one across 200 routes.
+@router.get("/reconciliation")
+def contract_reconciliation(period: str = "2025", inline: bool = False,
+                            actor: Actor = Depends(require_reader)) -> Response:
+    """The three America Makes contracts on one page, for one signature.
+
+    A read, like the other two papers: rendering asserts nothing that was
+    not already recorded when the restatements were computed, and the band
+    says where each stands.
+    """
+    r = _reconciliation(period)
+    body = render_reconciliation(r)
+    record(actor, "EXPORT", "period", period,
+           after={"paper": "reconciliation",
+                  "awards": [c.award_id for c in r.contracts],
+                  "to_return": str(r.total_return),
+                  "to_claim": str(r.total_claim),
+                  "certified": r.certified},
+           reason="contract reconciliation rendered")
+    return _as_pdf(body, f"YBI-contract-reconciliation-{period}.pdf", inline)
+
+
 @router.get("/{restatement_id}")
 def detail(restatement_id: str) -> dict:
     head = one("SELECT * FROM v_restatement WHERE restatement_id = %s",
@@ -474,8 +547,18 @@ def decide(restatement_id: str, body: DecideIn,
     basis is refused by the schema. That single omission is the most likely
     thing in this whole exercise to become a finding.
     """
-    if body.status not in ("SUBMITTED", "ACCEPTED", "REJECTED"):
+    if body.status not in ("SUBMITTED", "ACCEPTED", "REJECTED", "SUPERSEDED"):
         raise HTTPException(422, f"Unknown status {body.status!r}.")
+    # Withdrawing a position YBI has put to a sponsor is the second of the
+    # two conscious acts `POST /api/restate` refuses to collapse into one,
+    # and it is the only one that takes something back. So it carries a
+    # reason, the way unsealing does — and the reason is the whole of what
+    # the record will have to say about it later.
+    if body.status == "SUPERSEDED" and len(body.note.strip()) < 20:
+        raise HTTPException(
+            422, "Withdrawing a position the sponsor has seen needs a reason "
+                 "on the record — what changed, and why the figure no longer "
+                 "stands. Twenty characters or more.")
     head = one("""SELECT status::text AS status, modification_ref, objective_id
                     FROM restatement WHERE restatement_id = %s""",
                (restatement_id,))
@@ -705,7 +788,8 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
         reference=f"{award_id} · {period}")
 
 
-def _paper(award_id: str, period: str, actor: Actor, which: str) -> Response:
+def _paper(award_id: str, period: str, actor: Actor, which: str,
+           inline: bool = False) -> Response:
     p = _papers(award_id, period)
     body = (render_memo(p) if which == "memo" else render_acceptance(p))
     record(actor, "EXPORT", "award", award_id,
@@ -715,13 +799,11 @@ def _paper(award_id: str, period: str, actor: Actor, which: str) -> Response:
            reason=f"amendment {which} rendered")
     name = (f"YBI-amendment-memo-{award_id}.pdf" if which == "memo"
             else f"YBI-acceptance-{award_id}.pdf")
-    return Response(body, media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="{name}"',
-                             "X-Content-Type-Options": "nosniff"})
+    return _as_pdf(body, name, inline)
 
 
 @router.get("/award/{award_id}/memo")
-def amendment_memo(award_id: str, period: str = "2025",
+def amendment_memo(award_id: str, period: str = "2025", inline: bool = False,
                    actor: Actor = Depends(require_reader)) -> Response:
     """Why this award's invoices are being reissued, and under what clause.
 
@@ -732,14 +814,14 @@ def amendment_memo(award_id: str, period: str = "2025",
     who may read everything and holds no portfolio, would be the library
     defect in a new place.
     """
-    return _paper(award_id, period, actor, "memo")
+    return _paper(award_id, period, actor, "memo", inline)
 
 
 @router.get("/award/{award_id}/acceptance")
-def acceptance_form(award_id: str, period: str = "2025",
+def acceptance_form(award_id: str, period: str = "2025", inline: bool = False,
                     actor: Actor = Depends(require_reader)) -> Response:
     """What NCDMM signs. Both directions, and never their difference."""
-    return _paper(award_id, period, actor, "acceptance")
+    return _paper(award_id, period, actor, "acceptance", inline)
 
 
 # ── One page, three contracts, one signature ─────────────────────────
@@ -984,26 +1066,3 @@ def _fmt(over, under) -> str:
     return "Nothing"
 
 
-@router.get("/reconciliation")
-def contract_reconciliation(period: str = "2025",
-                            actor: Actor = Depends(require_reader)) -> Response:
-    """The three America Makes contracts on one page, for one signature.
-
-    A read, like the other two papers: rendering asserts nothing that was
-    not already recorded when the restatements were computed, and the band
-    says where each stands.
-    """
-    r = _reconciliation(period)
-    body = render_reconciliation(r)
-    record(actor, "EXPORT", "period", period,
-           after={"paper": "reconciliation",
-                  "awards": [c.award_id for c in r.contracts],
-                  "to_return": str(r.total_return),
-                  "to_claim": str(r.total_claim),
-                  "certified": r.certified},
-           reason="contract reconciliation rendered")
-    return Response(body, media_type="application/pdf",
-                    headers={"Content-Disposition":
-                             f'inline; filename="YBI-contract-reconciliation-'
-                             f'{period}.pdf"',
-                             "X-Content-Type-Options": "nosniff"})

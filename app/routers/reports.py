@@ -25,10 +25,11 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 
 from app import storage
 from app.audit import record
+from app.papers import as_pdf as _as_pdf
 from app.auth import Actor, require_controller, require_reader
 from app.db import execute, one, query
 from app import shapes
@@ -279,7 +280,8 @@ def _invoice_caveats(head: dict, lines: list[dict]) -> list[str]:
 
 
 @router.get("/invoice/{invoice_id}")
-def invoice_pdf(invoice_id: str, actor: Actor = Depends(require_reader)):
+def invoice_pdf(invoice_id: str, inline: bool = False,
+                actor: Actor = Depends(require_reader)):
     """The invoice, rendered off the register.
 
     Takes the invoice number or the identifier, because somebody working
@@ -295,11 +297,11 @@ def invoice_pdf(invoice_id: str, actor: Actor = Depends(require_reader)):
                   "total": str(doc.total), "original": doc.is_original},
            reason="invoice regenerated")
 
+    # `inline=1` is the preview panel; bare is the Download button. One URL
+    # served both and could only carry one disposition — see `_as_pdf` in
+    # `restate.py` for why the default is the save.
     name = f"YBI-invoice-{doc.number}.pdf"
-    return Response(
-        body, media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{name}"',
-                 "X-Content-Type-Options": "nosniff"})
+    return _as_pdf(body, name, inline)
 
 
 @router.post("/invoice/{invoice_id}/file", status_code=201)

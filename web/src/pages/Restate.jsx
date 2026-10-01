@@ -176,7 +176,7 @@ export default function Restate({ actor }) {
             named on the page as excluded rather than dropped.
           </div>
           <div className="btn-row">
-            <a className="btn" target="_blank" rel="noreferrer"
+            <a className="btn" download
                href={api.reconciliationUrl(rows[0].period)}>
               Contract reconciliation (.pdf)
             </a>
@@ -405,11 +405,15 @@ function Detail({ d, canWrite, toast, onChange }) {
           record; the form keeps both directions apart and is what they sign.
         </div>
         <div className="btn-row">
-          <a className="btn" target="_blank" rel="noreferrer"
+          {/* Saves rather than opening a tab. These go to NCDMM, so the
+              thing wanted is a file; and `target="_blank"` against an
+              `attachment` response leaves a blank tab behind on some
+              browsers and nothing at all on others. */}
+          <a className="btn" download
              href={api.amendmentMemoUrl(r.award_id, r.period)}>
             Amendment memorandum (.pdf)
           </a>
-          <a className="btn" target="_blank" rel="noreferrer"
+          <a className="btn" download
              href={api.acceptanceFormUrl(r.award_id, r.period)}>
             Acceptance form (.pdf)
           </a>
@@ -429,7 +433,7 @@ function Detail({ d, canWrite, toast, onChange }) {
           {r.decided_note && <div className="wrap">{r.decided_note}</div>}
         </div>
         {canWrite && r.status !== "SUPERSEDED" && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["SUBMITTED", "ACCEPTED", "REJECTED"]
               .filter((s) => s !== r.status)
               .map((s) => (
@@ -439,6 +443,20 @@ function Detail({ d, canWrite, toast, onChange }) {
                     : s === "ACCEPTED" ? "Accepted in writing" : "Rejected"}
                 </button>
               ))}
+            {/* The second of the two acts it takes to replace a position the
+                sponsor has seen. Measuring again is refused while this one
+                stands — one objective carries one claim YBI would bill on —
+                and taking something back is not done on anybody's behalf,
+                so it is a button with a reason behind it rather than a
+                silent consequence of pressing Measure. Offered only where
+                there is something to withdraw: a PROPOSED position is
+                superseded by recomputing, which is not taking anything back
+                from anyone. */}
+            {["SUBMITTED", "ACCEPTED"].includes(r.status) && (
+              <button className="sm ghost" onClick={() => setDeciding("SUPERSEDED")}>
+                Withdraw this position
+              </button>
+            )}
           </div>
         )}
       </Card>
@@ -446,15 +464,21 @@ function Detail({ d, canWrite, toast, onChange }) {
       <Drawer open={!!deciding} onClose={() => setDeciding(null)}
               title={deciding === "ACCEPTED" ? "Accepted in writing"
                      : deciding === "SUBMITTED" ? "Send it to the sponsor"
+                     : deciding === "SUPERSEDED" ? "Withdraw this position"
                      : "Rejected"}
               subtitle={deciding === "ACCEPTED"
                 ? "Which modification authorised the change of basis"
+                : deciding === "SUPERSEDED"
+                ? "It stays on the record with its dates — what changed?"
                 : "What happened, for the record"}>
         {deciding && (
           <DecideForm status={deciding} onDone={async (body) => {
             try {
               await api.restateStatus(r.restatement_id, { status: deciding, ...body });
-              toast.ok(`Moved to ${deciding.toLowerCase()}`);
+              toast.ok(deciding === "SUPERSEDED"
+                ? "Withdrawn. It stays on the record, and the objective is "
+                  + "free to be measured again."
+                : `Moved to ${deciding.toLowerCase()}`);
               setDeciding(null);
               onChange();
             } catch (e) { toast.fail(explain(e)); }
@@ -504,6 +528,7 @@ function DecideForm({ status, onDone }) {
   const [ref, setRef] = useState("");
   const [note, setNote] = useState("");
   const needsRef = status === "ACCEPTED";
+  const needsReason = status === "SUPERSEDED";
   return (
     <>
       {needsRef && (
@@ -519,14 +544,25 @@ function DecideForm({ status, onDone }) {
           </div>
         </>
       )}
-      <Field label="What happened">
+      {/* A withdrawal is the only one of these that takes something back,
+          so its reason is required and the server refuses a short one. The
+          form says so rather than letting the button answer 422 — the gate
+          and the screen read the same rule. */}
+      <Field label={needsReason ? "Why it no longer stands" : "What happened"}
+             required={needsReason}
+             hint={needsReason
+               ? "Twenty characters or more. It stays on the record beside "
+                 + "the position, which keeps its dates."
+               : ""}>
         <textarea rows={3} value={note}
                   onChange={(e) => setNote(e.target.value)} />
       </Field>
       <div style={{ marginTop: 12 }}>
-        <button className="primary" disabled={needsRef && !ref.trim()}
+        <button className="primary"
+                disabled={(needsRef && !ref.trim())
+                          || (needsReason && note.trim().length < 20)}
                 onClick={() => onDone({ modification_ref: ref.trim(), note })}>
-          Record it
+          {needsReason ? "Withdraw it" : "Record it"}
         </button>
       </div>
     </>

@@ -39,13 +39,20 @@ export default function Reports({ actor }) {
   }, [toast]);
   useEffect(() => { load(); }, [load]);
 
+  /* The anchor is removed on the next tick rather than on the same one.
+     Chrome can cancel a download whose initiating element has already left
+     the document, which is a race nobody loses on a fast local server and
+     somebody loses over a real network. The server sends `attachment` now,
+     so the save no longer depends on the `download` attribute winning an
+     argument with the header — the attribute is kept for the filename. */
   function take(url, filename) {
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.rel = "noopener";
     document.body.appendChild(a);
     a.click();
-    a.remove();
+    setTimeout(() => a.remove(), 0);
   }
 
   async function file(inv) {
@@ -203,7 +210,7 @@ export default function Reports({ actor }) {
              will not render a PDF inside a sandboxed frame, and the
              Content-Security-Policy on the response does the same job. */
           <iframe className="doc-frame" title={`Invoice ${preview.invoice_number}`}
-                  src={api.invoicePdfUrl(preview.invoice_number)} />
+                  src={api.invoicePreviewUrl(preview.invoice_number)} />
         )}
       </Drawer>
     </div>

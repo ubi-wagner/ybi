@@ -469,7 +469,15 @@ export const api = {
      through JavaScript, same as the library. */
   invoicesToRender: (period = "") =>
     req(`/reports/invoices${period ? `?period=${period}` : ""}`),
+  /* Two URLs, because they are two jobs. The bare URL sends
+     `Content-Disposition: attachment` and saves; `?inline=1` sends `inline`
+     and renders in the preview frame. One URL served both and could only
+     carry one disposition — it sent `inline`, so every Download button
+     depended on the browser preferring the `download` attribute over the
+     server's own header, which is a thing browsers disagree about. */
   invoicePdfUrl: (id) => `/api/reports/invoice/${encodeURIComponent(id)}`,
+  invoicePreviewUrl: (id) =>
+    `/api/reports/invoice/${encodeURIComponent(id)}?inline=1`,
   fileInvoice: (id) =>
     req(`/reports/invoice/${encodeURIComponent(id)}/file`, { method: "POST" }),
   timesheetReportUrl: (period = "", employeeKey = "") => {
