@@ -1524,6 +1524,124 @@ run felt long because it ran three times.
 Both fixtures assert they read something, because four sweeps iterate the
 register and every one of them is satisfied by an empty list.
 
+## Everything after the rate is locked
+
+Walked end to end for the first time — certify, restate, report — on a clone
+with the rate locked and the carve-outs left carved out. Four defects, and
+two of them were on the page the controller was standing on.
+
+### Three invoices, 200 OK, and nothing on his machine
+
+`app/papers.py`, `tests/test_a_paper_reaches_the_person_who_asked.py`. He
+pressed Download on three invoices in sixteen seconds and got nothing. Every
+one answered **200 with an `EXPORT` row written**, so the server log said the
+system was working — the shape this file already calls the worst a fault can
+take.
+
+Four routes render a paper and all four sent `Content-Disposition: inline`,
+including the three behind a button reading Download. **The first hypothesis
+was that Chromium refuses the save outright, and measuring it in a browser
+said otherwise**: it honours the `download` attribute anyway. Reasoning
+rather than measuring would have been the sandbox-attribute mistake in a new
+place. What is true is weaker and is still the defect: **one URL was doing
+two jobs** — an `<iframe src>` that renders and an `<a download>` that saves
+— and a disposition can only be right for one of them. `as_pdf` decides,
+once, and **the default is the save**; `?inline=1` is the preview frame and
+nothing else, which is the split the library settled long ago.
+
+**And a literal route declared after a parameterised sibling never runs.**
+`GET /api/restate/reconciliation` reached
+`detail(restatement_id="reconciliation")` and answered **500** on
+`invalid input syntax for type uuid` — on every deployment since it was
+written. The route existed, `test_every_capability_has_a_door` saw it in the
+route table, the SPA had a button for it, and its tests called the assembly
+function directly, so nothing anywhere could see that the door was walled
+up. *Reachable is not capable*, one level further in: the path resolves and
+the wrong handler answers.
+`test_no_route_is_shadowed_by_a_parameterised_sibling` derives both sides
+from the running application and found exactly this one across 200 routes.
+
+Two smaller ones. `Reports.jsx` explains why the preview frame carries no
+`sandbox` attribute — *"the Content-Security-Policy on the response does the
+same job"* — and that response **carried no CSP at all**: a comment
+asserting a safety measure that is not there, which is worse than no comment
+because the next person reads it and stops looking. And `take()` removes its
+anchor on the next tick rather than the same one, because Chrome can cancel
+a download whose initiating element has already left the document.
+
+### One standing claim per objective
+
+Migration `133`. **The register carried two live positions for one award and
+every reader added them together.** Recomputing DRIVE-AM on the locked rate
+left the accepted $128,474.23 standing and wrote $136,534.61 beside it, so
+the acceptance form NCDMM signs asked for **$265,008.84** — a position plus
+its own replacement, on the one page that goes to a sponsor. The
+reconciliation printed eight awards where there are four and overran its
+page, which is that guard earning its keep on a cause it was not written
+for.
+
+`POST /api/restate` supersedes only a `PROPOSED` predecessor. That is right
+about the thing it protects — a position the sponsor has **accepted** must
+not be replaced silently — and it then writes the new row anyway, so the
+guard produces exactly the state it exists to prevent. **And the index that
+would have caught it was already there**: `(period, objective_id) WHERE
+status <> 'SUPERSEDED'`, on the right columns, written by somebody who had
+the shape in mind, one word short of the invariant.
+
+It is `one_live_decision_per_unit` in the last register that lacked it — a
+ledger line carries one live decision, one live explanation (`125`), a
+charge code one live manager. The predicate is the `STANDING` set the
+routers already read, and **REJECTED is deliberately not standing**: a
+sponsor saying no is the reason to measure again, and an index that blocked
+that would be a control nobody can clear by doing the work.
+
+**The repair leaves the later computation standing**, which is this system's
+model of change everywhere else, and erases nothing: a superseded row keeps
+its `decided_at` and its `modification_ref`, so *NCDMM accepted $320,427.12
+on 15 September* still reads and now carries a date rather than standing as
+a claim YBI would bill on.
+
+The handler refuses the collision in words, and **the way out is a door that
+did not exist**: `POST /{id}/status` takes `SUPERSEDED` with a required
+reason and `/restate` has a Withdraw button. Two conscious acts to replace
+something a sponsor has seen — `drive_recertify`'s rule, *the one act that
+takes something away from the person who made it is never automatic.*
+
+### A rehearsal is not a signature, and the walk was calling it one
+
+Migration `134`. The landing page the year is closed from read **"9 CERTIFY
+· DONE · Signed by Tom Metzinger on 01 Oct 2026"** over a certification
+whose `origin` is `REHEARSAL`.
+
+`122` exists for exactly this, gave the row the value that tells the two
+apart, and fixed the **six** places that composed their own sentence from
+`certified` and `certified_by`. The walk is the seventh. It is in SQL, which
+is why that sweep could not reach it — a view cannot call
+`certification_lines()` — and it is the worst one left: every paper `122`
+fixed says REHEARSAL on its face, and this is the screen that tells the
+controller the year is finished.
+
+**And the step reads OPEN rather than DONE.** A rehearsal is not a weaker
+kind of done: nothing resting on it may go to a sponsor, which is precisely
+the definition of outstanding. `086`, in the one step whose output is the
+whole landing page.
+
+### What the walk says afterwards
+
+Certify, four collisions refused, four withdrawn, four recomputed, nine
+papers, eleven exhibits: **10 of 11 steps done, 19 of 21 anchors tying**,
+and the two that do not are the two named to the cent since `103` — the
+asset register against the ledger's depreciation, and the invoice register
+against grant income. The one step still open is the citations: *0 of 363
+federally chargeable judgments cite a document.*
+
+**And six tests on `SETTLEMENT_2025.md` fail, correctly.** The memorandum
+states the positions it was written against and the record has moved past
+them. Regenerating it from a clone carrying a REHEARSAL signature is exactly
+what `122` forbids, so it stays stale and failing until a person locks the
+rate and recomputes — which is the test doing its job rather than a defect
+to patch.
+
 ## Will the next document break it?
 
 Migration `129`, `app/domain/document_shape.py`, `app/shapes.py`,
