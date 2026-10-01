@@ -1393,7 +1393,7 @@ still proposes 'SBA-ACCEL', which is not on the register"*, and the first
 attempt at that watch failed on the function signature instead — which proves
 nothing, and is worth not mistaking for a proof.
 
-## One page, three contracts, one signature
+## One page, every contract, one signature
 
 `app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,
 a card at the top of `/restate`, and a file in the publication set.
@@ -1446,6 +1446,92 @@ every text assertion passed over it.
 `test_no_two_columns_can_print_over_each_other` is the property: each money
 column must be at least as wide as the widest figure it could print. And the
 signature heading printed over its own sentence.
+
+### The page covered three of four, and the year is closed across all of them
+
+The instruction that found it: *"evaluate the existing invoices for those
+programs which reconcile with 2025 GL, apply the calculated rate against
+them to present to AM, which will result in a claim on some and a return on
+others — YBI and AM will work through those offsets at the organisational
+level such that they can close out 2025 on all contracts."*
+
+Both halves of that were things the page could not do.
+
+**It selected on the prime and the conversation is with the sponsor.**
+Digital Engineering is NCDMM-administered and primed through
+N00174-20-1-0031; the other three are AFRL FA8650-20-2-5700. The page
+filtered on the AFRL prime and named Digital Engineering as excluded —
+which was the careful answer when the page was three awards and is three
+quarters of a conversation on a paper presenting itself as the whole of
+it. **$325,052.11 of the $536,580.67 going back to NCDMM was on the award
+the page left off.** The unit is the **sponsor**, because that is who
+signs it and who the year is closed with; the prime is the unit of the
+*money*, and the page groups on that — two groups, a subtotal each, the
+prime named on every row, so a reader can settle one programme without the
+other and can see that the two are different money.
+
+**And it refused the offset the parties are actually making.** `061` took
+`net_movement` off `v_restatement` because *$120,000 to ask for and
+$120,000 to give back is not a quiet year*, and that still governs the
+**record**: the table prints both directions in full, award by award and
+prime by prime, and never nets. What the page was missing is the movement
+the year is closed **by**, which is a settlement mechanism rather than a
+reading of the register — the identical tension `SETTLEMENT_2025.md`
+already resolved, in its own words: *"the user asked for a single credit,
+which is a settlement mechanism rather than a reading of the record. So
+both directions are on the page in full first, the rule is written on the
+paper."* The single movement is in the ask, after them. An offset **within**
+a prime is arithmetic; an offset **across** two moves federal award funds
+between programmes, so the page states each prime's movement separately
+and asks for NCDMM's agreement in those words rather than quietly adding
+the columns up.
+
+    N00174-20-1-0031   1 award    325,052.11 to NCDMM
+    FA8650-20-2-5700   3 awards   211,528.56 to return · 36,590.16 to claim
+                                  174,938.40 to NCDMM
+    all four                      536,580.67 · 36,590.16 → 499,990.51
+
+**The one-page guard did its job and cost four prose cuts.** A fourth award,
+two groups and the settlement paragraph overran by 83pt, and the refusal is
+what forced the page to be read rather than extended. Three of the four cuts
+were duplications the guard surfaced: two awards carrying no change-of-basis
+clause printed *please name the instrument* **twice** — one sentence per
+fact, not one per award, which is the evidence screen's own lesson; the
+seal was a numbered ground *and* the provenance line under the rate it is
+about, so the ground went and its one extra clause joined the provenance;
+and a subtotal of a single-award group is that award printed twice. The
+group headings went too, with the prime moving onto the row it belongs to —
+a heading costs a line per group and says nothing the row cannot say for
+itself.
+
+**And one sentence had to change or the page would contradict itself.** The
+totals row read *"a single figure for the difference would hide both"* four
+inches above an ask giving exactly that figure. Both statements are true of
+different things — the register holds two directions, the parties settle by
+one movement — and the paper now says which is which.
+
+Three more found by *looking at the rendered page*, which is the only way
+any of them are found:
+
+- **The subtotal printed two of its four money columns**, leaving a hole
+  mid-row that reads as missing data rather than as a subtotal.
+- **The page was addressed to the wrong party.** `bill_to` took the sponsor
+  string off whichever award has the largest give-back, so a page covering
+  four awards was addressed *To: NCDMM / Energetics Technology Center* and
+  its signature block read *Accepted for NCDMM / Energetics Technology
+  Center* — true of one award and false of the page, which is the shape this
+  file keeps finding: a label that checks out and is about something else.
+  Where the awards agree it is what they say; where they differ it is the
+  sponsor they have in common.
+- **The reference line still read `America Makes · 2025`** under a masthead
+  naming two primes, and then read `NCDMM · 2025` under `To: NCDMM` — three
+  lines saying one thing. A reference is for a filing clerk to match on.
+
+**And the test for the prime could not fail for the thing it names.** It
+asked whether each prime appeared anywhere on the page, and passed with the
+row draw deleted, because the subtotal label and the ask both name them.
+Asserted by **count** now — at least once per row in its group — and
+watched failing. Fifth instance here, found the only way any of them are.
 
 ### A claim measured on a rate that no longer stands
 

@@ -845,6 +845,10 @@ def acceptance_form(award_id: str, period: str = "2025", inline: bool = False,
 #: silently dropped, because a page three-quarters complete with no note is
 #: worse than one that says which quarter is missing.
 _AM_PRIME = "FA8650-20-2-5700"
+#: Who is on the other side of the page. The unit is the **sponsor**,
+#: because that is who signs it and who the year is closed with; the prime
+#: is the unit of the *money*, and the page groups on that.
+_SPONSOR = "NCDMM"
 
 
 def _rate_lines(period: str, rate_id: str | None) -> tuple[RateLine, ...]:
@@ -879,6 +883,32 @@ def _rate_lines(period: str, rate_id: str | None) -> tuple[RateLine, ...]:
                  for r in rows)
 
 
+def _addressee(rows: list[dict]) -> str:
+    """Who the page is addressed to, where the awards name it differently."""
+    names = {(r.get("sponsor") or "").strip() for r in rows}
+    names.discard("")
+    return names.pop() if len(names) == 1 else _SPONSOR
+
+
+def _programme(rows: list[dict]) -> str:
+    """What sits under the masthead: the primes actually on the page.
+
+    `America Makes · prime FA8650-20-2-5700` was right when the page
+    carried one prime and is a false label on a page carrying two — the
+    kind that checks out and is about something else.
+    """
+    primes = []
+    for r in rows:
+        pa = (r.get("prime_agreement") or "").replace("AFRL ", "")
+        if pa and pa not in primes:
+            primes.append(pa)
+    if not primes:
+        return _SPONSOR
+    if len(primes) == 1 and primes[0] == _AM_PRIME:
+        return f"America Makes · prime {_AM_PRIME}"
+    return f"{_SPONSOR} · primes " + " and ".join(primes)
+
+
 def _reconciliation(period: str) -> Reconciliation:
     rows = query("""SELECT r.award_id, r.objective_id, r.invoices,
                            r.billed_total, r.direct_supported,
@@ -902,14 +932,22 @@ def _reconciliation(period: str) -> Reconciliation:
             f"is nothing to reconcile. POST /api/restate is what makes one, "
             f"and it is a judgment."))
 
-    ours = [r for r in rows if _AM_PRIME in (r.get("prime_agreement") or "")]
+    # Every award **this sponsor administers**, not every award under one
+    # prime. The first draft filtered on FA8650-20-2-5700 and left Digital
+    # Engineering off with a line saying so — three quarters of the
+    # conversation on a page presenting itself as the whole of it, when the
+    # entity on the other side of all four is NCDMM and the year is being
+    # closed across the relationship. The prime distinction is real and is
+    # kept where it belongs: the page groups on it and subtotals each, so a
+    # reader can settle one programme without the other.
+    ours = [r for r in rows if _SPONSOR in (r.get("sponsor") or "").upper()]
     others = [r for r in rows if r not in ours]
     if not ours:
         raise HTTPException(409, (
-            f"No standing restatement for {period} is on an award whose "
-            f"prime is {_AM_PRIME}, so there is no America Makes "
-            f"reconciliation to draw. {len(rows)} restatement(s) stand on "
-            f"other programmes and each is its own conversation."))
+            f"No standing restatement for {period} is on an award "
+            f"{_SPONSOR} administers, so there is no reconciliation to "
+            f"draw. {len(rows)} restatement(s) stand on other sponsors and "
+            f"each is its own conversation."))
 
     # Two of these three run against YBI, and the page raises the give-back
     # first — `AMERICA_MAKES_RESTATEMENT.md` records why: a page that led
@@ -927,6 +965,7 @@ def _reconciliation(period: str) -> Reconciliation:
                  indirect_billed=money(r["indirect_billed"] or 0),
                  to_return=money(r["over_collected"] or 0),
                  to_claim=money(r["under_recovered"] or 0),
+                 prime=(r.get("prime_agreement") or "").replace("AFRL ", ""),
                  status=r["status"],
                  accepted_on=(r["decided_at"].date()
                               if r.get("decided_at") and r["status"] == "ACCEPTED"
@@ -963,12 +1002,12 @@ def _reconciliation(period: str) -> Reconciliation:
 
     # Each ground is a statement the record can be asked to prove. "The rate
     # is reasonable" is an adjective and belongs on nobody's letterhead.
+    # The seal is **not** a ground, although it is the strongest thing on
+    # the page. It is printed under the rate, where the provenance line
+    # states it with the hash a reviewer ties to — and a page that said it
+    # twice would be saying one fact in two places, which is what most of
+    # this repository's defects are.
     grounds = [
-        "The classifications were sealed before any rate was computed and "
-        "the rate carries the seal, enforced by the database rather than by "
-        "assertion: a rate whose seal does not match a sealed set is "
-        "refused, and changing a classification afterwards requires an "
-        "unsealing with a written reason, which supersedes the rate.",
         "The fringe rate is anchored at both ends to source documents — the "
         "profit and loss's six fringe accounts over the payroll register's "
         "wages — so it falls out of the judgments rather than being asserted.",
@@ -982,21 +1021,21 @@ def _reconciliation(period: str) -> Reconciliation:
         grounds.append(
             f"Every pool reconciles to the general ledger — {pools.get('tie', 0)} "
             f"of {pools.get('n', 0)} build-up rows and {tied} of "
-            f"{len(anchors)} independent rate anchors tie — and the eleven "
-            f"cross-reference controls between the ledger, the profit and "
-            f"loss, the balance sheet and the payroll register must all tie "
-            f"before a rate can be computed at all.")
+            f"{len(anchors)} independent anchors tie — and the eleven "
+            f"controls between the ledger, the profit and loss, the balance "
+            f"sheet and the payroll register must all tie before a rate can "
+            f"be computed at all.")
     grounds.append(
         "The 200.465 carve-out removes the occupancy cost of let and vacant "
-        "space from the pool before any federal rate is taken, and 200.436(b) "
-        "removes depreciation on federally funded assets — recorded "
-        "adjustments with their citations, not estimates.")
+        "space before any federal rate is taken, and 200.436(b) removes "
+        "depreciation on federally funded assets — recorded adjustments "
+        "carrying their citations, not estimates.")
 
     cert = rate_certification(period) or {}
     return Reconciliation(
         period=period, issued_on=date.today(), remit_to=_YBI,
-        bill_to=Party(first.get("sponsor") or "NCDMM", _SPONSOR_ADDRESS),
-        programme=f"America Makes · prime {_AM_PRIME}",
+        bill_to=Party(_addressee(ours), _SPONSOR_ADDRESS),
+        programme=_programme(ours),
         contracts=contracts,
         rates=_rate_lines(period, first.get("rate_id")),
         basis=("Indirect is applied to modified total direct cost, as "
@@ -1037,7 +1076,7 @@ def _reconciliation(period: str) -> Reconciliation:
             for r in others),
         certified=bool(cert.get("certified")) and not cert.get("rehearsal"),
         certification_line=" ".join(certification_lines(cert)),
-        reference=f"America Makes · {period}")
+        reference=f"{period} close-out")
 
 
 def _stale_rate_warning(rows: list[dict]) -> tuple[str, ...]:

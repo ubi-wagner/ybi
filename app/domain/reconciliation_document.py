@@ -1,4 +1,4 @@
-"""One page, three contracts, and the two questions a sponsor answers on it.
+"""One page, every contract NCDMM administers, and one signature.
 
 `amendment_document.py` renders the two papers **one award** cannot travel
 without: why this invoice differs from the one NCDMM paid, and how to say
@@ -8,9 +8,9 @@ separate questions about three agreements; it is asking one question — *was
 the rate acceptable, and will you settle 2025 on it* — and a sponsor handed
 three memoranda has to work out that they are one ask, then sign three times.
 
-So: one page, the three America Makes awards on it, one signature.
+So: one page, every award NCDMM administers on it, one signature.
 
-Four things it does that a stack of three does not:
+Five things it does that a stack of memoranda does not:
 
   * **It puts the rate at the top, with what stands behind it.** The
     reconciliation is arithmetic once the rate is agreed, and the rate is the
@@ -26,13 +26,29 @@ Four things it does that a stack of three does not:
     and a page that led with the claim and mentioned the credits underneath
     would be read exactly once. `AMERICA_MAKES_RESTATEMENT.md` already does
     this in prose and records why: it is what makes the ask credible.
-  * **It says what it is not covering.** Digital Engineering is the fourth
-    America Makes-administered award and its prime is *not* America Makes —
+  * **It groups by prime rather than dropping what does not fit.** Digital
+    Engineering is NCDMM-administered and its prime is *not* America Makes:
     it flows from N00174-20-1-0031 through Energetics Technology Center and
-    NSWC Indian Head, where the other three flow from AFRL FA8650-20-2-5700.
-    Federal award funds are not fungible between programmes, so it is not on
-    this page; a page silently three-quarters complete is worse than one
-    that says which quarter is missing.
+    NSWC Indian Head, where the other three flow from AFRL
+    FA8650-20-2-5700. Federal award funds are not fungible between
+    programmes — but the entity on the other side of all four is the same
+    one, and YBI and NCDMM are closing 2025 across the relationship. The
+    first draft of this page left Digital Engineering off and named it as
+    excluded, which is three quarters of the conversation on a page
+    pretending to be the whole of it. It carries all four now, in two
+    groups with a subtotal each, so a reader can settle one programme
+    without the other and can see that the two are different money.
+  * **It offers the offset, and says it is a mechanism.** The year closes
+    in one movement rather than two cheques crossing, which is what the
+    parties are actually doing. `061` took `net_movement` off
+    `v_restatement` because a single figure hides both directions, and
+    that still governs the **record**: the table prints both in full,
+    award by award and prime by prime, and never nets. The single movement
+    is in the ask, *after* them — `SETTLEMENT_2025.md`'s rule, which
+    `test_both_directions_appear_before_any_aggregate` already holds for
+    the memorandum. An offset within a prime is arithmetic; an offset
+    across two is something NCDMM has to agree to, and the page asks for
+    it in those words instead of quietly adding the columns up.
 
 Everything is **passed in, read from the record by the caller**. The two
 rules that decide whether this paper can be trusted are the two that already
@@ -95,6 +111,12 @@ class Contract:
     #: three of these four, which is not a saving — it is the finding, and it
     #: is why the rebuild finds more was collected than the year supports.
     indirect_billed: Decimal = Decimal("0")
+    #: The prime agreement this award flows down from. Federal award funds
+    #: are not fungible between programmes, so two awards under different
+    #: primes are two pots of money however one sponsor administers them —
+    #: and the page says which is which rather than leaving a reader to
+    #: infer it from an award id.
+    prime: str = ""
     #: Where this award's restatement stands with the sponsor.
     status: str = "PROPOSED"
     #: When the sponsor answered, where they have.
@@ -184,6 +206,65 @@ class Reconciliation:
     @property
     def total_invoices(self) -> int:
         return sum(c.invoices for c in self.contracts)
+
+    # ── grouped by prime, because the money is ───────────────────────
+
+    @property
+    def by_prime(self) -> tuple[tuple[str, tuple[Contract, ...]], ...]:
+        """The contracts, grouped by the prime they flow down from.
+
+        One sponsor administers all of these and that is an administrative
+        fact, not a financial one: `N00174-20-1-0031` is Navy money through
+        Energetics Technology Center and the rest is AFRL
+        `FA8650-20-2-5700`, and an offset that crossed them would move
+        federal award funds between programmes. So the grouping is on the
+        page, with a subtotal each, and a reader can settle one group
+        without the other.
+
+        Groups are ordered by their own give-back, largest first, for the
+        same reason the rows are: a page that led with the claim is read
+        once. The order is a property of the figures rather than of a list
+        written here.
+        """
+        order: list[str] = []
+        groups: dict[str, list[Contract]] = {}
+        for c in self.contracts:
+            if c.prime not in groups:
+                groups[c.prime] = []
+                order.append(c.prime)
+            groups[c.prime].append(c)
+        order.sort(key=lambda p: -sum(c.to_return for c in groups[p]))
+        return tuple((p, tuple(groups[p])) for p in order)
+
+    @property
+    def multi_prime(self) -> bool:
+        return len(self.by_prime) > 1
+
+    # ── the settlement, which is a mechanism and not a reading ───────
+    #
+    # `061` took `net_movement` off `v_restatement` because *$120,000 to
+    # ask for and $120,000 to give back is not a quiet year*, and that is
+    # still true of the **record**: the register holds two directions and
+    # the table above prints both in full, award by award, never netted.
+    #
+    # What follows is a different thing wearing a similar shape. YBI and
+    # NCDMM are closing 2025 at the organisational level, which means the
+    # two directions are discharged against each other rather than by two
+    # cheques. That is a settlement mechanism the parties agree to, and a
+    # page that made a sponsor derive it themselves is a page that gets a
+    # telephone call. It is printed **after** both directions and never in
+    # place of them — `SETTLEMENT_2025.md`'s rule, which
+    # `test_both_directions_appear_before_any_aggregate` already holds for
+    # the memorandum.
+
+    def settles_to(self, contracts: tuple[Contract, ...]) -> Decimal:
+        """One movement, positive where YBI pays NCDMM."""
+        return money(sum((c.to_return - c.to_claim for c in contracts),
+                         Decimal("0")))
+
+    @property
+    def settlement(self) -> Decimal:
+        return self.settles_to(self.contracts)
 
     @property
     def standing(self) -> str:
@@ -365,7 +446,9 @@ def _rates(c, r: Reconciliation, y: float) -> float:
         provenance.append(
             f"{counted} — seal {r.seal_hash[:12]} — and the rate carries "
             f"that seal. A database trigger refuses a rate whose seal does "
-            f"not match a sealed set.")
+            f"not match a sealed set, and changing a classification "
+            f"afterwards takes an unsealing with a written reason, which "
+            f"supersedes the rate.")
     if provenance:
         y = _para(c, " ".join(provenance), y, size=7.6, colour=MUTED)
     return y - 6
@@ -434,7 +517,39 @@ def _row(c, t: Contract, y: float) -> float:
             if not t.indirect_billed
             else f"indirect billed {_fmt_money(t.indirect_billed)}")
     c.drawRightString(MARGIN + _TCOLS[6], y, note)
+    # Which pot of money this award is, on the award rather than in a
+    # heading over a block of them: a heading costs a line per group and
+    # says nothing the row cannot say for itself.
+    if t.prime:
+        c.drawRightString(PAGE_W - MARGIN, y, t.prime)
     return y - 11
+
+
+def _subtotal(c, prime: str, group: tuple[Contract, ...], y: float) -> float:
+    """What this prime comes to, in both directions and never netted here.
+
+    The single movement is in the ask below, after both directions have
+    been printed in full — a subtotal that netted on the way past would
+    put the aggregate above the figures it is an aggregate of.
+    """
+    _rule(c, y + 7, WIDTH)
+    ret = money(sum((t.to_return for t in group), Decimal("0")))
+    claim = money(sum((t.to_claim for t in group), Decimal("0")))
+    c.setFillColor(MUTED)
+    c.setFont("Helvetica-Bold", 7.6)
+    c.drawString(MARGIN + _TCOLS[0] + 6, y,
+                 f"{prime} · {len(group)} award"
+                 f"{'s' if len(group) != 1 else ''}")
+    for field, x in (("billed", _TCOLS[3]), ("direct_supported", _TCOLS[4]),
+                     ("indirect_supported", _TCOLS[5]),
+                     ("supported", _TCOLS[6])):
+        total = money(sum((getattr(t, field) for t in group), Decimal("0")))
+        c.drawRightString(MARGIN + x, y, _fmt_money(total))
+    c.setFillColor(WARN_INK if ret else MUTED)
+    c.drawRightString(MARGIN + _TCOLS[7], y, _fmt_money(ret) if ret else "—")
+    c.setFillColor(INK if claim else MUTED)
+    c.drawRightString(PAGE_W - MARGIN, y, _fmt_money(claim) if claim else "—")
+    return y - 12
 
 
 def _totals(c, r: Reconciliation, y: float) -> float:
@@ -456,11 +571,12 @@ def _totals(c, r: Reconciliation, y: float) -> float:
 
     y = _para(
         c,
-        "The two columns are not netted and do not add up. "
-        f"{_fmt_money(r.total_return)} is money YBI is returning to NCDMM and "
-        f"{_fmt_money(r.total_claim)} is money YBI is asking for; they are two "
-        "transactions in two directions and a single figure for the "
-        "difference would hide both.", y, size=7.6, colour=MUTED)
+        "The two columns are not netted here and do not add up. "
+        f"{_fmt_money(r.total_return)} is money YBI is returning and "
+        f"{_fmt_money(r.total_claim)} is money YBI is asking for — two "
+        "directions, each measured on its own award's invoices and its own "
+        "classified cost. The single movement they are settled by is "
+        "below, after both.", y, size=7.6, colour=MUTED)
     return y - 4
 
 
@@ -476,17 +592,35 @@ def _asks(c, r: Reconciliation, y: float) -> float:
     y = _section(c, ("What NCDMM accepted" if settled
                      else "What we are asking NCDMM to accept"), y)
     n = 0
+    # One sentence per fact, not one per award. Two of these four carry no
+    # change-of-basis clause at all, and two copies of *please name the
+    # instrument* is the defect the evidence screen already learned —
+    # thirty-two unread workbooks burying three real proposals. The awards
+    # are named rather than counted.
+    silent = [a for a, clause, citation in r.clauses if not citation]
     for award, clause, citation in r.clauses:
+        if not citation:
+            continue
         n += 1
         c.setFillColor(INK)
         c.setFont("Helvetica-Bold", 8.2)
         c.drawString(MARGIN, y, f"{n}.")
-        text = (f"{award} — the change of basis"
-                + (f" under {citation}" if citation else
-                   ", for which the executed agreement carries no clause; "
-                   "please name the instrument this is recorded against")
-                + (f". “{clause}”" if clause else "."))
-        y = _para(c, text, y, size=8.2, indent=14)
+        y = _para(c, (f"{award} — the change of basis under {citation}"
+                      + (f". “{clause}”" if clause else ".")),
+                  y, size=8.2, indent=14)
+        y -= 1
+    if silent:
+        n += 1
+        c.setFillColor(INK)
+        c.setFont("Helvetica-Bold", 8.2)
+        c.drawString(MARGIN, y, f"{n}.")
+        y = _para(c, (
+            f"{', '.join(silent)} — the change of basis, for which the "
+            f"executed agreement"
+            f"{'s carry' if len(silent) > 1 else ' carries'} no clause. "
+            f"Please name the instrument "
+            f"{'each' if len(silent) > 1 else 'it'} is recorded against."),
+            y, size=8.2, indent=14)
         y -= 1
     n += 1
     c.setFillColor(INK)
@@ -496,8 +630,39 @@ def _asks(c, r: Reconciliation, y: float) -> float:
         f"The true-up in the table above: {_fmt_money(r.total_return)} "
         f"{'returned' if settled else 'to return'} to NCDMM and "
         f"{_fmt_money(r.total_claim)} {'claimed' if settled else 'to claim'}, "
-        "award by award, each settled as its own transaction."),
-        y, size=8.2, indent=14)
+        "award by award, each measured on its own invoices and its own "
+        "classified cost."), y, size=8.2, indent=14)
+    y -= 1
+
+    # The offset, last, and only now — both directions are above it in
+    # full, award by award and prime by prime. It is what YBI and NCDMM
+    # are closing the year with rather than a reading of the register,
+    # and the paper says which it is.
+    n += 1
+    c.setFillColor(INK)
+    c.setFont("Helvetica-Bold", 8.2)
+    c.drawString(MARGIN, y, f"{n}.")
+    if r.multi_prime:
+        parts = ", ".join(
+            f"{_fmt_money(abs(r.settles_to(g)))} "
+            f"{'to NCDMM' if r.settles_to(g) >= 0 else 'to YBI'} "
+            f"under {prime}"
+            for prime, g in r.by_prime)
+        text = (
+            f"Discharging those against each other, so 2025 closes in one "
+            f"movement per programme: {parts}. Federal award funds are not "
+            f"fungible between programmes, so each may be settled on its "
+            f"own; taken together they come to "
+            f"{_fmt_money(abs(r.settlement))} "
+            f"{'to NCDMM' if r.settlement >= 0 else 'to YBI'}, which needs "
+            f"NCDMM's agreement that an offset may cross the two.")
+    else:
+        text = (
+            f"Discharging those against each other, so 2025 closes in one "
+            f"movement of {_fmt_money(abs(r.settlement))} "
+            f"{'to NCDMM' if r.settlement >= 0 else 'to YBI'} rather than "
+            f"two transfers in opposite directions.")
+    y = _para(c, text, y, size=8.2, indent=14)
     return y - 4
 
 
@@ -546,8 +711,8 @@ def _signature(c, r: Reconciliation, y: float) -> float:
         when = (f" on {_fmt_date(r.accepted_on)}" if r.accepted_on else "")
         y = _para(c, (
             f"{r.bill_to.name} accepted the rate stated above for the "
-            f"{r.period} period and the award-by-award true-up in the "
-            f"table{when}"
+            f"{r.period} period, the award-by-award true-up in the table "
+            f"and the single movement it is settled by{when}"
             + (f", recorded against {r.modification_reference}."
                if r.modification_reference else
                ". No written instrument is named on the record against this "
@@ -558,9 +723,10 @@ def _signature(c, r: Reconciliation, y: float) -> float:
 
     y = _para(c, (
         "Signing accepts the indirect cost rate stated above for the "
-        f"{r.period} period and the award-by-award true-up in the table, and "
-        "names the written instrument each change of basis is recorded "
-        "against."), y, size=7.6, colour=MUTED)
+        f"{r.period} period, the award-by-award true-up in the table and "
+        "the single movement it is settled by, and names the written "
+        "instrument each change of basis is recorded against."),
+        y, size=7.6, colour=MUTED)
     y -= 12
 
     half = (WIDTH - 24) / 2
@@ -599,8 +765,12 @@ def render_reconciliation(r: Reconciliation) -> bytes:
     y = _rates(c, r, y)
     y = _section(c, "The reconciliation", y)
     y = _table_head(c, y)
-    for t in r.contracts:
-        y = _row(c, t, y)
+    for prime, group in r.by_prime:
+        for t in group:
+            y = _row(c, t, y)
+        # A subtotal of one award is that award, printed twice.
+        if r.multi_prime and len(group) > 1:
+            y = _subtotal(c, prime, group, y)
     y = _totals(c, r, y)
     y = _grounds(c, r, y)
     y = _asks(c, r, y)

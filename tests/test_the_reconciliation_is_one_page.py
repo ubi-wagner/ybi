@@ -1,14 +1,17 @@
-"""One page, three contracts, and the two things it must never do.
+"""One page, every contract NCDMM administers, and what it must never do.
 
 `amendment_document.py` shipped the worst defect available to a paper that
 leaves the building: it summed the per-invoice lines and printed the sum as
 the ask, which on Drive AM is $254,808.06 *to claim* against a recorded
 position of $58,786.31 *to give back* — $313,000 apart and pointing the
-other way. This page carries three awards instead of one, so the same
-mistake is available three times over and a fourth way besides: netting the
-two directions into a single settlement figure, which is the one summary a
-reader would find natural and which `061` removed from `v_restatement` for
-exactly that reason.
+other way. This page carries every award instead of one, so the same
+mistake is available four times over and a fifth way besides: printing the
+single settlement figure *in place of* the two directions, which is the
+summary a reader would find natural and which `061` removed from
+`v_restatement` for exactly that reason. The movement the parties settle
+by is on the page now — they are closing 2025 across the relationship —
+and the rule that governs it is one of order: both directions in full
+first, the aggregate after, the paper saying which is which.
 
 So the assertions are about behaviour, not about source. Render the page,
 read it back with `pypdf`, and ask what is printed on it — because a
@@ -120,18 +123,109 @@ def test_both_directions_are_printed_in_full():
     assert "43,960.60" in text, "the money being claimed is not on the page"
 
 
-def test_the_difference_between_them_is_never_printed():
+def test_both_directions_are_printed_before_the_single_movement():
     """$201,421.30 to give back and $43,960.60 to claim is not a
-    $157,460.70 year. `061` took `net_movement` out of `v_restatement`
-    because a single figure hides both, and three awards on one page make
-    that single figure look like the natural summary."""
+    $157,460.70 year, and that is still what the **record** holds: `061`
+    took `net_movement` off `v_restatement` because a single figure hides
+    both directions.
+
+    What the page now also carries is the movement YBI and NCDMM close the
+    year **by**, which is a settlement mechanism rather than a reading of
+    the register — `SETTLEMENT_2025.md` resolved the identical tension and
+    its rule is the one held here: both directions in full first, the
+    aggregate after, and the paper saying which is which. A draft that
+    opened on the net would be the thing `061` refused.
+    """
     text, _ = _text(_page())
     net = Decimal("201421.30") - Decimal("43960.60")
-    assert f"{net:,.2f}" not in text, (
-        f"the page nets the two directions into {net:,.2f}")
-    assert f"{-net:,.2f}" not in text
+    assert f"{net:,.2f}" in text, "the single movement is not on the page"
+    assert text.index("201,421.30") < text.index(f"{net:,.2f}"), (
+        "the page prints the net before the money going back to NCDMM")
+    assert text.index("43,960.60") < text.index(f"{net:,.2f}"), (
+        "the page prints the net before the money being claimed")
     assert "not netted" in text.lower(), (
         "the page does not say the two columns are not meant to add up")
+    # Once, in the ask. A second occurrence means it has leaked into the
+    # table — a totals row or a subtotal quietly netting on the way past,
+    # which puts the aggregate above the figures it is an aggregate of.
+    assert text.count(f"{net:,.2f}") == 1, (
+        f"{net:,.2f} is printed {text.count(f'{net:,.2f}')} times; the "
+        f"single movement belongs in the ask and nowhere above it")
+
+
+def test_the_single_movement_is_the_two_directions_and_nothing_else():
+    """Derived from the columns, never recorded beside them.
+
+    A stored net is a third figure free to disagree with the two it came
+    from, which is what `rate.superseded_by` turned out to be.
+    """
+    r = _page()
+    assert r.settlement == r.total_return - r.total_claim
+
+
+# ── two primes are two pots of money ─────────────────────────────────
+
+def _two_primes() -> tuple[Contract, ...]:
+    """The three America Makes awards, and the one NCDMM primes elsewhere."""
+    three = tuple(
+        Contract(**{**c.__dict__, "prime": "FA8650-20-2-5700"})
+        for c in _contracts())
+    return (Contract("AM-ICAM-DIGENG", "DIG-ENG", "SRA-0350", 7,
+                     Decimal("579074.25"), Decimal("207398.87"),
+                     Decimal("51248.26"), Decimal("258647.13"),
+                     to_return=Decimal("320427.12"),
+                     prime="N00174-20-1-0031"),) + three
+
+
+def test_two_primes_are_two_groups_with_a_subtotal_each():
+    """Federal award funds are not fungible between programmes, so a reader
+    has to be able to settle one group without the other."""
+    r = _page(contracts=_two_primes(), excluded=())
+    assert r.multi_prime
+    primes = [p for p, _ in r.by_prime]
+    assert primes == ["N00174-20-1-0031", "FA8650-20-2-5700"], (
+        "the groups are not ordered with the larger give-back first")
+    text, _ = _text(r)
+    # the three-award group's subtotal, in both directions
+    assert "201,421.30" in text, "the FA8650 group's give-back is not shown"
+    assert "FA8650-20-2-5700 · 3 awards" in text
+
+
+def test_a_group_of_one_prints_no_subtotal_of_itself():
+    """A subtotal of one award is that award, printed twice."""
+    text, _ = _text(_page(contracts=_two_primes(), excluded=()))
+    assert "N00174-20-1-0031 · 1 award" not in text
+
+
+def test_an_offset_across_two_primes_says_it_needs_agreement():
+    """Within a prime an offset is arithmetic. Across two it is something
+    NCDMM has to agree to, and a page that quietly added the columns up
+    would be asking for that without saying so."""
+    r = _page(contracts=_two_primes(), excluded=())
+    text, _ = _text(r)
+    assert f"{r.settles_to(r.by_prime[0][1]):,.2f}" in text
+    assert f"{r.settles_to(r.by_prime[1][1]):,.2f}" in text
+    assert "not fungible between programmes" in text
+    assert "cross the two" in text
+
+
+def test_the_prime_is_named_on_every_row():
+    """Dropped from a heading onto the row it belongs to, because a reader
+    looking at one award should not have to scroll up to learn which
+    programme's money it is.
+
+    Asserted by **count** rather than by presence. The first spelling asked
+    whether each prime appeared anywhere on the page and passed with the
+    row draw deleted, because the subtotal label and the ask both name them
+    — the fifth instance here of a test that cannot fail for the thing it
+    names, found the only way any of them are.
+    """
+    r = _page(contracts=_two_primes(), excluded=())
+    text, _ = _text(r)
+    for prime, group in r.by_prime:
+        assert text.count(prime) >= len(group) + 1, (
+            f"{prime} is named {text.count(prime)} time(s) for "
+            f"{len(group)} award(s) — not once per row")
 
 
 def test_the_give_back_is_not_buried():
@@ -247,14 +341,14 @@ def test_the_page_prints_the_registers_own_positions():
                          coalesce(sum(r.under_recovered), 0) AS claim,
                          count(*) AS n
                     FROM v_restatement r
-                    LEFT JOIN award a USING (award_id)
                    WHERE r.period = '2025' AND r.status = ANY(%s)
-                     AND coalesce(a.prime_agreement, '')
-                         LIKE '%%FA8650-20-2-5700%%'""", (list(STANDING),))
+                     AND upper(coalesce(r.sponsor, '')) LIKE '%%NCDMM%%'""",
+               (list(STANDING),))
     if not held or not held["n"]:
-        pytest.skip("no America Makes restatement stands on this record")
+        pytest.skip("no NCDMM restatement stands on this record")
 
     r = _reconciliation("2025")
+    assert len(r.contracts) == held["n"]
     assert r.total_return == D(str(held["ret"]))
     assert r.total_claim == D(str(held["claim"]))
     assert len(r.contracts) == held["n"]
