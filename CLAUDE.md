@@ -1577,6 +1577,55 @@ rate was computed"* on a clone whose set had since been unsealed — `086` as
 a sentence rather than as a state, a count printed without asking whether
 there is one to print.
 
+### The restated invoice said the rate was certified, two lines above the band saying it was not
+
+**All forty-three restated invoices printed "the rate is certified" and
+"NOT CERTIFIED — The rate this is built on carries no signature" on the
+same face.** The first is a string literal in
+`scripts/restate_2025_invoices.py`; the second is the band
+`invoice_document.py` draws from `certified` / `certification_line`, which
+that script passed neither of, so it correctly defaulted to uncertified.
+
+`122` is the rule and this is the eighth place to break it: *there is one
+sentence-maker for the signature and it is `certification_lines()`.* The
+sweep written for it reads the renderers, and this is a **script** composing
+a caveat it hands to a renderer — one level out from where that test looks.
+It is also the worst face available for it: the restated invoices are the
+basis of the amendment NCDMM signs, so a reader reconciling them has a
+document arguing with itself about the one thing the amendment turns on.
+
+The literal asserted three facts and only one was about a signature, which
+is why it read as harmless. `standing_of_the_record()` derives the other
+two **as figures** — *the 2025 classification is 100.0% complete and
+sealed; the 200.465 facilities carve-out is evaluated against the estate on
+the record (5 building(s), 756,869.33)* — and says nothing about the
+signature at all, because the band already does and does it from the row.
+
+### The agreement number was on no restated invoice, and the field for it was dead
+
+`InvoiceDocument.award` has existed since the document was written and
+**nothing ever drew it**. On an invoice YBI issues that costs nothing — the
+sponsor raised the purchase order and knows the award. On a **restatement
+settled by an agreement amendment** it is the one reference a payables
+clerk matches to the agreement, and its absence is how a closeout stalls on
+somebody's desk. The face carried `PROJECT: LTM` and a purchase order and
+nothing naming the subrecipient agreement.
+
+**And the number the script held was wrong.** `CONTRACTS` carried
+`AM-LTM` as a literal where the register holds `AM-LTM-PROJ88` — found by
+checking the list against `award` rather than by reading it. It had never
+been visible, precisely because the field was dead: a wrong value in a
+column nothing renders, waiting for the day somebody renders it. The four
+transcriptions that genuinely are transcriptions stay written down — the
+contract's name, the project line, the people, the purchase order, all of
+them how the originals print — and `award_for()` reads the number off the
+register and **refuses** rather than printing a blank, because an invoice
+naming no agreement is one nobody can match.
+
+Both were found by rendering the paper and reading it back with `pypdf`,
+which is the only way any of these are found, and both were fixed in the
+hour the closeout path was being walked end to end.
+
 ### The rate that no migration superseded
 
 **22.48% does not reproduce.** The same sealed set, on the same record,
