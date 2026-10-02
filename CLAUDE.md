@@ -1537,8 +1537,11 @@ watched failing. Fifth instance here, found the only way any of them are.
 
 Migration `132`, and it is what building the page above turned up.
 **All four standing America Makes settlements were computed against
-INDIRECT_COMBINED at 24.71%, and that rate is SUPERSEDED** — `131` changed
-how the 200.465 carve-out is constructed and a recompute gives 22.48%.
+INDIRECT_COMBINED at 24.71%, and that rate is SUPERSEDED** — a recompute
+gives 22.48%. (That attribution was wrong when it was written: the
+recompute to 22.48% is Heidi's measured estate, not `131`. See **The rate
+that no migration superseded** below, which is what reading it again
+found.)
 Nothing anywhere said so: the restatements read ACCEPTED, the walk's step 10
 read DONE, the papers rendered cleanly, and the only sign of it on the whole
 record was `scripts/restate_2025_invoices.py` — which reads the *live* rate
@@ -1573,6 +1576,73 @@ counted. And the page printed *"The 0 classifications were sealed before any
 rate was computed"* on a clone whose set had since been unsealed — `086` as
 a sentence rather than as a state, a count printed without asking whether
 there is one to print.
+
+### The rate that no migration superseded
+
+**22.48% does not reproduce.** The same sealed set, on the same record,
+with the same measured estate, recomputed today gives **27.21%** — and
+nothing on the record says so, because nothing was superseded. The rate row
+is live, the seal matches the judgments, `v_rate_buildup` ties
+`rate.pool_amount` to `v_pool_balance.allocable` to the cent, and all four
+restatements name it. Every control is green over arithmetic the code no
+longer performs.
+
+Found by chasing something else, which is the only reason it was found at
+all: the question on the table was whether recording the six 200.331
+parties as direct 1099 contractors moves the base. It does not — with all
+six recorded the base is `4,736,602.11` to the cent, as it is with none —
+and the recompute that proved it came back at 27.21% instead of 22.48%.
+The control run, a clone with **nothing** changed, gives the same 27.21%
+twice.
+
+**The dates are the whole of it**, and they are on the record:
+
+    15 Sep 14:43   RATE_COMPUTE    24.71%   before the estate was measured
+    17 Sep 13:39   REQUEST_ACCEPT           Heidi's floor plan accepted
+    17 Sep 13:46   RATE_COMPUTE    22.48%   seven minutes later
+    29 Sep 20:32   migration 131            the carve-out rebuilt
+    02 Oct         RATE_COMPUTE    27.21%   the same seal, the same estate
+
+So 24.71% → 22.48% was **the measurement**, and `132`'s note attributing it
+to `131` was written on 29 Sep against a rate computed on 17 Sep: a figure
+that checks out and is about something else, in the section written to
+catch exactly that. `131` is still ahead of it and worth 4.73 points.
+
+**The arithmetic confirms the attribution rather than resting on the
+dates.** Write the pool as G = 1,497,879.12, the occupancy floor area
+drives as C = 1,316,602.97 and the federally funded depreciation as
+D = 261,988.65, at a let share s ≈ 0.505:
+
+    pre-131    G·(1−s) − D        = 479,461.52   against 479,021.14 recorded
+    post-131   G − C·s − D·(1−s)  = 703,310.24   against 703,000.52 recomputed
+
+Both within the per-building weighting. **22.48% is the pre-`131`
+construction on the measured estate; 27.21% is `131`'s correction of it** —
+carving only what floor area drives and scaling 200.436(b) by the share
+that stayed, which is what `131` says it is for. It runs *in YBI's favour*,
+which is the direction worth knowing before anybody treats it as a problem.
+
+**And the reference record carries the same rate**, computed 17 Sep,
+with `131` applied 29 Sep. So does every settlement figure published off
+it, including the reconciliation page this file describes two sections up.
+
+**What no control could see, and why.** `088` asks whether the *invoice
+population* moved under a claim. `132` asks whether the *rate* was
+superseded. Neither asks whether the **code that computed the rate** has
+moved, and that is a third thing: the row is live, so `rate_is_live` is
+true; the pools tie, because `carve_out` holds the figures that same
+computation wrote and both sides of the control are the old arithmetic.
+A control comparing a rate to its own pool cannot see that the pool was
+built by a construction nobody uses any more.
+
+The cheap honest answer is `088`'s `saw_*` pattern pointed at the schema
+rather than at a population: record the migration head on the rate row when
+it is computed, and report it beside the head in force. *This rate was
+computed under schema 130; the schema is 134* is a sentence a reader can
+act on, it is derived rather than hand-kept, and it needs no list of which
+migrations count — which is the list this file has been wrong about four
+times in one run. Recorded here rather than built, because it is a schema
+change and the figure it would flag is Tom's to recompute either way.
 
 ## The run happened three times, and the slow test was slow where CI never goes
 
