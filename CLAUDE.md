@@ -1714,6 +1714,35 @@ papers, the FAR appears **exactly once** in the four executed agreements —
 cost clause reaches YBI on any of them. That is what `056`'s text layer bought:
 a question about what the agreements say, answered by asking the agreements.
 
+**And the opening section is the one the amendment turns on.** Asked for an
+introduction showing that an organisation may move off the de minimis rate at
+any point and agree a new one with its prime, the answer is in two paragraphs
+of the regulation and both were read rather than recalled — `ecfr.gov` and
+`govinfo.gov` are both blocked by this environment's egress proxy, so the text
+came back through search and is quoted with the ellipsis where the sentences
+are not adjacent.
+
+**200.414(f)** ends the election on a condition that names only the recipient:
+*"Once elected, the recipient or subrecipient must use the de minimis rate for
+all Federal awards **until the recipient or subrecipient chooses to receive a
+negotiated rate**."* No term of years, no award cycle, no agency release.
+**200.332(a)(4)** then says who agrees the replacement: *"If no approved rate
+exists, a pass-through entity **must determine the appropriate rate in
+collaboration with the subrecipient**"*, and puts a rate negotiated between
+the two and the de minimis rate side by side as the options. So NCDMM is the
+party with the authority, and no cognizant-agency NICRA is a precondition.
+
+Three things the section is exact about rather than leaving to be challenged,
+because an amendment is read by somebody looking for the gap: the floor on
+these four awards is **10%, not 15%** (the rise applies to awards issued on or
+after 1 Oct 2024 and all four predate it, LTM by nine days); the election ends
+for **all** federal awards at once, which with `200.403(d)` is why the
+settlement runs in both directions rather than award by award; and **nothing
+in 200.414(f) speaks to a year already invoiced in either direction** — what
+makes 2025 settleable is the instrument, being cost reimbursement with a §4.4
+change-of-basis clause, and `200.344`–`200.345`. That last bullet is the
+section's own counter-argument, which is the half a reader checks.
+
 The citation list is derived the same way — `carve_out.citation`,
 `award_term.citation`, and every `200.xxx` literal in `app/` and `scripts/` —
 rather than composed from general knowledge, so each row carries the figure it
