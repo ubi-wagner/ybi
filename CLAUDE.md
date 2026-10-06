@@ -1693,6 +1693,39 @@ migrations count — which is the list this file has been wrong about four
 times in one run. Recorded here rather than built, because it is a schema
 change and the figure it would flag is Tom's to recompute either way.
 
+## The FAR does not bind here, and the record says so once
+
+`docs/REGULATORY_BASIS_2025.md`. Asked for the applicable FAR and 2 CFR 200,
+the honest first move is to test the premise rather than list parts: FAR Part
+31 binds a **procurement contract**, and all four America Makes awards are
+**subawards under federal assistance** — three from AFRL cooperative agreement
+FA8650-20-2-5700, Digital Engineering from Navy grant N00174-20-1-0031 through
+Energetics Technology Center, every one cost reimbursement with no fee. So
+2 CFR 200 Subpart E governs and FAR 31 does not apply of its own force. Two
+agreements say it in as many words at §4.2; Digital Engineering's Attachment 2
+flow-down adds **2 CFR 1103**, DoD's interim implementation, which nothing in
+this file had recorded.
+
+**Measured rather than asserted**, which is the only reason it is worth
+writing down: searching `evidence.extracted_text` across all twenty-four
+papers, the FAR appears **exactly once** in the four executed agreements —
+**48 CFR 27.401**, the definition of *data*, inside the Data Rights clause
+§1.10 of Hybrid Phase 2 and Last Tactical Mile. No FAR 31, no CAS, no 52.2xx
+cost clause reaches YBI on any of them. That is what `056`'s text layer bought:
+a question about what the agreements say, answered by asking the agreements.
+
+The citation list is derived the same way — `carve_out.citation`,
+`award_term.citation`, and every `200.xxx` literal in `app/` and `scripts/` —
+rather than composed from general knowledge, so each row carries the figure it
+moves on this record: 200.465 at $756,869.33, 200.436(b) at $261,988.65,
+200.331 at $313,605.35 open across six parties, 200.430(i) at $1,835,047.17
+with nobody signed.
+
+**And the memo states the rate structure with its own staleness on it.** The
+rows are 17 Sep and predate `131`; the same sealed set now recomputes to
+27.21%. A regulatory memo printing 22.48% as *the* rate would be the overtaken
+claim shape in the one document whose job is to say what the rules are.
+
 ## The run happened three times, and the slow test was slow where CI never goes
 
 `.dockerignore`, `on: { push: { branches: [main] }, pull_request: }`, and a
