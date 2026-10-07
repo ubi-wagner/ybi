@@ -1848,6 +1848,81 @@ rows rather than being composed here. The figures are the 15 September
 positions, and recomputing is Tom's act — the script reads and renders and
 writes nothing to the cost record.
 
+### Every liberal reading tested runs against YBI
+
+`scripts/liberal_rate.py`. The instruction was *"it is a negotiated rate —
+let's be liberal to YBI for this and future ones"*, and
+**200.332(a)(4) does give YBI that latitude**: the pass-through determines
+the rate *in collaboration with* the subrecipient, so the judgments inside
+it are genuinely YBI's. There are only two of them worth anything on 2025 —
+which floor area is let (200.465) and which parties are subrecipients
+(200.331) — and **both of them cost YBI money.** That is the finding, and it
+is the one thing nobody would have guessed.
+
+    reading                 rate raw       credit  rate kept   net to NCDMM
+      as the record stands    27.21%         0.00     27.21%     137,866.88
+      the America Makes building
+                              29.11%   108,000.00     26.83%     140,845.14
+      the incubator suites    30.44%   183,548.41     26.57%     142,882.90
+      both legs               32.35%   291,548.41     26.19%     145,861.16
+      the six parties as subrecipients
+                              29.14%            —          —     169,240.86
+
+**Moving space out of "let" raises the raw rate and the rent it brings with
+it is worth more.** Reading the America Makes building and the incubator
+suites as programme space takes the overhead rate up 5.14 points — and the
+$291,548.41 of rent those tenants pay then becomes an **applicable credit**
+under 200.406, because floor area whose cost stays in the federal pool and
+which somebody pays for cannot be charged twice. The credit is worth 6.16
+points. Net **−1.02 points**, and the settlement gets $7,994.28 worse.
+`rate_headroom.py` already priced the client-space leg at *+2.72 with the
+rent credited and +6.75 without*; what it did not do is carry the credited
+figure through to the settlement, where the sign flips.
+
+**And a subrecipient determination shrinks the award's own base faster than
+it raises the rate.** All six parties read SUBRECIPIENT takes the combined
+rate 27.21% → 29.14%, which sounds like the liberal answer — and the
+$313,605.35 of excess over the 200.1 cap leaves each award's *own* direct
+cost as well as the estate-wide MTDC, so `direct × (1 + rate)` falls on
+every one of the three. The net goes to $169,240.86, worse than the
+$157,460.70 at the 24.71% the restatements actually name.
+
+**The two legs are measured differently, and the script asserts the
+difference rather than assuming it.** A carve-out moves the pool and no
+award's own direct cost, so a tenancy leg's settlement is arithmetic on a
+`direct_supported` that must hold still — and the run **checks that it did**
+across all four readings, because an arithmetic net over a direct figure
+that had moved would be measuring two things at once. The 200.331 leg goes
+through `POST /api/restate` for exactly the reason the assertion exists.
+
+**Three judgments stay out of reach however the rate is negotiated**, and
+the script holds all three rather than offering them: 200.406 on the rent,
+200.465 and `unit_market_needs_basis` on a charged tenancy called programme
+space (the scenario supplies a placeholder and **says it is one** — the real
+move names the agreement), and 200.403(d), so a reading adopted for one
+award is adopted for all of them. The six determinations carry
+`SCENARIO … and not a determination` in the basis, because which of
+200.331's five tests carries each party is a judgment with a person's name
+on it.
+
+**What the rate cannot reach at all: these three cross zero at 44.80%
+combined** — Drive AM at 60.25%, Hybrid at 104.18%, LTM at 11.41% — above
+anything this record has ever produced. The highest figure in the file is
+43.99%, the uncarved POOL basis, and at that the net is $6,353.11 to NCDMM:
+near level and never across. So **the rate is not the lever on 2025; the
+attribution of cost to each award is.** Drive AM is $93,890.37 and Hybrid
+$55,539.95 short of what was billed, and $103,018.39 / $256,937.79 /
+$58,493.36 of direct cost closes the three give-backs outright. Nothing
+here proposes moving cost onto an award to reduce one — that is the rate
+reverse-engineered by another route. The question is whether the cost record
+is complete, and it is answered by going and looking.
+
+Priced on a clone built from the reference record, the engine computing
+every figure, **the record untouched** — `ybi_lib` was dropped afterwards.
+Each leg restores the estate before the next one, so the four tenancy
+readings are four measurements and not a cumulative drift.
+
+
 ## The run happened three times, and the slow test was slow where CI never goes
 
 `.dockerignore`, `on: { push: { branches: [main] }, pull_request: }`, and a
