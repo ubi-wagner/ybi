@@ -1755,6 +1755,99 @@ rows are 17 Sep and predate `131`; the same sealed set now recomputes to
 27.21%. A regulatory memo printing 22.48% as *the* rate would be the overtaken
 claim shape in the one document whose job is to say what the rules are.
 
+## One page the sponsor signs, and two pages saying what they are signing
+
+`app/domain/settlement_document.py`, `scripts/settlement_papers.py`,
+`docs/settlement-2025/`. A two-page memorandum of understanding and a
+one-page **Collaborative Agreement Amendment** covering only the three
+awards primed through AFRL **FA8650-20-2-5700** — Drive AM, Hybrid Phase 2
+and Last Tactical Mile — with what each was billed for 2025, what the
+restated rate supports, the over and the under, and a mutual waiver of the
+net.
+
+    award                  billed       restated    to return    to claim
+    Drive AM           579,240.87     450,766.64   128,474.23           —
+    Hybrid Phase 2     187,416.05     114,468.98    72,947.07           —
+    Last Tactical Mile 368,222.24     412,182.84            —   43,960.60
+    all three        1,134,879.16     977,418.46   201,421.30   43,960.60
+    net declared unrecoverable: 157,460.70, running to NCDMM
+
+**The defect this module is built around is that the record says the
+sponsor already agreed.** All four standing restatements read
+`status = 'ACCEPTED'` with the note *"Accepted by NCDMM on the acceptance
+form returned with the amendment memorandum"*, written at 15 Sep 14:43 by
+`drive_the_close.py --rehearsal`, and **NCDMM has accepted nothing.**
+`amendment_document.py::standing_band()` reads that status and is right for
+the papers it was written for; called from here it would print the
+sponsor's agreement onto the document whose entire purpose is to obtain it.
+That is `122` in the fourth place it has been available, and the fence is a
+property rather than a promise: `no_paper_here_claims_an_acceptance()`, held
+against both rendered papers, and a FOR SIGNATURE band in place of a
+standing one. The script says the rows are rehearsal residue rather than
+rendering over them quietly.
+
+**Three more came out of reading the rendered page, which is the only way
+any of them are found:**
+
+- **A count printed as a finding.** The memorandum opened *"of the 3
+  projects covered here, three carried no indirect line at all"* — and Last
+  Tactical Mile billed **$44,400.00** of it. `without_an_indirect_line`
+  reads `indirect_billed` off the row now and names what the others did
+  bill, because saying only how many did not invites the reader to assume
+  the rest billed at the elected rate. `086` on a paper going to a sponsor.
+- **Three right figures that do not foot.** Overhead is 12.35% and G&A
+  12.37%, each its own pool over the base rounded to four places; the
+  combined rate is 24.71%, which is the *combined pool* over the same base.
+  12.35 + 12.37 is 24.72. Every one of the three is correct and printing
+  them together puts an apparent arithmetic error on an instrument a
+  sponsor's analyst will add up — `069`'s largest-remainder lesson in a
+  presentation rather than in a view. The papers print the **pools**, which
+  add exactly, and `__post_init__` refuses a set whose pools do not.
+- **The instrument's own name ran into the organisation's.**
+  "COLLABORATIVE AGREEMENT AMENDMENT" is 330.8pt at 15pt against 320.9pt of
+  room beside the masthead. `_title_size()` sizes it to the space and
+  refuses below 12pt rather than overlapping, which is
+  `test_no_two_columns_can_print_over_each_other` pointed at a heading.
+
+And two of geometry, both the reconciliation page's own defects one document
+along: **the subtitle was clipped by the band under it** — the descenders of
+*"recovery"* and *"year-end"* cut by the FOR SIGNATURE rectangle, which is
+*the signature heading printed over its own sentence* exactly; and **the
+mutual-waiver box was a fixed 48pt over text whose line count it had never
+measured**, so a fourth award would have clipped the clause the whole
+instrument turns on. It derives its height from the wrapped sentence now.
+
+**One prime per instrument, and the register spells it two ways.** Federal
+award funds are not fungible between programmes, so `SettlementPapers`
+refuses a mixed set rather than leaving the caller to remember — and
+`award.prime_agreement` holds `FA8650-20-2-5700` on two of the three and
+`AFRL FA8650-20-2-5700` on Hybrid, so equality on the string would report
+one programme as two and refuse a legitimate set. `_prime_key()` is *never
+join on a name that can repeat* where no key exists. The Navy-primed
+Digital Engineering award — $320,427.12, the largest single correction in
+the file — is excluded by construction and a test asserts it is not on the
+page.
+
+### A mutation that does not express the defect proves nothing
+
+Six mutants were run against the renderer and five were caught at once. The
+sixth — *print the net before both directions* — **passed**, and the test
+was right: the mutant injected the net paragraph after `_amend_total`,
+which is still after both columns. It expressed nothing. Re-aimed above
+`_amend_heads` it failed on the line it names. This file already records
+the shape — *the first attempt at that watch failed on the function
+signature instead, which proves nothing* — and it is worth the second
+reading every time, because a green mutation run is indistinguishable from
+a real one until you read what you actually changed.
+
+**The papers carry their own staleness**, per `082` and `132`: the rate the
+positions were measured on is 24.71% and the record now carries it as
+SUPERSEDED, so a notice says so **above** the figures; and nobody has signed
+the rate, so `certification_lines()` prints NOT CERTIFIED. Both come off
+rows rather than being composed here. The figures are the 15 September
+positions, and recomputing is Tom's act — the script reads and renders and
+writes nothing to the cost record.
+
 ## The run happened three times, and the slow test was slow where CI never goes
 
 `.dockerignore`, `on: { push: { branches: [main] }, pull_request: }`, and a
