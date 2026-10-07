@@ -335,6 +335,12 @@ export const api = {
     `/api/restate/award/${encodeURIComponent(awardId)}/memo?period=${period}`,
   acceptanceFormUrl: (awardId, period = "2025") =>
     `/api/restate/award/${encodeURIComponent(awardId)}/acceptance?period=${period}`,
+  // The three America Makes contracts on one page, for one signature. Per
+  // period rather than per award: the memorandum and the form are the right
+  // unit for a change of basis and the wrong one for the conversation, and a
+  // sponsor handed three of each has to work out that they are one ask.
+  reconciliationUrl: (period = "2025") =>
+    `/api/restate/reconciliation?period=${period}`,
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   // The rate itself. `POST /api/rates/compute` was complete on the server and
@@ -463,7 +469,15 @@ export const api = {
      through JavaScript, same as the library. */
   invoicesToRender: (period = "") =>
     req(`/reports/invoices${period ? `?period=${period}` : ""}`),
+  /* Two URLs, because they are two jobs. The bare URL sends
+     `Content-Disposition: attachment` and saves; `?inline=1` sends `inline`
+     and renders in the preview frame. One URL served both and could only
+     carry one disposition — it sent `inline`, so every Download button
+     depended on the browser preferring the `download` attribute over the
+     server's own header, which is a thing browsers disagree about. */
   invoicePdfUrl: (id) => `/api/reports/invoice/${encodeURIComponent(id)}`,
+  invoicePreviewUrl: (id) =>
+    `/api/reports/invoice/${encodeURIComponent(id)}?inline=1`,
   fileInvoice: (id) =>
     req(`/reports/invoice/${encodeURIComponent(id)}/file`, { method: "POST" }),
   timesheetReportUrl: (period = "", employeeKey = "") => {

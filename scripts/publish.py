@@ -166,6 +166,37 @@ def walk_caveats() -> list[str]:
 
 # ── the amendment papers, per award ──────────────────────────────────
 
+def contract_reconciliation(c, out_dir: Path, caveats: list[str]) -> None:
+    """The three America Makes contracts on one page, for one signature.
+
+    The memorandum and the acceptance form are per award, which is the right
+    unit for a change of basis and the wrong one for the conversation: a
+    sponsor handed three of each has to work out that they are one ask. This
+    is the page that asks it once — the rate at the top, both directions in
+    their own columns underneath, and one signature block.
+
+    Fetched from the route, like everything else here.
+    """
+    if not fetch(c, f"/api/restate/reconciliation?period={PERIOD}",
+                 out_dir / f"contract-reconciliation-{PERIOD}.pdf",
+                 "the America Makes contracts reconciled on one page — the "
+                 "rate, both directions of the true-up, and one signature",
+                 caveats):
+        return
+    other = query("""SELECT r.objective_id, a.prime_agreement
+                       FROM v_restatement r
+                       LEFT JOIN award a USING (award_id)
+                      WHERE r.period = %s AND r.status = ANY(%s)
+                        AND coalesce(a.prime_agreement, '')
+                            NOT LIKE %s""",
+                  (PERIOD, list(STANDING), "%FA8650-20-2-5700%"))
+    for row in other:
+        note(f"{row['objective_id']} is not on the reconciliation: its prime "
+             f"is {row['prime_agreement'] or 'not recorded'}, and federal "
+             f"award funds are not fungible between programmes. It is named "
+             f"on the page as excluded rather than dropped.")
+
+
 def amendment_papers(c, out_dir: Path, caveats: list[str]) -> None:
     """One memo and one form per award that has a standing restatement.
 
@@ -345,6 +376,9 @@ def main() -> int:
 
     head("The papers that go with them")
     amendment_papers(c, out_dir, caveats)
+
+    head("The settlement, on one page")
+    contract_reconciliation(c, out_dir, caveats)
 
     head("The manifest")
     manifest = {

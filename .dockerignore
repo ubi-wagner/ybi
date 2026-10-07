@@ -1,0 +1,35 @@
+# What the image does not need, and what it costs to send anyway.
+#
+# There is no .dockerignore and the build context carried `.git` (250MB) and
+# `web/node_modules` (49MB) on every deploy — uploaded, then discarded. The
+# second is worse than waste: the web stage installs its own dependencies and
+# then `COPY web/ ./` writes the host's tree over them, so whatever was on the
+# build machine decided what the image was built against.
+#
+# `docs/` ships on purpose — `077` records why: the scripts were in the
+# container and the eighteen documents they file were not. What does not ship
+# is 47MB of *pictures of this system*: the screen sweeps, the UI drive and
+# the manual's own screenshots, which no script in the image reads. The
+# manual's pictures are served from `web/public/help`, which is inside
+# `web/dist`, so the guidebook in the deployment is unaffected. They stay in
+# the repository, where the reviews that produced them are read.
+#
+# `docs/runbook-walk/` deliberately stays: `runbook_guidebook.py` and
+# `monday_anchor.py` ship in the image and read it, and a script in the
+# container with nothing to read is the defect `077` is named after.
+
+.git
+.gitignore
+**/node_modules
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.venv
+intake/
+storage/
+web/dist
+
+docs/ui-sweep/
+docs/screenshots/
+docs/screen-sweep/
+docs/audit-ui/

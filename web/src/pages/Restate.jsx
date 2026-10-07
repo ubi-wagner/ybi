@@ -156,6 +156,34 @@ export default function Restate({ actor }) {
         )}
       </Card>
 
+      {/* One page, every America Makes contract that has a standing
+          restatement, one signature. The memorandum and the acceptance form
+          are per award and live inside each proposal below; this is the page
+          that asks the question once — the rate at the top, both directions
+          in their own columns underneath. Offered to anybody who may read
+          the record, like the other two papers: rendering it asserts nothing
+          that was not recorded when the restatements were computed, and the
+          band says where each stands. */}
+      {rows.length > 0 && (
+        <Card variant="quiet" title="The settlement, on one page"
+              aside="What NCDMM signs once"
+              style={{ marginTop: 14 }}>
+          <div className="rowsub wrap" style={{ marginBottom: 10 }}>
+            The rate and what stands behind it, then every America Makes
+            contract with what was billed, what the year supports, and the
+            true-up in the direction it runs. The two directions are in their
+            own columns and are never netted. An award primed elsewhere is
+            named on the page as excluded rather than dropped.
+          </div>
+          <div className="btn-row">
+            <a className="btn" download
+               href={api.reconciliationUrl(rows[0].period)}>
+              Contract reconciliation (.pdf)
+            </a>
+          </div>
+        </Card>
+      )}
+
       <Card title="Proposals" aside={`${rows.length} on the record`}
             style={{ marginTop: 14 }}>
         {rows.length === 0 ? (
@@ -180,6 +208,7 @@ export default function Restate({ actor }) {
                 {r.invoices} invoice(s) · rate {(Number(r.rate_applied) * 100).toFixed(2)}%
               </span>
             </div>
+            <OnADeadRate r={r} />
             <Overtaken r={r} />
             <Movement r={r} />
           </div>
@@ -234,6 +263,28 @@ export default function Restate({ actor }) {
    Never shown on a SUPERSEDED row. A superseded restatement is history and
    is *supposed* to disagree; flagging it would be the sweep that cries wolf,
    and the next real one the reader dismisses. */
+/* A restatement rests on two things: the invoices it measured and the rate
+   it measured them on. `Overtaken` is the first. This is the second, and it
+   is the worse half — a changed population moves which invoices a claim
+   covers, and a changed rate moves every figure on it. Nothing on this
+   screen said so until 132, while four settlements sat here reading ACCEPTED
+   against a rate a recompute had superseded. */
+function OnADeadRate({ r }) {
+  if (r.status === "SUPERSEDED" || r.rate_is_live !== false) return null;
+  return (
+    <div className="gate bad" style={{ margin: "8px 0" }}>
+      <strong>Measured on a rate that no longer stands.</strong>{" "}
+      <span className="rowsub wrap">
+        This was computed against {(Number(r.rate_applied) * 100).toFixed(2)}%{" "}
+        {r.rate_kind}, which is now {r.rate_status}. Every figure on it is
+        against arithmetic the record has moved past. Measure it again before
+        anything goes to a sponsor — recomputing supersedes this rather than
+        editing it, so the position taken today stays on the record.
+      </span>
+    </div>
+  );
+}
+
 function Overtaken({ r }) {
   if (r.status === "SUPERSEDED" || r.still_agrees !== false) return null;
   return (
@@ -354,11 +405,15 @@ function Detail({ d, canWrite, toast, onChange }) {
           record; the form keeps both directions apart and is what they sign.
         </div>
         <div className="btn-row">
-          <a className="btn" target="_blank" rel="noreferrer"
+          {/* Saves rather than opening a tab. These go to NCDMM, so the
+              thing wanted is a file; and `target="_blank"` against an
+              `attachment` response leaves a blank tab behind on some
+              browsers and nothing at all on others. */}
+          <a className="btn" download
              href={api.amendmentMemoUrl(r.award_id, r.period)}>
             Amendment memorandum (.pdf)
           </a>
-          <a className="btn" target="_blank" rel="noreferrer"
+          <a className="btn" download
              href={api.acceptanceFormUrl(r.award_id, r.period)}>
             Acceptance form (.pdf)
           </a>
@@ -378,7 +433,7 @@ function Detail({ d, canWrite, toast, onChange }) {
           {r.decided_note && <div className="wrap">{r.decided_note}</div>}
         </div>
         {canWrite && r.status !== "SUPERSEDED" && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["SUBMITTED", "ACCEPTED", "REJECTED"]
               .filter((s) => s !== r.status)
               .map((s) => (
@@ -388,6 +443,20 @@ function Detail({ d, canWrite, toast, onChange }) {
                     : s === "ACCEPTED" ? "Accepted in writing" : "Rejected"}
                 </button>
               ))}
+            {/* The second of the two acts it takes to replace a position the
+                sponsor has seen. Measuring again is refused while this one
+                stands — one objective carries one claim YBI would bill on —
+                and taking something back is not done on anybody's behalf,
+                so it is a button with a reason behind it rather than a
+                silent consequence of pressing Measure. Offered only where
+                there is something to withdraw: a PROPOSED position is
+                superseded by recomputing, which is not taking anything back
+                from anyone. */}
+            {["SUBMITTED", "ACCEPTED"].includes(r.status) && (
+              <button className="sm ghost" onClick={() => setDeciding("SUPERSEDED")}>
+                Withdraw this position
+              </button>
+            )}
           </div>
         )}
       </Card>
@@ -395,15 +464,21 @@ function Detail({ d, canWrite, toast, onChange }) {
       <Drawer open={!!deciding} onClose={() => setDeciding(null)}
               title={deciding === "ACCEPTED" ? "Accepted in writing"
                      : deciding === "SUBMITTED" ? "Send it to the sponsor"
+                     : deciding === "SUPERSEDED" ? "Withdraw this position"
                      : "Rejected"}
               subtitle={deciding === "ACCEPTED"
                 ? "Which modification authorised the change of basis"
+                : deciding === "SUPERSEDED"
+                ? "It stays on the record with its dates — what changed?"
                 : "What happened, for the record"}>
         {deciding && (
           <DecideForm status={deciding} onDone={async (body) => {
             try {
               await api.restateStatus(r.restatement_id, { status: deciding, ...body });
-              toast.ok(`Moved to ${deciding.toLowerCase()}`);
+              toast.ok(deciding === "SUPERSEDED"
+                ? "Withdrawn. It stays on the record, and the objective is "
+                  + "free to be measured again."
+                : `Moved to ${deciding.toLowerCase()}`);
               setDeciding(null);
               onChange();
             } catch (e) { toast.fail(explain(e)); }
@@ -453,6 +528,7 @@ function DecideForm({ status, onDone }) {
   const [ref, setRef] = useState("");
   const [note, setNote] = useState("");
   const needsRef = status === "ACCEPTED";
+  const needsReason = status === "SUPERSEDED";
   return (
     <>
       {needsRef && (
@@ -468,14 +544,25 @@ function DecideForm({ status, onDone }) {
           </div>
         </>
       )}
-      <Field label="What happened">
+      {/* A withdrawal is the only one of these that takes something back,
+          so its reason is required and the server refuses a short one. The
+          form says so rather than letting the button answer 422 — the gate
+          and the screen read the same rule. */}
+      <Field label={needsReason ? "Why it no longer stands" : "What happened"}
+             required={needsReason}
+             hint={needsReason
+               ? "Twenty characters or more. It stays on the record beside "
+                 + "the position, which keeps its dates."
+               : ""}>
         <textarea rows={3} value={note}
                   onChange={(e) => setNote(e.target.value)} />
       </Field>
       <div style={{ marginTop: 12 }}>
-        <button className="primary" disabled={needsRef && !ref.trim()}
+        <button className="primary"
+                disabled={(needsRef && !ref.trim())
+                          || (needsReason && note.trim().length < 20)}
                 onClick={() => onDone({ modification_ref: ref.trim(), note })}>
-          Record it
+          {needsReason ? "Withdraw it" : "Record it"}
         </button>
       </div>
     </>

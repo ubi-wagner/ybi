@@ -267,6 +267,8 @@ def _parties(c, doc: InvoiceDocument, y: float) -> float:
                       f"{_fmt_date(doc.service_from)} – {_fmt_date(doc.service_to)}"))
     if doc.objective:
         facts.append(("PROJECT", doc.objective))
+    if doc.award:
+        facts.append(("AGREEMENT", doc.award))
 
     fy = y
     label_x = MARGIN + 3.55 * inch

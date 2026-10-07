@@ -39,7 +39,11 @@ from app.statelock import turn
 from app.domain.audit_package import certification_lines
 from app.domain.amendment_document import (AmendmentPapers, Movement,
                                            render_acceptance, render_memo)
+from app.domain.reconciliation_document import (Contract, RateLine,
+                                                Reconciliation,
+                                                render_reconciliation)
 from app.domain.core import money
+from app.papers import as_pdf as _as_pdf
 from app.domain.invoice import (Category, DirectCost, Invoice, InvoiceLine,
                                 assess, rebuild)
 from app.domain.invoice_document import Party
@@ -318,6 +322,48 @@ def restate(body: RestateIn, period: str = None,
                             "likely the classifications were reopened. Nothing "
                             "was written."),
                 "rate_id": str(rate["rate_id"])})
+        # One objective carries one claim YBI would bill on, and the index
+        # `one_standing_restatement_per_objective` holds it. This is the
+        # same rule in the handler, where it can say what happened.
+        #
+        # Recomputing supersedes a PROPOSED position — YBI's own, unsent, and
+        # the recompute *is* the correction. It must not silently replace one
+        # the sponsor has SUBMITTED to or ACCEPTED: that is a position
+        # somebody agreed to, and `drive_recertify` settled the principle —
+        # *the one act that takes something away from the person who made it
+        # is never automatic.*
+        #
+        # The first draft declined to supersede those and **wrote the new row
+        # anyway**, so the guard produced the state it existed to prevent:
+        # two standing claims on one objective, added together by every
+        # reader, putting $265,008.84 on the acceptance form for an award
+        # that owes $136,534.61.
+        cur.execute("""SELECT restatement_id, status::text AS status,
+                              over_collected, under_recovered, modification_ref
+                         FROM restatement
+                        WHERE period = %s AND objective_id = %s
+                          AND status IN ('SUBMITTED', 'ACCEPTED')""",
+                    (period, body.objective_id))
+        held = cur.fetchone()
+        if held:
+            stands = (f"{held['over_collected']:,.2f} to return"
+                      if held["over_collected"] else
+                      f"{held['under_recovered']:,.2f} to claim")
+            raise HTTPException(409, {
+                "error": "A_POSITION_IS_STANDING",
+                "message": (
+                    f"{body.objective_id} already carries a position that has "
+                    f"been put to the sponsor — {held['status'].lower()}, at "
+                    f"{stands}"
+                    + (f", under {held['modification_ref']}"
+                       if (held.get("modification_ref") or "").strip() else "")
+                    + ". Measuring again would replace it, and taking back "
+                    "something a sponsor has seen is not something this does "
+                    "on your behalf. Withdraw that position first, with the "
+                    "reason, and then measure."),
+                "restatement_id": str(held["restatement_id"]),
+                "status": held["status"]})
+
         cur.execute("""UPDATE restatement SET status = 'SUPERSEDED'
                         WHERE period = %s AND objective_id = %s
                           AND status = 'PROPOSED'""",
@@ -439,9 +485,44 @@ def list_restatements(period: str = None) -> list[dict]:
                            -- measured. `088`: three claims stood for a week
                            -- over three invoices that had been moved to
                            -- another period, and nothing anywhere said so.
-                           register_invoices, register_billed, still_agrees
+                           register_invoices, register_billed, still_agrees,
+                           -- And what it was measured *on*. `132`: the same
+                           -- question one column along, and the worse half —
+                           -- a changed population moves which invoices a
+                           -- claim covers, a changed rate moves every figure.
+                           rate_status, rate_is_live
                       FROM v_restatement WHERE period = %s
                      ORDER BY computed_at DESC""", (period,))
+
+
+# Declared **before** `/{restatement_id}`, and that is load-bearing rather
+# than tidy. Starlette matches routes in declaration order, so a literal path
+# registered after a parameterised sibling never runs: `/restate/reconciliation`
+# reached `detail(restatement_id="reconciliation")` and answered 500 on
+# `invalid input syntax for type uuid`. The route existed, the sweep that asks
+# whether every capability has a door saw it, and the tests called the
+# assembly function directly — so nothing anywhere could see that the door was
+# walled up. `test_no_route_is_shadowed_by_a_parameterised_sibling` is the
+# property; it found exactly this one across 200 routes.
+@router.get("/reconciliation")
+def contract_reconciliation(period: str = "2025", inline: bool = False,
+                            actor: Actor = Depends(require_reader)) -> Response:
+    """The three America Makes contracts on one page, for one signature.
+
+    A read, like the other two papers: rendering asserts nothing that was
+    not already recorded when the restatements were computed, and the band
+    says where each stands.
+    """
+    r = _reconciliation(period)
+    body = render_reconciliation(r)
+    record(actor, "EXPORT", "period", period,
+           after={"paper": "reconciliation",
+                  "awards": [c.award_id for c in r.contracts],
+                  "to_return": str(r.total_return),
+                  "to_claim": str(r.total_claim),
+                  "certified": r.certified},
+           reason="contract reconciliation rendered")
+    return _as_pdf(body, f"YBI-contract-reconciliation-{period}.pdf", inline)
 
 
 @router.get("/{restatement_id}")
@@ -466,8 +547,18 @@ def decide(restatement_id: str, body: DecideIn,
     basis is refused by the schema. That single omission is the most likely
     thing in this whole exercise to become a finding.
     """
-    if body.status not in ("SUBMITTED", "ACCEPTED", "REJECTED"):
+    if body.status not in ("SUBMITTED", "ACCEPTED", "REJECTED", "SUPERSEDED"):
         raise HTTPException(422, f"Unknown status {body.status!r}.")
+    # Withdrawing a position YBI has put to a sponsor is the second of the
+    # two conscious acts `POST /api/restate` refuses to collapse into one,
+    # and it is the only one that takes something back. So it carries a
+    # reason, the way unsealing does — and the reason is the whole of what
+    # the record will have to say about it later.
+    if body.status == "SUPERSEDED" and len(body.note.strip()) < 20:
+        raise HTTPException(
+            422, "Withdrawing a position the sponsor has seen needs a reason "
+                 "on the record — what changed, and why the figure no longer "
+                 "stands. Twenty characters or more.")
     head = one("""SELECT status::text AS status, modification_ref, objective_id
                     FROM restatement WHERE restatement_id = %s""",
                (restatement_id,))
@@ -548,7 +639,7 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
                            r.rate_kind, r.rate_applied, r.rate_base,
                            r.seal_hash, r.sponsor, r.billed_under,
                            r.register_invoices, r.register_billed,
-                           r.still_agrees,
+                           r.still_agrees, r.rate_is_live, r.rate_status,
                            r.status, r.modification_ref
                       FROM v_restatement r
                      WHERE r.period = %s AND r.status = ANY(%s)
@@ -662,7 +753,18 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
         # bullet to learn the figures measure a population that has moved has
         # already formed a view.
         caveats=(
+            # A rate that has since been superseded comes first, because it
+            # moves *every figure* on the paper where a changed invoice
+            # population only moves which invoices are covered. `132`.
             tuple(
+                f"Measured on a rate that no longer stands — "
+                f"{r['objective_id']} was computed against "
+                f"{(r['rate_applied'] or 0) * 100:.2f}% "
+                f"{r['rate_kind']}, which is now {r['rate_status']}. Every "
+                f"figure here is against arithmetic the record has moved "
+                f"past. Recompute before this goes to a sponsor."
+                for r in rows if r.get("rate_is_live") is False)
+            + tuple(
                 f"Overtaken — {r['objective_id']} measured "
                 f"{r['invoices']} invoice(s) totalling {r['billed_total']:,.2f}, "
                 f"and the register now holds {r['register_invoices']} "
@@ -686,7 +788,8 @@ def _papers(award_id: str, period: str) -> AmendmentPapers:
         reference=f"{award_id} · {period}")
 
 
-def _paper(award_id: str, period: str, actor: Actor, which: str) -> Response:
+def _paper(award_id: str, period: str, actor: Actor, which: str,
+           inline: bool = False) -> Response:
     p = _papers(award_id, period)
     body = (render_memo(p) if which == "memo" else render_acceptance(p))
     record(actor, "EXPORT", "award", award_id,
@@ -696,13 +799,11 @@ def _paper(award_id: str, period: str, actor: Actor, which: str) -> Response:
            reason=f"amendment {which} rendered")
     name = (f"YBI-amendment-memo-{award_id}.pdf" if which == "memo"
             else f"YBI-acceptance-{award_id}.pdf")
-    return Response(body, media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="{name}"',
-                             "X-Content-Type-Options": "nosniff"})
+    return _as_pdf(body, name, inline)
 
 
 @router.get("/award/{award_id}/memo")
-def amendment_memo(award_id: str, period: str = "2025",
+def amendment_memo(award_id: str, period: str = "2025", inline: bool = False,
                    actor: Actor = Depends(require_reader)) -> Response:
     """Why this award's invoices are being reissued, and under what clause.
 
@@ -713,11 +814,294 @@ def amendment_memo(award_id: str, period: str = "2025",
     who may read everything and holds no portfolio, would be the library
     defect in a new place.
     """
-    return _paper(award_id, period, actor, "memo")
+    return _paper(award_id, period, actor, "memo", inline)
 
 
 @router.get("/award/{award_id}/acceptance")
-def acceptance_form(award_id: str, period: str = "2025",
+def acceptance_form(award_id: str, period: str = "2025", inline: bool = False,
                     actor: Actor = Depends(require_reader)) -> Response:
     """What NCDMM signs. Both directions, and never their difference."""
-    return _paper(award_id, period, actor, "acceptance")
+    return _paper(award_id, period, actor, "acceptance", inline)
+
+
+# ── One page, three contracts, one signature ─────────────────────────
+#
+# The memorandum and the acceptance form are per award, which is the right
+# unit for a change of basis and the wrong one for the conversation. YBI is
+# asking NCDMM one question — *was the rate acceptable, and will you settle
+# 2025 on it* — and a sponsor handed three of each has to work out that they
+# are one ask. Assembled here for the reason `_papers` is: `publish.py` opens
+# on the rule that every document is fetched from the route the screen calls,
+# and a second assembly in a script is a second implementation of one paper.
+
+#: Which awards belong on an America Makes page, and which do not.
+#:
+#: Read from the record rather than listed here: an award is on the page
+#: when its prime flows from the America Makes cooperative agreement. Digital
+#: Engineering is administered by NCDMM and its prime is N00174-20-1-0031
+#: through Energetics Technology Center and NSWC Indian Head, so it is a
+#: different programme's money — and federal award funds are not fungible
+#: between programmes. It is named on the page as excluded rather than
+#: silently dropped, because a page three-quarters complete with no note is
+#: worse than one that says which quarter is missing.
+_AM_PRIME = "FA8650-20-2-5700"
+#: Who is on the other side of the page. The unit is the **sponsor**,
+#: because that is who signs it and who the year is closed with; the prime
+#: is the unit of the *money*, and the page groups on that.
+_SPONSOR = "NCDMM"
+
+
+def _rate_lines(period: str, rate_id: str | None) -> tuple[RateLine, ...]:
+    """The build-up, off the rate the restatements were actually measured on.
+
+    Read by `rate_id` and not by "the live rate": a restatement carries the
+    rate it used, and a page that printed today's rate over yesterday's
+    settlement would be the overtaken-claim shape with the two halves
+    swapped. Where the restatements name no rate — which cannot happen,
+    `restatement_requires_sealed_rate` sees to it — nothing is printed rather
+    than a plausible substitute.
+    """
+    if not rate_id:
+        return ()
+    rows = query("""SELECT r.kind, r.rate, r.pool_amount, r.base_amount,
+                           r.base_type
+                      FROM rate r
+                     WHERE r.period = %s
+                       AND r.computed_at = (SELECT computed_at FROM rate
+                                             WHERE rate_id = %s)
+                     ORDER BY CASE r.kind WHEN 'FRINGE' THEN 1
+                                          WHEN 'OVERHEAD' THEN 2
+                                          WHEN 'G&A' THEN 3 ELSE 4 END""",
+                 (period, rate_id))
+    says = {"SALARIES_WAGES": "the payroll register's wages",
+            "SALARIES_FRINGE": "wages and fringe",
+            "MTDC": "modified total direct cost"}
+    return tuple(RateLine(kind=r["kind"], rate=Decimal(str(r["rate"])),
+                          pool=money(r["pool_amount"] or 0),
+                          base=money(r["base_amount"] or 0),
+                          base_says=says.get(r["base_type"] or "", ""))
+                 for r in rows)
+
+
+def _addressee(rows: list[dict]) -> str:
+    """Who the page is addressed to, where the awards name it differently."""
+    names = {(r.get("sponsor") or "").strip() for r in rows}
+    names.discard("")
+    return names.pop() if len(names) == 1 else _SPONSOR
+
+
+def _programme(rows: list[dict]) -> str:
+    """What sits under the masthead: the primes actually on the page.
+
+    `America Makes · prime FA8650-20-2-5700` was right when the page
+    carried one prime and is a false label on a page carrying two — the
+    kind that checks out and is about something else.
+    """
+    primes = []
+    for r in rows:
+        pa = (r.get("prime_agreement") or "").replace("AFRL ", "")
+        if pa and pa not in primes:
+            primes.append(pa)
+    if not primes:
+        return _SPONSOR
+    if len(primes) == 1 and primes[0] == _AM_PRIME:
+        return f"America Makes · prime {_AM_PRIME}"
+    return f"{_SPONSOR} · primes " + " and ".join(primes)
+
+
+def _reconciliation(period: str) -> Reconciliation:
+    rows = query("""SELECT r.award_id, r.objective_id, r.invoices,
+                           r.billed_total, r.direct_supported,
+                           r.indirect_rebuilt, r.supported_total,
+                           r.indirect_billed, r.under_recovered,
+                           r.over_collected, r.status, r.modification_ref,
+                           r.decided_at, r.rate_id, r.seal_hash, r.sponsor,
+                           r.still_agrees, r.rate_is_live, r.rate_status,
+                           r.rate_kind, r.rate_applied,
+                           r.register_invoices, r.register_billed,
+                           a.agreement_name, a.prime_agreement, a.instrument
+                      FROM v_restatement r
+                      LEFT JOIN award a USING (award_id)
+                     WHERE r.period = %s AND r.status = ANY(%s)
+                     ORDER BY r.over_collected DESC NULLS LAST,
+                              r.award_id""",
+                 (period, list(STANDING)))
+    if not rows:
+        raise HTTPException(404, (
+            f"No restatement is standing as a claim for {period}, so there "
+            f"is nothing to reconcile. POST /api/restate is what makes one, "
+            f"and it is a judgment."))
+
+    # Every award **this sponsor administers**, not every award under one
+    # prime. The first draft filtered on FA8650-20-2-5700 and left Digital
+    # Engineering off with a line saying so — three quarters of the
+    # conversation on a page presenting itself as the whole of it, when the
+    # entity on the other side of all four is NCDMM and the year is being
+    # closed across the relationship. The prime distinction is real and is
+    # kept where it belongs: the page groups on it and subtotals each, so a
+    # reader can settle one programme without the other.
+    ours = [r for r in rows if _SPONSOR in (r.get("sponsor") or "").upper()]
+    others = [r for r in rows if r not in ours]
+    if not ours:
+        raise HTTPException(409, (
+            f"No standing restatement for {period} is on an award "
+            f"{_SPONSOR} administers, so there is no reconciliation to "
+            f"draw. {len(rows)} restatement(s) stand on other sponsors and "
+            f"each is its own conversation."))
+
+    # Two of these three run against YBI, and the page raises the give-back
+    # first — `AMERICA_MAKES_RESTATEMENT.md` records why: a page that led
+    # with the claim and mentioned the credits underneath is read once. The
+    # ORDER BY does it, so the order is a property of the figures rather
+    # than of a list written here.
+    contracts = tuple(
+        Contract(award_id=r["award_id"], objective_id=r["objective_id"],
+                 title=(r.get("agreement_name") or r.get("instrument") or ""),
+                 invoices=r["invoices"] or 0,
+                 billed=money(r["billed_total"] or 0),
+                 direct_supported=money(r["direct_supported"] or 0),
+                 indirect_supported=money(r["indirect_rebuilt"] or 0),
+                 supported=money(r["supported_total"] or 0),
+                 indirect_billed=money(r["indirect_billed"] or 0),
+                 to_return=money(r["over_collected"] or 0),
+                 to_claim=money(r["under_recovered"] or 0),
+                 prime=(r.get("prime_agreement") or "").replace("AFRL ", ""),
+                 status=r["status"],
+                 accepted_on=(r["decided_at"].date()
+                              if r.get("decided_at") and r["status"] == "ACCEPTED"
+                              else None),
+                 modification_ref=r.get("modification_ref") or "")
+        for r in ours)
+
+    first = ours[0]
+    clauses = []
+    for r in ours:
+        # Quoted from `award_term`, never recalled — `056` found three
+        # provisions on two awards cited to clauses those agreements do not
+        # contain, and this page puts the citation in front of the person
+        # signing it.
+        cl = one("""SELECT term_value, citation FROM award_term
+                     WHERE award_id = %s AND term_key = 'Change of basis'""",
+                 (r["award_id"],)) or {}
+        clauses.append((r["objective_id"], cl.get("term_value") or "",
+                        cl.get("citation") or ""))
+
+    seal = one("""SELECT sealed_at, seal_hash,
+                         (SELECT count(*) FROM decision d
+                           WHERE d.set_id = ds.set_id AND d.reversed_at IS NULL)
+                         AS judgments
+                    FROM decision_set ds
+                   WHERE ds.period = %s AND ds.sealed_at IS NOT NULL
+                   ORDER BY ds.sealed_at DESC LIMIT 1""", (period,)) or {}
+
+    anchors = query("""SELECT control, state FROM v_rate_anchor
+                        WHERE period = %s""", (period,))
+    pools = one("""SELECT count(*) FILTER (WHERE ties) AS tie,
+                          count(*) AS n FROM v_rate_buildup
+                    WHERE period = %s""", (period,)) or {}
+
+    # Each ground is a statement the record can be asked to prove. "The rate
+    # is reasonable" is an adjective and belongs on nobody's letterhead.
+    # The seal is **not** a ground, although it is the strongest thing on
+    # the page. It is printed under the rate, where the provenance line
+    # states it with the hash a reviewer ties to — and a page that said it
+    # twice would be saying one fact in two places, which is what most of
+    # this repository's defects are.
+    grounds = [
+        "The fringe rate is anchored at both ends to source documents — the "
+        "profit and loss's six fringe accounts over the payroll register's "
+        "wages — so it falls out of the judgments rather than being asserted.",
+    ]
+    # One ground, not two. The build-up rows and the rate anchors are both
+    # "the arithmetic reconciles", and a page that spent two numbered points
+    # on one claim reads as padding — which is the opposite of what a
+    # numbered list of reasons is for.
+    tied = sum(1 for a in anchors if a["state"] == "TIES")
+    if pools.get("n") or anchors:
+        grounds.append(
+            f"Every pool reconciles to the general ledger — {pools.get('tie', 0)} "
+            f"of {pools.get('n', 0)} build-up rows and {tied} of "
+            f"{len(anchors)} independent anchors tie — and the eleven "
+            f"controls between the ledger, the profit and loss, the balance "
+            f"sheet and the payroll register must all tie before a rate can "
+            f"be computed at all.")
+    grounds.append(
+        "The 200.465 carve-out removes the occupancy cost of let and vacant "
+        "space before any federal rate is taken, and 200.436(b) removes "
+        "depreciation on federally funded assets — recorded adjustments "
+        "carrying their citations, not estimates.")
+
+    cert = rate_certification(period) or {}
+    return Reconciliation(
+        period=period, issued_on=date.today(), remit_to=_YBI,
+        bill_to=Party(_addressee(ours), _SPONSOR_ADDRESS),
+        programme=_programme(ours),
+        contracts=contracts,
+        rates=_rate_lines(period, first.get("rate_id")),
+        basis=("Indirect is applied to modified total direct cost, as "
+               "2 CFR 200.1 defines it."),
+        admin_labour_basis=(one("""SELECT admin_labour_basis FROM rate
+                                    WHERE rate_id = %s""",
+                                (first.get("rate_id"),)) or {}
+                            ).get("admin_labour_basis") or "",
+        seal_hash=first.get("seal_hash") or seal.get("seal_hash") or "",
+        judgments=seal.get("judgments") or 0,
+        clauses=tuple(clauses),
+        grounds=tuple(grounds),
+        # Anything the register has since overtaken comes first, for the
+        # reason it does on the amendment papers: a reader who reaches the
+        # fourth bullet before learning the figures measure a population
+        # that has moved has already formed a view.
+        # Above the figures, because these are the ones that make the table
+        # itself untrustworthy rather than merely incomplete.
+        #
+        # One sentence for all of them, not one per award. Every standing
+        # restatement is measured on the same rate, so three copies of one
+        # fact at the top of the page is the defect the evidence screen
+        # already learned — *thirty-two unread workbooks buried three real
+        # proposals* — and the awards are named rather than counted.
+        warnings=_stale_rate_warning(ours),
+        caveats=tuple(
+            f"Overtaken — {r['objective_id']} measured {r['invoices']} "
+            f"invoice(s) totalling {r['billed_total']:,.2f}, and the "
+            f"register now holds {r['register_invoices']} totalling "
+            f"{r['register_billed']:,.2f}. Recompute before this is sent."
+            for r in ours if r.get("still_agrees") is False),
+        excluded=tuple(
+            (r["objective_id"],
+             "administered by NCDMM and primed elsewhere"
+             + (f" ({r['prime_agreement']})" if r.get("prime_agreement") else "")
+             + f". {_fmt(r['over_collected'], r['under_recovered'])} stands "
+             f"on it and is settled against that programme, not this one.")
+            for r in others),
+        certified=bool(cert.get("certified")) and not cert.get("rehearsal"),
+        certification_line=" ".join(certification_lines(cert)),
+        reference=f"{period} close-out")
+
+
+def _stale_rate_warning(rows: list[dict]) -> tuple[str, ...]:
+    """One line per rate that has been superseded, naming the awards on it."""
+    by_rate: dict[tuple, list[str]] = {}
+    for r in rows:
+        if r.get("rate_is_live") is False:
+            key = (r["rate_kind"], r["rate_applied"], r["rate_status"])
+            by_rate.setdefault(key, []).append(r["objective_id"])
+    return tuple(
+        f"Measured on a rate that no longer stands — "
+        f"{', '.join(sorted(names))} "
+        f"{'was' if len(names) == 1 else 'were'} computed against "
+        f"{(kind_rate or 0) * 100:.2f}% {kind}, which is now {status}. Every "
+        f"figure below is against arithmetic the record has moved past. "
+        f"Recompute before this is sent."
+        for (kind, kind_rate, status), names in by_rate.items())
+
+
+def _fmt(over, under) -> str:
+    over, under = money(over or 0), money(under or 0)
+    if over:
+        return f"{over:,.2f} to return"
+    if under:
+        return f"{under:,.2f} to claim"
+    return "Nothing"
+
+
