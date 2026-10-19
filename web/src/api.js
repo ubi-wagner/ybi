@@ -268,6 +268,19 @@ export const api = {
   // Whether everything above ties to the financials. One row per report
   // and anchor, each read from the control that already owns its figure.
   reportTies: (period = "2025") => req(`/review/ties?period=${period}`),
+  /* What makes up every figure on the build-up, one level down: the pool's
+     gross by account, each carve-out with the register that sized it, the
+     administrative labour by person, and the base by objective. Every
+     partition says whether it foots to the figure on file, because a
+     breakdown that does not add up is worse in a negotiation than none. */
+  rateComposition: (period = "2025") =>
+    req(`/review/rate/composition?period=${period}`),
+  /* One account inside one pool — who was paid, and every transaction under
+     it. Query parameters rather than a path: an account is
+     `Grant Expenses:Drive AM`, and a composite key in a path is not
+     something every client will encode. */
+  rateAccount: (params) =>
+    req("/review/rate/account?" + new URLSearchParams(params)),
   rateBuildupUrl: (period = "2025") => `/api/export/rate-buildup?period=${period}`,
   auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
   form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,

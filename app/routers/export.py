@@ -273,17 +273,28 @@ def rate_buildup_export(period: str = None,
     """The rate, with the pool and the seal behind it."""
     from app.domain.review_workbooks import build_rate_buildup
     from app.routers.review import rate_buildup as _rate
+    from app.routers.review import rate_composition, rate_lines
 
     period = period or settings.period
     d = _rate(period)
+    # What is inside each of those figures, from the same functions the
+    # screen reads. The controller downloaded this file, found it was the
+    # four rows he was already looking at, and asked for the breakdown — so
+    # the drill-down and the workbook are one implementation with two
+    # callers rather than a screen and an export that can disagree.
+    comp = rate_composition(period)
+    lines = rate_lines(period)
+    comp["lines"] = lines["rows"]
+    comp["lines_part"] = lines["part"]
     out, name = _out(period, "indirect-rate")
     build_rate_buildup(period=period, out_path=out, rates=d["rates"],
                        certification=rate_certification(period),
                        carve_outs=d["carve_outs"], coverage=d["coverage"],
-                       open_controls=d["open_controls"], final=d["final"])
+                       open_controls=d["open_controls"], final=d["final"],
+                       composition=comp)
     record(actor, "EXPORT", "rate_buildup", name,
            after={"period": period, "rates": len(d["rates"]),
-                  "final": d["final"]},
+                  "final": d["final"], "lines": len(lines["rows"])},
            reason="indirect rate build-up downloaded")
     return FileResponse(out, filename=name, media_type=XLSX)
 

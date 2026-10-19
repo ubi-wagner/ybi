@@ -68,7 +68,8 @@ def _as_rate(ws, first_row: int, last_row: int, col: int) -> None:
 def build_rate_buildup(*, period: str, out_path: Path, rates: list[dict],
                        carve_outs: list[dict], coverage: dict | None,
                        open_controls: list[dict], final: bool,
-                       certification: dict | None = None) -> Path:
+                       certification: dict | None = None,
+                       composition: dict | None = None) -> Path:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -118,8 +119,213 @@ def build_rate_buildup(*, period: str, out_path: Path, rates: list[dict],
                     "created_by"],
                    [16, 30, 26, 16, 40, 22, 20], {4})
 
+    # ------------------------------------------------ and what is inside it
+    #
+    # The four rows above are the build-up. What a negotiation opens with is
+    # the question underneath them, and the controller asked for it in those
+    # words after downloading this file and finding it was the same four rows
+    # he was already reading on the screen.
+    #
+    # Each sheet carries **its own footing line**: what the rows come to, the
+    # figure the rate recorded, and the difference. A breakdown that does not
+    # add back to the workpaper is worse than none at all once it is in a
+    # sponsor's hands, and a workbook travels further than a screen does.
+    if composition:
+        _composition_sheets(wb, period, composition)
+
     wb.save(out_path)
     return out_path
+
+
+def _foots(ws, row: int, part: dict | None, what: str) -> int:
+    """What the rows come to, against the figure on file."""
+    if not part:
+        return row
+    total = Decimal(str(part.get("total") or 0))
+    rec = Decimal(str(part.get("recorded") or 0))
+    # Three states. `NO DATA` is no breakdown to draw, not a failed tie, and
+    # printing it as one puts a variance the width of the whole base on a
+    # workpaper a sponsor reads. A sweep that cries wolf teaches the reader
+    # to dismiss the next real one.
+    if part.get("state") == "NO DATA":
+        text = (f"Nothing breaks the {rec:,.2f} on file down here. "
+                + (part.get("needs") or ""))
+        ok = None
+    else:
+        ok = total == rec
+        text = (f"{len(part.get('rows') or [])} {what} totalling {total:,.2f} "
+                + (f"— ties to the {rec:,.2f} the rate carries" if ok else
+                   f"— DOES NOT TIE to the {rec:,.2f} the rate carries, out "
+                   f"by {total - rec:,.2f}"))
+    c = ws.cell(row=row, column=1, value=text)
+    c.font = RULE if ok else BOLD
+    c.alignment = WRAP
+    return row + 2
+
+
+def _composition_sheets(wb: Workbook, period: str, comp: dict) -> None:
+    """The pool by account, every transaction under it, the drivers, the base.
+
+    One sheet per question rather than one per rate: the four rates are drawn
+    from three pools and INDIRECT_COMBINED is two of them, so a sheet per
+    rate would print OVERHEAD and G&A twice and leave a reader working out
+    which copy to add up.
+    """
+    rates = comp.get("rates") or []
+
+    ws = _sheet(wb, "Pool detail", "What the pools are made of",
+                "Every account classified into a pool a rate is taken over, "
+                "with the rate it serves. The sum of each pool is the gross "
+                "on the build-up.")
+    _stamp(ws, period)
+    r = 5
+    for rate in rates:
+        # INDIRECT_COMBINED is the two pools under it, so printing it as well
+        # would be the same accounts twice. The pools are the unit here and
+        # the kind is named on each.
+        if len(rate.get("pools") or []) != 1:
+            continue
+        ws.cell(row=r, column=1, value=f"{rate['kind']} — {rate['pools'][0]}").font = BOLD
+        r = _foots(ws, r + 1, rate.get("gross"), "account(s)")
+        r = _table(ws, r, ["Pool", "Account", "Amount", "Payees", "Lines"],
+                   rate["gross"]["rows"],
+                   ["pool", "account", "amount", "payees", "lines"],
+                   [16, 62, 16, 10, 10], {3}) + 3
+
+    ws = _sheet(wb, "Transactions", "Every transaction in the pools",
+                "The ledger lines behind the accounts on the previous sheet, "
+                "each with the judgment that put it in its pool.")
+    _stamp(ws, period)
+    r = _foots(ws, 5, comp.get("lines_part"), "transaction(s)")
+    _table(ws, r,
+           ["Pool", "Account", "Date", "Payee", "Description", "Amount",
+            "990 function", "Federal", "Objective", "Grade", "Citation",
+            "Rationale", "Judged by"],
+           comp.get("lines") or [],
+           ["pool", "account", "date", "payee", "description", "amount",
+            "function_990", "federal", "objective_id", "grade", "citation",
+            "rationale", "decided_by"],
+           [14, 46, 12, 26, 40, 16, 20, 14, 16, 24, 26, 60, 20], {6})
+
+    ws = _sheet(wb, "Carve-out drivers", "What sized each carve-out",
+                "A carve-out without the register that sized it is an "
+                "adjustment. 200.465 is sized by floor area and 200.436(b) "
+                "by what bought the asset.")
+    _stamp(ws, period)
+    r = 5
+    split = next((x.get("driver_split") for x in rates
+                  if x.get("driver_split")), None)
+    if split:
+        ws.cell(row=r, column=1, value="What floor area drives").font = BOLD
+        ws.cell(row=r + 1, column=1, value=(
+            "The square-footage carve-out may only reach the cost square "
+            "footage causes. The rest of the pool — T1 access, telephone, "
+            "insurance, equipment — is the floor under the overhead rate."
+        )).alignment = WRAP
+        r = _table(ws, r + 3, ["Part of the pool", "Amount"],
+                   [{"what": "Occupancy — floor area drives it",
+                     "amount": split["occupancy"]},
+                    {"what": "Not driven by floor area",
+                     "amount": split["not_area_driven"]},
+                    {"what": "Pool gross", "amount": split["pool_gross"]}],
+                   ["what", "amount"], [44, 18], {2}) + 3
+    if comp.get("overhead_drivers"):
+        ws.cell(row=r, column=1, value=(
+            "Which accounts are the exception, and why. The default is that "
+            "floor area drives an account, so one nobody has considered is "
+            "carved — the conservative direction.")).alignment = WRAP
+        r = _table(ws, r + 2, ["Account", "Floor area drives it", "Reason"],
+                   comp["overhead_drivers"],
+                   ["account_fragment", "driven_by_area", "reason"],
+                   [40, 18, 70]) + 3
+    if comp.get("estate"):
+        ws.cell(row=r, column=1,
+                value="The estate the 200.465 share is measured on "
+                      "(square feet, not dollars)").font = BOLD
+        last = _table(ws, r + 2,
+                   ["Building", "Usable", "Assignable", "Common", "Let",
+                    "Vacant", "Committed", "Programme", "Admin",
+                    "Shared lab", "Share let"],
+                   comp["estate"],
+                   ["name", "usable_sqft", "assignable", "common",
+                    "tenant_sqft", "vacant_sqft", "committed_sqft",
+                    "program_sqft", "admin_sqft", "shared_lab_sqft",
+                    "rental_share"],
+                   [34, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12])
+        _as_rate(ws, r + 3, last, 11)
+        r = last + 3
+    if comp.get("federally_funded_assets"):
+        ws.cell(row=r, column=1,
+                value="The assets federal money bought, which 200.436(b) "
+                      "makes unallowable to depreciate into a federal "
+                      "pool").font = BOLD
+        last = _table(ws, r + 2,
+               ["Asset", "Account", "Cost", "Depreciation", "Federal funding",
+                "Total funding", "Federal share", "Allowable depreciation"],
+               comp["federally_funded_assets"],
+               ["description", "gl_account", "gross_cost", "depreciation",
+                "federal_funding", "total_funding", "federal_share",
+                "allowable_depreciation"],
+               [44, 18, 16, 16, 16, 16, 14, 20], {3, 4, 5, 6, 8})
+        _as_rate(ws, r + 3, last, 7)
+
+    ws = _sheet(wb, "Base", "What each pool is spread over",
+                "The denominator of each rate, read off the register it was "
+                "taken over: the payroll register for a wage base, the "
+                "allocation for an MTDC base — and the administrative "
+                "labour, where the G&A pool carries it.")
+    _stamp(ws, period)
+    r = 5
+    for rate in rates:
+        ws.cell(row=r, column=1,
+                value=f"{rate['kind']} — base {rate['base_type']}").font = BOLD
+        # A wage base is one row per person and an MTDC base is one row per
+        # objective, and the unit is not cosmetic: printing 43 people as "43
+        # objective(s)" under objective headings is the count confusion that
+        # put 97 on the run sheet where the answer was 43. The register the
+        # base was taken over decides both the word and the columns.
+        base = rate.get("base") or {}
+        by_person = base.get("by") == "PERSON"
+        r = _foots(ws, r + 1, base,
+                   "people on the payroll register" if by_person
+                   else "objective(s)")
+        if base.get("state") == "NO DATA":
+            # The footing line above has already said what is missing;
+            # column headings with nothing under them say less than that.
+            r += 1
+        elif by_person:
+            r = _table(ws, r,
+                       ["Person", "Employee key", "Wages in the base",
+                        "Objectives", "From", "Grade"],
+                       base.get("rows") or [],
+                       ["employee_name", "employee_key", "base_amount",
+                        "objectives", "source", "grade"],
+                       [30, 20, 20, 12, 22, 30], {3}) + 3
+        else:
+            r = _table(ws, r,
+                       ["Cost objective", "Label", "Kind", "Federal", "Base",
+                        "Indirect allocated"],
+                       base.get("rows") or [],
+                       ["objective_id", "label", "objective_type", "is_federal",
+                        "base_amount", "allocated"],
+                       [20, 40, 18, 10, 18, 18], {5, 6}) + 3
+        adm = rate.get("admin_labour")
+        if adm:
+            ws.cell(row=r, column=1, value=(
+                f"Administrative labour in the {rate['kind']} pool — "
+                f"{adm['objective']}, under the {adm['basis']} basis. "
+                f"Wages {Decimal(str(adm['wages'])):,.2f} plus fringe "
+                f"{Decimal(str(adm['fringe_on_it'])):,.2f} is the "
+                f"{Decimal(str(adm['recorded'])):,.2f} the pool carries. It "
+                f"comes from the effort distribution rather than from a "
+                f"classification, which is why it is in no account above."
+            )).alignment = WRAP
+            r = _table(ws, r + 2,
+                       ["Person", "Employee key", "Wages", "From", "Grade"],
+                       adm["rows"],
+                       ["employee_name", "employee_key", "distributed_wages",
+                        "source", "grade"],
+                       [30, 20, 18, 16, 28], {3}) + 3
 
 
 # -------------------------------------------------------- auditor's report

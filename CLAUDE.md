@@ -1393,6 +1393,143 @@ still proposes 'SBA-ACCEL', which is not on the register"*, and the first
 attempt at that watch failed on the function signature instead — which proves
 nothing, and is worth not mistaking for a proof.
 
+## What the rate is made of
+
+`GET /api/review/rate/composition`, `GET /api/review/rate/account`,
+`web/src/pages/RateComposition.jsx`, four more sheets on the build-up
+workbook. The controller's words: *"I need to have access to what makes up
+our indirect rate for our pending negotiations … I've downloaded the
+rate-buildup sheet at the bottom of the page, but it's not what I'm looking
+for. I'd like to be able to see high-level amounts of what makes up the
+individual amounts as well as detailed by transaction if possible."*
+
+He is right that the workbook was not it. `/review/rate` and the workbook
+both answer *how the rate was struck* — pool over base, less what was carved
+out, against the seal — which is what a reviewer needs to reproduce the
+arithmetic and is **not** what somebody walking into a negotiation needs.
+America Makes will ask what is in the $1,497,879.12, and the only answer the
+system could give was four rows restating the figure.
+
+**Everything added is a read, and nothing is computed.** Two GETs under
+`require_reader`, no migration, no column, no write to the cost record — the
+sealed rates Tom computed are untouched by construction. Every figure is read
+from the register that already holds it: the gross from `v_pool_balance`, the
+carve-outs from `carve_out`, the driver split from `v_overhead_split`, the
+estate from `v_facility_occupancy`, the wage base from `v_labor_effective`,
+the MTDC base from `allocation`. `test_no_review_screen_computes_a_figure`
+takes the new pane too.
+
+**Every partition says whether it foots**, and that is the only rule that
+matters here. A breakdown that does not add back to the figure on the
+workpaper is worse than no breakdown, in a negotiation most of all: a sponsor
+who adds the column up and gets a different answer stops reading the rest.
+On the measured estate:
+
+    FRINGE              6 accounts  401,783.60    base 43 people   1,835,047.17
+    OVERHEAD           19 accounts 1,497,879.12   carved 6           742,561.90
+    G&A                18 accounts   263,517.59
+    INDIRECT_COMBINED  37 accounts 1,761,396.71   base 19 objectives 5,058,960.43
+    transactions        2,268 lines 2,163,180.31  against the pools' own gross
+
+**Three states, not two.** `_part` answers `NO DATA` where there is no
+breakdown to draw rather than reporting a failed tie, and says what is
+missing. The per-objective base is the case: `allocation` is recorded once,
+against the rate it was computed on, so asking OVERHEAD for its own objective
+base compares an empty table to $5,058,960.43 and prints a five-million
+dollar variance over something that was never meant to exist. *A control that
+cries wolf teaches the reader to dismiss the next real one* — and the screen
+and the workbook each reintroduced the two-state reading one layer up, where
+`foots: None` is falsy and renders as a failure.
+
+**A wage base is people and an MTDC base is objectives**, and the unit is not
+cosmetic. The fringe denominator *is* the payroll register, which is the
+eleventh control's whole point, so printing 43 people under objective
+headings would say the rate was taken over the ledger's wage accounts — the
+other denominator, and 22.45% rather than 21.90%. The first draft did exactly
+that: 43 rows with the amount in the Base column and every other cell blank,
+under a footing line reading *"43 objective(s)"*. It is `v_labor_effective`
+reading 97 on the run sheet, one screen along.
+
+**The drill-down is a query parameter and not a path.** A group key is an
+account and a payee joined by 0x1f and an account name carries colons and
+spaces; `?pool=&account=` is the house rule from `/classify`, for the reason
+recorded there.
+
+**And `rate_lines` is not a route.** Every transaction in every rate pool is
+2,268 rows on this record and there is no screen that wants them at once — a
+route answering a 4,000-row payload is a capability with no door in the
+direction nobody checks. It is called by the export, so the workbook's
+Transactions sheet and the screen's per-account drawer are one implementation
+with two callers, and `rate_composition` is called by both the screen and the
+export for the same reason.
+
+**A pane open is not an export.** The drill-down records
+`RATE_DRILL_DOWN`; `v_export_activity` and `v_shared_password_acts` both name
+`EXPORT` explicitly, so labelling a click as one would put a row in the
+register claiming a file had gone out. Reading and taking a copy are
+different acts, which is already why `EVIDENCE_VIEW` sits beside
+`EVIDENCE_DOWNLOAD` and is on neither list.
+
+### The map is the view's own, and the mutation that proved nothing
+
+`KIND_POOLS` says which ledger pools each rate kind is taken over, and
+INDIRECT_COMBINED is OVERHEAD plus G&A. `v_rate_buildup` already holds that
+as `pool_for_kind`, so the test **executes the CTE out of
+`pg_get_viewdef`** rather than keeping a second copy — the map this file has
+been wrong about four times in one run. It is pure literals, so it runs
+against an empty database.
+
+`065` is why it matters: the one rate that leaves the building was the one
+with nothing behind it, because the join read `pb.pool = r.kind` and there is
+no pool of that name.
+
+**And the `AND dl.live` mutation passed, twice.** The first run was on a
+record where nothing had ever been superseded, so there was no second
+`decision_line` to multiply — *a mutation that does not express the defect
+proves nothing*, which this file records about a settlement paragraph and
+which is worth the second reading every time. Reclassifying the janitorial
+contract through the real API and re-sealing produced the real shape, and it
+**still** passed: reclassifying *reverses* the judgment it replaces, so
+`d.reversed_at IS NULL` already excludes the row `AND dl.live` does. Dropping
+both fails at exactly **22,712.00**, the group to the cent. Both guards stay
+— *a rule with an exception is one somebody gets wrong the day they change
+that join* — and the test says it catches the pair rather than claiming to
+catch either.
+
+Six more assertions were watched failing: the map with G&A dropped from
+INDIRECT_COMBINED, the third state removed from `_part`, a `NO DATA` with no
+reason, and the per-person base taken off the screen and off the workbook.
+
+### Four things the rendered workbook showed and no assertion did
+
+- **The Base sheet printed 43 people into objective columns** (above).
+- **`true` is what JSON calls it and not what a person does.** The
+  `overhead_driver` exceptions read `False` under *Floor area drives it*. It
+  is fixed in `_table` rather than at the call site, so the next sheet to
+  carry a boolean gets it; `None` stays blank, because *there is no answer*
+  and *nobody has answered* are different facts and `no` writes the second as
+  the first.
+- **A ratio formatted to the cent.** The federal share of each asset printed
+  `1` beside figures in `#,##0.00` — `082`'s *0.9144 reads as ninety-one
+  cents* in the sheet that answers the 200.436(b) question.
+- **A partition printed short of its own whole.** The estate table showed
+  Usable, Let, Vacant, Committed and Programme, so Tech Block 5 read 54,308
+  usable against 18,019 let and a reader could not see where the other 36,289
+  feet went. Every use the view partitions by is printed now — and `common`
+  blank on all five buildings is the honest answer, because the derived
+  estate has no common-area row, which is the distinction Semple's 2,857 sq
+  ft turns on.
+
+Driven in a browser behind the 2025 audit door, as Tom, on a from-empty
+record carrying the measured estate: the pane renders under both `/rates` and
+`/review/rate` from one component, every partition ticks, the drawer opens
+850,382.89 of depreciation over 12 lines with `2 CFR 200.436` on each, 5215
+Dues pages 340 lines over 60 payees at 200 a page, and an unknown pool
+answers 422 naming the three a rate is taken over — INDIRECT_COMBINED is not
+one of them, which is `065` in a refusal. **No 404, no 5xx, no console error, 6,722px.** The auditor gets the
+same pane and the same figures, which is right: it is the cost record, and
+reading it is a grant.
+
 ## One page, every contract, one signature
 
 `app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,
