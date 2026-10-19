@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api, explain, money, count } from "../api.js";
 import { Card, Drawer, Empty, Pill, Segmented, Table, Tick } from "../components/ui.jsx";
+import { fn990 } from "../functions990.js";
 
 /* Inside the rate. What makes up the pool, the carve-outs and the base —
  * high-level first, then every transaction underneath.
@@ -87,6 +88,7 @@ export default function RateComposition({ period = "2025" }) {
   const [open, setOpen] = useState(null);     // {pool, account}
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [more, setMore] = useState(false);
 
   useEffect(() => {
     api.rateComposition(period).then(setD).catch((e) => setErr(explain(e)));
@@ -103,6 +105,25 @@ export default function RateComposition({ period = "2025" }) {
       .catch((e) => { setErr(explain(e)); setDetail(null); })
       .finally(() => setLoading(false));
   }, [open, period]);
+
+  /* Appends rather than replaces, which is `080`'s rule: the cursor and the
+     reader's position are both places in this list. The largest account on
+     this record carries 340 lines against a page of 200, and the route has
+     taken `offset` since it was written — so saying "the workbook carries
+     them all" and stopping was 140 transactions reachable only by
+     downloading a file, in the one place somebody is checking a figure
+     against a ledger. The queue could reach 80 of 757 groups the same way,
+     for the same reason. */
+  function fetchMore() {
+    if (!open || !detail) return;
+    setMore(true);
+    api.rateAccount({ period, pool: open.pool, account: open.account,
+                      offset: detail.lines.length })
+      .then((next) => setDetail((cur) => ({
+        ...cur, more: next.more, lines: [...cur.lines, ...next.lines] })))
+      .catch((e) => setErr(explain(e)))
+      .finally(() => setMore(false));
+  }
 
   if (err && !d) {
     return (
@@ -486,7 +507,7 @@ export default function RateComposition({ period = "2025" }) {
               <div className="section-h">Every transaction</div>
               <span className="rowsub">
                 {detail.more
-                  ? `${count(detail.lines.length)} of ${count(detail.lines_total)} — the workbook carries them all`
+                  ? `${count(detail.lines.length)} of ${count(detail.lines_total)}`
                   : `all ${count(detail.lines_total)}`}
               </span>
             </div>
@@ -502,11 +523,29 @@ export default function RateComposition({ period = "2025" }) {
                   <td className="l">{l.payee}</td>
                   <td className="l rowsub wrap">{l.description}</td>
                   <td className="amt">{money(l.amount)}</td>
-                  <td className="l rowsub">{l.function_990}</td>
+                  {/* The short form. `MANAGEMENT_AND_GENERAL` is 22
+                      characters and pushed the federal treatment off the
+                      right edge of the drawer — and whether a cost is
+                      ALLOWABLE is the thing a sponsor asks about, so
+                      clipping that to print an enum in full was the wrong
+                      trade twice over. */}
+                  <td className="l rowsub">{fn990(l.function_990, true)}</td>
                   <td className="l rowsub">{l.federal}</td>
                 </tr>
               ))}
             </Table>
+            {detail.more && (
+              <div style={{ marginTop: 10 }}>
+                <button className="btn sm" onClick={fetchMore} disabled={more}>
+                  {more ? "Reading…"
+                        : `Show ${count(Math.min(200, detail.lines_total - detail.lines.length))} more`}
+                </button>
+                <span className="rowsub">
+                  {" "}{count(detail.lines_total - detail.lines.length)} still
+                  to show
+                </span>
+              </div>
+            )}
             {/* Why these lines are in this pool at all. A transaction says
                 what was spent; a sponsor asks why it is here, and the answer
                 is on the judgment that put it there. */}

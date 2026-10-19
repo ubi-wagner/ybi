@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, explain, money } from "../api.js";
+import { FUNCTION_990 as FN } from "../functions990.js";
 import { Card, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
 
 /* Form 990 Part IX — the Statement of Functional Expenses, and the documents
@@ -17,11 +18,6 @@ import { Card, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui
  * An allocation that quietly distributes unjudged cost is one nobody can
  * support in fieldwork. */
 
-const FN = {
-  PROGRAM: "Program services",
-  MANAGEMENT_AND_GENERAL: "Management and general",
-  FUNDRAISING: "Fundraising",
-};
 
 export default function Form990({ embedded = false }) {
   const [d, setD] = useState(null);

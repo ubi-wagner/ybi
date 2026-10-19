@@ -184,3 +184,59 @@ def test_the_workbook_prints_the_unit_too():
         "workbook that leaves the building")
     assert '"people on the payroll register"' in src, (
         "the footing line on the Base sheet counts people as objectives")
+
+
+def test_the_990_function_labels_name_every_value_the_enum_has():
+    """The map is complete, and the database is what says so.
+
+    `Form990.jsx` held a private map of three where `function_990` has four,
+    which is harmless on that screen — it prints the three columns the return
+    prints — and is not harmless anywhere else: `NOT_APPLICABLE` is the
+    compensation block, cost lifted *out* of those three, and a screen that
+    could not name it would print the enum at a controller. That is
+    `worklistKinds.js`'s own lesson, where three hand-kept maps each missed
+    different kinds and the failure mode was a screen that starts speaking
+    SQL.
+
+    Read from `pg_enum` rather than written down twice — a hand-kept copy of
+    an enum is the map this repository has been wrong about four times in
+    one run.
+    """
+    import re
+    from app.db import query
+
+    src = (ROOT / "web" / "src" / "functions990.js").read_text()
+    want = {r["v"] for r in query(
+        "SELECT e.enumlabel AS v FROM pg_enum e JOIN pg_type t "
+        " ON t.oid = e.enumtypid WHERE t.typname = 'function_990'")}
+    assert want, "the function_990 enum is not in this database"
+
+    for const in ("FUNCTION_990", "FUNCTION_990_SHORT"):
+        body = src[src.index(f"export const {const} = {{"):]
+        body = body[:body.index("};")]
+        named = set(re.findall(r"^\s*([A-Z_]+):", body, re.M))
+        assert named == want, (
+            f"{const} names {sorted(named)} where function_990 is "
+            f"{sorted(want)}. A value the map does not hold prints as the "
+            f"enum, which is the screen speaking SQL at the person who has "
+            f"to put it in front of a sponsor.")
+
+
+def test_the_990_label_map_is_the_only_one():
+    """One definition, the way `money()` and `worklistKinds.js` are.
+
+    Narrow on purpose: naming the enum as a *value to send* is correct and
+    three screens legitimately do it. What must not reappear is a second
+    object mapping those values to prose, which is what drifts.
+    """
+    import re
+    pages = (ROOT / "web" / "src")
+    offenders = []
+    for f in pages.rglob("*.jsx"):
+        src = re.sub(r"/\*.*?\*/", "", f.read_text(), flags=re.S)
+        if re.search(r"MANAGEMENT_AND_GENERAL:\s*[\"']", src):
+            offenders.append(f.name)
+    assert not offenders, (
+        f"{offenders} carry their own map of what a 990 function is called. "
+        f"There were three maps of what a worklist kind means and every one "
+        f"was missing different kinds; `functions990.js` is the one here.")

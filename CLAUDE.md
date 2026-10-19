@@ -1506,9 +1506,12 @@ reason, and the per-person base taken off the screen and off the workbook.
 - **`true` is what JSON calls it and not what a person does.** The
   `overhead_driver` exceptions read `False` under *Floor area drives it*. It
   is fixed in `_table` rather than at the call site, so the next sheet to
-  carry a boolean gets it; `None` stays blank, because *there is no answer*
-  and *nobody has answered* are different facts and `no` writes the second as
-  the first.
+  carry a boolean gets it — and that is what reached the **43 cells in the
+  auditor's report and the audit package that have been printing `True` at a
+  reader since they were written**, which the diff below found and no
+  assertion could. `None` stays blank, because *there is no answer* and
+  *nobody has answered* are different facts and `no` writes the second as the
+  first.
 - **A ratio formatted to the cent.** The federal share of each asset printed
   `1` beside figures in `#,##0.00` — `082`'s *0.9144 reads as ninety-one
   cents* in the sheet that answers the 200.436(b) question.
@@ -1529,6 +1532,75 @@ answers 422 naming the three a rate is taken over — INDIRECT_COMBINED is not
 one of them, which is `065` in a refusal. **No 404, no 5xx, no console error, 6,722px.** The auditor gets the
 same pane and the same figures, which is right: it is the cost record, and
 reading it is a grant.
+
+### Verified against every report and both people, and it found three more
+
+The pane is a read, so the tie-ins cannot move and the point was to measure
+that rather than assert it. **Eleven cross-reference points tie. The tie
+register reads 20 anchors, 18 tying**, and the two open are the two named to
+the cent since `103` — the asset register against the ledger's depreciation,
+and the invoice register against grant income. No migration is in the change,
+so no anchor could have moved; the register says so rather than the diff.
+
+**And the reports were diffed cell by cell on both sides of the commit**,
+because `_table` is shared by four workbooks and reasoning about a shared
+helper is how a deliverable moves without anybody seeing it. Generated,
+reverted, generated again, compared:
+
+    rate build-up      4 sheets added · 0 cells changed on the sheet already there
+    Form 990           nothing
+    timesheet report   nothing
+    auditor's report   11 cells
+    audit package      32 cells
+    reconciliation.csv, exceptions.csv   byte-identical
+
+**All 43 of those cells read `True` or `False` before and `yes` or `no`
+after** — which is the finding, because none of them is in my sheets. The
+auditor's report and the audit package have been printing booleans at a
+reader for as long as they have existed, in the Controls column and in
+A-1 Reconciliation. Fixing it in `_table` rather than at the call site is
+what reached them; fixing it in my own new sheet would not have. The audit
+package's Activity sheet differs further and only there, because it is a live
+feed and the two runs are minutes apart — proved by comparing the rows as a
+set, where the later run is the earlier one plus its own download entries and
+nothing else.
+
+**Three defects came out of driving it, and two are in the pane:**
+
+- **The drawer showed 200 of 340 and offered no way to the rest.** It said
+  *"the workbook carries them all"*, which is true and is the classification
+  queue's own defect in a sentence: that screen could reach 80 groups of 757
+  and the rest were findable only by guessing a vendor name. The route has
+  taken `offset` since it was written and already answers `more`, so this was
+  a capability with no door built in the same hour as the door. *Show 140
+  more* appends, the count is read off the answer, and it was paged to the
+  end in a browser.
+- **`MANAGEMENT_AND_GENERAL` pushed the federal treatment off the edge of the
+  drawer**, so every row read `ALLOWAB`. Whether a cost is allowable is the
+  thing a sponsor asks about, so clipping that to print an enum in full is
+  the wrong trade twice: the column was unreadable *and* it was shouting SQL.
+  The fix is `web/src/functions990.js`, because `Form990.jsx` held a private
+  map of **three** where the enum has **four** — harmless there, since the
+  return prints three columns, and not harmless anywhere else, because
+  `NOT_APPLICABLE` is the compensation block lifted *out* of them. Two
+  assertions hold it: the map names every value of `function_990` read from
+  `pg_enum`, and no screen may grow a second one. Both watched failing.
+- **The API was still serving the reverted code** when the first drive ran,
+  and the drive is what said so — `404 /review/rate/composition` on the two
+  screens that call it, where reading the source would have said the route is
+  fine. An instrument that exercises the running thing is the only one that
+  can see a stale process.
+
+Driven end to end afterwards: **32 screen visits across the eight audit tabs
+and the review screens, as Tom and as the auditor — no 404, no 5xx, no
+console error, every screen drawing.** All four kind tabs foot, every
+disclosure opens with the rows it names (4 driver exceptions, 5 buildings, 20
+federally funded assets), three drawers open and page, and the auditor gets
+the identical pane with no Unseal, Compute or Certify on it. The suite is
+**1,675 passing**; the six reds are `SETTLEMENT_2025.md`'s, which this file
+already records as correct — the memorandum states positions the record has
+moved past, and regenerating it from a rehearsal signature is what `122`
+forbids.
 
 ## One page, every contract, one signature
 
