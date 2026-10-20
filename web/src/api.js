@@ -282,6 +282,19 @@ export const api = {
   rateAccount: (params) =>
     req("/review/rate/account?" + new URLSearchParams(params)),
   rateBuildupUrl: (period = "2025") => `/api/export/rate-buildup?period=${period}`,
+  /* Any one section of the build-up, at the level somebody is reading it.
+     The whole workbook was the only way to take a figure away, which is the
+     right artefact for a workpaper file and the wrong one for an email:
+     America Makes asks what is in the overhead pool and the answer should be
+     the overhead pool. A URL rather than a fetch, because a download link is
+     a door and the browser does the saving. */
+  rateSectionUrl: (params) =>
+    `/api/export/rate?` + new URLSearchParams(params),
+  /* What the server will export, so the screen does not keep its own list.
+     Three hand-kept maps of what a worklist kind means were each missing
+     different kinds; a second list of sections is that map one register
+     along. */
+  rateSections: () => req("/export/rate/sections"),
   auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
   form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,
   coverage: (period = "2025") => req(`/classify/coverage?period=${period}`),

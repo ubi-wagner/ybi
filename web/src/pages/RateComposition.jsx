@@ -81,6 +81,29 @@ function Foots({ part, what }) {
   );
 }
 
+/* Take this section away, at the level it is being read.
+ *
+ * Two formats because they are two jobs: a CSV is pasted into a sponsor's
+ * model and an .xlsx is filed as a workpaper, and a figure that arrives in
+ * the wrong one gets retyped. Both carry the caveat and the section's own
+ * footing line on the face of the file, because a file travels further than
+ * the screen that would have said so.
+ *
+ * Rendered only for a section the server offers, read from
+ * `/export/rate/sections` — the screen keeping its own list of what is
+ * exportable is the hand-kept map one register along. */
+function Take({ sections, section, params }) {
+  if (!sections || !sections.some((s) => s.section === section)) return null;
+  const at = (format) => api.rateSectionUrl({ ...params, section, format });
+  return (
+    <span className="rowsub take-away">
+      <a href={at("csv")} download>CSV</a>
+      {" · "}
+      <a href={at("xlsx")} download>Excel</a>
+    </span>
+  );
+}
+
 export default function RateComposition({ period = "2025" }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
@@ -89,9 +112,14 @@ export default function RateComposition({ period = "2025" }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [more, setMore] = useState(false);
+  const [sections, setSections] = useState(null);
 
   useEffect(() => {
     api.rateComposition(period).then(setD).catch((e) => setErr(explain(e)));
+    /* A failure here loses the export links and nothing else, so it is
+       swallowed deliberately rather than taking the pane down — `req()`
+       has already put it on the failure panel underneath. */
+    api.rateSections().then((r) => setSections(r.sections)).catch(() => {});
   }, [period]);
 
   /* The drawer reads the account rather than being handed it. Both lists that
@@ -138,6 +166,9 @@ export default function RateComposition({ period = "2025" }) {
   if (rates.length === 0) return null;
   const shown = rates.find((r) => r.kind === kind) || rates[0];
   const offered = KINDS.filter(([k]) => rates.some((r) => r.kind === k));
+  /* What a per-rate export needs to be asked: the server refuses a section
+     of one rate that does not name which, rather than exporting the first. */
+  const kp = { period, kind: shown.kind };
 
   return (
     <>
@@ -152,6 +183,7 @@ export default function RateComposition({ period = "2025" }) {
 
         <Segmented options={offered} value={shown.kind} onChange={setKind} />
 
+
         {/* ---------------------------------------------------- the pool */}
         <div className="section-head" style={{ marginTop: 18 }}>
           <div className="section-h">
@@ -163,7 +195,10 @@ export default function RateComposition({ period = "2025" }) {
               </span>
             )}
           </div>
-          <Foots part={shown.gross} what="accounts" />
+          <span className="head-aside">
+            <Foots part={shown.gross} what="accounts" />
+            <Take sections={sections} section="pool" params={kp} />
+          </span>
         </div>
         {shown.gross.rows.length === 0 ? (
           <div className="quiet-note">
@@ -248,6 +283,10 @@ export default function RateComposition({ period = "2025" }) {
                   direction. This list is a transcription somebody made of the
                   chart, not a rule derived from it.
                 </div>
+                <div className="take-row">
+                  <Take sections={sections} section="drivers"
+                        params={{ period }} />
+                </div>
               </details>
             )}
           </>
@@ -261,7 +300,10 @@ export default function RateComposition({ period = "2025" }) {
               {" — "}taken out of the pool before the rate was struck
             </span>
           </div>
-          <Foots part={shown.carved} what="carve-outs" />
+          <span className="head-aside">
+            <Foots part={shown.carved} what="carve-outs" />
+            <Take sections={sections} section="carve-outs" params={kp} />
+          </span>
         </div>
         {shown.carved.rows.length === 0 ? (
           <div className="quiet-note">
@@ -329,6 +371,9 @@ export default function RateComposition({ period = "2025" }) {
               space carves its share of the occupancy in the pool, weighted by
               what the building is of the whole estate.
             </div>
+            <div className="take-row">
+              <Take sections={sections} section="estate" params={{ period }} />
+            </div>
           </details>
         )}
         {(d.federally_funded_assets || []).length > 0 && (
@@ -355,6 +400,9 @@ export default function RateComposition({ period = "2025" }) {
                 </tr>
               ))}
             </Table>
+            <div className="take-row">
+              <Take sections={sections} section="assets" params={{ period }} />
+            </div>
           </details>
         )}
 
@@ -369,12 +417,15 @@ export default function RateComposition({ period = "2025" }) {
                   {shown.admin_labour.basis} basis
                 </span>
               </div>
+              <span className="head-aside">
               <span className="rowsub">
                 wages <span className="num">{money(shown.admin_labour.wages)}</span>
                 {" + fringe "}
                 <span className="num">{money(shown.admin_labour.fringe_on_it)}</span>
                 {" = "}
                 <span className="num">{money(shown.admin_labour.recorded)}</span>
+              </span>
+              <Take sections={sections} section="admin-labour" params={kp} />
               </span>
             </div>
             <Table columns={[{ label: "Person", align: "left" },
@@ -407,8 +458,11 @@ export default function RateComposition({ period = "2025" }) {
               it
             </span>
           </div>
-          <Foots part={shown.base}
-                 what={shown.base.by === "PERSON" ? "people" : "objectives"} />
+          <span className="head-aside">
+            <Foots part={shown.base}
+                   what={shown.base.by === "PERSON" ? "people" : "objectives"} />
+            <Take sections={sections} section="base" params={kp} />
+          </span>
         </div>
         {/* A wage base is one row per person and an MTDC base one row per
             objective. The unit is not cosmetic: the fringe denominator *is*
@@ -459,6 +513,15 @@ export default function RateComposition({ period = "2025" }) {
             ))}
           </Table>
         )}
+
+        {/* All of it, across every pool a rate is taken over. Not a section
+            of one rate, which is why it sits under the card rather than
+            beside a heading: it is what goes across the table. */}
+        <div className="take-row rowsub" style={{ marginTop: 20 }}>
+          Every transaction in every pool, in one file:{" "}
+          <Take sections={sections} section="transactions"
+                params={{ period }} />
+        </div>
       </Card>
 
       {/* -------------------------------------------------- one account */}
@@ -469,7 +532,9 @@ export default function RateComposition({ period = "2025" }) {
                 : ""}
               onClose={() => setOpen(null)}>
         {loading && <div className="rowsub">Reading the lines…</div>}
-        {detail && (
+        {detail && (() => {
+          const ap = { period, pool: open.pool, account: open.account };
+          return (
           <>
             <div className="stat-row">
               <div className="stat">
@@ -488,8 +553,11 @@ export default function RateComposition({ period = "2025" }) {
 
             <div className="section-head" style={{ marginTop: 16 }}>
               <div className="section-h">Where it went</div>
-              <span className="rowsub">
-                every payee in this account, largest first
+              <span className="head-aside">
+                <span className="rowsub">
+                  every payee in this account, largest first
+                </span>
+                <Take sections={sections} section="payees" params={ap} />
               </span>
             </div>
             <Table columns={[{ label: "Payee", align: "left" },
@@ -505,10 +573,16 @@ export default function RateComposition({ period = "2025" }) {
 
             <div className="section-head" style={{ marginTop: 18 }}>
               <div className="section-h">Every transaction</div>
-              <span className="rowsub">
-                {detail.more
-                  ? `${count(detail.lines.length)} of ${count(detail.lines_total)}`
-                  : `all ${count(detail.lines_total)}`}
+              <span className="head-aside">
+                <span className="rowsub">
+                  {detail.more
+                    ? `${count(detail.lines.length)} of ${count(detail.lines_total)}`
+                    : `all ${count(detail.lines_total)}`}
+                </span>
+                {/* The file carries every line, not the page on the screen:
+                    a breakdown that stopped at 200 rows would not add back
+                    to its own account. */}
+                <Take sections={sections} section="account" params={ap} />
               </span>
             </div>
             <Table columns={[{ label: "Date", align: "left" },
@@ -582,7 +656,8 @@ export default function RateComposition({ period = "2025" }) {
               </details>
             )}
           </>
-        )}
+          );
+        })()}
       </Drawer>
     </>
   );

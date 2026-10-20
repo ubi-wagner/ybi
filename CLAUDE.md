@@ -1602,6 +1602,98 @@ already records as correct — the memorandum states positions the record has
 moved past, and regenerating it from a rehearsal signature is what `122`
 forbids.
 
+### Any level of it, as a file
+
+`app/domain/rate_export.py`, `GET /api/export/rate`,
+`GET /api/export/rate/sections`, a `CSV · Excel` pair on every section head.
+The ask: *"make an easy to export report capability if you do not have it —
+any level of detail across the rate build-up exportable."*
+
+It did not have one. There was **one button and one artefact**: the whole
+five-sheet build-up workbook, 171KB, all of it or none of it. That is the
+right shape for a workpaper file and the wrong one for the conversation it
+was built for — America Makes asks what is in the $1,497,879.12 and the
+answer should be the overhead pool, not a workbook with the overhead pool on
+sheet two. **Ten sections now**, each at the level somebody is reading it:
+the pool by account, the carve-outs, the base, what floor area drives, the
+estate, the federally funded assets, the administrative labour, one
+account's payees, one account's transactions, and every transaction in every
+pool.
+
+**Two formats, because they are two jobs.** A CSV is pasted into a sponsor's
+model and an .xlsx is filed as a workpaper, and a figure that arrives in the
+wrong one gets retyped — which is how a number stops reconciling.
+
+**The footing line is on the face of every file.** *A breakdown that does not
+add back to the figure on the workpaper is worse than no breakdown, in a
+negotiation most of all* — and a CSV has left the screen that said so, which
+makes it exactly the artefact that needs to carry it. Three states, so a
+`NO DATA` section says what is missing rather than printing a variance the
+width of the whole base. The signature band travels too, through
+`certification_lines()` and not a seventh copy of that sentence.
+
+**One reading, three callers.** The route goes through `rate_composition`,
+`rate_account` and `rate_lines` — the same functions the pane and the
+workbook already call — so a figure in the file and the same figure on the
+screen cannot disagree. `publish.py` opens on that rule and broke it once by
+assembling two papers itself.
+
+**And the screen does not keep a list of what is exportable.**
+`/export/rate/sections` answers it, and `<Take>` renders nothing for a
+section the server does not offer. `test_every_section_the_server_offers_
+has_a_button` derives both sides: a section with no button is the
+capability-with-no-door shape for the seventh time, and a button naming a
+section the server lacks is a 422 behind a link somebody will click. Both
+were watched failing.
+
+**`needs` is answered or the route refuses.** A section of one rate exported
+without naming which would answer with whichever rate came first — which is
+`_build_model` reading the fringe rate off whatever was already on file, a
+figure chosen by the order of the rows. The refusal names the four kinds,
+and a second test reads the screen's own `params` to check it never asks
+without them.
+
+**The file carries every line; the screen carries a page.** The drawer shows
+200 of 340 and `rate_account` clamps its page at 1,000 — right for a drawer
+and wrong for a file, so the route pages *through the same function* rather
+than raising the clamp for one caller and putting a second opinion about it
+in the route. Measured: the screen showing 200 exports 340, and the footing
+line says *340 of 340; the account is 50,134.97 in the G&A pool.*
+
+Four defects out of building it, and three are shapes already here:
+
+- **Square feet spelled as money.** `_cell` formatted every `Decimal`
+  `{:,.2f}`, so the estate printed 54,308 square feet as `54,308.00` beside
+  $850,382.89 in the same file. `money()` and `count()` are two helpers in
+  the SPA for exactly this reason. A figure is money only where the column
+  says so, and a plain one keeps the decimals it has — so Heidi's 9,326.5
+  survives and a whole building does not grow cents.
+- **The base's money column is in two different places.** A wage base puts
+  it third and an MTDC base fifth, and the first draft wrote `money={2}`,
+  which is neither. The set travels with the columns now, because the two
+  registers are the thing that differs.
+- **Column headings over no rows**, in the format where it costs most: a
+  reader pasting an empty CSV into a model gets a header and no data and has
+  to work out which of the two happened. The Base sheet of the workbook was
+  corrected for this an hour earlier.
+- **A pane open is `RATE_DRILL_DOWN` and this is `EXPORT`**, which is the
+  whole of why those are two verbs: a file is leaving the building, and
+  `v_export_activity` is where a reviewer looks to find out what went out.
+
+**And the test that could not read the screen was argued with rather than
+believed.** The pane declares `const kp = { period, kind: shown.kind }` once
+and passes `kp`, which is better code and invisible to a regex — so the
+first draft reported a correct screen as missing the rate. *A test that
+argues with correct code is worse than no test.* It resolves one hop through
+a `const` now and **fails loudly on a shorthand it cannot follow**, because
+a property nobody is checking should not read as a pass.
+
+Driven in a browser behind the 2025 audit door: **14 export links on the
+pane and 4 in the drawer, no 404, no 5xx, no console error**, both formats
+downloading, and the links sitting on the footing line itself — *37 accounts
+· 1,761,396.71 ✓ ties to the rate · CSV · Excel* — which is where the figure
+a reader wants to take away already is.
+
 ## One page, every contract, one signature
 
 `app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,

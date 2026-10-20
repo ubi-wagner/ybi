@@ -10,7 +10,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from app.audit import record
@@ -343,3 +343,100 @@ def form_990_export(period: str = None, actor: Actor = Depends(require_reader)):
                   "documents": len(docs)},
            reason="Form 990 Part IX downloaded")
     return FileResponse(out, filename=name, media_type=XLSX)
+
+
+@router.get("/rate/sections")
+def rate_sections() -> dict:
+    """What can be taken away, and what each one needs to be asked.
+
+    The screen renders a button from this rather than keeping its own list.
+    Three maps of what a worklist kind means were each missing different
+    kinds, and the failure mode was a screen that starts speaking SQL; a
+    second list of exportable sections is the same map one register along.
+    """
+    from app.domain.rate_export import SECTIONS
+
+    return {"sections": [{"section": k, "title": s.title, "about": s.about,
+                          "needs": s.needs}
+                         for k, s in SECTIONS.items()]}
+
+
+@router.get("/rate")
+def rate_section_export(section: str, period: str = None,
+                        kind: str = None, pool: str = None,
+                        account: str = None, format: str = "csv",
+                        actor: Actor = Depends(require_reader)):
+    """One section of the rate build-up, at the level somebody is reading it.
+
+    **Through the same three functions the screen calls**, so a figure in
+    this file and the same figure on the pane cannot disagree — the rule the
+    publication script opens on and then broke once by assembling two papers
+    itself.
+
+    This writes an `EXPORT` row where the drill-down writes
+    `RATE_DRILL_DOWN`, and the difference is the whole of why those are two
+    verbs: a pane opening is a read and this is a file leaving the building.
+    `v_export_activity` names `EXPORT`, which is where a reviewer looks to
+    find out what went out and to whom.
+    """
+    from app.domain import rate_export as rx
+    from app.papers import as_data
+    from app.routers.review import (KIND_POOLS, rate_account,
+                                    rate_composition, rate_lines)
+
+    period = period or settings.period
+    if section not in rx.SECTIONS:
+        raise HTTPException(422, f"'{section}' is not a section of the rate "
+                                 f"build-up. One of: "
+                                 f"{', '.join(sorted(rx.SECTIONS))}.")
+    spec = rx.SECTIONS[section]
+    if spec.needs == "kind" and not kind:
+        raise HTTPException(422, f"'{section}' is a section of one rate, so "
+                                 f"it needs ?kind=. One of: "
+                                 f"{', '.join(sorted(KIND_POOLS))}.")
+    if spec.needs == "account" and not (pool and account):
+        raise HTTPException(422, f"'{section}' is a section of one account, "
+                                 f"so it needs ?pool= and ?account=.")
+
+    comp = rate_composition(period)
+    detail = None
+    if spec.needs == "account":
+        # Every line, not the screen's page. `rate_account` clamps its page
+        # at 1,000 — which is right for a drawer and wrong for a file, and
+        # raising the clamp for one caller would put a second opinion about
+        # it in this route. It is paged here instead, through the same
+        # function, until the route itself says there is no more.
+        detail = rate_account(period=period, pool=pool, account=account,
+                              limit=1000, offset=0, actor=actor)
+        while detail.get("more"):
+            nxt = rate_account(period=period, pool=pool, account=account,
+                               limit=1000, offset=len(detail["lines"]),
+                               actor=actor)
+            detail["lines"].extend(nxt["lines"])
+            detail["more"] = nxt.get("more")
+    elif section == "transactions":
+        detail = rate_lines(period)
+
+    try:
+        sheet = rx.build_sheet(section, comp=comp, detail=detail, kind=kind)
+    except KeyError:
+        raise HTTPException(422, f"No {kind} rate stands for {period}, so "
+                                 f"there is no '{section}' to export.")
+
+    cert = rate_certification(period)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+    slug = section + (f"-{kind.lower().replace('&', 'and')}" if kind else "")
+    record(actor, "EXPORT", "rate_section", f"{section}|{kind or ''}|{account or ''}",
+           after={"period": period, "section": section, "kind": kind,
+                  "account": account, "rows": len(sheet.rows),
+                  "format": format},
+           reason=f"{sheet.title} taken away as {format}")
+
+    if format == "xlsx":
+        out = Path(tempfile.gettempdir()) / f"YBI-{period}-{slug}-{stamp}.xlsx"
+        rx.to_xlsx(sheet, out, period=period, certification=cert)
+        return FileResponse(out, filename=out.name, media_type=XLSX)
+    if format != "csv":
+        raise HTTPException(422, f"'{format}' is not a format. csv or xlsx.")
+    return as_data(rx.to_csv(sheet, period=period, certification=cert),
+                   f"YBI-{period}-{slug}-{stamp}.csv", "text/csv")

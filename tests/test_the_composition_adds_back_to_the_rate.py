@@ -240,3 +240,156 @@ def test_the_990_label_map_is_the_only_one():
         f"{offenders} carry their own map of what a 990 function is called. "
         f"There were three maps of what a worklist kind means and every one "
         f"was missing different kinds; `functions990.js` is the one here.")
+
+
+# ----------------------------------------------------------- the exports
+
+
+def test_every_section_the_server_offers_has_a_button():
+    """And every button asks for a section the server knows.
+
+    Both directions, because both have cost this repository something. A
+    section with no button is the capability-with-no-door shape, which has
+    now appeared six times; a button naming a section the server does not
+    have is a screen offering what the API will not take, which shipped once
+    on 24 accounts. Neither side keeps a list — the server's is `SECTIONS`
+    and the screen's is read out of its own `<Take section="…">` calls.
+    """
+    import re
+
+    from app.domain.rate_export import SECTIONS
+
+    src = (PAGES / "RateComposition.jsx").read_text()
+    src = re.sub(r"\{?/\*.*?\*/\}?", "", src, flags=re.S)
+    asked = set(re.findall(r'<Take\s+[^>]*?section="([^"]+)"', src))
+    offered = set(SECTIONS)
+    assert asked - offered == set(), (
+        f"the pane offers {sorted(asked - offered)}, which the export route "
+        f"does not know — a 422 behind a link somebody will click")
+    assert offered - asked == set(), (
+        f"{sorted(offered - asked)} can be exported and nothing on the "
+        f"screen says so. A capability with no door is the shape this "
+        f"repository has found six times.")
+
+
+def test_a_per_rate_section_is_never_exported_without_its_rate():
+    """`needs` is answered or the route refuses, never defaulted.
+
+    A section of one rate exported without naming which would answer with
+    whichever rate came first, which is `_build_model` reading the fringe
+    rate off whatever was already on file: a figure chosen by the order of
+    the rows rather than by a caller.
+    """
+    import re
+
+    from app.domain.rate_export import SECTIONS
+
+    src = (PAGES / "RateComposition.jsx").read_text()
+    src = re.sub(r"\{?/\*.*?\*/\}?", "", src, flags=re.S)
+
+    def resolve(expr: str) -> str:
+        """One hop through a shorthand, and no further.
+
+        The screen declares `const kp = { period, kind: shown.kind }` once
+        and passes `kp`, which is better code and invisible to a regex. A
+        test that read the literal and reported it missing would be arguing
+        with correct code — the defect this repository calls worse than no
+        test. Anything that is neither an object nor a resolvable `const`
+        fails rather than passing quietly, because a shorthand this cannot
+        follow is a property nobody is checking.
+        """
+        expr = expr.strip()
+        if expr.startswith("{"):
+            return expr
+        name = re.fullmatch(r"\.\.\.?\s*([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)",
+                            expr)
+        assert name, f"cannot read the params passed to <Take>: {expr!r}"
+        ident = name.group(1) or name.group(2)
+        decl = re.search(rf"const\s+{re.escape(ident)}\s*=\s*(\{{[^}}]*\}})",
+                         src)
+        assert decl, (f"<Take params={{{ident}}}> and nothing in the file "
+                      f"declares {ident}")
+        return decl.group(1)
+
+    for m in re.finditer(r'<Take\s+[^>]*?section="([^"]+)"[^>]*?'
+                         r'params=\{(.*?)\}\s*/>', src, re.S):
+        section, params = m.group(1), resolve(m.group(2))
+        needs = SECTIONS[section].needs
+        if needs == "kind":
+            assert "kind" in params, (
+                f"'{section}' is a section of one rate and the screen asks "
+                f"for it without naming the rate: {params.strip()}")
+        if needs == "account":
+            assert "account" in params and "pool" in params, (
+                f"'{section}' is a section of one account and the screen "
+                f"asks for it without naming it: {params.strip()}")
+
+
+def test_every_exported_section_carries_its_own_tie(composition):
+    """A file travels further than the screen that said whether it foots.
+
+    This is the whole point of the pane in a negotiation: a sponsor who adds
+    the column up and gets a different answer stops reading. So the footing
+    line is on the face of every partition exported, in the same words, and a
+    `NO DATA` section says what is missing rather than printing a variance
+    the width of the whole base.
+    """
+    from app.domain import rate_export as rx
+
+    checked = 0
+    for rate in composition["rates"]:
+        for section in ("pool", "carve-outs", "base"):
+            sheet = rx.build_sheet(section, comp=composition,
+                                   kind=rate["kind"])
+            assert sheet.foots, (
+                f"{rate['kind']}'s {section} exports with no statement of "
+                f"whether it adds back to the rate")
+            assert "DOES NOT TIE" not in sheet.foots, (
+                f"{rate['kind']}'s {section}: {sheet.foots}")
+            checked += 1
+    assert checked >= 3, "no section was examined, so this asserted nothing"
+
+
+def test_a_section_that_cannot_be_drawn_prints_no_column_headings(composition):
+    """Headings over nothing say less than the sentence above them.
+
+    The Base sheet of the build-up workbook was corrected for exactly this,
+    and a CSV repeats it one format along — where it is worse, because a
+    reader pasting the file into a model gets a header row and no data and
+    has to work out which of the two happened.
+    """
+    from app.domain import rate_export as rx
+    from app.routers.rates import rate_certification
+
+    empty = [r for r in composition["rates"]
+             if (r.get("base") or {}).get("state") == "NO DATA"]
+    if not empty:
+        pytest.skip("every rate on this record carries a per-objective base, "
+                    "so there is no undrawable section to check")
+    for rate in empty:
+        sheet = rx.build_sheet("base", comp=composition, kind=rate["kind"])
+        body = rx.to_csv(sheet, period=PERIOD,
+                         certification=rate_certification(PERIOD))
+        assert sheet.columns[0] not in body, (
+            f"{rate['kind']}'s base exports column headings over no rows")
+        assert "Nothing breaks" in body, (
+            f"{rate['kind']}'s base exports without saying why it is empty")
+
+
+def test_a_figure_is_money_only_where_the_column_says_so():
+    """Square feet are not dollars.
+
+    `money()` and `count()` are two helpers in the SPA for this reason, and
+    the first draft of `_cell` spelled every `Decimal` `{:,.2f}` — so the
+    estate printed 54,308 square feet as `54,308.00` beside $850,382.89 in
+    the same file.
+    """
+    from decimal import Decimal as D
+
+    from app.domain.rate_export import _cell
+
+    assert _cell(D("54308.00")) == "54,308"
+    assert _cell(D("9326.50")) == "9,326.5"
+    assert _cell(D("850382.89"), money=True) == "850,382.89"
+    assert _cell(D("1"), rate=True) == "100.0000%"
+    assert _cell(None) == "" and _cell(True) == "yes" and _cell(False) == "no"

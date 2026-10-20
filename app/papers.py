@@ -48,3 +48,27 @@ def as_pdf(body: bytes, name: str, inline: bool = False) -> Response:
                  "Content-Security-Policy":
                      "default-src 'none'; object-src 'self'; "
                      "plugin-types application/pdf; sandbox"})
+
+
+XLSX = ("application/vnd.openxmlformats-officedocument."
+        "spreadsheetml.sheet")
+
+
+def as_data(body: bytes | str, name: str, media_type: str) -> Response:
+    """A generated data file, saved rather than rendered.
+
+    Here for the reason `as_pdf` is: one place decides the disposition. A
+    CSV is the easiest of these to get wrong, because a browser will happily
+    render one in the tab and a button reading Download has then done
+    nothing — which is this module's own founding defect in the format most
+    likely to meet it.
+
+    `nosniff` because the type is ours and there is nothing for a browser to
+    improve by guessing.
+    """
+    if isinstance(body, str):
+        body = body.encode("utf-8-sig")      # Excel reads the BOM as UTF-8
+    return Response(
+        body, media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{name}"',
+                 "X-Content-Type-Options": "nosniff"})
