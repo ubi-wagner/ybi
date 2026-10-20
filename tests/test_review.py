@@ -142,7 +142,14 @@ def test_every_review_screen_states_what_is_unfinished(page):
         f"A reviewer handed a total forms a view before they reach a footnote.")
 
 
-@pytest.mark.parametrize("page", ["RateReview.jsx", "Form990.jsx", "Auditor.jsx"])
+# `RateComposition.jsx` is on the computing sweep and deliberately not on the
+# one above it: it is a pane rendered inside `RateReview` and the `/review`
+# shell, both of which already state what is unfinished, and one sentence per
+# fact is the rule — four copies of the caveat at the top of one page is the
+# defect the evidence screen already learned. What it must obey is the harder
+# half: every figure it prints is read from the row it was recorded in.
+@pytest.mark.parametrize("page", ["RateReview.jsx", "Form990.jsx", "Auditor.jsx",
+                                  "RateComposition.jsx"])
 def test_no_review_screen_computes_a_figure(page):
     """Read back, never recomputed.
 

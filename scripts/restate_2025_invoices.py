@@ -78,7 +78,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from app.db import open_pool, query
+from app.db import one, open_pool, query
+from app.domain.audit_package import certification_lines
 from app.domain.invoice_document import (DocumentLine, InvoiceDocument, Party,
                                          render)
 
@@ -99,16 +100,48 @@ ALL_MONTHS = [f"{PERIOD}-{i:02d}" for i in range(1, 13)]
 #: It is restated on the same rate because the rate is YBI's, not the
 #: award's; whose money the offset settles against is a separate question
 #: and the workpaper keeps it separate.
+#: What each restated invoice carries on its face besides the figures: the
+#: contract's name as the originals print it, the project line, the people
+#: named on it and the purchase order. All four are **transcriptions of the
+#: invoices YBI issued** — they are how NCDMM's payables recognises the
+#: paper — so they are written down here, like the six fringe accounts.
+#:
+#: The **award number is not**. It is on the register, and a literal copy of
+#: it is free to be wrong: this list carried `AM-LTM` where the register
+#: holds `AM-LTM-PROJ88`, so every one of Last Tactical Mile's twelve
+#: restated invoices printed an award number NCDMM does not hold. Not a
+#: figure — the money was right — which is exactly why nothing caught it,
+#: and a wrong reference on the one line a payables clerk matches to an
+#: agreement is what stalls a settlement. `award_for()` reads it.
 CONTRACTS = [
-    ("DRIVE-AM",  "AM-DRIVE-AM",  "Drive AM",
+    ("DRIVE-AM",  "Drive AM",
      "DRIVE AM Project", "Engel, Gaffney, Kale, Negro, Jaric", "20240119"),
-    ("LTM",       "AM-LTM",       "Last Tactical Mile",
+    ("LTM",       "Last Tactical Mile",
      "Impact 2.0 The Last Tactical Mile Project", "Engel, Gaffney", "20250018"),
-    ("HYBRID-II", "AM-HYBRID-P2", "Hybrid Phase 2",
+    ("HYBRID-II", "Hybrid Phase 2",
      "Hybrid Phase II", "Gaffney, Negro, Longo, Jaric, Metzinger", ""),
-    ("DIG-ENG",   "AM-ICAM-DIGENG", "Digital Engineering",
+    ("DIG-ENG",   "Digital Engineering",
      "Digital Engineering (SRA-0350)", "Gaffney, Longo", "20240105"),
 ]
+
+
+def award_for(objectives) -> dict[str, str]:
+    """The award number each objective is billed under, from the register.
+
+    It refuses rather than printing a blank: an invoice naming no award is
+    one a payables clerk cannot match, and an objective with no award row is
+    a fact worth stopping on rather than papering over.
+    """
+    rows = query("""SELECT objective_id, award_id FROM award
+                     WHERE objective_id = ANY(%s)""", (list(objectives),))
+    found = {r["objective_id"]: r["award_id"] for r in rows}
+    missing = [o for o in objectives if o not in found]
+    if missing:
+        raise SystemExit(
+            f"no award on the register for {', '.join(missing)} — a restated "
+            f"invoice has to name the agreement it is issued under, and this "
+            f"script will not invent one.")
+    return found
 
 #: Where each objective's billing sits in the Income section. The ledger is
 #: the billing register and its account names are its own.
@@ -309,6 +342,46 @@ def months_of(objectives) -> dict[str, list[str]]:
     return {o: sorted(out[o]) for o in objectives}
 
 
+def standing_of_the_record() -> str:
+    """What is true about the classification and the carve-out, as figures.
+
+    Deliberately **says nothing about the signature.** `122`'s rule is that
+    there is one sentence-maker for that and it is `certification_lines()`,
+    which `invoice_document.py` already draws as a band on every one of
+    these faces. This caveat used to assert "the rate is certified" as a
+    string literal, so all forty-three restated invoices printed it two
+    lines above a band reading *NOT CERTIFIED — the rate this is built on
+    carries no signature*. A paper that contradicts itself is worse than one
+    that says nothing, and this is the face NCDMM's payables reads.
+    """
+    cov = one("""SELECT round(pct_dollars_covered, 1) AS pct, unclassified
+                   FROM v_classification_coverage WHERE period = %s""",
+              (PERIOD,)) or {}
+    carve = one("""SELECT count(*) AS n, COALESCE(sum(amount), 0) AS amount
+                     FROM carve_out
+                    WHERE period = %s AND citation LIKE '%%200.465%%'""",
+                (PERIOD,)) or {}
+    seal = one("""SELECT count(*) AS n FROM decision_set
+                   WHERE period = %s AND sealed_at IS NOT NULL""",
+               (PERIOD,)) or {}
+
+    bits = []
+    pct = cov.get("pct")
+    if pct is not None:
+        bits.append(f"The 2025 classification is {pct}% complete"
+                    + (" and sealed" if (seal.get("n") or 0) else
+                       " and is not yet sealed"))
+    if (carve.get("n") or 0):
+        bits.append(f"the 200.465 facilities carve-out is evaluated against "
+                    f"the estate on the record ({carve['n']} building(s), "
+                    f"{carve['amount']:,.2f})")
+    else:
+        bits.append("no 200.465 facilities carve-out has been evaluated, so "
+                    "every dollar of tenant and vacant occupancy cost is in "
+                    "the federal pool")
+    return ". ".join(b[0].upper() + b[1:] for b in bits) + "." if bits else ""
+
+
 def recorded_position(objectives) -> dict[str, dict]:
     """What the engine recorded, to check this script against.
 
@@ -345,8 +418,13 @@ def build():
     nonlab = monthly_nonlabour(objectives)
     spans = months_of(objectives)
 
+    award_of = award_for(objectives)
+    standing = standing_of_the_record()
+    cert = one("SELECT * FROM v_rate_certified WHERE period = %s", (PERIOD,))
+
     built = []
-    for obj, award, title, project, personnel, po in CONTRACTS:
+    for obj, title, project, personnel, po in CONTRACTS:
+        award = award_of[obj]
         MONTHS = spans[obj]
         lab = {mm: labour[obj].get(mm, D("0.00")) for mm in MONTHS}
         nl = {mm: nonlab[obj].get(mm, D("0.00")) for mm in MONTHS}
@@ -374,7 +452,8 @@ def build():
                 total=mtdc[mm] + ind[mm],
                 billed=dict(billed.get(mm, {})),
                 billed_total=sum(billed.get(mm, {}).values(), D("0.00")),
-                unmatched=unmatched))
+                unmatched=unmatched,
+                standing=standing, cert=cert))
     return built, dict(fringe=fringe_rate, indirect=indirect_rate, basis=basis,
                        unlogged=unlogged, alloc=alloc)
 
@@ -406,6 +485,7 @@ def document(row, rates) -> InvoiceDocument:
                      description=f"Indirect @ {rates['indirect'] * 100:.2f}% of MTDC "
                                  f"({row['mtdc']:,.2f})"),
     ]
+    standing = row["standing"]
     caveats = [
         "PROPOSED RESTATEMENT — not an invoice YBI has issued. It rebuilds the "
         f"month on the negotiated rate and supersedes what was billed "
@@ -416,10 +496,8 @@ def document(row, rates) -> InvoiceDocument:
         "The category split of the non-labour is not on the cost record — the "
         "ledger carries an account and a payee, not an invoice category — so it "
         "is one line rather than a guess.",
-        "Requires a §4.4 modification changing the basis from the 10% de minimis "
-        "to the negotiated rate. Classification is complete and sealed, the rate "
-        "is certified, and the 200.465 facilities carve-out has been evaluated "
-        "against the estate on the record.",
+        "Requires a §4.4 modification changing the basis from the 10% de "
+        "minimis to the negotiated rate. " + standing,
     ]
     return InvoiceDocument(
         number=f"R-{row['objective']}-{row['month'].replace('-', '')}",
@@ -427,6 +505,9 @@ def document(row, rates) -> InvoiceDocument:
         lines=tuple(lines), total=row["total"], terms="Net 30",
         po_number=row["po"], service_from=start, service_to=end,
         objective=row["objective"], award=row["award"],
+        certified=bool((row["cert"] or {}).get("certified"))
+                  and not (row["cert"] or {}).get("rehearsal"),
+        certification_line=" ".join(certification_lines(row["cert"])),
         is_original=True, status="RESTATED",
         source_document="Rebuilt from the sealed 2025 classification. "
                         "scripts/restate_2025_invoices.py",
@@ -591,7 +672,7 @@ def main() -> int:
            f"{'non-lab':>12}{'indirect':>11}{'restated':>12}{'as billed':>12}{'movement':>12}")
     print(hdr)
     grand = [D("0.00")] * 3
-    for obj, award, title, *_ in CONTRACTS:
+    for obj, title, *_ in CONTRACTS:
         rows = [r for r in built if r["objective"] == obj]
         t = [D("0.00")] * 6
         for r in rows:
@@ -612,7 +693,7 @@ def main() -> int:
     # registers, so this is a comparison and not an assertion.
     recorded = recorded_position([o for o, *_ in CONTRACTS])
     print(f"\n{'':20}{'this script':>16}{'the restatement':>18}{'difference':>14}")
-    for obj, award, title, *_ in CONTRACTS:
+    for obj, title, *_ in CONTRACTS:
         mine = sum((r["total"] - r["billed_total"]
                     for r in built if r["objective"] == obj), D("0.00"))
         rec = recorded.get(obj)
@@ -623,7 +704,7 @@ def main() -> int:
         d = mine - theirs
         print(f"{title:20}{mine:>16}{theirs:>18}{d:>14}"
               f"{'' if d == 0 else '   <- the two registers differ'}")
-    off = [(t, o) for o, a, t, *_ in CONTRACTS
+    off = [(t, o) for o, t, *_ in CONTRACTS
            if o in recorded
            and sum((r["total"] - r["billed_total"]
                     for r in built if r["objective"] == o), D("0.00"))

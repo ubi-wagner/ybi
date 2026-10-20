@@ -1393,6 +1393,1066 @@ still proposes 'SBA-ACCEL', which is not on the register"*, and the first
 attempt at that watch failed on the function signature instead — which proves
 nothing, and is worth not mistaking for a proof.
 
+## What the rate is made of
+
+`GET /api/review/rate/composition`, `GET /api/review/rate/account`,
+`web/src/pages/RateComposition.jsx`, four more sheets on the build-up
+workbook. The controller's words: *"I need to have access to what makes up
+our indirect rate for our pending negotiations … I've downloaded the
+rate-buildup sheet at the bottom of the page, but it's not what I'm looking
+for. I'd like to be able to see high-level amounts of what makes up the
+individual amounts as well as detailed by transaction if possible."*
+
+He is right that the workbook was not it. `/review/rate` and the workbook
+both answer *how the rate was struck* — pool over base, less what was carved
+out, against the seal — which is what a reviewer needs to reproduce the
+arithmetic and is **not** what somebody walking into a negotiation needs.
+America Makes will ask what is in the $1,497,879.12, and the only answer the
+system could give was four rows restating the figure.
+
+**Everything added is a read, and nothing is computed.** Two GETs under
+`require_reader`, no migration, no column, no write to the cost record — the
+sealed rates Tom computed are untouched by construction. Every figure is read
+from the register that already holds it: the gross from `v_pool_balance`, the
+carve-outs from `carve_out`, the driver split from `v_overhead_split`, the
+estate from `v_facility_occupancy`, the wage base from `v_labor_effective`,
+the MTDC base from `allocation`. `test_no_review_screen_computes_a_figure`
+takes the new pane too.
+
+**Every partition says whether it foots**, and that is the only rule that
+matters here. A breakdown that does not add back to the figure on the
+workpaper is worse than no breakdown, in a negotiation most of all: a sponsor
+who adds the column up and gets a different answer stops reading the rest.
+On the measured estate:
+
+    FRINGE              6 accounts  401,783.60    base 43 people   1,835,047.17
+    OVERHEAD           19 accounts 1,497,879.12   carved 6           742,561.90
+    G&A                18 accounts   263,517.59
+    INDIRECT_COMBINED  37 accounts 1,761,396.71   base 19 objectives 5,058,960.43
+    transactions        2,268 lines 2,163,180.31  against the pools' own gross
+
+**Three states, not two.** `_part` answers `NO DATA` where there is no
+breakdown to draw rather than reporting a failed tie, and says what is
+missing. The per-objective base is the case: `allocation` is recorded once,
+against the rate it was computed on, so asking OVERHEAD for its own objective
+base compares an empty table to $5,058,960.43 and prints a five-million
+dollar variance over something that was never meant to exist. *A control that
+cries wolf teaches the reader to dismiss the next real one* — and the screen
+and the workbook each reintroduced the two-state reading one layer up, where
+`foots: None` is falsy and renders as a failure.
+
+**A wage base is people and an MTDC base is objectives**, and the unit is not
+cosmetic. The fringe denominator *is* the payroll register, which is the
+eleventh control's whole point, so printing 43 people under objective
+headings would say the rate was taken over the ledger's wage accounts — the
+other denominator, and 22.45% rather than 21.90%. The first draft did exactly
+that: 43 rows with the amount in the Base column and every other cell blank,
+under a footing line reading *"43 objective(s)"*. It is `v_labor_effective`
+reading 97 on the run sheet, one screen along.
+
+**The drill-down is a query parameter and not a path.** A group key is an
+account and a payee joined by 0x1f and an account name carries colons and
+spaces; `?pool=&account=` is the house rule from `/classify`, for the reason
+recorded there.
+
+**And `rate_lines` is not a route.** Every transaction in every rate pool is
+2,268 rows on this record and there is no screen that wants them at once — a
+route answering a 4,000-row payload is a capability with no door in the
+direction nobody checks. It is called by the export, so the workbook's
+Transactions sheet and the screen's per-account drawer are one implementation
+with two callers, and `rate_composition` is called by both the screen and the
+export for the same reason.
+
+**A pane open is not an export.** The drill-down records
+`RATE_DRILL_DOWN`; `v_export_activity` and `v_shared_password_acts` both name
+`EXPORT` explicitly, so labelling a click as one would put a row in the
+register claiming a file had gone out. Reading and taking a copy are
+different acts, which is already why `EVIDENCE_VIEW` sits beside
+`EVIDENCE_DOWNLOAD` and is on neither list.
+
+### The map is the view's own, and the mutation that proved nothing
+
+`KIND_POOLS` says which ledger pools each rate kind is taken over, and
+INDIRECT_COMBINED is OVERHEAD plus G&A. `v_rate_buildup` already holds that
+as `pool_for_kind`, so the test **executes the CTE out of
+`pg_get_viewdef`** rather than keeping a second copy — the map this file has
+been wrong about four times in one run. It is pure literals, so it runs
+against an empty database.
+
+`065` is why it matters: the one rate that leaves the building was the one
+with nothing behind it, because the join read `pb.pool = r.kind` and there is
+no pool of that name.
+
+**And the `AND dl.live` mutation passed, twice.** The first run was on a
+record where nothing had ever been superseded, so there was no second
+`decision_line` to multiply — *a mutation that does not express the defect
+proves nothing*, which this file records about a settlement paragraph and
+which is worth the second reading every time. Reclassifying the janitorial
+contract through the real API and re-sealing produced the real shape, and it
+**still** passed: reclassifying *reverses* the judgment it replaces, so
+`d.reversed_at IS NULL` already excludes the row `AND dl.live` does. Dropping
+both fails at exactly **22,712.00**, the group to the cent. Both guards stay
+— *a rule with an exception is one somebody gets wrong the day they change
+that join* — and the test says it catches the pair rather than claiming to
+catch either.
+
+Six more assertions were watched failing: the map with G&A dropped from
+INDIRECT_COMBINED, the third state removed from `_part`, a `NO DATA` with no
+reason, and the per-person base taken off the screen and off the workbook.
+
+### Four things the rendered workbook showed and no assertion did
+
+- **The Base sheet printed 43 people into objective columns** (above).
+- **`true` is what JSON calls it and not what a person does.** The
+  `overhead_driver` exceptions read `False` under *Floor area drives it*. It
+  is fixed in `_table` rather than at the call site, so the next sheet to
+  carry a boolean gets it — and that is what reached the **43 cells in the
+  auditor's report and the audit package that have been printing `True` at a
+  reader since they were written**, which the diff below found and no
+  assertion could. `None` stays blank, because *there is no answer* and
+  *nobody has answered* are different facts and `no` writes the second as the
+  first.
+- **A ratio formatted to the cent.** The federal share of each asset printed
+  `1` beside figures in `#,##0.00` — `082`'s *0.9144 reads as ninety-one
+  cents* in the sheet that answers the 200.436(b) question.
+- **A partition printed short of its own whole.** The estate table showed
+  Usable, Let, Vacant, Committed and Programme, so Tech Block 5 read 54,308
+  usable against 18,019 let and a reader could not see where the other 36,289
+  feet went. Every use the view partitions by is printed now — and `common`
+  blank on all five buildings is the honest answer, because the derived
+  estate has no common-area row, which is the distinction Semple's 2,857 sq
+  ft turns on.
+
+Driven in a browser behind the 2025 audit door, as Tom, on a from-empty
+record carrying the measured estate: the pane renders under both `/rates` and
+`/review/rate` from one component, every partition ticks, the drawer opens
+850,382.89 of depreciation over 12 lines with `2 CFR 200.436` on each, 5215
+Dues pages 340 lines over 60 payees at 200 a page, and an unknown pool
+answers 422 naming the three a rate is taken over — INDIRECT_COMBINED is not
+one of them, which is `065` in a refusal. **No 404, no 5xx, no console error, 6,722px.** The auditor gets the
+same pane and the same figures, which is right: it is the cost record, and
+reading it is a grant.
+
+### Verified against every report and both people, and it found three more
+
+The pane is a read, so the tie-ins cannot move and the point was to measure
+that rather than assert it. **Eleven cross-reference points tie. The tie
+register reads 20 anchors, 18 tying**, and the two open are the two named to
+the cent since `103` — the asset register against the ledger's depreciation,
+and the invoice register against grant income. No migration is in the change,
+so no anchor could have moved; the register says so rather than the diff.
+
+**And the reports were diffed cell by cell on both sides of the commit**,
+because `_table` is shared by four workbooks and reasoning about a shared
+helper is how a deliverable moves without anybody seeing it. Generated,
+reverted, generated again, compared:
+
+    rate build-up      4 sheets added · 0 cells changed on the sheet already there
+    Form 990           nothing
+    timesheet report   nothing
+    auditor's report   11 cells
+    audit package      32 cells
+    reconciliation.csv, exceptions.csv   byte-identical
+
+**All 43 of those cells read `True` or `False` before and `yes` or `no`
+after** — which is the finding, because none of them is in my sheets. The
+auditor's report and the audit package have been printing booleans at a
+reader for as long as they have existed, in the Controls column and in
+A-1 Reconciliation. Fixing it in `_table` rather than at the call site is
+what reached them; fixing it in my own new sheet would not have. The audit
+package's Activity sheet differs further and only there, because it is a live
+feed and the two runs are minutes apart — proved by comparing the rows as a
+set, where the later run is the earlier one plus its own download entries and
+nothing else.
+
+**Three defects came out of driving it, and two are in the pane:**
+
+- **The drawer showed 200 of 340 and offered no way to the rest.** It said
+  *"the workbook carries them all"*, which is true and is the classification
+  queue's own defect in a sentence: that screen could reach 80 groups of 757
+  and the rest were findable only by guessing a vendor name. The route has
+  taken `offset` since it was written and already answers `more`, so this was
+  a capability with no door built in the same hour as the door. *Show 140
+  more* appends, the count is read off the answer, and it was paged to the
+  end in a browser.
+- **`MANAGEMENT_AND_GENERAL` pushed the federal treatment off the edge of the
+  drawer**, so every row read `ALLOWAB`. Whether a cost is allowable is the
+  thing a sponsor asks about, so clipping that to print an enum in full is
+  the wrong trade twice: the column was unreadable *and* it was shouting SQL.
+  The fix is `web/src/functions990.js`, because `Form990.jsx` held a private
+  map of **three** where the enum has **four** — harmless there, since the
+  return prints three columns, and not harmless anywhere else, because
+  `NOT_APPLICABLE` is the compensation block lifted *out* of them. Two
+  assertions hold it: the map names every value of `function_990` read from
+  `pg_enum`, and no screen may grow a second one. Both watched failing.
+- **The API was still serving the reverted code** when the first drive ran,
+  and the drive is what said so — `404 /review/rate/composition` on the two
+  screens that call it, where reading the source would have said the route is
+  fine. An instrument that exercises the running thing is the only one that
+  can see a stale process.
+
+Driven end to end afterwards: **32 screen visits across the eight audit tabs
+and the review screens, as Tom and as the auditor — no 404, no 5xx, no
+console error, every screen drawing.** All four kind tabs foot, every
+disclosure opens with the rows it names (4 driver exceptions, 5 buildings, 20
+federally funded assets), three drawers open and page, and the auditor gets
+the identical pane with no Unseal, Compute or Certify on it. The suite is
+**1,675 passing**; the six reds are `SETTLEMENT_2025.md`'s, which this file
+already records as correct — the memorandum states positions the record has
+moved past, and regenerating it from a rehearsal signature is what `122`
+forbids.
+
+### Any level of it, as a file
+
+`app/domain/rate_export.py`, `GET /api/export/rate`,
+`GET /api/export/rate/sections`, a `CSV · Excel` pair on every section head.
+The ask: *"make an easy to export report capability if you do not have it —
+any level of detail across the rate build-up exportable."*
+
+It did not have one. There was **one button and one artefact**: the whole
+five-sheet build-up workbook, 171KB, all of it or none of it. That is the
+right shape for a workpaper file and the wrong one for the conversation it
+was built for — America Makes asks what is in the $1,497,879.12 and the
+answer should be the overhead pool, not a workbook with the overhead pool on
+sheet two. **Ten sections now**, each at the level somebody is reading it:
+the pool by account, the carve-outs, the base, what floor area drives, the
+estate, the federally funded assets, the administrative labour, one
+account's payees, one account's transactions, and every transaction in every
+pool.
+
+**Two formats, because they are two jobs.** A CSV is pasted into a sponsor's
+model and an .xlsx is filed as a workpaper, and a figure that arrives in the
+wrong one gets retyped — which is how a number stops reconciling.
+
+**The footing line is on the face of every file.** *A breakdown that does not
+add back to the figure on the workpaper is worse than no breakdown, in a
+negotiation most of all* — and a CSV has left the screen that said so, which
+makes it exactly the artefact that needs to carry it. Three states, so a
+`NO DATA` section says what is missing rather than printing a variance the
+width of the whole base. The signature band travels too, through
+`certification_lines()` and not a seventh copy of that sentence.
+
+**One reading, three callers.** The route goes through `rate_composition`,
+`rate_account` and `rate_lines` — the same functions the pane and the
+workbook already call — so a figure in the file and the same figure on the
+screen cannot disagree. `publish.py` opens on that rule and broke it once by
+assembling two papers itself.
+
+**And the screen does not keep a list of what is exportable.**
+`/export/rate/sections` answers it, and `<Take>` renders nothing for a
+section the server does not offer. `test_every_section_the_server_offers_
+has_a_button` derives both sides: a section with no button is the
+capability-with-no-door shape for the seventh time, and a button naming a
+section the server lacks is a 422 behind a link somebody will click. Both
+were watched failing.
+
+**`needs` is answered or the route refuses.** A section of one rate exported
+without naming which would answer with whichever rate came first — which is
+`_build_model` reading the fringe rate off whatever was already on file, a
+figure chosen by the order of the rows. The refusal names the four kinds,
+and a second test reads the screen's own `params` to check it never asks
+without them.
+
+**The file carries every line; the screen carries a page.** The drawer shows
+200 of 340 and `rate_account` clamps its page at 1,000 — right for a drawer
+and wrong for a file, so the route pages *through the same function* rather
+than raising the clamp for one caller and putting a second opinion about it
+in the route. Measured: the screen showing 200 exports 340, and the footing
+line says *340 of 340; the account is 50,134.97 in the G&A pool.*
+
+Four defects out of building it, and three are shapes already here:
+
+- **Square feet spelled as money.** `_cell` formatted every `Decimal`
+  `{:,.2f}`, so the estate printed 54,308 square feet as `54,308.00` beside
+  $850,382.89 in the same file. `money()` and `count()` are two helpers in
+  the SPA for exactly this reason. A figure is money only where the column
+  says so, and a plain one keeps the decimals it has — so Heidi's 9,326.5
+  survives and a whole building does not grow cents.
+- **The base's money column is in two different places.** A wage base puts
+  it third and an MTDC base fifth, and the first draft wrote `money={2}`,
+  which is neither. The set travels with the columns now, because the two
+  registers are the thing that differs.
+- **Column headings over no rows**, in the format where it costs most: a
+  reader pasting an empty CSV into a model gets a header and no data and has
+  to work out which of the two happened. The Base sheet of the workbook was
+  corrected for this an hour earlier.
+- **A pane open is `RATE_DRILL_DOWN` and this is `EXPORT`**, which is the
+  whole of why those are two verbs: a file is leaving the building, and
+  `v_export_activity` is where a reviewer looks to find out what went out.
+
+**And the test that could not read the screen was argued with rather than
+believed.** The pane declares `const kp = { period, kind: shown.kind }` once
+and passes `kp`, which is better code and invisible to a regex — so the
+first draft reported a correct screen as missing the rate. *A test that
+argues with correct code is worse than no test.* It resolves one hop through
+a `const` now and **fails loudly on a shorthand it cannot follow**, because
+a property nobody is checking should not read as a pass.
+
+Driven in a browser behind the 2025 audit door: **14 export links on the
+pane and 4 in the drawer, no 404, no 5xx, no console error**, both formats
+downloading, and the links sitting on the footing line itself — *37 accounts
+· 1,761,396.71 ✓ ties to the rate · CSV · Excel* — which is where the figure
+a reader wants to take away already is.
+
+### And a booklet for the person who asked for it
+
+`docs/manuals/inside-the-rate.md`, seventh on `foundation.GUIDES`, Tom's on
+the shelf at `/guidebook`. The pane answers what is in the pool; the booklet
+is how somebody who has never seen it finds that out — where it is, the four
+tabs, the five sections in the order they read, the drawer, the three
+disclosures, and the ten things exportable at `CSV · Excel`.
+
+**It is written for the medium it is read in.** The guide route serves a
+`.md` as `text/plain`, so the panel renders it raw — which is how all six
+manuals before it read, and which turns a markdown table into a row of
+pipes. The three tables are indented blocks instead. Watched in a browser as
+Tom: on the shelf, marked *Yours*, between *Working the classification* and
+*The run sheet*, opening in the panel with every section legible.
+
+**And no figure in it is the state of the work.** `docs/manuals/README.md`'s
+own rule — *a fact about the 2025 books may be stated, the state of the work
+may not, and the test is whether doing the work would make the sentence
+false*. So the footing line is shown as a shape rather than with a total on
+it, and the booklet points at the screen for every number. The auditor's
+manual carried *no seal, no rate, no square footage* for a week after all
+three stopped being true; a booklet about a rate is the easiest place in the
+system to do that again.
+
+### Printed, and derived rather than retyped
+
+`scripts/guide_pdf.py`, `docs/manuals/inside-the-rate.pdf`,
+`tests/test_a_guide_pdf_is_its_own_manual.py`. The shelf serves the PDF —
+it renders in the panel through Chromium's viewer instead of as raw
+markdown, and Download hands over a document rather than a source file.
+
+**The PDF is rendered from the manual and is never a second copy of it.** A
+hand-written HTML version beside the markdown is `space_partition` beside
+`space_unit` in a document: two structures describing one thing, free to
+disagree the day somebody edits one. So the markdown is the source, the
+renderer reads it, and the HTML is deleted after printing — leaving it
+beside the PDF would put a third copy in the repository. The route is
+`monday_anchor.py`'s, for its reason: no runtime dependency joins the image
+for one PDF.
+
+**It refuses what it cannot render rather than dropping it.** A table, a
+block quote, an asterisk bullet or a numbered list stops the run and names
+the line, because a half-renderer prints a document missing the row a reader
+was sent to find and nothing anywhere says so. *Nothing is coerced into
+validity*, applied to a document. The first draft refused eleven correct
+paragraphs by testing the first character — a paragraph opening on
+`**bold**` starts with an asterisk too — which is a guard arguing with the
+document it is checking.
+
+**And a staleness test, because the one way these drift is a person editing
+the markdown and not reprinting.** Every heading of the manual must appear
+in the printed text, read back with `pypdf` for the reason
+`requirements.txt` records. **The pairing is read off the document and never
+off its filename**: a first draft paired a `.pdf` with any `.md` of the same
+name and `BARB_ONE_PAGE_AM.pdf` has one — written by its own script from the
+record — so the sweep reported a correct document as stale.
+`guide_pdf.py` prints the source on the face of what it renders, so the
+artefact answers rather than a convention. Both assertions were watched
+failing: a heading added without reprinting, and the emphasis fix reverted.
+
+Three defects, all found by *reading the rendered page*, which is the only
+way any of them are:
+
+- **Bold spanning a code span printed its own markers.** `inline()` split
+  the string on code and ran emphasis on each piece, so
+  `**`/rates` — the Rate tab**` had its opening marker in one piece and its
+  closing in another and neither matched. Three paragraphs printed literal
+  asterisks at a reader. A code span is lifted out behind a sentinel now and
+  emphasis runs on the whole line — which keeps the reason the ordering
+  existed, that a `*` inside code is not emphasis.
+- **The title printed twice**, an inch apart: once as the masthead and once
+  as the manual's own `# ` heading. The body gives it up to the masthead.
+- **A code span ending a sentence printed `marked 7-9 .`** — its horizontal
+  padding read as a space before the full stop.
+
+## One page, every contract, one signature
+
+`app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,
+a card at the top of `/restate`, and a file in the publication set.
+
+The amendment memorandum and the acceptance form are per **award**, which is
+the right unit for a change of basis and the wrong one for the conversation
+actually being had. YBI is not asking NCDMM three separate questions about
+three agreements; it is asking one — *was the rate acceptable, and will you
+settle 2025 on it* — and a sponsor handed three memoranda has to work out
+that they are the same ask, then sign three times.
+
+- **The rate goes at the top**, with what stands behind it. The
+  reconciliation is arithmetic once the rate is agreed, and the rate is the
+  only thing on the page anybody can disagree with; burying it under the
+  figures it produces invites a reader to argue with the total instead.
+- **Both directions, in their own columns, and never netted.** `061` took
+  `net_movement` out of `v_restatement` because *$120,000 to ask for and
+  $120,000 to give back is not a quiet year*, and three awards on one page
+  make that single figure look like the natural summary.
+  `test_the_difference_between_them_is_never_printed` watches for it in
+  either sign.
+- **The give-back is raised first**, by the query's own ORDER BY rather than
+  by a list written down. Two of these three run against YBI, and a page
+  that led with the claim and mentioned the credits underneath is read
+  exactly once.
+- **The ask is the recorded position, never the sum of the lines** — the
+  mistake the acceptance form shipped once, where Drive AM's lines add to
+  254,808.06 *to claim* against a rebuilt position of 58,786.31 to **give
+  back**.
+- **The rate printed is the rate the restatement used**, read by `rate_id`
+  and not "the live rate". A page printing today's rate over yesterday's
+  settlement is `088`'s overtaken claim with the halves swapped.
+- **Digital Engineering is named on the page as excluded, not dropped.** Its
+  prime is N00174-20-1-0031 and the other three are AFRL FA8650-20-2-5700;
+  federal award funds are not fungible between programmes. Which awards
+  belong is read from `award.prime_agreement`.
+- **And it stops asking once they have answered.** `093` found the
+  acceptance form printing PROPOSED over a signature NCDMM had already
+  given; the same defect is available here in reverse, as ruled signature
+  lines under a band reading ACCEPTED inviting a second signature on a
+  settled matter.
+- **It refuses to become two pages** rather than overrunning quietly.
+
+Two defects found by *looking at the rendered page*, which no assertion
+could see. **The totals row printed `201,421.30` over `43,960.60`** — the
+two directions this page exists to keep apart, overlapping, in the one row a
+reader takes the settlement from, rendering as a run of digits that is
+neither figure. `pypdf` reads the two strings and not where they landed, so
+every text assertion passed over it.
+`test_no_two_columns_can_print_over_each_other` is the property: each money
+column must be at least as wide as the widest figure it could print. And the
+signature heading printed over its own sentence.
+
+### The page covered three of four, and the year is closed across all of them
+
+The instruction that found it: *"evaluate the existing invoices for those
+programs which reconcile with 2025 GL, apply the calculated rate against
+them to present to AM, which will result in a claim on some and a return on
+others — YBI and AM will work through those offsets at the organisational
+level such that they can close out 2025 on all contracts."*
+
+Both halves of that were things the page could not do.
+
+**It selected on the prime and the conversation is with the sponsor.**
+Digital Engineering is NCDMM-administered and primed through
+N00174-20-1-0031; the other three are AFRL FA8650-20-2-5700. The page
+filtered on the AFRL prime and named Digital Engineering as excluded —
+which was the careful answer when the page was three awards and is three
+quarters of a conversation on a paper presenting itself as the whole of
+it. **$325,052.11 of the $536,580.67 going back to NCDMM was on the award
+the page left off.** The unit is the **sponsor**, because that is who
+signs it and who the year is closed with; the prime is the unit of the
+*money*, and the page groups on that — two groups, a subtotal each, the
+prime named on every row, so a reader can settle one programme without the
+other and can see that the two are different money.
+
+**And it refused the offset the parties are actually making.** `061` took
+`net_movement` off `v_restatement` because *$120,000 to ask for and
+$120,000 to give back is not a quiet year*, and that still governs the
+**record**: the table prints both directions in full, award by award and
+prime by prime, and never nets. What the page was missing is the movement
+the year is closed **by**, which is a settlement mechanism rather than a
+reading of the register — the identical tension `SETTLEMENT_2025.md`
+already resolved, in its own words: *"the user asked for a single credit,
+which is a settlement mechanism rather than a reading of the record. So
+both directions are on the page in full first, the rule is written on the
+paper."* The single movement is in the ask, after them. An offset **within**
+a prime is arithmetic; an offset **across** two moves federal award funds
+between programmes, so the page states each prime's movement separately
+and asks for NCDMM's agreement in those words rather than quietly adding
+the columns up.
+
+    N00174-20-1-0031   1 award    325,052.11 to NCDMM
+    FA8650-20-2-5700   3 awards   211,528.56 to return · 36,590.16 to claim
+                                  174,938.40 to NCDMM
+    all four                      536,580.67 · 36,590.16 → 499,990.51
+
+**The one-page guard did its job and cost four prose cuts.** A fourth award,
+two groups and the settlement paragraph overran by 83pt, and the refusal is
+what forced the page to be read rather than extended. Three of the four cuts
+were duplications the guard surfaced: two awards carrying no change-of-basis
+clause printed *please name the instrument* **twice** — one sentence per
+fact, not one per award, which is the evidence screen's own lesson; the
+seal was a numbered ground *and* the provenance line under the rate it is
+about, so the ground went and its one extra clause joined the provenance;
+and a subtotal of a single-award group is that award printed twice. The
+group headings went too, with the prime moving onto the row it belongs to —
+a heading costs a line per group and says nothing the row cannot say for
+itself.
+
+**And one sentence had to change or the page would contradict itself.** The
+totals row read *"a single figure for the difference would hide both"* four
+inches above an ask giving exactly that figure. Both statements are true of
+different things — the register holds two directions, the parties settle by
+one movement — and the paper now says which is which.
+
+Three more found by *looking at the rendered page*, which is the only way
+any of them are found:
+
+- **The subtotal printed two of its four money columns**, leaving a hole
+  mid-row that reads as missing data rather than as a subtotal.
+- **The page was addressed to the wrong party.** `bill_to` took the sponsor
+  string off whichever award has the largest give-back, so a page covering
+  four awards was addressed *To: NCDMM / Energetics Technology Center* and
+  its signature block read *Accepted for NCDMM / Energetics Technology
+  Center* — true of one award and false of the page, which is the shape this
+  file keeps finding: a label that checks out and is about something else.
+  Where the awards agree it is what they say; where they differ it is the
+  sponsor they have in common.
+- **The reference line still read `America Makes · 2025`** under a masthead
+  naming two primes, and then read `NCDMM · 2025` under `To: NCDMM` — three
+  lines saying one thing. A reference is for a filing clerk to match on.
+
+**And the test for the prime could not fail for the thing it names.** It
+asked whether each prime appeared anywhere on the page, and passed with the
+row draw deleted, because the subtotal label and the ask both name them.
+Asserted by **count** now — at least once per row in its group — and
+watched failing. Fifth instance here, found the only way any of them are.
+
+### A claim measured on a rate that no longer stands
+
+Migration `132`, and it is what building the page above turned up.
+**All four standing America Makes settlements were computed against
+INDIRECT_COMBINED at 24.71%, and that rate is SUPERSEDED** — a recompute
+gives 22.48%. (That attribution was wrong when it was written: the
+recompute to 22.48% is Heidi's measured estate, not `131`. See **The rate
+that no migration superseded** below, which is what reading it again
+found.)
+Nothing anywhere said so: the restatements read ACCEPTED, the walk's step 10
+read DONE, the papers rendered cleanly, and the only sign of it on the whole
+record was `scripts/restate_2025_invoices.py` — which reads the *live* rate
+— reporting every award differing from its own settlement by four to eight
+thousand dollars with no explanation available anywhere.
+
+`088` asked whether the **invoice population** had moved underneath a claim
+and stopped there. A restatement rests on two things and the other one is
+the rate. *Fixing one instance is not fixing the rule* — and this is the
+worse half: a changed population moves which invoices a claim covers, a
+changed rate moves **every figure on it**. A settlement page printing 24.71%
+is not wrong about the rate it used, which is exactly what makes it
+unreadable: a reader who looks the rate up finds 22.48% and cannot tell
+which of the two documents is stale.
+
+`v_restatement` carries `rate_status` and `rate_is_live`, the walk says
+which of the two has moved, both papers carry it **above their figures** in
+the warning colour, and `/restate` shows it on the row. **Nothing is
+corrected**: the rows record what was measured, and they are superseded by
+recomputing, which is the controller's act and not a migration's.
+
+**`rate_is_live` is deliberately not `status = 'ACTIVE'`.** `rate.status`
+carries the *sponsor* conversation — PROPOSED means YBI has put the rate to
+NCDMM and they have not answered — and only SUPERSEDED says the arithmetic
+has moved. Reading it the other way would report every restatement in the
+file as stale.
+
+**One sentence per rate, not one per award.** Four awards on one rate is one
+fact, and four copies of it at the top of a one-page document is the defect
+the evidence screen already learned. The awards are named rather than
+counted. And the page printed *"The 0 classifications were sealed before any
+rate was computed"* on a clone whose set had since been unsealed — `086` as
+a sentence rather than as a state, a count printed without asking whether
+there is one to print.
+
+### The restated invoice said the rate was certified, two lines above the band saying it was not
+
+**All forty-three restated invoices printed "the rate is certified" and
+"NOT CERTIFIED — The rate this is built on carries no signature" on the
+same face.** The first is a string literal in
+`scripts/restate_2025_invoices.py`; the second is the band
+`invoice_document.py` draws from `certified` / `certification_line`, which
+that script passed neither of, so it correctly defaulted to uncertified.
+
+`122` is the rule and this is the eighth place to break it: *there is one
+sentence-maker for the signature and it is `certification_lines()`.* The
+sweep written for it reads the renderers, and this is a **script** composing
+a caveat it hands to a renderer — one level out from where that test looks.
+It is also the worst face available for it: the restated invoices are the
+basis of the amendment NCDMM signs, so a reader reconciling them has a
+document arguing with itself about the one thing the amendment turns on.
+
+The literal asserted three facts and only one was about a signature, which
+is why it read as harmless. `standing_of_the_record()` derives the other
+two **as figures** — *the 2025 classification is 100.0% complete and
+sealed; the 200.465 facilities carve-out is evaluated against the estate on
+the record (5 building(s), 756,869.33)* — and says nothing about the
+signature at all, because the band already does and does it from the row.
+
+### The agreement number was on no restated invoice, and the field for it was dead
+
+`InvoiceDocument.award` has existed since the document was written and
+**nothing ever drew it**. On an invoice YBI issues that costs nothing — the
+sponsor raised the purchase order and knows the award. On a **restatement
+settled by an agreement amendment** it is the one reference a payables
+clerk matches to the agreement, and its absence is how a closeout stalls on
+somebody's desk. The face carried `PROJECT: LTM` and a purchase order and
+nothing naming the subrecipient agreement.
+
+**And the number the script held was wrong.** `CONTRACTS` carried
+`AM-LTM` as a literal where the register holds `AM-LTM-PROJ88` — found by
+checking the list against `award` rather than by reading it. It had never
+been visible, precisely because the field was dead: a wrong value in a
+column nothing renders, waiting for the day somebody renders it. The four
+transcriptions that genuinely are transcriptions stay written down — the
+contract's name, the project line, the people, the purchase order, all of
+them how the originals print — and `award_for()` reads the number off the
+register and **refuses** rather than printing a blank, because an invoice
+naming no agreement is one nobody can match.
+
+Both were found by rendering the paper and reading it back with `pypdf`,
+which is the only way any of these are found, and both were fixed in the
+hour the closeout path was being walked end to end.
+
+### The rate that no migration superseded
+
+**22.48% does not reproduce.** The same sealed set, on the same record,
+with the same measured estate, recomputed today gives **27.21%** — and
+nothing on the record says so, because nothing was superseded. The rate row
+is live, the seal matches the judgments, `v_rate_buildup` ties
+`rate.pool_amount` to `v_pool_balance.allocable` to the cent, and all four
+restatements name it. Every control is green over arithmetic the code no
+longer performs.
+
+Found by chasing something else, which is the only reason it was found at
+all: the question on the table was whether recording the six 200.331
+parties as direct 1099 contractors moves the base. It does not — with all
+six recorded the base is `4,736,602.11` to the cent, as it is with none —
+and the recompute that proved it came back at 27.21% instead of 22.48%.
+The control run, a clone with **nothing** changed, gives the same 27.21%
+twice.
+
+**The dates are the whole of it**, and they are on the record:
+
+    15 Sep 14:43   RATE_COMPUTE    24.71%   before the estate was measured
+    17 Sep 13:39   REQUEST_ACCEPT           Heidi's floor plan accepted
+    17 Sep 13:46   RATE_COMPUTE    22.48%   seven minutes later
+    29 Sep 20:32   migration 131            the carve-out rebuilt
+    02 Oct         RATE_COMPUTE    27.21%   the same seal, the same estate
+
+So 24.71% → 22.48% was **the measurement**, and `132`'s note attributing it
+to `131` was written on 29 Sep against a rate computed on 17 Sep: a figure
+that checks out and is about something else, in the section written to
+catch exactly that. `131` is still ahead of it and worth 4.73 points.
+
+**The arithmetic confirms the attribution rather than resting on the
+dates.** Write the pool as G = 1,497,879.12, the occupancy floor area
+drives as C = 1,316,602.97 and the federally funded depreciation as
+D = 261,988.65, at a let share s ≈ 0.505:
+
+    pre-131    G·(1−s) − D        = 479,461.52   against 479,021.14 recorded
+    post-131   G − C·s − D·(1−s)  = 703,310.24   against 703,000.52 recomputed
+
+Both within the per-building weighting. **22.48% is the pre-`131`
+construction on the measured estate; 27.21% is `131`'s correction of it** —
+carving only what floor area drives and scaling 200.436(b) by the share
+that stayed, which is what `131` says it is for. It runs *in YBI's favour*,
+which is the direction worth knowing before anybody treats it as a problem.
+
+**And the reference record carries the same rate**, computed 17 Sep,
+with `131` applied 29 Sep. So does every settlement figure published off
+it, including the reconciliation page this file describes two sections up.
+
+**What no control could see, and why.** `088` asks whether the *invoice
+population* moved under a claim. `132` asks whether the *rate* was
+superseded. Neither asks whether the **code that computed the rate** has
+moved, and that is a third thing: the row is live, so `rate_is_live` is
+true; the pools tie, because `carve_out` holds the figures that same
+computation wrote and both sides of the control are the old arithmetic.
+A control comparing a rate to its own pool cannot see that the pool was
+built by a construction nobody uses any more.
+
+The cheap honest answer is `088`'s `saw_*` pattern pointed at the schema
+rather than at a population: record the migration head on the rate row when
+it is computed, and report it beside the head in force. *This rate was
+computed under schema 130; the schema is 134* is a sentence a reader can
+act on, it is derived rather than hand-kept, and it needs no list of which
+migrations count — which is the list this file has been wrong about four
+times in one run. Recorded here rather than built, because it is a schema
+change and the figure it would flag is Tom's to recompute either way.
+
+## The FAR does not bind here, and the record says so once
+
+`docs/REGULATORY_BASIS_2025.md`. Asked for the applicable FAR and 2 CFR 200,
+the honest first move is to test the premise rather than list parts: FAR Part
+31 binds a **procurement contract**, and all four America Makes awards are
+**subawards under federal assistance** — three from AFRL cooperative agreement
+FA8650-20-2-5700, Digital Engineering from Navy grant N00174-20-1-0031 through
+Energetics Technology Center, every one cost reimbursement with no fee. So
+2 CFR 200 Subpart E governs and FAR 31 does not apply of its own force. Two
+agreements say it in as many words at §4.2; Digital Engineering's Attachment 2
+flow-down adds **2 CFR 1103**, DoD's interim implementation, which nothing in
+this file had recorded.
+
+**Measured rather than asserted**, which is the only reason it is worth
+writing down: searching `evidence.extracted_text` across all twenty-four
+papers, the FAR appears **exactly once** in the four executed agreements —
+**48 CFR 27.401**, the definition of *data*, inside the Data Rights clause
+§1.10 of Hybrid Phase 2 and Last Tactical Mile. No FAR 31, no CAS, no 52.2xx
+cost clause reaches YBI on any of them. That is what `056`'s text layer bought:
+a question about what the agreements say, answered by asking the agreements.
+
+**And the opening section is the one the amendment turns on.** Asked for an
+introduction showing that an organisation may move off the de minimis rate at
+any point and agree a new one with its prime, the answer is in two paragraphs
+of the regulation and both were read rather than recalled — `ecfr.gov` and
+`govinfo.gov` are both blocked by this environment's egress proxy, so the text
+came back through search and is quoted with the ellipsis where the sentences
+are not adjacent.
+
+**200.414(f)** ends the election on a condition that names only the recipient:
+*"Once elected, the recipient or subrecipient must use the de minimis rate for
+all Federal awards **until the recipient or subrecipient chooses to receive a
+negotiated rate**."* No term of years, no award cycle, no agency release.
+**200.332(a)(4)** then says who agrees the replacement: *"If no approved rate
+exists, a pass-through entity **must determine the appropriate rate in
+collaboration with the subrecipient**"*, and puts a rate negotiated between
+the two and the de minimis rate side by side as the options. So NCDMM is the
+party with the authority, and no cognizant-agency NICRA is a precondition.
+
+Three things the section is exact about rather than leaving to be challenged,
+because an amendment is read by somebody looking for the gap: the floor on
+these four awards is **10%, not 15%** (the rise applies to awards issued on or
+after 1 Oct 2024 and all four predate it, LTM by nine days); the election ends
+for **all** federal awards at once, which with `200.403(d)` is why the
+settlement runs in both directions rather than award by award; and **nothing
+in 200.414(f) speaks to a year already invoiced in either direction** — what
+makes 2025 settleable is the instrument, being cost reimbursement with a §4.4
+change-of-basis clause, and `200.344`–`200.345`. That last bullet is the
+section's own counter-argument, which is the half a reader checks.
+
+The citation list is derived the same way — `carve_out.citation`,
+`award_term.citation`, and every `200.xxx` literal in `app/` and `scripts/` —
+rather than composed from general knowledge, so each row carries the figure it
+moves on this record: 200.465 at $756,869.33, 200.436(b) at $261,988.65,
+200.331 at $313,605.35 open across six parties, 200.430(i) at $1,835,047.17
+with nobody signed.
+
+**And the memo states the rate structure with its own staleness on it.** The
+rows are 17 Sep and predate `131`; the same sealed set now recomputes to
+27.21%. A regulatory memo printing 22.48% as *the* rate would be the overtaken
+claim shape in the one document whose job is to say what the rules are.
+
+## One page the sponsor signs, and two pages saying what they are signing
+
+`app/domain/settlement_document.py`, `scripts/settlement_papers.py`,
+`docs/settlement-2025/`. A two-page memorandum of understanding and a
+one-page **Collaborative Agreement Amendment** covering only the three
+awards primed through AFRL **FA8650-20-2-5700** — Drive AM, Hybrid Phase 2
+and Last Tactical Mile — with what each was billed for 2025, what the
+restated rate supports, the over and the under, and a mutual waiver of the
+net.
+
+    award                  billed       restated    to return    to claim
+    Drive AM           579,240.87     450,766.64   128,474.23           —
+    Hybrid Phase 2     187,416.05     114,468.98    72,947.07           —
+    Last Tactical Mile 368,222.24     412,182.84            —   43,960.60
+    all three        1,134,879.16     977,418.46   201,421.30   43,960.60
+    net declared unrecoverable: 157,460.70, running to NCDMM
+
+**The defect this module is built around is that the record says the
+sponsor already agreed.** All four standing restatements read
+`status = 'ACCEPTED'` with the note *"Accepted by NCDMM on the acceptance
+form returned with the amendment memorandum"*, written at 15 Sep 14:43 by
+`drive_the_close.py --rehearsal`, and **NCDMM has accepted nothing.**
+`amendment_document.py::standing_band()` reads that status and is right for
+the papers it was written for; called from here it would print the
+sponsor's agreement onto the document whose entire purpose is to obtain it.
+That is `122` in the fourth place it has been available, and the fence is a
+property rather than a promise: `no_paper_here_claims_an_acceptance()`, held
+against both rendered papers, and a FOR SIGNATURE band in place of a
+standing one. The script says the rows are rehearsal residue rather than
+rendering over them quietly.
+
+**Three more came out of reading the rendered page, which is the only way
+any of them are found:**
+
+- **A count printed as a finding.** The memorandum opened *"of the 3
+  projects covered here, three carried no indirect line at all"* — and Last
+  Tactical Mile billed **$44,400.00** of it. `without_an_indirect_line`
+  reads `indirect_billed` off the row now and names what the others did
+  bill, because saying only how many did not invites the reader to assume
+  the rest billed at the elected rate. `086` on a paper going to a sponsor.
+- **Three right figures that do not foot.** Overhead is 12.35% and G&A
+  12.37%, each its own pool over the base rounded to four places; the
+  combined rate is 24.71%, which is the *combined pool* over the same base.
+  12.35 + 12.37 is 24.72. Every one of the three is correct and printing
+  them together puts an apparent arithmetic error on an instrument a
+  sponsor's analyst will add up — `069`'s largest-remainder lesson in a
+  presentation rather than in a view. The papers print the **pools**, which
+  add exactly, and `__post_init__` refuses a set whose pools do not.
+- **The instrument's own name ran into the organisation's.**
+  "COLLABORATIVE AGREEMENT AMENDMENT" is 330.8pt at 15pt against 320.9pt of
+  room beside the masthead. `_title_size()` sizes it to the space and
+  refuses below 12pt rather than overlapping, which is
+  `test_no_two_columns_can_print_over_each_other` pointed at a heading.
+
+And two of geometry, both the reconciliation page's own defects one document
+along: **the subtitle was clipped by the band under it** — the descenders of
+*"recovery"* and *"year-end"* cut by the FOR SIGNATURE rectangle, which is
+*the signature heading printed over its own sentence* exactly; and **the
+mutual-waiver box was a fixed 48pt over text whose line count it had never
+measured**, so a fourth award would have clipped the clause the whole
+instrument turns on. It derives its height from the wrapped sentence now.
+
+**One prime per instrument, and the register spells it two ways.** Federal
+award funds are not fungible between programmes, so `SettlementPapers`
+refuses a mixed set rather than leaving the caller to remember — and
+`award.prime_agreement` holds `FA8650-20-2-5700` on two of the three and
+`AFRL FA8650-20-2-5700` on Hybrid, so equality on the string would report
+one programme as two and refuse a legitimate set. `_prime_key()` is *never
+join on a name that can repeat* where no key exists. The Navy-primed
+Digital Engineering award — $320,427.12, the largest single correction in
+the file — is excluded by construction and a test asserts it is not on the
+page.
+
+### A mutation that does not express the defect proves nothing
+
+Six mutants were run against the renderer and five were caught at once. The
+sixth — *print the net before both directions* — **passed**, and the test
+was right: the mutant injected the net paragraph after `_amend_total`,
+which is still after both columns. It expressed nothing. Re-aimed above
+`_amend_heads` it failed on the line it names. This file already records
+the shape — *the first attempt at that watch failed on the function
+signature instead, which proves nothing* — and it is worth the second
+reading every time, because a green mutation run is indistinguishable from
+a real one until you read what you actually changed.
+
+**The papers carry their own staleness**, per `082` and `132`: the rate the
+positions were measured on is 24.71% and the record now carries it as
+SUPERSEDED, so a notice says so **above** the figures; and nobody has signed
+the rate, so `certification_lines()` prints NOT CERTIFIED. Both come off
+rows rather than being composed here. The figures are the 15 September
+positions, and recomputing is Tom's act — the script reads and renders and
+writes nothing to the cost record.
+
+### Every liberal reading tested runs against YBI
+
+`scripts/liberal_rate.py`. The instruction was *"it is a negotiated rate —
+let's be liberal to YBI for this and future ones"*, and
+**200.332(a)(4) does give YBI that latitude**: the pass-through determines
+the rate *in collaboration with* the subrecipient, so the judgments inside
+it are genuinely YBI's. There are only two of them worth anything on 2025 —
+which floor area is let (200.465) and which parties are subrecipients
+(200.331) — and **both of them cost YBI money.** That is the finding, and it
+is the one thing nobody would have guessed.
+
+    reading                 rate raw       credit  rate kept   net to NCDMM
+      as the record stands    27.21%         0.00     27.21%     137,866.88
+      the America Makes building
+                              29.11%   108,000.00     26.83%     140,845.14
+      the incubator suites    30.44%   183,548.41     26.57%     142,882.90
+      both legs               32.35%   291,548.41     26.19%     145,861.16
+      the six parties as subrecipients
+                              29.14%            —          —     169,240.86
+
+**Moving space out of "let" raises the raw rate and the rent it brings with
+it is worth more.** Reading the America Makes building and the incubator
+suites as programme space takes the overhead rate up 5.14 points — and the
+$291,548.41 of rent those tenants pay then becomes an **applicable credit**
+under 200.406, because floor area whose cost stays in the federal pool and
+which somebody pays for cannot be charged twice. The credit is worth 6.16
+points. Net **−1.02 points**, and the settlement gets $7,994.28 worse.
+`rate_headroom.py` already priced the client-space leg at *+2.72 with the
+rent credited and +6.75 without*; what it did not do is carry the credited
+figure through to the settlement, where the sign flips.
+
+**And a subrecipient determination shrinks the award's own base faster than
+it raises the rate.** All six parties read SUBRECIPIENT takes the combined
+rate 27.21% → 29.14%, which sounds like the liberal answer — and the
+$313,605.35 of excess over the 200.1 cap leaves each award's *own* direct
+cost as well as the estate-wide MTDC, so `direct × (1 + rate)` falls on
+every one of the three. The net goes to $169,240.86, worse than the
+$157,460.70 at the 24.71% the restatements actually name.
+
+**The two legs are measured differently, and the script asserts the
+difference rather than assuming it.** A carve-out moves the pool and no
+award's own direct cost, so a tenancy leg's settlement is arithmetic on a
+`direct_supported` that must hold still — and the run **checks that it did**
+across all four readings, because an arithmetic net over a direct figure
+that had moved would be measuring two things at once. The 200.331 leg goes
+through `POST /api/restate` for exactly the reason the assertion exists.
+
+**Three judgments stay out of reach however the rate is negotiated**, and
+the script holds all three rather than offering them: 200.406 on the rent,
+200.465 and `unit_market_needs_basis` on a charged tenancy called programme
+space (the scenario supplies a placeholder and **says it is one** — the real
+move names the agreement), and 200.403(d), so a reading adopted for one
+award is adopted for all of them. The six determinations carry
+`SCENARIO … and not a determination` in the basis, because which of
+200.331's five tests carries each party is a judgment with a person's name
+on it.
+
+**What the rate cannot reach at all: these three cross zero at 44.80%
+combined** — Drive AM at 60.25%, Hybrid at 104.18%, LTM at 11.41% — above
+anything this record has ever produced. The highest figure in the file is
+43.99%, the uncarved POOL basis, and at that the net is $6,353.11 to NCDMM:
+near level and never across. So **the rate is not the lever on 2025; the
+attribution of cost to each award is.** Drive AM is $93,890.37 and Hybrid
+$55,539.95 short of what was billed, and $103,018.39 / $256,937.79 /
+$58,493.36 of direct cost closes the three give-backs outright. Nothing
+here proposes moving cost onto an award to reduce one — that is the rate
+reverse-engineered by another route. The question is whether the cost record
+is complete, and it is answered by going and looking.
+
+Priced on a clone built from the reference record, the engine computing
+every figure, **the record untouched** — `ybi_lib` was dropped afterwards.
+Each leg restores the estate before the next one, so the four tenancy
+readings are four measurements and not a cumulative drift.
+
+
+## The run happened three times, and the slow test was slow where CI never goes
+
+`.dockerignore`, `on: { push: { branches: [main] }, pull_request: }`, and a
+shared reading in `test_every_report_ties_to_the_financials.py`.
+
+**Three runs per change** — the push to the working branch, the
+pull_request event for the same commit, and the merge commit on main. Two of
+those three test an identical tree. CI runs on the pull request, which is
+where a change is read, and on main, which is what deploys; `concurrency`
+cancels a run whose tree has been superseded.
+
+**The build context carried 300MB nobody wanted.** There was no
+`.dockerignore`, so `.git` (250MB) and `web/node_modules` (49MB) went up on
+every deploy — and the second is worse than waste, because the web stage
+installs its own dependencies and `COPY web/ ./` then writes the host's tree
+over them, so whatever was on the build machine decided what the image was
+built against. Out with them go 47MB of *pictures of this system*.
+`docs/runbook-walk` deliberately stays: two scripts that ship in the image
+read it, and a script in the container with nothing to read is the defect
+`077` is named after.
+
+**And the slow test was slow somewhere CI never goes.** The tie-register
+file ran 43 seconds against a loaded record, 24 of them in one test asking
+the database, once per period, to count rows it already held. The read-only
+sweeps share one reading now and the summary test counts off it — which is
+also the more honest comparison, since *the summary is the register* means
+those two readings rather than the view against itself. 43s to 12s, and the
+whole suite 141s to 110s. **What that does not buy is a faster CI**, and the
+first draft of the commit claimed it did: CI builds an empty database, where
+six of those fourteen tests skip and the file costs 2.8 seconds. Measured
+there the suite is 1,583 tests in 70 seconds with no hot spot at all. The
+run felt long because it ran three times.
+
+Both fixtures assert they read something, because four sweeps iterate the
+register and every one of them is satisfied by an empty list.
+
+## Everything after the rate is locked
+
+Walked end to end for the first time — certify, restate, report — on a clone
+with the rate locked and the carve-outs left carved out. Four defects, and
+two of them were on the page the controller was standing on.
+
+### Three invoices, 200 OK, and nothing on his machine
+
+`app/papers.py`, `tests/test_a_paper_reaches_the_person_who_asked.py`. He
+pressed Download on three invoices in sixteen seconds and got nothing. Every
+one answered **200 with an `EXPORT` row written**, so the server log said the
+system was working — the shape this file already calls the worst a fault can
+take.
+
+Four routes render a paper and all four sent `Content-Disposition: inline`,
+including the three behind a button reading Download. **The first hypothesis
+was that Chromium refuses the save outright, and measuring it in a browser
+said otherwise**: it honours the `download` attribute anyway. Reasoning
+rather than measuring would have been the sandbox-attribute mistake in a new
+place. What is true is weaker and is still the defect: **one URL was doing
+two jobs** — an `<iframe src>` that renders and an `<a download>` that saves
+— and a disposition can only be right for one of them. `as_pdf` decides,
+once, and **the default is the save**; `?inline=1` is the preview frame and
+nothing else, which is the split the library settled long ago.
+
+**And a literal route declared after a parameterised sibling never runs.**
+`GET /api/restate/reconciliation` reached
+`detail(restatement_id="reconciliation")` and answered **500** on
+`invalid input syntax for type uuid` — on every deployment since it was
+written. The route existed, `test_every_capability_has_a_door` saw it in the
+route table, the SPA had a button for it, and its tests called the assembly
+function directly, so nothing anywhere could see that the door was walled
+up. *Reachable is not capable*, one level further in: the path resolves and
+the wrong handler answers.
+`test_no_route_is_shadowed_by_a_parameterised_sibling` derives both sides
+from the running application and found exactly this one across 200 routes.
+
+Two smaller ones. `Reports.jsx` explains why the preview frame carries no
+`sandbox` attribute — *"the Content-Security-Policy on the response does the
+same job"* — and that response **carried no CSP at all**: a comment
+asserting a safety measure that is not there, which is worse than no comment
+because the next person reads it and stops looking. And `take()` removes its
+anchor on the next tick rather than the same one, because Chrome can cancel
+a download whose initiating element has already left the document.
+
+### One standing claim per objective
+
+Migration `133`. **The register carried two live positions for one award and
+every reader added them together.** Recomputing DRIVE-AM on the locked rate
+left the accepted $128,474.23 standing and wrote $136,534.61 beside it, so
+the acceptance form NCDMM signs asked for **$265,008.84** — a position plus
+its own replacement, on the one page that goes to a sponsor. The
+reconciliation printed eight awards where there are four and overran its
+page, which is that guard earning its keep on a cause it was not written
+for.
+
+`POST /api/restate` supersedes only a `PROPOSED` predecessor. That is right
+about the thing it protects — a position the sponsor has **accepted** must
+not be replaced silently — and it then writes the new row anyway, so the
+guard produces exactly the state it exists to prevent. **And the index that
+would have caught it was already there**: `(period, objective_id) WHERE
+status <> 'SUPERSEDED'`, on the right columns, written by somebody who had
+the shape in mind, one word short of the invariant.
+
+It is `one_live_decision_per_unit` in the last register that lacked it — a
+ledger line carries one live decision, one live explanation (`125`), a
+charge code one live manager. The predicate is the `STANDING` set the
+routers already read, and **REJECTED is deliberately not standing**: a
+sponsor saying no is the reason to measure again, and an index that blocked
+that would be a control nobody can clear by doing the work.
+
+**The repair leaves the later computation standing**, which is this system's
+model of change everywhere else, and erases nothing: a superseded row keeps
+its `decided_at` and its `modification_ref`, so *NCDMM accepted $320,427.12
+on 15 September* still reads and now carries a date rather than standing as
+a claim YBI would bill on.
+
+The handler refuses the collision in words, and **the way out is a door that
+did not exist**: `POST /{id}/status` takes `SUPERSEDED` with a required
+reason and `/restate` has a Withdraw button. Two conscious acts to replace
+something a sponsor has seen — `drive_recertify`'s rule, *the one act that
+takes something away from the person who made it is never automatic.*
+
+### A rehearsal is not a signature, and the walk was calling it one
+
+Migration `134`. The landing page the year is closed from read **"9 CERTIFY
+· DONE · Signed by Tom Metzinger on 01 Oct 2026"** over a certification
+whose `origin` is `REHEARSAL`.
+
+`122` exists for exactly this, gave the row the value that tells the two
+apart, and fixed the **six** places that composed their own sentence from
+`certified` and `certified_by`. The walk is the seventh. It is in SQL, which
+is why that sweep could not reach it — a view cannot call
+`certification_lines()` — and it is the worst one left: every paper `122`
+fixed says REHEARSAL on its face, and this is the screen that tells the
+controller the year is finished.
+
+**And the step reads OPEN rather than DONE.** A rehearsal is not a weaker
+kind of done: nothing resting on it may go to a sponsor, which is precisely
+the definition of outstanding. `086`, in the one step whose output is the
+whole landing page.
+
+### What the walk says afterwards
+
+Certify, four collisions refused, four withdrawn, four recomputed, nine
+papers, eleven exhibits: **10 of 11 steps done, 19 of 21 anchors tying**,
+and the two that do not are the two named to the cent since `103` — the
+asset register against the ledger's depreciation, and the invoice register
+against grant income. The one step still open is the citations: *0 of 363
+federally chargeable judgments cite a document.*
+
+**And six tests on `SETTLEMENT_2025.md` fail, correctly.** The memorandum
+states the positions it was written against and the record has moved past
+them. Regenerating it from a clone carrying a REHEARSAL signature is exactly
+what `122` forbids, so it stays stale and failing until a person locks the
+rate and recomputes — which is the test doing its job rather than a defect
+to patch.
+
 ## Will the next document break it?
 
 Migration `129`, `app/domain/document_shape.py`, `app/shapes.py`,

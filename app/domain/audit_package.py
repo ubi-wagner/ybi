@@ -54,7 +54,12 @@ def _table(ws, row: int, headers: list[str], rows: list[dict],
         r += 1
         for i, key in enumerate(keys, start=1):
             value = item.get(key)
-            if isinstance(value, Decimal):
+            # `true` is what JSON calls it and not what a person does. None
+            # stays blank: there is no answer and nobody has answered are
+            # different facts, and `no` would write the second as the first.
+            if isinstance(value, bool):
+                value = "yes" if value else "no"
+            elif isinstance(value, Decimal):
                 value = float(value)
             elif isinstance(value, datetime):
                 value = value.replace(tzinfo=None)

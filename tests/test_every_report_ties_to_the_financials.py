@@ -54,25 +54,75 @@ def cur():
         con.rollback()
 
 
+@pytest.fixture(scope="session")
+def register():
+    """The whole register, read once.
+
+    `v_report_tie` collects twenty-one controls, so reading it is the most
+    expensive query in the suite — and the tests below that only *read* it
+    were each opening a connection and asking again, six times, for the same
+    answer. They are sweeps over one population: whether every state is one
+    of the three, whether every anchor names what it ties to, whether any of
+    them speaks SQL. One reading answers all of them.
+
+    Session-scoped on purpose, and only for the read-only sweeps. Every test
+    that *moves* something keeps `cur`, whose whole guarantee is a
+    transaction that is rolled back — a shared connection could not offer
+    that, and a sweep reading another test's uncommitted row would be the
+    review reading its own writing.
+    """
+    import psycopg
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as con:
+        with _cur(con) as c:
+            c.execute("SELECT * FROM v_report_tie")
+            rows = c.fetchall()
+        con.rollback()
+    # Four sweeps iterate this, and every one of them is satisfied by an
+    # empty list — *the dangerous one is the test whose assertion is still
+    # satisfied by the empty case*. The register answers over a period with
+    # no books too (`109`), so nothing here makes it empty legitimately.
+    assert rows, "the tie register answered with no rows at all"
+    return rows
+
+
+@pytest.fixture(scope="session")
+def summary():
+    """The one-line register, read once — from the view, never derived.
+
+    The summary has to come from `v_report_tie_summary` itself: the whole
+    question is whether *it* agrees with the register, and computing it here
+    would be the test agreeing with its own arithmetic.
+    """
+    import psycopg
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as con:
+        with _cur(con) as c:
+            c.execute("""SELECT period, anchors, ties, open, no_data, state,
+                                open_anchors FROM v_report_tie_summary""")
+            rows = c.fetchall()
+        con.rollback()
+    assert rows, "the summary answered with no rows at all"
+    return rows
+
+
 # ── The register speaks one vocabulary ───────────────────────────────
 
-def test_every_state_is_one_of_the_three(cur):
-    cur.execute("SELECT DISTINCT state FROM v_report_tie")
-    said = {r["state"] for r in cur.fetchall()}
+def test_every_state_is_one_of_the_three(register):
+    said = {r["state"] for r in register}
     assert said <= STATES, (
         f"the register is speaking a view's private vocabulary: {said - STATES}")
 
 
-def test_every_anchor_names_what_it_ties_to(cur):
+def test_every_anchor_names_what_it_ties_to(register):
     """*Ties* with nothing said about *to what* is the citation-with-no-
     document shape: it cannot be checked, so it never is."""
-    cur.execute("SELECT report, anchor, ties_to FROM v_report_tie")
-    for r in cur.fetchall():
+    for r in register:
         assert (r["ties_to"] or "").strip(), (
             f"{r['report']} · {r['anchor']} ties to nothing in particular")
 
 
-def test_no_anchor_speaks_sql(cur):
+def test_no_anchor_speaks_sql(register):
     """`v_rate_anchor` names its controls the way a database does, and the
     register passed four of them straight through — `WAGE_BASE_IS_THE_
     REGISTER` beside *The depreciation entry balances*, on the panel a
@@ -83,8 +133,7 @@ def test_no_anchor_speaks_sql(cur):
     So a new anchor still reaches the register — nothing falls off the end —
     and fails here until somebody writes the sentence.
     """
-    cur.execute("SELECT report, anchor, ties_to, needs FROM v_report_tie")
-    for r in cur.fetchall():
+    for r in register:
         # `needs` too: it is the sentence the controller acts on, and naming a
         # view in it is the same defect one column along.
         for field in ("anchor", "ties_to", "needs"):
@@ -96,14 +145,12 @@ def test_no_anchor_speaks_sql(cur):
                 f"{r['report']} · {r[field]} names a view on the screen")
 
 
-def test_an_open_anchor_says_how_much_or_what_it_wants(cur):
+def test_an_open_anchor_says_how_much_or_what_it_wants(register):
     """A control that reports OPEN and neither the variance nor the ask is a
     dead end, and a register that collects dead ends is a longer one. This is
     what `102` had to fix in the one report on the live record that does not
     tie: the state was right and `needs` had gone blank underneath it."""
-    cur.execute("""SELECT report, anchor, variance, needs
-                     FROM v_report_tie WHERE state = 'OPEN'""")
-    for r in cur.fetchall():
+    for r in (r for r in register if r["state"] == "OPEN"):
         assert r["variance"] is not None or (r["needs"] or "").strip(), (
             f"{r['report']} · {r['anchor']} is OPEN and says nothing about why")
 
@@ -128,10 +175,8 @@ def test_every_arm_reads_a_control(cur):
 
 # ── The one line is the register, and never rounds it up ─────────────
 
-def test_the_summary_is_the_register(cur):
-    cur.execute("""SELECT period, anchors, ties, open, no_data, state,
-                          open_anchors FROM v_report_tie_summary""")
-    for s in cur.fetchall():
+def test_the_summary_is_the_register(summary, register):
+    for s in summary:
         assert s["ties"] + s["open"] + s["no_data"] == s["anchors"], (
             f"{s['period']}: the summary counts do not add to its anchors — "
             "which means the register is emitting a fourth state")
@@ -144,10 +189,18 @@ def test_the_summary_is_the_register(cur):
         else:
             assert s["open"] or s["no_data"] or s["anchors"] == 0
 
-        cur.execute("""SELECT count(*) AS n FROM v_report_tie
-                        WHERE period = %s AND state = 'OPEN'""", (s["period"],))
+        # Counted off the register's own reading rather than asked of the
+        # database once per period: six round trips through twenty-one
+        # controls to count rows already in hand, which made this the slowest
+        # test in the suite against a loaded record — 24 seconds of 43, where
+        # CI never saw it because these tests skip over an empty one. It is
+        # also the more honest comparison —
+        # *the summary is the register* means these two readings, not the
+        # view against itself.
+        held = len([r for r in register
+                    if r["period"] == s["period"] and r["state"] == "OPEN"])
         named = len([p for p in (s["open_anchors"] or "").split(";") if p.strip()])
-        assert named == cur.fetchone()["n"] == s["open"], (
+        assert named == held == s["open"], (
             f"{s['period']}: the one line names {named} open anchors of "
             f"{s['open']}. A summary that shortens the list is the reason "
             "nobody reads the next one.")

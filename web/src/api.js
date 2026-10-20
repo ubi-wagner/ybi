@@ -268,7 +268,33 @@ export const api = {
   // Whether everything above ties to the financials. One row per report
   // and anchor, each read from the control that already owns its figure.
   reportTies: (period = "2025") => req(`/review/ties?period=${period}`),
+  /* What makes up every figure on the build-up, one level down: the pool's
+     gross by account, each carve-out with the register that sized it, the
+     administrative labour by person, and the base by objective. Every
+     partition says whether it foots to the figure on file, because a
+     breakdown that does not add up is worse in a negotiation than none. */
+  rateComposition: (period = "2025") =>
+    req(`/review/rate/composition?period=${period}`),
+  /* One account inside one pool — who was paid, and every transaction under
+     it. Query parameters rather than a path: an account is
+     `Grant Expenses:Drive AM`, and a composite key in a path is not
+     something every client will encode. */
+  rateAccount: (params) =>
+    req("/review/rate/account?" + new URLSearchParams(params)),
   rateBuildupUrl: (period = "2025") => `/api/export/rate-buildup?period=${period}`,
+  /* Any one section of the build-up, at the level somebody is reading it.
+     The whole workbook was the only way to take a figure away, which is the
+     right artefact for a workpaper file and the wrong one for an email:
+     America Makes asks what is in the overhead pool and the answer should be
+     the overhead pool. A URL rather than a fetch, because a download link is
+     a door and the browser does the saving. */
+  rateSectionUrl: (params) =>
+    `/api/export/rate?` + new URLSearchParams(params),
+  /* What the server will export, so the screen does not keep its own list.
+     Three hand-kept maps of what a worklist kind means were each missing
+     different kinds; a second list of sections is that map one register
+     along. */
+  rateSections: () => req("/export/rate/sections"),
   auditorsReportUrl: (period = "2025") => `/api/export/auditors-report?period=${period}`,
   form990Url: (period = "2025") => `/api/export/form-990?period=${period}`,
   coverage: (period = "2025") => req(`/classify/coverage?period=${period}`),
@@ -335,6 +361,12 @@ export const api = {
     `/api/restate/award/${encodeURIComponent(awardId)}/memo?period=${period}`,
   acceptanceFormUrl: (awardId, period = "2025") =>
     `/api/restate/award/${encodeURIComponent(awardId)}/acceptance?period=${period}`,
+  // The three America Makes contracts on one page, for one signature. Per
+  // period rather than per award: the memorandum and the form are the right
+  // unit for a change of basis and the wrong one for the conversation, and a
+  // sponsor handed three of each has to work out that they are one ask.
+  reconciliationUrl: (period = "2025") =>
+    `/api/restate/reconciliation?period=${period}`,
   rates: (period = "2025") => req(`/rates/current?period=${period}`),
   seal: (body) => req("/rates/seal", { method: "POST", body: JSON.stringify(body) }),
   // The rate itself. `POST /api/rates/compute` was complete on the server and
@@ -463,7 +495,15 @@ export const api = {
      through JavaScript, same as the library. */
   invoicesToRender: (period = "") =>
     req(`/reports/invoices${period ? `?period=${period}` : ""}`),
+  /* Two URLs, because they are two jobs. The bare URL sends
+     `Content-Disposition: attachment` and saves; `?inline=1` sends `inline`
+     and renders in the preview frame. One URL served both and could only
+     carry one disposition — it sent `inline`, so every Download button
+     depended on the browser preferring the `download` attribute over the
+     server's own header, which is a thing browsers disagree about. */
   invoicePdfUrl: (id) => `/api/reports/invoice/${encodeURIComponent(id)}`,
+  invoicePreviewUrl: (id) =>
+    `/api/reports/invoice/${encodeURIComponent(id)}?inline=1`,
   fileInvoice: (id) =>
     req(`/reports/invoice/${encodeURIComponent(id)}/file`, { method: "POST" }),
   timesheetReportUrl: (period = "", employeeKey = "") => {

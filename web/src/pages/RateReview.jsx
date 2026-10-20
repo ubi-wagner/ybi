@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, explain, money } from "../api.js";
 import { Card, Empty, PageHead, Pill, Stat, Table, Tick } from "../components/ui.jsx";
+import RateComposition from "./RateComposition.jsx";
 
 /* Schedule D — the indirect rate, built up rather than asserted.
  *
@@ -218,6 +219,13 @@ export default function RateReview({ embedded = false, actsHere = false }) {
               </Table>
             )}
           </Card>
+
+          {/* What is inside each of those figures. The build-up above says
+              how the rate was struck; this says what it is made of, which is
+              the question a negotiation actually opens with. Rendered here
+              rather than on a screen of its own so the workpaper and `/rates`
+              cannot hold two readings of one pool. */}
+          <RateComposition />
 
           <Card variant="quiet" style={{ marginTop: 16 }}>
             <div className="card-head">

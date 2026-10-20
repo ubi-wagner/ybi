@@ -1136,3 +1136,12 @@ button.primary:disabled { background: var(--surface-sunk);
    recalled, and this is the screen where the difference decides a base. */
 .tests { margin: 0; padding-left: 18px; }
 .tests li { margin: 3px 0; color: var(--muted); }
+
+/* A section heading carries its own footing line and its export links, and
+   they belong on one baseline at the right of the head rather than stacked.
+   `.stat-row` was corrected for the mirror of this: aligning the bottoms
+   pushed a label out of line with its neighbours. */
+.head-aside { display: flex; align-items: baseline; gap: 10px; }
+.take-away a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted currentColor; }
+.take-away a:hover { border-bottom-style: solid; }
+.take-row { margin-top: 8px; }
