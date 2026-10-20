@@ -334,6 +334,10 @@ GUIDES = (
           "Reviewing the 757 working positions, citing the paper behind "
           "them, and the timesheet every person on the payroll signs for "
           "themselves.", "CONTROLLER"),
+    Guide("manuals/inside-the-rate.md", "Inside the rate",
+          "What makes up each pool, what came out of it and what the base "
+          "is — down to the transaction, and exportable at any level.",
+          "CONTROLLER"),
     Guide("manuals/auditor.md", "The auditor",
           "What to read and in what order, and where every figure on a "
           "workpaper comes from.", "AUDITOR"),

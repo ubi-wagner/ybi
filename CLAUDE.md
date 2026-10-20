@@ -1694,6 +1694,30 @@ downloading, and the links sitting on the footing line itself — *37 accounts
 · 1,761,396.71 ✓ ties to the rate · CSV · Excel* — which is where the figure
 a reader wants to take away already is.
 
+### And a booklet for the person who asked for it
+
+`docs/manuals/inside-the-rate.md`, seventh on `foundation.GUIDES`, Tom's on
+the shelf at `/guidebook`. The pane answers what is in the pool; the booklet
+is how somebody who has never seen it finds that out — where it is, the four
+tabs, the five sections in the order they read, the drawer, the three
+disclosures, and the ten things exportable at `CSV · Excel`.
+
+**It is written for the medium it is read in.** The guide route serves a
+`.md` as `text/plain`, so the panel renders it raw — which is how all six
+manuals before it read, and which turns a markdown table into a row of
+pipes. The three tables are indented blocks instead. Watched in a browser as
+Tom: on the shelf, marked *Yours*, between *Working the classification* and
+*The run sheet*, opening in the panel with every section legible.
+
+**And no figure in it is the state of the work.** `docs/manuals/README.md`'s
+own rule — *a fact about the 2025 books may be stated, the state of the work
+may not, and the test is whether doing the work would make the sentence
+false*. So the footing line is shown as a shape rather than with a total on
+it, and the booklet points at the screen for every number. The auditor's
+manual carried *no seal, no rate, no square footage* for a week after all
+three stopped being true; a booklet about a rate is the easiest place in the
+system to do that again.
+
 ## One page, every contract, one signature
 
 `app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,
