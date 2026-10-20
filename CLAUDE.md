@@ -1718,6 +1718,57 @@ manual carried *no seal, no rate, no square footage* for a week after all
 three stopped being true; a booklet about a rate is the easiest place in the
 system to do that again.
 
+### Printed, and derived rather than retyped
+
+`scripts/guide_pdf.py`, `docs/manuals/inside-the-rate.pdf`,
+`tests/test_a_guide_pdf_is_its_own_manual.py`. The shelf serves the PDF —
+it renders in the panel through Chromium's viewer instead of as raw
+markdown, and Download hands over a document rather than a source file.
+
+**The PDF is rendered from the manual and is never a second copy of it.** A
+hand-written HTML version beside the markdown is `space_partition` beside
+`space_unit` in a document: two structures describing one thing, free to
+disagree the day somebody edits one. So the markdown is the source, the
+renderer reads it, and the HTML is deleted after printing — leaving it
+beside the PDF would put a third copy in the repository. The route is
+`monday_anchor.py`'s, for its reason: no runtime dependency joins the image
+for one PDF.
+
+**It refuses what it cannot render rather than dropping it.** A table, a
+block quote, an asterisk bullet or a numbered list stops the run and names
+the line, because a half-renderer prints a document missing the row a reader
+was sent to find and nothing anywhere says so. *Nothing is coerced into
+validity*, applied to a document. The first draft refused eleven correct
+paragraphs by testing the first character — a paragraph opening on
+`**bold**` starts with an asterisk too — which is a guard arguing with the
+document it is checking.
+
+**And a staleness test, because the one way these drift is a person editing
+the markdown and not reprinting.** Every heading of the manual must appear
+in the printed text, read back with `pypdf` for the reason
+`requirements.txt` records. **The pairing is read off the document and never
+off its filename**: a first draft paired a `.pdf` with any `.md` of the same
+name and `BARB_ONE_PAGE_AM.pdf` has one — written by its own script from the
+record — so the sweep reported a correct document as stale.
+`guide_pdf.py` prints the source on the face of what it renders, so the
+artefact answers rather than a convention. Both assertions were watched
+failing: a heading added without reprinting, and the emphasis fix reverted.
+
+Three defects, all found by *reading the rendered page*, which is the only
+way any of them are:
+
+- **Bold spanning a code span printed its own markers.** `inline()` split
+  the string on code and ran emphasis on each piece, so
+  `**`/rates` — the Rate tab**` had its opening marker in one piece and its
+  closing in another and neither matched. Three paragraphs printed literal
+  asterisks at a reader. A code span is lifted out behind a sentinel now and
+  emphasis runs on the whole line — which keeps the reason the ordering
+  existed, that a `*` inside code is not emphasis.
+- **The title printed twice**, an inch apart: once as the masthead and once
+  as the manual's own `# ` heading. The body gives it up to the masthead.
+- **A code span ending a sentence printed `marked 7-9 .`** — its horizontal
+  padding read as a space before the full stop.
+
 ## One page, every contract, one signature
 
 `app/domain/reconciliation_document.py`, `GET /api/restate/reconciliation`,

@@ -11,7 +11,7 @@ cost — so the split follows what somebody actually does.
 | [The administrator](administrator.md) | Accounts, access, and who let whom in. Barb. |
 | [Facilities and inventory](facilities-and-inventory.md) | The two measurements the rate turns on: the square footage of each building and what federal money paid for each asset. Heidi. |
 | [The classification team](classification-team.md) | Reviewing the 757 working positions, citing the paper behind each, and the timesheet path. |
-| [Inside the rate](inside-the-rate.md) | What makes up each pool, what came out of it and what the base is — down to the transaction, and exportable at any level. Tom, for the America Makes negotiation. |
+| [Inside the rate](inside-the-rate.md) · [PDF](inside-the-rate.pdf) | What makes up each pool, what came out of it and what the base is — down to the transaction, and exportable at any level. Tom, for the America Makes negotiation. |
 | [The auditor](auditor.md) | Reading the record, and what each figure rests on. |
 
 **Seven, and this table has been four.** A list of the manuals kept by hand
